@@ -9,13 +9,13 @@ import { toast } from "@/components/ui/toaster";
 import type { Result } from "@/lib/store/store";
 import { timeAgo } from "@/lib/utils";
 
-export function NotesPanel({ notes, onAdd }: { notes: Note[]; onAdd: (text: string) => Result<Note> }) {
+export function NotesPanel({ notes, onAdd }: { notes: Note[]; onAdd: (text: string) => Promise<Result<Note>> }) {
   const [text, setText] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const res = onAdd(text);
+    const res = await onAdd(text);
     if (res.ok) {
       setText("");
       setError(null);

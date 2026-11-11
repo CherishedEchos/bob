@@ -25,7 +25,7 @@ import { requestAction } from "./actions";
 import { runReadTool } from "./tools";
 import { mentionScore, resolveCustomers, resolveEnquiries, resolveJobs } from "./resolve";
 import {
-  cleanUtterance, detectMethod, findAmounts, isAffirmative, isNegative, parseDeposit, parseDueDate, parseDueTerms,
+  cleanUtterance, detectMethod, findAmounts, isAffirmative, parseDeposit, parseDueDate, parseDueTerms,
   parseExpenseCategory, parseLocation, parsePeriod, parseVat, parseVatRate, parseWorkTitle, stripDatePhrases, titleCase,
 } from "./nlu";
 import {
@@ -409,7 +409,8 @@ function enquiryStats(t: Turn, text: string) {
     say(t, `You've had no enquiries recorded in ${s.period}. ${s.coverage}`, { cards: r.cards });
     return;
   }
-  const channels = s.bySource.map((b) => `${b.count} ${b.source === "phone" ? "by phone" : b.source === "manual" ? "added manually" : `via ${b.label.toLowerCase()}`}`);
+  const via: Record<string, string> = { email: "came by email", website: "through your website", instagram: "on Instagram", phone: "by phone", manual: "were added manually" };
+  const channels = s.bySource.map((b) => `${b.count} ${via[b.source] ?? `via ${b.label}`}`);
   const action = s.needsAction ? ` ${s.needsAction === 1 ? "One still needs" : `${s.needsAction} still need`} a reply or follow-up.` : " They've all been dealt with.";
   say(t, `You've had ${plural(s.total, "enquiry", "enquiries")} over ${s.period}. ${capital(listNames(channels, 6))}.${action}${s.won ? ` ${s.won} turned into work.` : ""}`, {
     cards: r.cards,

@@ -4,10 +4,10 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ninety3 Assistant",
-  description: "Your jobs, enquiries and payments — with an assistant that helps you stay on top of them.",
-  applicationName: "Ninety3 Assistant",
-  appleWebApp: { capable: true, title: "Ninety3", statusBarStyle: "black-translucent" },
+  title: "Bob",
+  description: "You do the work. Bob does the admin. A voice-first assistant for trade businesses.",
+  applicationName: "Bob",
+  appleWebApp: { capable: true, title: "Bob", statusBarStyle: "black-translucent" },
   icons: { icon: "/brand/ninety3-logo.png", apple: "/brand/ninety3-logo.png" },
   // Private business tool: keep it out of search engines.
   robots: { index: false, follow: false },

@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { CalendarCheck, Inbox, MapPin, Plus, Search } from "lucide-react";
+import { CalendarCheck, Inbox, MapPin, Plus, RefreshCw, Search } from "lucide-react";
+import { toast } from "@/components/ui/toaster";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { followUpDue, needsReply, sortEnquiries, SOURCE_LABEL } from "@/lib/derive";
@@ -13,23 +14,26 @@ import { EnquiryStatusBadge, PriorityBadge, SourceIcon } from "@/components/comm
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type Filter = "all" | "needs_reply" | "new" | "followup" | "replied" | "quoted" | "won" | "closed";
+type Filter = "all" | "needs_reply" | "new" | "followup" | "replied" | "quote_required" | "quoted" | "won" | "lost";
 
 const FILTERS: { value: Filter; label: string; test: (e: Enquiry) => boolean }[] = [
-  { value: "all", label: "All open", test: (e) => e.status !== "closed" && e.status !== "won" },
+  { value: "all", label: "All open", test: (e) => e.status !== "lost" && e.status !== "won" },
   { value: "needs_reply", label: "Needs reply", test: needsReply },
   { value: "new", label: "New", test: (e) => e.status === "new" },
   { value: "followup", label: "Follow-up due", test: followUpDue },
-  { value: "replied", label: "Replied", test: (e) => e.status === "replied" || e.status === "site_visit" },
+  { value: "replied", label: "Replied", test: (e) => e.status === "replied" },
+  { value: "quote_required", label: "Quote required", test: (e) => e.status === "quote_required" },
   { value: "quoted", label: "Quoted", test: (e) => e.status === "quoted" },
   { value: "won", label: "Won", test: (e) => e.status === "won" },
-  { value: "closed", label: "Closed", test: (e) => e.status === "closed" },
+  { value: "lost", label: "Lost", test: (e) => e.status === "lost" },
 ];
 
 function EnquiriesInner() {
-  const { data } = useStore();
+  const { data, actions, can } = useStore();
   const ui = useUI();
   const params = useSearchParams();
+  const [syncing, setSyncing] = React.useState(false);
+  const inbox = data.connections.find((c) => c.kind === "email" && (c.status === "connected" || c.status === "demo"));
   const initial = (params.get("filter") as Filter) ?? "all";
   const [filter, setFilter] = React.useState<Filter>(FILTERS.some((f) => f.value === initial) ? initial : "all");
   const [source, setSource] = React.useState<EnquirySource | "any">("any");
@@ -52,9 +56,29 @@ function EnquiriesInner() {
         title="Enquiries"
         subtitle={`${data.enquiries.filter(needsReply).length} waiting for a reply`}
         actions={
-          <Button onClick={() => ui.openForm({ form: "enquiry" })}>
-            <Plus /> Log enquiry
-          </Button>
+          <>
+            {inbox && can("enquiries.write") ? (
+              <Button
+                variant="secondary"
+                disabled={syncing}
+                onClick={async () => {
+                  setSyncing(true);
+                  const r = await actions.syncInbox();
+                  setSyncing(false);
+                  if (!r.ok) return toast(Object.values(r.errors)[0] ?? "Couldn't check the inbox", "error");
+                  const n = r.value.created.length;
+                  toast(`${n ? `${n} new enquir${n === 1 ? "y" : "ies"} imported` : "No new enquiries"}${r.value.flagged.length ? ` · ${r.value.flagged.length} flagged as suspicious` : ""}`);
+                }}
+              >
+                <RefreshCw className={syncing ? "animate-spin" : ""} /> {inbox.status === "demo" ? "Check demo inbox" : "Check inbox"}
+              </Button>
+            ) : null}
+            {can("enquiries.write") ? (
+              <Button onClick={() => ui.openForm({ form: "enquiry" })}>
+                <Plus /> Log enquiry
+              </Button>
+            ) : null}
+          </>
         }
       />
 
@@ -71,7 +95,7 @@ function EnquiriesInner() {
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, job or town" aria-label="Search enquiries" className="pl-10" />
           </div>
           <div className="flex gap-1.5 rounded-xl bg-white/[0.03] p-1 ring-1 ring-white/10" role="radiogroup" aria-label="Source">
-            {(["any", "email", "instagram", "phone"] as const).map((s) => (
+            {(["any", "email", "website", "instagram", "phone", "manual"] as const).map((s) => (
               <button
                 key={s}
                 role="radio"

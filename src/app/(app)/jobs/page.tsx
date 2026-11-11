@@ -15,22 +15,24 @@ import { Button } from "@/components/ui/button";
 type Filter = "active" | JobStatus | "all";
 
 export default function JobsPage() {
-  const { data } = useStore();
+  const { data, can } = useStore();
   const ui = useUI();
   const [filter, setFilter] = React.useState<Filter>("active");
   const match = (j: Job) => (filter === "all" ? true : filter === "active" ? isActiveJob(j) : j.status === filter);
   const list = data.jobs.filter(match);
-  const statuses: JobStatus[] = ["awaiting_deposit", "scheduled", "in_progress", "snagging", "quoted", "completed"];
+  const statuses: JobStatus[] = ["awaiting_deposit", "scheduled", "in_progress", "snagging", "quoted", "completed", "lost"];
 
   return (
     <>
       <PageHeader
         title="Jobs"
-        subtitle={`${data.jobs.filter(isActiveJob).length} active · ${gbp(data.jobs.filter(isActiveJob).reduce((s, j) => s + j.quotedValue, 0))} on the books`}
+        subtitle={`${data.jobs.filter(isActiveJob).length} active${can("finance.read") ? ` · ${gbp(data.jobs.filter(isActiveJob).reduce((s, j) => s + j.quotedValue, 0))} on the books` : ""}`}
         actions={
-          <Button onClick={() => ui.openForm({ form: "job" })}>
-            <Plus /> New job
-          </Button>
+          can("jobs.write") ? (
+            <Button onClick={() => ui.openForm({ form: "job" })}>
+              <Plus /> New job
+            </Button>
+          ) : null
         }
       />
       <div className="mb-4">
@@ -70,19 +72,23 @@ export default function JobsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 grid w-full grid-cols-3 gap-2 text-[13px]">
-                    <Stat label="Quoted" value={gbp(j.quotedValue)} />
-                    <Stat
-                      label="Deposit"
-                      value={j.depositRequired === 0 ? "None" : f.depositOutstanding === 0 ? "Paid" : `${gbp(f.depositOutstanding)} due`}
-                      tone={j.depositRequired === 0 ? undefined : f.depositOutstanding === 0 ? "green" : f.depositOverdue ? "red" : "amber"}
-                    />
-                    <Stat label="Balance" value={gbp(f.balance)} />
-                  </div>
-                  <div className="mt-3 flex w-full items-center gap-3">
-                    <ProgressBar value={f.paidPercent} className="flex-1" />
-                    <span className="tabular text-[12px] text-muted-foreground">{f.paidPercent}%</span>
-                  </div>
+                  {can("finance.read") ? (
+                    <>
+                      <div className="mt-4 grid w-full grid-cols-3 gap-2 text-[13px]">
+                        <Stat label="Price" value={gbp(j.quotedValue)} />
+                        <Stat
+                          label="Deposit"
+                          value={j.depositRequired === 0 ? "None" : f.depositOutstanding === 0 ? "Paid" : `${gbp(f.depositOutstanding)} due`}
+                          tone={j.depositRequired === 0 ? undefined : f.depositOutstanding === 0 ? "green" : f.depositOverdue ? "red" : "amber"}
+                        />
+                        <Stat label="Left to pay" value={gbp(f.balance)} />
+                      </div>
+                      <div className="mt-3 flex w-full items-center gap-3">
+                        <ProgressBar value={f.paidPercent} className="flex-1" />
+                        <span className="tabular text-[12px] text-muted-foreground">{f.paidPercent}%</span>
+                      </div>
+                    </>
+                  ) : null}
                   {j.nextAction ? (
                     <div className="mt-3 flex w-full items-center gap-2 rounded-xl bg-white/[0.03] px-3 py-2 text-[13px] text-foreground/85 ring-1 ring-white/[0.06]">
                       <ArrowRight className="size-3.5 shrink-0 text-copper-400" />

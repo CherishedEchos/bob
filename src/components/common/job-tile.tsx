@@ -1,4 +1,4 @@
-import { ChefHat, Home, DoorClosed, Building2, Fence, Footprints, Hammer } from "lucide-react";
+import { ChefHat, Home, DoorClosed, Building2, Fence, Footprints, Hammer, ShowerHead } from "lucide-react";
 import type { JobKind } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ const KIND_ICON: Record<JobKind, typeof Home> = {
   extension: Building2,
   decking: Fence,
   staircase: Footprints,
+  bathroom: ShowerHead,
   general: Hammer,
 };
 

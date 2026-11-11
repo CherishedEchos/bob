@@ -8,7 +8,6 @@ import "server-only";
  * (which needs credentials). Do not describe them as working until tested.
  */
 import type { Customer, Invoice } from "@/lib/types";
-import type { Ctx } from "@/server/context";
 import { getAccessToken } from "./oauth";
 import type { AccountingProvider, EmailProvider, InboundEmail, InvoiceSendOutcome, OutboundEmail, SendOutcome } from "./types";
 

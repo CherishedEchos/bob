@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { SESSION_COOKIE, cookieOptions, createSession, destroySession, membershipsFor } from "@/server/auth/session";
 import { authed, readJson } from "@/server/http";
 import { HttpError } from "@/server/context";

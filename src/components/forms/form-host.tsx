@@ -1,62 +1,97 @@
 "use client";
 
+/**
+ * Dashboard forms — the manual, no-AI way to do everything Bob can do.
+ * All validation and permission checks happen again on the server.
+ */
 import * as React from "react";
-import { ArrowLeft, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { useStore } from "@/lib/store/store";
-import { useUI } from "@/lib/store/ui";
-import type { FormPrefill } from "@/lib/assistant/types";
-import { JOB_STATUSES, JOB_STATUS_LABEL, PAYMENT_METHOD_LABEL, PAYMENT_TYPE_LABEL, jobFinance } from "@/lib/derive";
-import type { PaymentMethod, PaymentType } from "@/lib/types";
+import { useUI, type FormPrefill } from "@/lib/store/ui";
+import {
+  ENQUIRY_SOURCES, EXPENSE_CATEGORY_LABEL, JOB_STATUSES, JOB_STATUS_LABEL, PAYMENT_METHOD_LABEL, PAYMENT_TYPE_LABEL, SOURCE_LABEL,
+  computeInvoiceTotals, invoiceBalance, jobFinance,
+} from "@/lib/derive";
+import type { ExpenseCategory, PaymentMethod, PaymentType, VatTreatment } from "@/lib/types";
 import type { FieldErrors } from "@/lib/validation";
-import { addDaysKey, cn, formatDateKey, gbp, todayKey, formatDateInline } from "@/lib/utils";
+import { addDaysKey, gbp, todayKey, formatDateInline } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field, Input, NativeSelect, Textarea } from "@/components/ui/input";
+import { MoneyRow } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
+
+const TITLES: Record<FormPrefill["form"], [string, string]> = {
+  job: ["New job", "Add the basics now — you can fill in the rest later."],
+  payment: ["Record a payment", "Log money you've already received against a job."],
+  reminder: ["Set a reminder", "It shows on your overview and Bob mentions it when it's due."],
+  enquiry: ["Log an enquiry", "Capture a phone call, message or form that came in."],
+  customer: ["New customer", "Only add details you actually have."],
+  invoice: ["Invoice draft", "Saved as a draft. Nothing is sent from here."],
+  expense: ["Add a cost", "Record materials, labour or hire against a job."],
+  quote: ["Record a quote", "Log a quote you've sent so Bob can chase it."],
+};
 
 export function FormHost() {
   const ui = useUI();
   const form = ui.form;
-  const titles: Record<FormPrefill["form"], [string, string]> = {
-    job: ["New job", "Add the basics now — you can fill in the rest later."],
-    payment: ["Record a payment", "Log money you've received against a job."],
-    reminder: ["Set a reminder", "It'll show on your overview when it's due."],
-    enquiry: ["Log an enquiry", "Capture a phone call or message that came in."],
-  };
   return (
     <Dialog open={!!form} onOpenChange={(o) => !o && ui.closeForm()}>
       {form ? (
-        <DialogContent title={titles[form.form][0]} description={titles[form.form][1]}>
+        <DialogContent title={TITLES[form.form][0]} description={TITLES[form.form][1]}>
           {form.form === "job" ? <JobForm prefill={form} /> : null}
           {form.form === "payment" ? <PaymentForm prefill={form} /> : null}
           {form.form === "reminder" ? <ReminderForm prefill={form} /> : null}
           {form.form === "enquiry" ? <EnquiryForm /> : null}
+          {form.form === "customer" ? <CustomerForm /> : null}
+          {form.form === "invoice" ? <InvoiceForm prefill={form} /> : null}
+          {form.form === "expense" ? <ExpenseForm prefill={form} /> : null}
+          {form.form === "quote" ? <QuoteForm prefill={form} /> : null}
         </DialogContent>
       ) : null}
     </Dialog>
   );
 }
 
-function FormActions({ submitLabel, onCancel }: { submitLabel: string; onCancel: () => void }) {
+function FormActions({ submitLabel, onCancel, busy }: { submitLabel: string; onCancel: () => void; busy?: boolean }) {
   return (
     <div className="mt-6 flex gap-2">
-      <Button variant="secondary" className="flex-1" onClick={onCancel}>
+      <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>
         Cancel
       </Button>
-      <Button type="submit" className="flex-1">
-        <Check /> {submitLabel}
+      <Button type="submit" className="flex-1" disabled={busy}>
+        <Check /> {busy ? "Saving…" : submitLabel}
       </Button>
     </div>
   );
 }
 
+function FormError({ errors }: { errors: FieldErrors }) {
+  return errors._ ? (
+    <p role="alert" className="rounded-xl bg-red-500/10 px-3 py-2 text-[13.5px] text-red-200 ring-1 ring-red-500/25">
+      {errors._}
+    </p>
+  ) : null;
+}
+
+type Change = React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
+
+function useFormState<T extends Record<string, string>>(initial: T) {
+  const [values, setValues] = React.useState(initial);
+  const [errors, setErrors] = React.useState<FieldErrors>({});
+  const [busy, setBusy] = React.useState(false);
+  const set = (k: keyof T) => (e: Change) => setValues((s) => ({ ...s, [k]: e.target.value }));
+  return { values, setValues, errors, setErrors, busy, setBusy, set };
+}
+
 /* ---------------------------------- Job ---------------------------------- */
 
 function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }) {
-  const { actions } = useStore();
+  const { actions, data } = useStore();
   const ui = useUI();
   const v = prefill.values ?? {};
-  const [values, setValues] = React.useState({
+  const f = useFormState({
+    customerId: prefill.customerId ?? "",
     customerName: v.customerName ?? "",
     customerPhone: v.customerPhone ?? "",
     customerEmail: v.customerEmail ?? "",
@@ -68,17 +103,21 @@ function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }
     status: "quoted",
     startDate: "",
     depositDueDate: "",
-    nextAction: "",
   });
-  const [errors, setErrors] = React.useState<FieldErrors>({});
-  const set = (k: keyof typeof values) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    setValues((s) => ({ ...s, [k]: e.target.value }));
-
+  const { values, errors, set } = f;
   const quote = parseFloat(values.quotedValue || "0");
-  const submit = (e: React.FormEvent) => {
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = actions.createJob({ ...values, depositRequired: values.depositRequired || "0", enquiryId: prefill.enquiryId });
-    if (!res.ok) return setErrors(res.errors);
+    f.setBusy(true);
+    const res = await actions.createJob({
+      ...values,
+      customerId: values.customerId || undefined,
+      depositRequired: values.depositRequired || "0",
+      enquiryId: prefill.enquiryId,
+    });
+    f.setBusy(false);
+    if (!res.ok) return f.setErrors(res.errors);
     toast(`Job added for ${res.value.customerName}`);
     ui.closeForm();
     ui.openJob(res.value.id);
@@ -86,25 +125,42 @@ function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }
 
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
+      <FormError errors={errors} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="Customer name" htmlFor="jf-name" error={errors.customerName} className="sm:col-span-2">
-          <Input id="jf-name" value={values.customerName} onChange={set("customerName")} aria-invalid={!!errors.customerName} autoFocus={!values.customerName} />
+        <Field label="Customer" htmlFor="jf-cust" className="sm:col-span-2">
+          <NativeSelect id="jf-cust" value={values.customerId} onChange={set("customerId")}>
+            <option value="">New customer…</option>
+            {data.customers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+                {c.town ? ` (${c.town})` : ""}
+              </option>
+            ))}
+          </NativeSelect>
         </Field>
+        {!values.customerId ? (
+          <>
+            <Field label="Customer name" htmlFor="jf-name" error={errors.customerName} className="sm:col-span-2">
+              <Input id="jf-name" value={values.customerName} onChange={set("customerName")} aria-invalid={!!errors.customerName} />
+            </Field>
+            <Field label="Phone (optional)" htmlFor="jf-phone" error={errors.customerPhone}>
+              <Input id="jf-phone" type="tel" value={values.customerPhone} onChange={set("customerPhone")} />
+            </Field>
+            <Field label="Email (optional)" htmlFor="jf-email" error={errors.customerEmail}>
+              <Input id="jf-email" type="email" value={values.customerEmail} onChange={set("customerEmail")} aria-invalid={!!errors.customerEmail} />
+            </Field>
+          </>
+        ) : null}
         <Field label="Job" htmlFor="jf-title" error={errors.title}>
           <Input id="jf-title" value={values.title} onChange={set("title")} placeholder="e.g. Kitchen refit" aria-invalid={!!errors.title} />
         </Field>
         <Field label="Location" htmlFor="jf-loc" error={errors.location}>
           <Input id="jf-loc" value={values.location} onChange={set("location")} placeholder="e.g. Crawley" aria-invalid={!!errors.location} />
         </Field>
-        <Field label="Quoted value (£)" htmlFor="jf-quote" error={errors.quotedValue}>
+        <Field label="Price (£)" htmlFor="jf-quote" error={errors.quotedValue}>
           <Input id="jf-quote" inputMode="decimal" value={values.quotedValue} onChange={set("quotedValue")} placeholder="0" aria-invalid={!!errors.quotedValue} />
         </Field>
-        <Field
-          label="Deposit required (£)"
-          htmlFor="jf-dep"
-          error={errors.depositRequired}
-          hint={quote > 0 && !values.depositRequired ? undefined : undefined}
-        >
+        <Field label="Deposit required (£)" htmlFor="jf-dep" error={errors.depositRequired}>
           <Input id="jf-dep" inputMode="decimal" value={values.depositRequired} onChange={set("depositRequired")} placeholder="0" aria-invalid={!!errors.depositRequired} />
           {quote > 0 ? (
             <div className="mt-2 flex gap-1.5">
@@ -112,7 +168,7 @@ function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }
                 <button
                   key={pct}
                   type="button"
-                  onClick={() => setValues((s) => ({ ...s, depositRequired: String(Math.round((quote * pct) / 100)) }))}
+                  onClick={() => f.setValues((s) => ({ ...s, depositRequired: String(Math.round((quote * pct) / 100)) }))}
                   className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[12px] text-muted-foreground ring-1 ring-white/10 hover:text-foreground"
                 >
                   {pct}%
@@ -123,335 +179,484 @@ function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }
         </Field>
         <Field label="Status" htmlFor="jf-status">
           <NativeSelect id="jf-status" value={values.status} onChange={set("status")}>
-            {JOB_STATUSES.map((s) => (
+            {JOB_STATUSES.filter((s) => s !== "lost").map((s) => (
               <option key={s} value={s}>
                 {JOB_STATUS_LABEL[s]}
               </option>
             ))}
           </NativeSelect>
         </Field>
-        <Field label="Start date" htmlFor="jf-start" error={errors.startDate}>
+        <Field label="Start date (optional)" htmlFor="jf-start" error={errors.startDate}>
           <Input id="jf-start" type="date" value={values.startDate} onChange={set("startDate")} />
         </Field>
-        <Field label="Phone" htmlFor="jf-phone">
-          <Input id="jf-phone" type="tel" value={values.customerPhone} onChange={set("customerPhone")} />
-        </Field>
-        <Field label="Email" htmlFor="jf-email" error={errors.customerEmail}>
-          <Input id="jf-email" type="email" value={values.customerEmail} onChange={set("customerEmail")} aria-invalid={!!errors.customerEmail} />
-        </Field>
-        <Field label="Description" htmlFor="jf-desc" className="sm:col-span-2">
-          <Textarea id="jf-desc" value={values.description} onChange={set("description")} className="min-h-20" />
-        </Field>
-        <Field label="Next action" htmlFor="jf-next" className="sm:col-span-2">
-          <Input id="jf-next" value={values.nextAction} onChange={set("nextAction")} placeholder="e.g. Send written quote" />
+        {parseFloat(values.depositRequired || "0") > 0 ? (
+          <Field label="Deposit due (optional)" htmlFor="jf-ddue" error={errors.depositDueDate}>
+            <Input id="jf-ddue" type="date" value={values.depositDueDate} onChange={set("depositDueDate")} />
+          </Field>
+        ) : null}
+        <Field label="Description (optional)" htmlFor="jf-desc" className="sm:col-span-2">
+          <Textarea id="jf-desc" value={values.description} onChange={set("description")} />
         </Field>
       </div>
-      <FormActions submitLabel="Add job" onCancel={ui.closeForm} />
+      <FormActions submitLabel="Add job" onCancel={ui.closeForm} busy={f.busy} />
     </form>
   );
 }
 
-/* ---------------------------------- Payment ---------------------------------- */
+/* -------------------------------- Payment -------------------------------- */
 
 function PaymentForm({ prefill }: { prefill: Extract<FormPrefill, { form: "payment" }> }) {
-  const { data, actions } = useStore();
+  const { actions, data } = useStore();
   const ui = useUI();
-  const payable = data.jobs
-    .map((job) => ({ job, f: jobFinance(job, data.payments) }))
-    .filter(({ f }) => f.balance > 0);
-  const [jobId, setJobId] = React.useState(prefill.jobId ?? payable[0]?.job.id ?? "");
-  const selected = payable.find((p) => p.job.id === jobId);
-  const defaultType: PaymentType = selected && selected.f.depositOutstanding > 0 ? "deposit" : "stage";
-  const [amount, setAmount] = React.useState(prefill.amount ? String(prefill.amount) : "");
-  const [type, setType] = React.useState<PaymentType>(defaultType);
-  const [method, setMethod] = React.useState<PaymentMethod>("bank_transfer");
-  const [receivedAt, setReceivedAt] = React.useState(todayKey());
-  const [reference, setReference] = React.useState("");
-  const [errors, setErrors] = React.useState<FieldErrors>({});
-  const [step, setStep] = React.useState<"edit" | "confirm">("edit");
+  const owing = data.jobs.filter((j) => jobFinance(j, data.payments).balance > 0);
+  const f = useFormState({
+    jobId: prefill.jobId ?? owing[0]?.id ?? "",
+    invoiceId: "",
+    amount: prefill.amount ? String(prefill.amount) : "",
+    type: "deposit",
+    method: "bank_transfer",
+    receivedAt: todayKey(),
+    reference: "",
+  });
+  const { values, errors, set } = f;
+  const [checking, setChecking] = React.useState(false);
+  const job = data.jobs.find((j) => j.id === values.jobId);
+  const fin = job ? jobFinance(job, data.payments) : null;
+  const openInvoices = data.invoices.filter((i) => i.jobId === values.jobId && i.status === "sent");
 
   React.useEffect(() => {
-    if (selected) setType(selected.f.depositOutstanding > 0 ? "deposit" : "stage");
-  }, [jobId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (fin && !values.amount) f.setValues((s) => ({ ...s, type: fin.depositOutstanding > 0 ? "deposit" : "stage" }));
+  }, [values.jobId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!payable.length) {
-    return <p className="text-[15px] text-muted-foreground">Every job is paid in full — there&apos;s nothing to record.</p>;
-  }
-
-  const amt = parseFloat(amount);
-  const review = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errs: FieldErrors = {};
-    if (!selected) errs.jobId = "Choose a job";
-    if (!amount || !(amt > 0)) errs.amount = "Enter the amount received";
-    else if (selected && amt > selected.f.balance) errs.amount = `That's more than the ${gbp(selected.f.balance)} left on this job`;
-    if (!receivedAt) errs.receivedAt = "Pick the date it arrived";
-    setErrors(errs);
-    if (!Object.keys(errs).length) setStep("confirm");
-  };
-
-  const confirm = () => {
-    const res = actions.recordPayment({ jobId, amount, type, method, receivedAt, reference });
+    if (!checking) return setChecking(true); // explicit second step — payment records are financially significant
+    f.setBusy(true);
+    const res = await actions.recordPayment({ ...values, invoiceId: values.invoiceId || undefined });
+    f.setBusy(false);
     if (!res.ok) {
-      setErrors(res.errors);
-      setStep("edit");
-      return;
+      setChecking(false);
+      return f.setErrors(res.errors);
     }
-    toast(`${gbp(res.value.payment.amount)} recorded for ${res.value.job.customerName}${res.value.statusAdvanced ? " · job moved to Scheduled" : ""}`);
+    toast(`${gbp(parseFloat(values.amount))} recorded${res.value.statusAdvanced ? " — deposit covered, job booked in" : ""}`);
     ui.closeForm();
   };
 
-  if (step === "confirm" && selected) {
-    const after = selected.f.balance - amt;
-    return (
-      <div>
-        <div className="rounded-2xl bg-copper-500/[0.07] p-4 ring-1 ring-copper-500/30">
-          <div className="text-[13px] text-muted-foreground">You&apos;re recording</div>
-          <div className="tabular mt-1 text-[32px] font-bold tracking-tight">{gbp(amt)}</div>
-          <div className="mt-1 text-[14px] text-foreground/85">
-            {PAYMENT_TYPE_LABEL[type]} from {selected.job.customerName} · {selected.job.title}
-          </div>
-          <dl className="mt-3 space-y-1.5 text-[13.5px]">
-            <div className="flex justify-between"><dt className="text-muted-foreground">Method</dt><dd>{PAYMENT_METHOD_LABEL[method]}</dd></div>
-            <div className="flex justify-between"><dt className="text-muted-foreground">Received</dt><dd>{formatDateKey(receivedAt)}</dd></div>
-            {reference ? <div className="flex justify-between"><dt className="text-muted-foreground">Reference</dt><dd>{reference}</dd></div> : null}
-            <div className="flex justify-between"><dt className="text-muted-foreground">Balance after</dt><dd className="tabular font-medium">{gbp(after)}</dd></div>
-          </dl>
-        </div>
-        <p className="mt-3 text-[12.5px] text-subtle">This logs money already received. It doesn&apos;t charge the customer.</p>
-        <div className="mt-5 flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={() => setStep("edit")}>
-            <ArrowLeft /> Back
-          </Button>
-          <Button className="flex-1" onClick={confirm}>
-            <Check /> Confirm payment
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={review} noValidate className="space-y-4">
+    <form onSubmit={submit} noValidate className="space-y-4">
+      <FormError errors={errors} />
       <Field label="Job" htmlFor="pf-job" error={errors.jobId}>
-        <NativeSelect id="pf-job" value={jobId} onChange={(e) => setJobId(e.target.value)}>
-          {payable.map(({ job, f }) => (
-            <option key={job.id} value={job.id}>
-              {job.customerName} — {job.title} ({gbp(f.balance)} left)
+        <NativeSelect id="pf-job" value={values.jobId} onChange={set("jobId")} disabled={checking}>
+          {owing.map((j) => (
+            <option key={j.id} value={j.id}>
+              {j.customerName} — {j.title}
             </option>
           ))}
         </NativeSelect>
       </Field>
-      <Field label="Amount received (£)" htmlFor="pf-amount" error={errors.amount}>
-        <Input id="pf-amount" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" aria-invalid={!!errors.amount} autoFocus />
-        {selected ? (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {selected.f.depositOutstanding > 0 ? (
-              <QuickAmount onClick={() => { setAmount(String(selected.f.depositOutstanding)); setType("deposit"); }}>
-                Deposit {gbp(selected.f.depositOutstanding)}
-              </QuickAmount>
-            ) : null}
-            <QuickAmount onClick={() => { setAmount(String(selected.f.balance)); setType(selected.f.depositOutstanding >= selected.f.balance ? "deposit" : "final"); }}>
-              Full balance {gbp(selected.f.balance)}
-            </QuickAmount>
-          </div>
-        ) : null}
-      </Field>
+      {fin ? (
+        <p className="text-[13px] text-muted-foreground">
+          {gbp(fin.balance)} left to pay{fin.depositOutstanding ? ` · deposit outstanding ${gbp(fin.depositOutstanding)}` : ""}
+        </p>
+      ) : null}
       <div className="grid grid-cols-2 gap-4">
+        <Field label="Amount (£)" htmlFor="pf-amt" error={errors.amount}>
+          <Input id="pf-amt" inputMode="decimal" value={values.amount} onChange={set("amount")} aria-invalid={!!errors.amount} disabled={checking} />
+        </Field>
+        <Field label="Received" htmlFor="pf-date" error={errors.receivedAt}>
+          <Input id="pf-date" type="date" value={values.receivedAt} onChange={set("receivedAt")} disabled={checking} />
+        </Field>
         <Field label="Type" htmlFor="pf-type">
-          <NativeSelect id="pf-type" value={type} onChange={(e) => setType(e.target.value as PaymentType)}>
+          <NativeSelect id="pf-type" value={values.type} onChange={set("type")} disabled={checking}>
             {(Object.keys(PAYMENT_TYPE_LABEL) as PaymentType[]).map((t) => (
-              <option key={t} value={t}>{PAYMENT_TYPE_LABEL[t]}</option>
+              <option key={t} value={t}>
+                {PAYMENT_TYPE_LABEL[t]}
+              </option>
             ))}
           </NativeSelect>
         </Field>
         <Field label="Method" htmlFor="pf-method">
-          <NativeSelect id="pf-method" value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
+          <NativeSelect id="pf-method" value={values.method} onChange={set("method")} disabled={checking}>
             {(Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]).map((m) => (
-              <option key={m} value={m}>{PAYMENT_METHOD_LABEL[m]}</option>
+              <option key={m} value={m}>
+                {PAYMENT_METHOD_LABEL[m]}
+              </option>
             ))}
           </NativeSelect>
         </Field>
-        <Field label="Date received" htmlFor="pf-date" error={errors.receivedAt}>
-          <Input id="pf-date" type="date" value={receivedAt} max={todayKey()} onChange={(e) => setReceivedAt(e.target.value)} />
-        </Field>
-        <Field label="Reference (optional)" htmlFor="pf-ref">
-          <Input id="pf-ref" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="e.g. bank ref" />
-        </Field>
+        {openInvoices.length ? (
+          <Field label="Against invoice (optional)" htmlFor="pf-inv" className="col-span-2">
+            <NativeSelect id="pf-inv" value={values.invoiceId} onChange={set("invoiceId")} disabled={checking}>
+              <option value="">Not linked to an invoice</option>
+              {openInvoices.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.number ?? i.draftRef} — {gbp(invoiceBalance(i))} left
+                </option>
+              ))}
+            </NativeSelect>
+          </Field>
+        ) : null}
       </div>
-      <FormActions submitLabel="Review" onCancel={ui.closeForm} />
+      {checking ? (
+        <div className="rounded-2xl bg-copper-500/10 p-3.5 text-[14px] ring-1 ring-copper-500/35">
+          Record <strong>{gbp(parseFloat(values.amount || "0"))}</strong> from {job?.customerName} received {formatDateInline(values.receivedAt)}? Only do this once the money is in
+          your account.
+        </div>
+      ) : null}
+      <FormActions submitLabel={checking ? "Yes, record it" : "Check payment"} onCancel={checking ? () => setChecking(false) : ui.closeForm} busy={f.busy} />
     </form>
   );
 }
 
-function QuickAmount({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="tabular rounded-full bg-copper-500/10 px-3 py-1 text-[12.5px] text-copper-200 ring-1 ring-copper-500/35 hover:bg-copper-500/20"
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ---------------------------------- Reminder ---------------------------------- */
+/* -------------------------------- Reminder -------------------------------- */
 
 function ReminderForm({ prefill }: { prefill: Extract<FormPrefill, { form: "reminder" }> }) {
-  const { data, actions } = useStore();
+  const { actions, data } = useStore();
   const ui = useUI();
-  const [title, setTitle] = React.useState(prefill.title ?? "");
-  const [dueDate, setDueDate] = React.useState(prefill.dueDate ?? addDaysKey(1));
-  const [related, setRelated] = React.useState("");
-  const [errors, setErrors] = React.useState<FieldErrors>({});
-
-  const submit = (e: React.FormEvent) => {
+  const f = useFormState({ title: prefill.title ?? "", dueDate: prefill.dueDate ?? addDaysKey(1), assignedUserId: "" });
+  const { values, errors, set } = f;
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const [relatedType, relatedId] = related ? (related.split(":") as ["job" | "enquiry", string]) : [undefined, undefined];
-    const res = actions.createReminder({ title, dueDate, relatedType, relatedId });
-    if (!res.ok) return setErrors(res.errors);
-    toast(`Reminder set for ${formatDateInline(res.value.dueDate)}`);
+    f.setBusy(true);
+    const res = await actions.createTask({
+      title: values.title,
+      dueDate: values.dueDate,
+      customerId: prefill.customerId,
+      relatedType: prefill.relatedType,
+      relatedId: prefill.relatedId,
+      assignedUserId: values.assignedUserId || undefined,
+    });
+    f.setBusy(false);
+    if (!res.ok) return f.setErrors(res.errors);
+    toast(`Reminder set for ${formatDateInline(values.dueDate)}`);
     ui.closeForm();
   };
-
-  const quick = [
-    ["Today", addDaysKey(0)],
-    ["Tomorrow", addDaysKey(1)],
-    ["In 3 days", addDaysKey(3)],
-    ["Next week", addDaysKey(7)],
-  ] as const;
-
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
-      <Field label="Remind me to…" htmlFor="rf-title" error={errors.title}>
-        <Input id="rf-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Call Dave about the decking" aria-invalid={!!errors.title} autoFocus />
+      <FormError errors={errors} />
+      <Field label="What do you need reminding about?" htmlFor="rf-title" error={errors.title}>
+        <Input id="rf-title" value={values.title} onChange={set("title")} autoFocus aria-invalid={!!errors.title} />
       </Field>
       <Field label="When" htmlFor="rf-date" error={errors.dueDate}>
-        <div className="mb-2 flex flex-wrap gap-1.5">
-          {quick.map(([label, key]) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => setDueDate(key)}
-              aria-pressed={dueDate === key}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-[13px] ring-1",
-                dueDate === key ? "bg-copper-500/18 text-copper-200 ring-copper-500/60" : "bg-white/[0.04] text-muted-foreground ring-white/10",
-              )}
-            >
-              {label}
+        <Input id="rf-date" type="date" value={values.dueDate} onChange={set("dueDate")} />
+        <div className="mt-2 flex gap-1.5">
+          {[
+            ["Today", 0],
+            ["Tomorrow", 1],
+            ["Next week", 7],
+          ].map(([l, d]) => (
+            <button key={l} type="button" onClick={() => f.setValues((s) => ({ ...s, dueDate: addDaysKey(d as number) }))} className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[12px] text-muted-foreground ring-1 ring-white/10 hover:text-foreground">
+              {l}
             </button>
           ))}
         </div>
-        <Input id="rf-date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
       </Field>
-      <Field label="Link to (optional)" htmlFor="rf-rel">
-        <NativeSelect id="rf-rel" value={related} onChange={(e) => setRelated(e.target.value)}>
-          <option value="">Nothing</option>
-          <optgroup label="Jobs">
-            {data.jobs.filter((j) => j.status !== "completed").map((j) => (
-              <option key={j.id} value={`job:${j.id}`}>{j.customerName} — {j.title}</option>
+      {data.members.length > 1 ? (
+        <Field label="For" htmlFor="rf-who">
+          <NativeSelect id="rf-who" value={values.assignedUserId} onChange={set("assignedUserId")}>
+            <option value="">Me</option>
+            {data.members.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
             ))}
-          </optgroup>
-          <optgroup label="Enquiries">
-            {data.enquiries.filter((x) => x.status !== "closed" && x.status !== "won").map((x) => (
-              <option key={x.id} value={`enquiry:${x.id}`}>{x.customerName} — {x.title}</option>
-            ))}
-          </optgroup>
-        </NativeSelect>
-      </Field>
-      <FormActions submitLabel="Set reminder" onCancel={ui.closeForm} />
+          </NativeSelect>
+        </Field>
+      ) : null}
+      <FormActions submitLabel="Set reminder" onCancel={ui.closeForm} busy={f.busy} />
     </form>
   );
 }
 
-/* ---------------------------------- Enquiry ---------------------------------- */
+/* -------------------------------- Enquiry -------------------------------- */
 
 function EnquiryForm() {
   const { actions } = useStore();
   const ui = useUI();
-  const [values, setValues] = React.useState({
-    source: "phone",
-    customerName: "",
-    phone: "",
-    email: "",
-    instagramHandle: "",
-    title: "",
-    location: "",
-    description: "",
-    priority: "medium",
-    followUpDate: "",
-  });
-  const [errors, setErrors] = React.useState<FieldErrors>({});
-  const set = (k: keyof typeof values) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    setValues((s) => ({ ...s, [k]: e.target.value }));
-
-  const submit = (e: React.FormEvent) => {
+  const f = useFormState({ customerName: "", phone: "", email: "", instagramHandle: "", source: "phone", title: "", location: "", description: "", priority: "medium", followUpDate: "" });
+  const { values, errors, set } = f;
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = actions.createEnquiry(values);
-    if (!res.ok) return setErrors(res.errors);
-    toast(`Enquiry logged for ${res.value.customerName}`);
+    f.setBusy(true);
+    const res = await actions.createEnquiry(values);
+    f.setBusy(false);
+    if (!res.ok) return f.setErrors(res.errors);
+    toast(`Enquiry logged for ${values.customerName}`);
     ui.closeForm();
     ui.openEnquiry(res.value.id);
   };
-
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
-      <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Source">
-        {(["phone", "email", "instagram"] as const).map((s) => (
-          <button
-            key={s}
-            type="button"
-            role="radio"
-            aria-checked={values.source === s}
-            onClick={() => setValues((v) => ({ ...v, source: s }))}
-            className={cn(
-              "h-10 rounded-xl text-[13.5px] font-medium capitalize ring-1",
-              values.source === s ? "bg-copper-500/18 text-copper-200 ring-copper-500/60" : "bg-white/[0.04] text-muted-foreground ring-white/10",
-            )}
-          >
-            {s === "instagram" ? "Instagram" : s}
-          </button>
-        ))}
-      </div>
+      <FormError errors={errors} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="Customer name" htmlFor="ef-name" error={errors.customerName} className="sm:col-span-2">
-          <Input id="ef-name" value={values.customerName} onChange={set("customerName")} aria-invalid={!!errors.customerName} autoFocus />
+        <Field label="Name" htmlFor="ef-name" error={errors.customerName} className="sm:col-span-2">
+          <Input id="ef-name" value={values.customerName} onChange={set("customerName")} autoFocus aria-invalid={!!errors.customerName} />
+        </Field>
+        <Field label="How did it come in?" htmlFor="ef-src">
+          <NativeSelect id="ef-src" value={values.source} onChange={set("source")}>
+            {ENQUIRY_SOURCES.map((s) => (
+              <option key={s} value={s}>
+                {SOURCE_LABEL[s]}
+              </option>
+            ))}
+          </NativeSelect>
         </Field>
         <Field label="Phone" htmlFor="ef-phone" error={errors.phone}>
           <Input id="ef-phone" type="tel" value={values.phone} onChange={set("phone")} aria-invalid={!!errors.phone} />
         </Field>
-        {values.source === "instagram" ? (
-          <Field label="Instagram handle" htmlFor="ef-ig">
-            <Input id="ef-ig" value={values.instagramHandle} onChange={set("instagramHandle")} placeholder="@handle" />
-          </Field>
-        ) : (
-          <Field label="Email" htmlFor="ef-email" error={errors.email}>
-            <Input id="ef-email" type="email" value={values.email} onChange={set("email")} aria-invalid={!!errors.email} />
-          </Field>
-        )}
+        <Field label="Email" htmlFor="ef-email" error={errors.email}>
+          <Input id="ef-email" type="email" value={values.email} onChange={set("email")} aria-invalid={!!errors.email} />
+        </Field>
+        <Field label="Instagram" htmlFor="ef-ig">
+          <Input id="ef-ig" value={values.instagramHandle} onChange={set("instagramHandle")} placeholder="@handle" />
+        </Field>
         <Field label="What's the job?" htmlFor="ef-title" error={errors.title}>
           <Input id="ef-title" value={values.title} onChange={set("title")} placeholder="e.g. Fitted wardrobes" aria-invalid={!!errors.title} />
         </Field>
-        <Field label="Location" htmlFor="ef-loc" error={errors.location}>
-          <Input id="ef-loc" value={values.location} onChange={set("location")} placeholder="e.g. Horsham" aria-invalid={!!errors.location} />
+        <Field label="Where?" htmlFor="ef-loc" error={errors.location}>
+          <Input id="ef-loc" value={values.location} onChange={set("location")} aria-invalid={!!errors.location} />
         </Field>
         <Field label="Details" htmlFor="ef-desc" className="sm:col-span-2">
-          <Textarea id="ef-desc" value={values.description} onChange={set("description")} className="min-h-20" />
-        </Field>
-        <Field label="Priority" htmlFor="ef-pri">
-          <NativeSelect id="ef-pri" value={values.priority} onChange={set("priority")}>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </NativeSelect>
-        </Field>
-        <Field label="Follow up on (optional)" htmlFor="ef-fu">
-          <Input id="ef-fu" type="date" value={values.followUpDate} onChange={set("followUpDate")} />
+          <Textarea id="ef-desc" value={values.description} onChange={set("description")} />
         </Field>
       </div>
-      <FormActions submitLabel="Log enquiry" onCancel={ui.closeForm} />
+      <FormActions submitLabel="Log enquiry" onCancel={ui.closeForm} busy={f.busy} />
+    </form>
+  );
+}
+
+/* -------------------------------- Customer -------------------------------- */
+
+function CustomerForm() {
+  const { actions } = useStore();
+  const ui = useUI();
+  const f = useFormState({ name: "", phone: "", email: "", town: "", address: "" });
+  const { values, errors, set } = f;
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    f.setBusy(true);
+    const res = await actions.createCustomer(values);
+    f.setBusy(false);
+    if (!res.ok) return f.setErrors(res.errors);
+    toast(`${values.name} added`);
+    ui.closeForm();
+    ui.openCustomer(res.value.id);
+  };
+  return (
+    <form onSubmit={submit} noValidate className="space-y-4">
+      <FormError errors={errors} />
+      <Field label="Name" htmlFor="cf-name" error={errors.name}>
+        <Input id="cf-name" value={values.name} onChange={set("name")} autoFocus aria-invalid={!!errors.name} />
+      </Field>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Phone" htmlFor="cf-phone" error={errors.phone}>
+          <Input id="cf-phone" type="tel" value={values.phone} onChange={set("phone")} />
+        </Field>
+        <Field label="Email" htmlFor="cf-email" error={errors.email}>
+          <Input id="cf-email" type="email" value={values.email} onChange={set("email")} aria-invalid={!!errors.email} />
+        </Field>
+        <Field label="Town" htmlFor="cf-town">
+          <Input id="cf-town" value={values.town} onChange={set("town")} />
+        </Field>
+        <Field label="Address" htmlFor="cf-addr">
+          <Input id="cf-addr" value={values.address} onChange={set("address")} />
+        </Field>
+      </div>
+      <FormActions submitLabel="Add customer" onCancel={ui.closeForm} busy={f.busy} />
+    </form>
+  );
+}
+
+/* -------------------------------- Invoice -------------------------------- */
+
+function InvoiceForm({ prefill }: { prefill: Extract<FormPrefill, { form: "invoice" }> }) {
+  const { actions, data, org } = useStore();
+  const ui = useUI();
+  const terms = org.finance.defaultPaymentTermsDays;
+  const f = useFormState({
+    customerId: prefill.customerId ?? "",
+    jobId: prefill.jobId ?? "",
+    description: "",
+    amount: prefill.amount ? String(prefill.amount) : "",
+    amountsAre: org.finance.vatRegistered === false ? "no_vat" : "",
+    vatRate: org.finance.vatRate != null ? String(org.finance.vatRate) : "",
+    dueDate: terms ? addDaysKey(terms) : "",
+  });
+  const { values, errors, set } = f;
+  const jobs = data.jobs.filter((j) => j.customerId === values.customerId);
+  const job = data.jobs.find((j) => j.id === values.jobId);
+  React.useEffect(() => {
+    if (job && !values.description) f.setValues((s) => ({ ...s, description: `${job.title}, ${job.location}` }));
+  }, [values.jobId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const amt = parseFloat(values.amount || "0");
+  const preview = values.amountsAre && amt > 0 ? computeInvoiceTotals(amt, values.amountsAre as VatTreatment, values.amountsAre === "no_vat" ? 0 : parseFloat(values.vatRate || "0")) : null;
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    f.setBusy(true);
+    const res = await actions.createInvoiceDraft({
+      customerId: values.customerId,
+      jobId: values.jobId || undefined,
+      description: values.description,
+      amount: values.amount,
+      amountsAre: values.amountsAre || undefined,
+      vatRate: values.amountsAre && values.amountsAre !== "no_vat" && values.vatRate ? values.vatRate : undefined,
+      dueDate: values.dueDate,
+    });
+    f.setBusy(false);
+    if (!res.ok) return f.setErrors(res.errors);
+    toast(`Draft ${res.value.draftRef} saved — not sent`);
+    ui.closeForm();
+  };
+
+  return (
+    <form onSubmit={submit} noValidate className="space-y-4">
+      <FormError errors={errors} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Customer" htmlFor="if-cust" error={errors.customerId}>
+          <NativeSelect id="if-cust" value={values.customerId} onChange={(e) => f.setValues((s) => ({ ...s, customerId: e.target.value, jobId: "" }))}>
+            <option value="">Choose…</option>
+            {data.customers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
+        <Field label="Job (optional)" htmlFor="if-job">
+          <NativeSelect id="if-job" value={values.jobId} onChange={set("jobId")} disabled={!values.customerId}>
+            <option value="">No job</option>
+            {jobs.map((j) => (
+              <option key={j.id} value={j.id}>
+                {j.title}, {j.location}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
+        <Field label="Description" htmlFor="if-desc" error={errors.description} className="sm:col-span-2">
+          <Input id="if-desc" value={values.description} onChange={set("description")} aria-invalid={!!errors.description} />
+        </Field>
+        <Field label="Amount (£)" htmlFor="if-amt" error={errors.amount}>
+          <Input id="if-amt" inputMode="decimal" value={values.amount} onChange={set("amount")} aria-invalid={!!errors.amount} />
+        </Field>
+        <Field label="VAT" htmlFor="if-vat" error={errors.amountsAre} hint={org.finance.vatRegistered === null ? "VAT isn't set up in Settings yet — choose for this invoice." : undefined}>
+          <NativeSelect id="if-vat" value={values.amountsAre} onChange={set("amountsAre")} aria-invalid={!!errors.amountsAre}>
+            <option value="">Choose…</option>
+            {org.finance.vatRegistered !== false ? (
+              <>
+                <option value="exclusive">Amount is before VAT (plus VAT)</option>
+                <option value="inclusive">Amount includes VAT</option>
+              </>
+            ) : null}
+            <option value="no_vat">No VAT</option>
+          </NativeSelect>
+        </Field>
+        {values.amountsAre && values.amountsAre !== "no_vat" && org.finance.vatRate == null ? (
+          <Field label="VAT rate (%)" htmlFor="if-rate" hint="Standard UK rate is 20%.">
+            <Input id="if-rate" inputMode="decimal" value={values.vatRate} onChange={set("vatRate")} />
+          </Field>
+        ) : null}
+        <Field label="Due date" htmlFor="if-due" error={errors.dueDate}>
+          <Input id="if-due" type="date" value={values.dueDate} onChange={set("dueDate")} aria-invalid={!!errors.dueDate} />
+        </Field>
+      </div>
+      {preview ? (
+        <div className="rounded-xl bg-white/[0.03] px-3.5 py-2 ring-1 ring-white/[0.06]">
+          <MoneyRow label="Net" value={gbp(preview.subtotal)} />
+          {preview.vat ? <MoneyRow label={`VAT ${preview.vatRate}%`} value={gbp(preview.vat)} /> : null}
+          <MoneyRow label="Total" value={gbp(preview.total)} strong />
+        </div>
+      ) : null}
+      <FormActions submitLabel="Save draft" onCancel={ui.closeForm} busy={f.busy} />
+    </form>
+  );
+}
+
+/* -------------------------------- Expense -------------------------------- */
+
+function ExpenseForm({ prefill }: { prefill: Extract<FormPrefill, { form: "expense" }> }) {
+  const { actions, data } = useStore();
+  const ui = useUI();
+  const f = useFormState({ jobId: prefill.jobId ?? data.jobs[0]?.id ?? "", amount: "", category: "materials", description: "", incurredOn: todayKey() });
+  const { values, errors, set } = f;
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    f.setBusy(true);
+    const res = await actions.addExpense(values);
+    f.setBusy(false);
+    if (!res.ok) return f.setErrors(res.errors);
+    toast(`${gbp(parseFloat(values.amount))} cost added`);
+    ui.closeForm();
+  };
+  return (
+    <form onSubmit={submit} noValidate className="space-y-4">
+      <FormError errors={errors} />
+      <Field label="Job" htmlFor="xf-job">
+        <NativeSelect id="xf-job" value={values.jobId} onChange={set("jobId")}>
+          {data.jobs.map((j) => (
+            <option key={j.id} value={j.id}>
+              {j.customerName} — {j.title}
+            </option>
+          ))}
+        </NativeSelect>
+      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Amount (£)" htmlFor="xf-amt" error={errors.amount}>
+          <Input id="xf-amt" inputMode="decimal" value={values.amount} onChange={set("amount")} aria-invalid={!!errors.amount} />
+        </Field>
+        <Field label="Type" htmlFor="xf-cat">
+          <NativeSelect id="xf-cat" value={values.category} onChange={set("category")}>
+            {(Object.keys(EXPENSE_CATEGORY_LABEL) as ExpenseCategory[]).map((c) => (
+              <option key={c} value={c}>
+                {EXPENSE_CATEGORY_LABEL[c]}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
+        <Field label="What for?" htmlFor="xf-desc" error={errors.description} className="col-span-2">
+          <Input id="xf-desc" value={values.description} onChange={set("description")} placeholder="e.g. Timber and fixings" aria-invalid={!!errors.description} />
+        </Field>
+        <Field label="Date" htmlFor="xf-date">
+          <Input id="xf-date" type="date" value={values.incurredOn} onChange={set("incurredOn")} />
+        </Field>
+      </div>
+      <FormActions submitLabel="Add cost" onCancel={ui.closeForm} busy={f.busy} />
+    </form>
+  );
+}
+
+/* --------------------------------- Quote --------------------------------- */
+
+function QuoteForm({ prefill }: { prefill: Extract<FormPrefill, { form: "quote" }> }) {
+  const { actions, data } = useStore();
+  const ui = useUI();
+  const enquiry = data.enquiries.find((e) => e.id === prefill.enquiryId);
+  const f = useFormState({ description: enquiry?.title ?? "", amount: "", followUpDate: addDaysKey(7) });
+  const { values, errors, set } = f;
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    f.setBusy(true);
+    const res = await actions.createQuote({ customerId: prefill.customerId, enquiryId: prefill.enquiryId, jobId: prefill.jobId, status: "sent", ...values });
+    f.setBusy(false);
+    if (!res.ok) return f.setErrors(res.errors);
+    toast("Quote recorded — Bob will remind you to chase it");
+    ui.closeForm();
+  };
+  return (
+    <form onSubmit={submit} noValidate className="space-y-4">
+      <FormError errors={errors} />
+      <Field label="What's it for?" htmlFor="qf-desc" error={errors.description}>
+        <Input id="qf-desc" value={values.description} onChange={set("description")} />
+      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Amount (£)" htmlFor="qf-amt" error={errors.amount}>
+          <Input id="qf-amt" inputMode="decimal" value={values.amount} onChange={set("amount")} aria-invalid={!!errors.amount} />
+        </Field>
+        <Field label="Chase on" htmlFor="qf-fu">
+          <Input id="qf-fu" type="date" value={values.followUpDate} onChange={set("followUpDate")} />
+        </Field>
+      </div>
+      <FormActions submitLabel="Record quote" onCancel={ui.closeForm} busy={f.busy} />
     </form>
   );
 }

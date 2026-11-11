@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Ninety3 Assistant",
-    short_name: "Ninety3",
-    description: "Jobs, enquiries and payments for Ninety3.",
+    name: "Bob — admin assistant",
+    short_name: "Bob",
+    description: "You do the work. Bob does the admin.",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",

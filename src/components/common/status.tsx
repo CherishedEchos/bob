@@ -1,4 +1,4 @@
-import { Mail, Phone, Flame } from "lucide-react";
+import { Mail, Phone, Flame, Globe, PenLine } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import {
   ENQUIRY_STATUS_LABEL,
@@ -13,10 +13,10 @@ const ENQUIRY_TONE: Record<EnquiryStatus, BadgeTone> = {
   new: "copper",
   awaiting_reply: "amber",
   replied: "blue",
-  site_visit: "violet",
+  quote_required: "violet",
   quoted: "neutral",
   won: "green",
-  closed: "neutral",
+  lost: "neutral",
 };
 
 const JOB_TONE: Record<JobStatus, BadgeTone> = {
@@ -26,6 +26,7 @@ const JOB_TONE: Record<JobStatus, BadgeTone> = {
   in_progress: "green",
   snagging: "violet",
   completed: "neutral",
+  lost: "neutral",
 };
 
 export function EnquiryStatusBadge({ status, className }: { status: EnquiryStatus; className?: string }) {
@@ -63,7 +64,7 @@ export function InstagramGlyph({ className }: { className?: string }) {
   );
 }
 
-const SOURCE_ICON = { email: Mail, instagram: InstagramGlyph, phone: Phone } as const;
+const SOURCE_ICON = { email: Mail, instagram: InstagramGlyph, phone: Phone, website: Globe, manual: PenLine } as const;
 
 export function SourceIcon({ source, className }: { source: EnquirySource; className?: string }) {
   const Icon = SOURCE_ICON[source];
@@ -75,6 +76,8 @@ export function SourceIcon({ source, className }: { source: EnquirySource; class
         source === "email" && "bg-sky-400/10 text-sky-300 ring-sky-400/20",
         source === "instagram" && "bg-pink-400/10 text-pink-300 ring-pink-400/20",
         source === "phone" && "bg-emerald-400/10 text-emerald-300 ring-emerald-400/20",
+        source === "website" && "bg-violet-400/10 text-violet-300 ring-violet-400/20",
+        source === "manual" && "bg-white/[0.05] text-muted-foreground ring-white/10",
         className,
       )}
     >
