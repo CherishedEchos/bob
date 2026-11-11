@@ -1,19 +1,10 @@
 /**
- * Pure, derived business logic. No React, no storage — safe to reuse on the
- * server (API routes, assistant tools) once a real database is connected.
+ * Pure, deterministic business logic shared by the server (reports, Bob tools)
+ * and the dashboard. No storage, no React, no AI.
  */
 import type {
-  AppData,
-  Enquiry,
-  EnquirySource,
-  EnquiryStatus,
-  Job,
-  JobStatus,
-  Payment,
-  PaymentMethod,
-  PaymentType,
-  Priority,
-  Reminder,
+  Enquiry, EnquirySource, EnquiryStatus, Expense, ExpenseCategory, Invoice, Job, JobStatus, Payment, PaymentMethod,
+  PaymentType, Priority, Quote, Snapshot, Task,
 } from "@/lib/types";
 import { daysFromToday, hoursSince, todayKey } from "@/lib/utils";
 
@@ -23,34 +14,34 @@ export const ENQUIRY_STATUS_LABEL: Record<EnquiryStatus, string> = {
   new: "New",
   awaiting_reply: "Awaiting reply",
   replied: "Replied",
-  site_visit: "Site visit",
+  quote_required: "Quote required",
   quoted: "Quoted",
   won: "Won",
-  closed: "Closed",
+  lost: "Lost",
 };
 export const ENQUIRY_STATUSES = Object.keys(ENQUIRY_STATUS_LABEL) as EnquiryStatus[];
 
 export const JOB_STATUS_LABEL: Record<JobStatus, string> = {
   quoted: "Quoted",
   awaiting_deposit: "Awaiting deposit",
-  scheduled: "Scheduled",
+  scheduled: "Booked in",
   in_progress: "In progress",
   snagging: "Snagging",
   completed: "Completed",
+  lost: "Lost",
 };
 export const JOB_STATUSES = Object.keys(JOB_STATUS_LABEL) as JobStatus[];
 
 export const SOURCE_LABEL: Record<EnquirySource, string> = {
   email: "Email",
+  website: "Website",
   instagram: "Instagram",
   phone: "Phone",
+  manual: "Added manually",
 };
+export const ENQUIRY_SOURCES = Object.keys(SOURCE_LABEL) as EnquirySource[];
 
-export const PRIORITY_LABEL: Record<Priority, string> = {
-  high: "High",
-  medium: "Medium",
-  low: "Low",
-};
+export const PRIORITY_LABEL: Record<Priority, string> = { high: "High", medium: "Medium", low: "Low" };
 
 export const PAYMENT_TYPE_LABEL: Record<PaymentType, string> = {
   deposit: "Deposit",
@@ -65,32 +56,54 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   cheque: "Cheque",
 };
 
+export const EXPENSE_CATEGORY_LABEL: Record<ExpenseCategory, string> = {
+  materials: "Materials",
+  labour: "Labour",
+  plant_hire: "Plant hire",
+  subcontractor: "Subcontractor",
+  waste: "Skips & waste",
+  other: "Other",
+};
+
+export const QUOTE_STATUS_LABEL: Record<Quote["status"], string> = {
+  draft: "Draft",
+  sent: "Sent",
+  accepted: "Accepted",
+  declined: "Declined",
+};
+
 /* ----------------------------- Enquiries ----------------------------- */
 
 export function needsReply(e: Enquiry): boolean {
   return e.status === "new" || e.status === "awaiting_reply";
 }
 
+export const isOpenEnquiry = (e: Enquiry) => e.status !== "won" && e.status !== "lost";
+
 export function followUpDue(e: Enquiry): boolean {
-  return (
-    !!e.followUpDate &&
-    daysFromToday(e.followUpDate) <= 0 &&
-    e.status !== "won" &&
-    e.status !== "closed"
-  );
+  return !!e.followUpDate && daysFromToday(e.followUpDate) <= 0 && isOpenEnquiry(e);
 }
 
 const PRIORITY_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
 export function sortEnquiries(list: Enquiry[]): Enquiry[] {
   return [...list].sort((a, b) => {
-    const ra = needsReply(a) ? 0 : followUpDue(a) ? 1 : 2;
-    const rb = needsReply(b) ? 0 : followUpDue(b) ? 1 : 2;
+    const ra = needsReply(a) ? 0 : followUpDue(a) ? 1 : isOpenEnquiry(a) ? 2 : 3;
+    const rb = needsReply(b) ? 0 : followUpDue(b) ? 1 : isOpenEnquiry(b) ? 2 : 3;
     if (ra !== rb) return ra - rb;
-    if (PRIORITY_RANK[a.priority] !== PRIORITY_RANK[b.priority])
+    if (ra < 2 && PRIORITY_RANK[a.priority] !== PRIORITY_RANK[b.priority])
       return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
     return new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime();
   });
+}
+
+/* ----------------------------- Quotes ----------------------------- */
+
+/** Sent quotes with no answer whose follow-up date has arrived (or 7+ days with none set). */
+export function quoteNeedsFollowUp(q: Quote): boolean {
+  if (q.status !== "sent") return false;
+  if (q.followUpDate) return daysFromToday(q.followUpDate) <= 0;
+  return !!q.sentAt && hoursSince(q.sentAt) >= 7 * 24;
 }
 
 /* ----------------------------- Jobs & money ----------------------------- */
@@ -103,21 +116,20 @@ export interface JobFinance {
   paidPercent: number;
   depositOverdue: boolean;
   depositDaysUntilDue: number | null;
+  expenses: number;
+  invoiced: number;
 }
 
 export function paymentsForJob(payments: Payment[], jobId: string): Payment[] {
-  return payments
-    .filter((p) => p.jobId === jobId)
-    .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
+  return payments.filter((p) => p.jobId === jobId).sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
 }
 
-export function jobFinance(job: Job, payments: Payment[]): JobFinance {
+export function jobFinance(job: Job, payments: Payment[], expenses: Expense[] = [], invoices: Invoice[] = []): JobFinance {
   const mine = payments.filter((p) => p.jobId === job.id);
   const depositPaid = mine.filter((p) => p.type === "deposit").reduce((s, p) => s + p.amount, 0);
   const totalPaid = mine.reduce((s, p) => s + p.amount, 0);
-  // Any money received counts towards the deposit (customers don't always label payments).
   const depositOutstanding = Math.max(0, job.depositRequired - Math.max(depositPaid, totalPaid));
-  const balance = Math.max(0, job.quotedValue - totalPaid);
+  const balance = Math.max(0, round2(job.quotedValue - totalPaid));
   const paidPercent = job.quotedValue > 0 ? Math.min(100, Math.round((totalPaid / job.quotedValue) * 100)) : 0;
   const depositDaysUntilDue = job.depositDueDate ? daysFromToday(job.depositDueDate) : null;
   return {
@@ -128,71 +140,90 @@ export function jobFinance(job: Job, payments: Payment[]): JobFinance {
     paidPercent,
     depositOverdue: depositOutstanding > 0 && depositDaysUntilDue !== null && depositDaysUntilDue < 0,
     depositDaysUntilDue,
+    expenses: expenses.filter((e) => e.jobId === job.id).reduce((s, e) => s + e.amount, 0),
+    invoiced: invoices
+      .filter((i) => i.jobId === job.id && i.status !== "void" && i.status !== "draft")
+      .reduce((s, i) => s + i.subtotal, 0),
   };
 }
 
-export const isActiveJob = (j: Job) => j.status !== "completed";
+export const isActiveJob = (j: Job) => j.status !== "completed" && j.status !== "lost";
 
-export function jobsAwaitingDeposit(data: AppData) {
+export function jobsAwaitingDeposit(data: Pick<Snapshot, "jobs" | "payments">) {
   return data.jobs
-    .filter(isActiveJob)
+    .filter((j) => isActiveJob(j) && j.status !== "quoted")
     .map((job) => ({ job, finance: jobFinance(job, data.payments) }))
     .filter(({ finance }) => finance.depositOutstanding > 0)
     .sort((a, b) => (a.finance.depositDaysUntilDue ?? 99) - (b.finance.depositDaysUntilDue ?? 99));
 }
 
-/** Jobs with deposit covered but money still owed (stage/final). */
-export function jobsWithBalance(data: AppData) {
-  return data.jobs
-    .map((job) => ({ job, finance: jobFinance(job, data.payments) }))
-    .filter(({ finance }) => finance.depositOutstanding === 0 && finance.balance > 0)
-    .sort((a, b) => b.finance.balance - a.finance.balance);
+/* ----------------------------- Invoices ----------------------------- */
+
+export function round2(n: number) {
+  return Math.round(n * 100) / 100;
 }
 
-/* ----------------------------- Reminders ----------------------------- */
-
-export function remindersDue(reminders: Reminder[]): Reminder[] {
-  return reminders
-    .filter((r) => !r.done && daysFromToday(r.dueDate) <= 0)
-    .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+export function invoiceBalance(i: Invoice): number {
+  return Math.max(0, round2(i.total - i.amountPaid));
 }
 
-/* ----------------------------- Overview ----------------------------- */
-
-export interface OverviewStats {
-  newEnquiries: number;
-  unanswered: number;
-  activeJobs: number;
-  depositsDueCount: number;
-  depositsDueTotal: number;
-  outstandingTotal: number;
-  remindersDue: number;
+export function isInvoiceOutstanding(i: Invoice): boolean {
+  return i.status === "sent" && invoiceBalance(i) > 0;
 }
 
-export function overviewStats(data: AppData): OverviewStats {
-  const deposits = jobsAwaitingDeposit(data);
-  return {
-    newEnquiries: data.enquiries.filter((e) => e.status === "new").length,
-    unanswered: data.enquiries.filter(needsReply).length,
-    activeJobs: data.jobs.filter(isActiveJob).length,
-    depositsDueCount: deposits.length,
-    depositsDueTotal: deposits.reduce((s, d) => s + d.finance.depositOutstanding, 0),
-    outstandingTotal: data.jobs
-      .filter((j) => j.status !== "quoted")
-      .reduce((s, j) => s + jobFinance(j, data.payments).balance, 0),
-    remindersDue: remindersDue(data.reminders).length,
-  };
+export function isInvoiceOverdue(i: Invoice): boolean {
+  return isInvoiceOutstanding(i) && !!i.dueDate && daysFromToday(i.dueDate) < 0;
 }
+
+export function invoiceStatusLabel(i: Invoice): string {
+  if (i.status === "draft") return "Draft";
+  if (i.status === "void") return "Void";
+  if (i.status === "paid" || invoiceBalance(i) === 0) return "Paid";
+  if (isInvoiceOverdue(i)) return "Overdue";
+  if (i.amountPaid > 0) return "Part paid";
+  return "Sent";
+}
+
+/** Work out subtotal / VAT / total from what the user said. Never guesses the treatment. */
+export function computeInvoiceTotals(amount: number, amountsAre: Invoice["amountsAre"], vatRate: number) {
+  if (amountsAre === "no_vat" || vatRate === 0) return { subtotal: round2(amount), vat: 0, total: round2(amount), vatRate: 0 };
+  if (amountsAre === "exclusive") {
+    const vat = round2((amount * vatRate) / 100);
+    return { subtotal: round2(amount), vat, total: round2(amount + vat), vatRate };
+  }
+  const subtotal = round2(amount / (1 + vatRate / 100));
+  return { subtotal, vat: round2(amount - subtotal), total: round2(amount), vatRate };
+}
+
+/* ----------------------------- Tasks ----------------------------- */
+
+export function tasksDue(tasks: Task[]): Task[] {
+  return tasks.filter((r) => !r.done && daysFromToday(r.dueDate) <= 0).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+}
+
+/* ----------------------------- Priorities ----------------------------- */
 
 export type PriorityItem =
   | { kind: "reply"; id: string; title: string; detail: string; urgency: number; enquiryId: string }
   | { kind: "followup"; id: string; title: string; detail: string; urgency: number; enquiryId: string }
+  | { kind: "quote"; id: string; title: string; detail: string; urgency: number; quoteId: string; enquiryId?: string }
   | { kind: "deposit"; id: string; title: string; detail: string; urgency: number; jobId: string }
-  | { kind: "reminder"; id: string; title: string; detail: string; urgency: number; reminderId: string };
+  | { kind: "invoice"; id: string; title: string; detail: string; urgency: number; invoiceId: string }
+  | { kind: "task"; id: string; title: string; detail: string; urgency: number; taskId: string };
 
-/** "What needs my attention today?" — ordered, deduplicated list. */
-export function todaysPriorities(data: AppData): PriorityItem[] {
+const gbp0 = (n: number) => `£${Math.round(n).toLocaleString("en-GB")}`;
+
+/**
+ * "What needs sorting today?" — proactive suggestions computed from records:
+ * unanswered enquiries, overdue follow-ups, quotes awaiting responses, tasks
+ * due, overdue deposits and invoices (by recorded due dates).
+ */
+export function todaysPriorities(
+  data: Pick<Snapshot, "enquiries" | "jobs" | "payments" | "tasks" | "invoices" | "quotes" | "customers">,
+  opts: { includeFinance: boolean } = { includeFinance: true },
+): PriorityItem[] {
   const items: PriorityItem[] = [];
+  const customerName = (id?: string) => data.customers.find((c) => c.id === id)?.name ?? "a customer";
 
   for (const e of data.enquiries.filter(needsReply)) {
     const hrs = hoursSince(e.receivedAt);
@@ -218,28 +249,52 @@ export function todaysPriorities(data: AppData): PriorityItem[] {
     });
   }
 
-  for (const { job, finance } of jobsAwaitingDeposit(data)) {
-    if (finance.depositDaysUntilDue === null || finance.depositDaysUntilDue > 3) continue;
+  const followEnquiryIds = new Set(items.map((i) => ("enquiryId" in i ? i.enquiryId : "")));
+  for (const q of data.quotes.filter(quoteNeedsFollowUp)) {
+    if (q.enquiryId && followEnquiryIds.has(q.enquiryId)) continue;
     items.push({
-      kind: "deposit",
-      id: `dep_${job.id}`,
-      title: finance.depositOverdue
-        ? `${job.customerName}'s deposit is overdue`
-        : `${job.customerName}'s deposit is due soon`,
-      detail: `£${finance.depositOutstanding.toLocaleString("en-GB")} · ${job.title}`,
-      urgency: finance.depositOverdue ? 3 : 15,
-      jobId: job.id,
+      kind: "quote",
+      id: `quote_${q.id}`,
+      title: `Chase ${customerName(q.customerId)} about their quote`,
+      detail: `${q.description}${opts.includeFinance ? ` · ${gbp0(q.amount)}` : ""} · sent ${Math.round(hoursSince(q.sentAt!) / 24)}d ago`,
+      urgency: 14,
+      quoteId: q.id,
+      enquiryId: q.enquiryId,
     });
   }
 
-  for (const r of remindersDue(data.reminders)) {
+  if (opts.includeFinance) {
+    for (const { job, finance } of jobsAwaitingDeposit(data)) {
+      if (finance.depositDaysUntilDue === null || finance.depositDaysUntilDue > 3) continue;
+      items.push({
+        kind: "deposit",
+        id: `dep_${job.id}`,
+        title: finance.depositOverdue ? `${job.customerName}'s deposit is overdue` : `${job.customerName}'s deposit is due soon`,
+        detail: `${gbp0(finance.depositOutstanding)} · ${job.title}`,
+        urgency: finance.depositOverdue ? 3 : 15,
+        jobId: job.id,
+      });
+    }
+    for (const inv of data.invoices.filter(isInvoiceOverdue)) {
+      items.push({
+        kind: "invoice",
+        id: `inv_${inv.id}`,
+        title: `${customerName(inv.customerId)}'s invoice is overdue`,
+        detail: `${gbp0(invoiceBalance(inv))} · due ${Math.abs(daysFromToday(inv.dueDate!))}d ago`,
+        urgency: 4,
+        invoiceId: inv.id,
+      });
+    }
+  }
+
+  for (const r of tasksDue(data.tasks)) {
     items.push({
-      kind: "reminder",
-      id: `rem_${r.id}`,
+      kind: "task",
+      id: `task_${r.id}`,
       title: r.title,
       detail: r.dueDate === todayKey() ? "Due today" : "Overdue",
       urgency: r.dueDate === todayKey() ? 6 : 2,
-      reminderId: r.id,
+      taskId: r.id,
     });
   }
 
@@ -248,17 +303,28 @@ export function todaysPriorities(data: AppData): PriorityItem[] {
 
 /* ----------------------------- Lookups ----------------------------- */
 
-function normalise(s: string) {
+export function normaliseText(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9\s&]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-/** Fuzzy-ish customer name match: "Sarah" matches "Sarah Mitchell", "Patel" matches "The Patels". */
+/** "Sarah" matches "Sarah Mitchell"; "Patel" matches "The Patels"; "Smith" matches "Mark Smith". */
 export function nameMatches(customerName: string, query: string): boolean {
-  const name = normalise(customerName);
-  const q = normalise(query).replace(/^the /, "");
+  const name = normaliseText(customerName);
+  const q = normaliseText(query).replace(/^the /, "");
   if (!q) return false;
   if (name.includes(q)) return true;
-  const qSingular = q.replace(/s$/, "");
   const parts = name.split(" ").map((p) => p.replace(/s$/, ""));
-  return q.split(" ").every((w) => parts.includes(w.replace(/s$/, ""))) || parts.includes(qSingular);
+  return q.split(" ").every((w) => parts.includes(w.replace(/s$/, "")));
+}
+
+export function inferJobKind(text: string): Job["kind"] {
+  const t = text.toLowerCase();
+  if (/kitchen/.test(t)) return "kitchen";
+  if (/loft|dormer/.test(t)) return "loft";
+  if (/wardrobe|alcove|cupboard|storage/.test(t)) return "wardrobes";
+  if (/extension|garage/.test(t)) return "extension";
+  if (/deck/.test(t)) return "decking";
+  if (/stair|banister|balustrade/.test(t)) return "staircase";
+  if (/bathroom|shower|en-?suite/.test(t)) return "bathroom";
+  return "general";
 }
