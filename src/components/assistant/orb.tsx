@@ -1,3 +1,4 @@
+import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export type OrbState = "idle" | "listening" | "thinking";
@@ -12,11 +13,81 @@ const RIBBONS = [
 
 const BARS = [0.35, 0.6, 0.85, 1, 0.75, 0.5, 0.3];
 
-/**
- * The assistant's visual centrepiece: interlocking glowing copper ribbons
- * around a dark core with a live waveform. Pure CSS — cheap on mobile.
- */
-export function Orb({ state = "idle", size = 240, className }: { state?: OrbState; size?: number; className?: string }) {
+// "Soft" look (Ask Bob home): three broad, rounded-triangle petals with a
+// translucent amber fill and a soft glowing edge, slowly turning.
+function petal(R: number, k: number, steps = 96): string {
+  const pts: string[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = (i / steps) * Math.PI * 2;
+    const r = R * (1 + k * Math.cos(3 * t));
+    pts.push(`${(100 + r * Math.cos(t - Math.PI / 2)).toFixed(2)},${(100 + r * Math.sin(t - Math.PI / 2)).toFixed(2)}`);
+  }
+  return `M${pts.join("L")}Z`;
+}
+const PETALS = [
+  { d: petal(72, 0.17), rot: 0, dur: 40 },
+  { d: petal(70, 0.19), rot: 40, dur: 52 },
+  { d: petal(68, 0.16), rot: 80, dur: 64 },
+];
+
+/** Soft amber rings (Ask Bob home). Same states as the classic orb. */
+function SoftOrb({ state, size, className }: { state: OrbState; size: number; className?: string }) {
+  const speed = state === "listening" ? 0.3 : state === "thinking" ? 0.55 : 1;
+  const id = React.useId().replace(/:/g, "");
+  return (
+    <div
+      className={cn("relative isolate select-none", className)}
+      style={{ width: size, height: size }}
+      role="img"
+      aria-label={state === "listening" ? "Assistant is listening" : state === "thinking" ? "Assistant is thinking" : "Assistant ready"}
+    >
+      <div
+        className={cn("absolute -inset-[14%] -z-10 rounded-full blur-2xl transition-opacity duration-500", state === "listening" ? "opacity-100" : "opacity-60")}
+        style={{ background: "radial-gradient(circle, rgb(255 140 50 / 0.30), rgb(236 122 46 / 0.08) 50%, transparent 70%)" }}
+      />
+      <svg viewBox="0 0 200 200" className={cn("absolute inset-0 size-full overflow-visible transition-transform duration-700", state === "listening" && "scale-[1.05]")} aria-hidden>
+        <defs>
+          <radialGradient id={`f${id}`} cx="50%" cy="50%" r="50%">
+            <stop offset="45%" stopColor="#ff8c32" stopOpacity="0" />
+            <stop offset="100%" stopColor="#ff8c32" stopOpacity="0.3" />
+          </radialGradient>
+          <filter id={`g${id}`} x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="3.2" />
+          </filter>
+        </defs>
+        {PETALS.map((p, i) => (
+          <g key={i} transform={`rotate(${p.rot} 100 100)`}>
+            <g className={i % 2 ? "animate-orb-b" : "animate-orb-a"} style={{ transformOrigin: "100px 100px", animationDuration: `${p.dur * speed}s` }}>
+              <path d={p.d} fill={`url(#f${id})`} style={{ mixBlendMode: "screen" }} />
+              <path d={p.d} fill="none" stroke="#ff7a1a" strokeWidth="5" opacity="0.75" filter={`url(#g${id})`} />
+              <path d={p.d} fill="none" stroke="#ffcf9e" strokeWidth="1.4" opacity="0.95" />
+            </g>
+          </g>
+        ))}
+      </svg>
+      <div className="absolute inset-[31%] grid place-items-center rounded-full" style={{ background: "radial-gradient(circle, #140b06 50%, rgb(20 11 6 / 0) 100%)" }}>
+        <div className="flex h-[44%] items-center gap-[7%]" style={{ width: "62%" }}>
+          {BARS.map((h, i) => (
+            <span
+              key={i}
+              className={cn("flex-1 origin-center rounded-full bg-[#ff9a45]", state !== "idle" ? "animate-wave" : "")}
+              style={{
+                height: `${h * 100}%`,
+                animationDelay: `${i * 0.09}s`,
+                animationDuration: state === "listening" ? "0.7s" : "1.2s",
+                transform: state === "idle" ? `scaleY(${0.55 + h * 0.4})` : undefined,
+                boxShadow: "0 0 6px rgb(255 140 50 / 0.6)",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Orb({ state = "idle", size = 240, className, tone = "classic" }: { state?: OrbState; size?: number; className?: string; tone?: "classic" | "soft" }) {
+  if (tone === "soft") return <SoftOrb state={state} size={size} className={className} />;
   const speed = state === "listening" ? 0.35 : state === "thinking" ? 0.6 : 1;
   return (
     <div

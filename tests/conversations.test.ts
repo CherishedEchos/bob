@@ -192,3 +192,19 @@ describe("Other voice commands from the brief", () => {
     expect(c.text).toContain("Nadia Hussain");
   });
 });
+
+describe("Ask Bob shortcuts", () => {
+  it("'What needs my attention today?' gives the day's summary", async () => {
+    const c = await new Chat(ctxFor(N93_OWNER)).say("What needs my attention today?");
+    expect(c.text).toMatch(/waiting for a reply/);
+  });
+
+  it("'Follow up on enquiries' lists who needs chasing, from the same priorities as Today", async () => {
+    const ctx = ctxFor(N93_OWNER);
+    const due = Rep.todaySummary(ctx).priorities.filter((p) => p.kind === "followup" || p.kind === "quote");
+    const c = await new Chat(ctx).say("Follow up on enquiries");
+    expect(due.length).toBeGreaterThan(0);
+    expect(c.text).toContain(`${due.length} enquiries need following up`);
+    expect(c.text).toContain(due[0].who);
+  });
+});

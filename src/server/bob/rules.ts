@@ -300,6 +300,7 @@ async function route(t: Turn, text: string, lower: string) {
   if (/\bhow many\b.*\benquir/.test(lower) || /\benquir\w*\b.*\b(last|this|past)\b.*\b(month|week|days)\b/.test(lower)) return enquiryStats(t, text);
   if (/\b(any|got any|have i (got|had) any) new (enquir|leads?|messages)/.test(lower) || /\bnew enquiries\b/.test(lower)) return listEnquiries(t, "new");
   if (/\b(who|which) (haven'?t i|have i not|do i need to|still need to) (replied|reply|respond|got back)|\bunanswered\b|\bwaiting (on|for) (a |my )?repl|\b(who|which|what|anyone|anybody)\b.*\bneeds? (a |my )?(reply|replies|response|answer)|\bneeds? (a |my )?repl(y|ies)\b.*\?$/.test(lower)) return listEnquiries(t, "needs_reply");
+  if (/^follow[- ]?up on (my )?enquir|\b(which|what) enquir\w*\b.*\b(follow|chas)|\b(who|what) (needs?|do i need to) (follow(ing)?[- ]?up|chas)|\bfollow[- ]?ups?\b.*\b(due|today)\b/.test(lower)) return followUps(t);
   if (/\bwhich quotes?\b.*\b(follow|chase)|\bquotes?\b.*\bneed(s)? (following|chasing)|\bchase\b.*\bquotes\b/.test(lower)) return quotesToChase(t);
   if (/\bhow many quotes\b|\bhow much (work )?(have i|did i|i've) quoted\b|\bquoted\b.*\b(this|last) (month|week)\b|\bvalue of (my )?quotes\b/.test(lower)) return quoteStatsReply(t, text);
   if (/\bhow many jobs\b.*\b(won|win)\b|\bjobs (have i|did i) won\b|\bhow many (jobs )?(have i|did i) win\b/.test(lower)) return jobsWon(t, text);
@@ -436,6 +437,24 @@ function listEnquiries(t: Turn, filter: "new" | "needs_reply" | "open") {
         : `${plural(list.length, "open enquiry", "open enquiries")}.`;
   t.state.focus = { ...t.state.focus, enquiryId: first.id };
   say(t, lead, { cards: r.cards, chips: [{ kind: "send", label: `Draft a reply to ${firstName(first.customerName)}`, text: `Draft a reply to ${first.customerName}` }] });
+}
+
+/** Enquiries with a follow-up due and quotes waiting on an answer — from the same list as Today. */
+function followUps(t: Turn) {
+  const r = runReadTool(t.ctx, "get_todays_summary", {});
+  const s = r.data as Rep.TodaySummary;
+  const due = s.priorities.filter((p) => p.kind === "followup" || p.kind === "quote") as Extract<Rep.TodaySummary["priorities"][number], { kind: "followup" | "quote" }>[];
+  if (!due.length) {
+    say(t, "Nothing needs following up today. Nobody's waiting on a chase and no quotes are due a nudge.");
+    return;
+  }
+  const names = due.map((p) => p.who);
+  const ids = due.map((p) => p.enquiryId).filter(Boolean) as string[];
+  const first = due[0];
+  say(t, `${plural(due.length, "enquiry needs", "enquiries need")} following up: ${listNames(names, 4)}.`, {
+    cards: ids.length ? [{ type: "enquiries", ids }] : undefined,
+    chips: [{ kind: "send", label: `Draft a follow-up to ${firstName(first.who)}`, text: `Draft a follow-up to ${first.who}` }],
+  });
 }
 
 function quotesToChase(t: Turn) {

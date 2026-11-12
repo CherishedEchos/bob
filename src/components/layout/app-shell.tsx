@@ -51,16 +51,37 @@ const isAssistantRoute = (p: string) => p === "/" || p === "/assistant";
 function ShellLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const assistant = isAssistantRoute(pathname);
+  const shellRef = React.useRef<HTMLDivElement>(null);
+  // Follow the *visible* viewport so bottom controls sit above the iOS
+  // keyboard and Safari's toolbar instead of behind them.
+  React.useEffect(() => {
+    const vv = window.visualViewport;
+    const el = shellRef.current;
+    if (!vv || !el) return;
+    const sync = () => {
+      el.style.height = `${vv.height}px`;
+      el.style.transform = vv.offsetTop ? `translateY(${vv.offsetTop}px)` : "";
+    };
+    sync();
+    vv.addEventListener("resize", sync);
+    vv.addEventListener("scroll", sync);
+    return () => {
+      vv.removeEventListener("resize", sync);
+      vv.removeEventListener("scroll", sync);
+    };
+  }, []);
   return (
-    <div className="fixed inset-0 flex overflow-hidden bg-background">
+    <div ref={shellRef} className="fixed inset-x-0 top-0 flex h-dvh overflow-hidden bg-background">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        {pathname !== "/today" ? <DemoBanner /> : null}
+        {/* Today and Ask Bob show demo mode in their own headers. */}
+        {pathname !== "/today" && !assistant ? <DemoBanner /> : null}
         {!assistant ? <MobileHeader /> : null}
         <main className={cn("min-h-0 flex-1 overscroll-contain", assistant ? "overflow-hidden" : "overflow-y-auto bg-app")}>
           {assistant ? children : <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-4 lg:px-10 lg:pb-10 lg:pt-8">{children}</div>}
         </main>
-        <BottomNav />
+        {/* Ask Bob has its own back button and bottom controls. */}
+        {!assistant ? <BottomNav /> : null}
       </div>
       {!assistant && pathname !== "/today" ? <AskBobButton /> : null}
     </div>

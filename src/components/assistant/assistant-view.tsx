@@ -3,18 +3,19 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AudioLines, Bell, Loader2, Mic, MoreHorizontal, Pencil, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
+import { AudioLines, CalendarDays, ChevronLeft, FileText, Keyboard, Loader2, MessageCircle, Mic, MoreHorizontal, Pencil, Phone, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
+import { flushSync } from "react-dom";
 import { useBob } from "@/lib/bob/provider";
 import type { BobMessage, Chip } from "@/lib/bob/types";
 import { stopSpeaking } from "@/lib/voice/speech-output";
 import { useVoiceComposer, type ComposerPhase } from "@/lib/voice/use-voice-composer";
-import { ComposerStatus, ReadAloudButton } from "./voice-bits";
+import { ComposerStatus, ReadAloudButton, SpeakRepliesToggle } from "./voice-bits";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
-import { tasksDue, todaysPriorities } from "@/lib/derive";
+import { todaysPriorities } from "@/lib/derive";
 import { cn, firstName } from "@/lib/utils";
 import { PriorityCard } from "@/components/common/priority-card";
-import { BobWordmark, OrgLogo } from "@/components/brand/logo";
+import { BobLogo, BobWordmark, OrgLogo } from "@/components/brand/logo";
 import { Orb, OrbAvatar, type OrbState } from "./orb";
 import { ActionCard, AssistantCard } from "./assistant-cards";
 
@@ -38,7 +39,6 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
   const { speech, draft, setDraft, phase } = c;
   const inConversation = !home && messages.length > 0;
   const orbState: OrbState = speech.listening ? "listening" : thinking || phase === "sending" ? "thinking" : "idle";
-  const dueCount = tasksDue(data.tasks).length;
   const priorities = React.useMemo(() => todaysPriorities(data, { includeFinance: can("finance.read") }), [data, can]);
   const name = /^(owner|office|site team)$/i.test(user.name) ? "" : `, ${firstName(user.name)}`;
 
@@ -87,6 +87,13 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
   const lastAssistantId = [...messages].reverse().find((m) => m.role === "assistant")?.id;
   const lastUserId = [...messages].reverse().find((m) => m.role === "user")?.id;
 
+  const shortcuts: Shortcut[] = [
+    { label: "What needs my attention today?", icon: MessageCircle, run: () => ask("What needs my attention today?") },
+    ...(can("jobs.write") ? [{ label: "Add a new job", icon: CalendarDays, run: () => ui.openForm({ form: "job" }) }] : []),
+    ...(can("payments.record") ? [{ label: "Record a payment", icon: FileText, run: () => ui.openForm({ form: "payment" }) }] : []),
+    { label: "Follow up on enquiries", icon: Phone, run: () => ask("Follow up on enquiries") },
+  ];
+
   const suggestions = [
     "What needs sorting today?",
     "How many enquiries have I had in the last month?",
@@ -99,25 +106,64 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
   return (
     <div className={cn("relative flex h-full min-h-0 flex-col", variant === "page" && "bg-app")}>
       {/* ------------------------------ Header ------------------------------ */}
+      {variant === "page" ? (
+        <header className="relative z-10 grid h-16 shrink-0 grid-cols-[92px_minmax(0,1fr)_92px] items-center px-2 pt-[env(safe-area-inset-top)] lg:px-6">
+          <Link href="/today" aria-label="Back to Today" className="grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-surface-3">
+            <ChevronLeft className="size-7" strokeWidth={1.8} />
+          </Link>
+          <WorkspaceLockup org={org} />
+          <div className="relative flex items-center justify-end gap-0.5">
+            <SpeakRepliesToggle withLabel={false} />
+            {inConversation ? (
+              <button
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-label="Bob options"
+                aria-expanded={menuOpen}
+                className="grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-surface-3"
+              >
+                <MoreHorizontal className="size-6" />
+              </button>
+            ) : null}
+            {menuOpen ? (
+              <div className="absolute right-0 top-12 z-20 w-72 rounded-2xl bg-card p-1.5 shadow-2xl ring-1 ring-line">
+                <MenuItem
+                  onClick={() => {
+                    setHome(true);
+                    setMenuOpen(false);
+                  }}
+                >
+                  <AudioLines className="size-4" /> Ask Bob home
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    speech.cancel();
+                    c.discard();
+                    stopSpeaking();
+                    void newConversation();
+                    setHome(true);
+                    setMenuOpen(false);
+                  }}
+                >
+                  <PlusCircle className="size-4" /> New conversation
+                </MenuItem>
+                <div className="px-3 pb-1.5 pt-2 text-[12.5px] leading-snug text-subtle">
+                  Engine: {data.mode.aiEngine === "claude" ? "Claude (live AI)" : "Bob rules engine (demo — no AI key configured)"}.
+                  Voice: {speech.supported ? "your browser's speech recognition" : "not available in this browser"}.
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </header>
+      ) : (
       <header className="relative z-10 flex h-[68px] shrink-0 items-center justify-between gap-2 px-4 pt-[env(safe-area-inset-top)] lg:px-6">
         {inConversation ? (
           <button onClick={() => setHome(true)} className="flex items-center gap-2.5 rounded-full pr-2 text-left hover:bg-surface-2" aria-label="Back to Bob home">
-            <BobWordmark org={variant === "page" ? org : undefined} />
+            <BobWordmark />
           </button>
         ) : (
-          <BobWordmark org={variant === "page" ? org : undefined} />
+          <BobWordmark />
         )}
         <div className="relative flex items-center gap-1">
-          {variant === "page" ? (
-            <Link
-              href="/tasks"
-              aria-label={`Tasks${dueCount ? `, ${dueCount} due` : ""}`}
-              className="relative grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-surface-3 lg:hidden"
-            >
-              <Bell className="size-6" />
-              {dueCount ? <span className="absolute right-2.5 top-2.5 size-2.5 rounded-full bg-copper-500 ring-2 ring-background" /> : null}
-            </Link>
-          ) : null}
           <button
             onClick={() => setMenuOpen((o) => !o)}
             aria-label="Bob options"
@@ -167,7 +213,21 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
           ) : null}
         </div>
       </header>
+      )}
 
+      {variant === "page" && !inConversation ? (
+        <AskBobHome
+          composer={c}
+          inputRef={inputRef}
+          orbState={orbState}
+          thinking={thinking}
+          shortcuts={shortcuts}
+          hasConversation={messages.length > 0}
+          onContinue={() => setHome(false)}
+          onSubmit={submitText}
+        />
+      ) : (
+      <>
       {/* ------------------------------ Body ------------------------------ */}
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {!inConversation ? (
@@ -316,7 +376,234 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
           </div>
         </div>
       ) : null}
+      </>
+      )}
     </div>
+  );
+}
+
+/* ------------------------------ Ask Bob home (page) ------------------------------ */
+
+type Shortcut = { label: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; run: () => void };
+
+/** The workspace's own logo and name, "with bob." — works for any trades business. */
+function WorkspaceLockup({ org }: { org: { name: string; shortName: string; logoUrl?: string; dataMode?: string } }) {
+  return (
+    <div className="flex min-w-0 items-center justify-center gap-2.5">
+      <OrgLogo org={org} size={40} />
+      <div className="min-w-0 leading-none">
+        <div className="truncate text-[17px] font-bold uppercase tracking-[0.04em]">{org.shortName}</div>
+        <div className="mt-1 flex items-center gap-1 text-[13px] text-muted-foreground">
+          with <BobLogo height={10} title="Bob" className="translate-y-[1px]" />
+          {org.dataMode === "sample" ? (
+            <span title="Demo mode — sample data, nothing is sent to real customers" className="ml-1 rounded bg-sky-400/12 px-1 py-[1px] text-[10.5px] font-semibold uppercase tracking-wide text-info-fg">
+              Demo
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Orb size that keeps the orb, shortcuts and mic on one iPhone screen. */
+function useOrbSize() {
+  const [size, setSize] = React.useState(190);
+  React.useEffect(() => {
+    const calc = () => {
+      const h = window.visualViewport?.height ?? window.innerHeight;
+      setSize(Math.round(Math.max(128, Math.min(224, h - 494))));
+    };
+    calc();
+    window.addEventListener("resize", calc);
+    window.visualViewport?.addEventListener("resize", calc);
+    return () => {
+      window.removeEventListener("resize", calc);
+      window.visualViewport?.removeEventListener("resize", calc);
+    };
+  }, []);
+  return size;
+}
+
+function AskBobHome({
+  composer: c,
+  inputRef,
+  orbState,
+  thinking,
+  shortcuts,
+  hasConversation,
+  onContinue,
+  onSubmit,
+}: {
+  composer: ReturnType<typeof useVoiceComposer>;
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
+  orbState: OrbState;
+  thinking: boolean;
+  shortcuts: Shortcut[];
+  hasConversation: boolean;
+  onContinue: () => void;
+  onSubmit: (e?: React.FormEvent) => void;
+}) {
+  const { speech, phase } = c;
+  const orbSize = useOrbSize();
+  const [typing, setTyping] = React.useState(false);
+  const recording = phase === "listening" || phase === "starting";
+  const busy = phase === "stopping" || phase === "sending";
+  const showComposer = typing || !!c.draft.trim();
+
+  const openKeyboard = () => {
+    // Render the input and focus it inside the same tap, or iOS won't raise the keyboard.
+    flushSync(() => setTyping(true));
+    inputRef.current?.focus();
+  };
+
+  return (
+    <>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="mx-auto flex min-h-full w-full max-w-md flex-col items-center justify-center px-4 pb-3 pt-1">
+          <button
+            type="button"
+            onClick={c.toggleMic}
+            disabled={!speech.supported || busy}
+            aria-label={recording ? "Stop listening" : "Tap the orb to talk to Bob"}
+            className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-copper-300 disabled:cursor-default"
+          >
+            <Orb tone="soft" state={orbState} size={orbSize} />
+          </button>
+          <div className="mt-2 min-h-[40px] w-full px-2 text-center" aria-live="polite">
+            {phase === "listening" ? (
+              <>
+                <p className="flex items-center justify-center gap-2 text-[22px] font-semibold tracking-tight">
+                  <span className="size-2.5 animate-pulse rounded-full bg-red-500" /> Listening…
+                </p>
+                <p className="mt-1 text-[16px] leading-snug text-white/85">{speech.interim ? `“${speech.interim}”` : "Pause when you're done and I'll send it — or tap Stop to check it first."}</p>
+              </>
+            ) : phase === "starting" ? (
+              <p className="text-[22px] font-semibold tracking-tight">Starting the microphone…</p>
+            ) : phase === "stopping" ? (
+              <p className="text-[20px] font-semibold tracking-tight">Getting the last of what you said…</p>
+            ) : phase === "sending" || thinking ? (
+              <p className="text-[22px] font-semibold tracking-tight">Sending to Bob…</p>
+            ) : (
+              <h1 className="text-[28px] font-bold leading-tight tracking-[-0.02em] text-[#FAF9F6] min-[400px]:text-[30px]">Hey, how can I help?</h1>
+            )}
+          </div>
+
+          <ul className="mt-3 w-full space-y-2">
+            {shortcuts.map((s) => (
+              <li key={s.label}>
+                <button
+                  type="button"
+                  onClick={s.run}
+                  disabled={busy || recording}
+                  className="flex h-11 w-full items-center gap-4 rounded-[14px] bg-white/[0.035] px-4 text-left text-[16.5px] text-[#FAF9F6] ring-1 ring-white/[0.13] transition hover:bg-white/[0.06] active:scale-[0.99] disabled:opacity-50"
+                >
+                  <s.icon className="size-[22px] shrink-0 text-white/85" strokeWidth={1.6} />
+                  <span className="truncate">{s.label}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {hasConversation ? (
+            <button onClick={onContinue} className="mt-2 h-10 text-[14.5px] font-medium text-accent-fg">
+              Continue our conversation
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Bottom controls: above Safari's toolbar and the keyboard (the shell follows the visible viewport). */}
+      <div className="shrink-0 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-2">
+        <div className="mx-auto max-w-md">
+          {showComposer ? (
+            <>
+              <ComposerStatus phase={recording ? "idle" : phase} interim="" error={speech.error} notice={c.notice} supported={speech.supported} />
+              <div className="mt-2 flex items-end gap-2">
+                {!c.draft.trim() && !recording ? (
+                  <button
+                    type="button"
+                    onClick={() => setTyping(false)}
+                    aria-label="Close keyboard"
+                    className="grid size-[52px] shrink-0 place-items-center rounded-full text-white/80 ring-1 ring-white/15"
+                  >
+                    <X className="size-5" />
+                  </button>
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <Composer
+                    inputRef={inputRef}
+                    draft={c.draft}
+                    setDraft={c.setDraft}
+                    onSubmit={onSubmit}
+                    thinking={thinking}
+                    phase={phase}
+                    fromVoice={c.fromVoice}
+                    onDiscard={() => {
+                      c.discard();
+                      setTyping(false);
+                    }}
+                    supported={speech.supported}
+                    onMic={c.toggleMic}
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {speech.error || c.notice ? <ComposerStatus phase="idle" interim="" error={speech.error} notice={c.notice} supported={speech.supported} /> : null}
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+                <button
+                  type="button"
+                  onClick={openKeyboard}
+                  disabled={busy}
+                  aria-label="Type instead"
+                  className="ml-2 grid size-12 place-items-center justify-self-start rounded-full text-white/85 hover:bg-surface-3 disabled:opacity-40"
+                >
+                  <Keyboard className="size-7" strokeWidth={1.6} />
+                </button>
+                <div className="flex flex-col items-center">
+                  <BigMic phase={phase} disabled={!speech.supported || busy} onClick={c.toggleMic} />
+                  <span className={cn("mt-1.5 text-[15px] font-medium", recording ? "text-red-200" : "text-accent-fg")}>
+                    {phase === "listening" ? "Tap to stop" : phase === "starting" ? "Starting…" : phase === "stopping" ? "Finishing…" : phase === "sending" ? "Sending to Bob…" : "Tap to talk"}
+                  </span>
+                </div>
+                <span />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** The big amber mic (Ask Bob home). */
+function BigMic({ phase, disabled, onClick }: { phase: ComposerPhase; disabled?: boolean; onClick: () => void }) {
+  const recording = phase === "listening" || phase === "starting";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={recording ? "Stop listening" : "Tap to talk"}
+      aria-pressed={recording}
+      className="relative grid size-[76px] place-items-center rounded-full transition active:scale-95 disabled:opacity-50"
+      style={{
+        background: "radial-gradient(circle at 50% 40%, #2a170b, #120a05 72%)",
+        boxShadow: recording
+          ? "0 0 0 3px rgb(255 120 90 / 0.95), 0 0 26px rgb(255 90 60 / 0.6)"
+          : "0 0 0 3px rgb(255 150 70 / 0.95), 0 0 22px rgb(255 130 40 / 0.65), 0 0 50px rgb(236 122 46 / 0.25)",
+      }}
+    >
+      {phase === "listening" ? <span className="absolute inset-0 animate-ping-slow rounded-full ring-2 ring-red-400/60" /> : null}
+      {phase === "sending" || phase === "stopping" ? (
+        <Loader2 className="size-7 animate-spin text-white" />
+      ) : recording ? (
+        <Square className="size-6 fill-white text-white" />
+      ) : (
+        <Mic className="size-9 text-white" strokeWidth={1.8} />
+      )}
+    </button>
   );
 }
 
@@ -395,7 +682,7 @@ function Composer({
             }
           }}
           readOnly={busy || recording}
-          placeholder={recording ? "Listening…" : "Type to Bob, or tap the mic"}
+          placeholder={recording ? "Listening…" : "Type to Bob…"}
           aria-label="Message Bob"
           maxLength={2000}
           className={cn(

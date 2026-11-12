@@ -80,12 +80,13 @@ export function SpeakRepliesToggle({ className, withLabel = true }: { className?
         setSpeakReplies(!speakReplies);
       }}
       className={cn(
-        "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium ring-1 transition",
-        speakReplies ? "bg-copper-500/12 text-accent-fg ring-copper-500/40" : "text-muted-foreground ring-line-strong hover:text-foreground",
+        withLabel
+          ? cn("inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium ring-1 transition", speakReplies ? "bg-copper-500/12 text-accent-fg ring-copper-500/40" : "text-muted-foreground ring-line-strong hover:text-foreground")
+          : cn("grid size-11 shrink-0 place-items-center rounded-full transition hover:bg-surface-3", speakReplies ? "text-[#FAF9F6]" : "text-white/45"),
         className,
       )}
     >
-      {speakReplies ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+      {speakReplies ? <Volume2 className={withLabel ? "size-4" : "size-6"} strokeWidth={withLabel ? 2 : 1.7} /> : <VolumeX className={withLabel ? "size-4" : "size-6"} strokeWidth={withLabel ? 2 : 1.7} />}
       {withLabel ? <span>{speakReplies ? "Speak replies: on" : "Speak replies: off"}</span> : null}
     </button>
   );
