@@ -13,7 +13,7 @@ import { BobProvider } from "@/lib/bob/provider";
 import { ROLE_LABEL } from "@/lib/auth/permissions";
 import { needsReply, tasksDue } from "@/lib/derive";
 import { cn } from "@/lib/utils";
-import { BobWordmark, OrgLogo } from "@/components/brand/logo";
+import { BobLogo, OrgLogo } from "@/components/brand/logo";
 import { Toaster } from "@/components/ui/toaster";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AssistantView } from "@/components/assistant/assistant-view";
@@ -188,7 +188,9 @@ function UserMenu() {
       <button onClick={() => void signOut()} className="flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-[14.5px] text-muted-foreground hover:bg-surface-2 hover:text-foreground">
         <LogOut className="size-4" /> Sign out
       </button>
-      <div className="px-3 pt-1 text-[12px] text-subtle">Bob by Cresaro</div>
+      <div className="px-3 pt-2 opacity-80">
+        <BobLogo height={18} byline />
+      </div>
     </div>
   );
 }
@@ -201,7 +203,7 @@ function MobileHeader() {
   return (
     <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-line bg-background/90 px-3 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
       <Link href="/today" aria-label="Today">
-        <BobWordmark org={org} compact />
+        <BobLogo height={24} />
       </Link>
       <div className="flex items-center gap-1">
         <OrgLogo org={org} size={28} />

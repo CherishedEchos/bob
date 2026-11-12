@@ -1,7 +1,7 @@
 import Image from "next/image";
 import type { OrgConfig } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { OrbAvatar } from "@/components/assistant/orb";
+import { WORDMARK, WORDMARK_COLORS } from "./wordmark-paths";
 
 /**
  * Branding.
@@ -12,24 +12,64 @@ import { OrbAvatar } from "@/components/assistant/orb";
  * NOTE: public/brand/ninety3-logo.png is cropped from the supplied reference
  * mock-up as a stand-in. Replace it with Ninety3's original artwork.
  */
-export function BobWordmark({ className, org, compact }: { className?: string; org?: Pick<OrgConfig, "shortName">; compact?: boolean }) {
-  if (compact)
+/**
+ * The bob. wordmark — one set of outlines (Geist Black) shared with
+ * public/brand/bob-wordmark*.svg so it renders identically everywhere.
+ * `height` is the height of the letters (b ascender to baseline).
+ * tone="light" → warm-white letters for dark backgrounds; "dark" for light ones.
+ */
+export function BobLogo({
+  height = 24,
+  tone = "light",
+  byline = false,
+  className,
+  title = "Bob",
+}: {
+  height?: number;
+  tone?: "light" | "dark";
+  byline?: boolean;
+  className?: string;
+  title?: string;
+}) {
+  // Below ~40px the outlined byline would be too small to read: use live text.
+  if (byline && height < 40)
     return (
-      <div className={cn("flex items-center gap-2", className)}>
-        <OrbAvatar className="size-8" />
-        <div className="flex items-baseline gap-1.5 leading-none">
-          <span className="text-[18px] font-bold tracking-tight">Bob</span>
-          {org ? <span className="text-[13.5px] text-muted-foreground">for {org.shortName}</span> : null}
-        </div>
-      </div>
+      <span className={cn("inline-flex flex-col items-start gap-[3px]", className)}>
+        <BobLogo height={height} tone={tone} title={title} />
+        <span
+          className="text-[11px] font-medium leading-none"
+          style={{ color: tone === "light" ? WORDMARK_COLORS.bylineOnDark : WORDMARK_COLORS.bylineOnLight }}
+        >
+          by Cresaro
+        </span>
+      </span>
     );
+  const h = Number(WORDMARK.viewBox.split(" ")[3]);
+  const vb = byline ? WORDMARK.viewBoxWithByline : WORDMARK.viewBox;
+  const [, , vw, vh] = vb.split(" ").map(Number);
+  const scale = height / h;
   return (
-    <div className={cn("flex items-center gap-2.5", className)}>
-      <OrbAvatar />
-      <div className="leading-none">
-        <div className="text-[20px] font-bold tracking-tight">Bob</div>
-        {org ? <div className="mt-0.5 text-[13px] text-muted-foreground">for {org.shortName}</div> : null}
-      </div>
+    <svg
+      viewBox={vb}
+      width={Math.round(vw * scale * 10) / 10}
+      height={Math.round(vh * scale * 10) / 10}
+      role="img"
+      aria-label={byline ? `${title} by Cresaro` : title}
+      className={cn("block shrink-0 overflow-visible", className)}
+    >
+      <path fill={tone === "light" ? WORDMARK_COLORS.light : WORDMARK_COLORS.dark} d={WORDMARK.letters} />
+      <circle fill={WORDMARK_COLORS.dot} cx={WORDMARK.dot.cx} cy={WORDMARK.dot.cy} r={WORDMARK.dot.r} />
+      {byline ? <path fill={tone === "light" ? WORDMARK_COLORS.bylineOnDark : WORDMARK_COLORS.bylineOnLight} d={WORDMARK.byline} /> : null}
+    </svg>
+  );
+}
+
+/** App header lock-up: the wordmark, optionally with the workspace it's running for. */
+export function BobWordmark({ className, org, compact }: { className?: string; org?: Pick<OrgConfig, "shortName">; compact?: boolean }) {
+  return (
+    <div className={cn("flex items-end gap-2", className)}>
+      <BobLogo height={compact ? 22 : 24} />
+      {org ? <span className="pb-[1px] text-[13.5px] leading-none text-muted-foreground">for {org.shortName}</span> : null}
     </div>
   );
 }
