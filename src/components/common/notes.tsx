@@ -36,7 +36,7 @@ export function NotesPanel({ notes, onAdd }: { notes: Note[]; onAdd: (text: stri
           aria-invalid={!!error}
           className="min-h-20"
         />
-        {error ? <p className="text-[13px] text-red-300">{error}</p> : null}
+        {error ? <p className="text-[14px] text-danger-fg">{error}</p> : null}
         <div className="flex justify-end">
           <Button type="submit" size="sm" variant="secondary" disabled={!text.trim()}>
             <StickyNote /> Add note
@@ -46,16 +46,16 @@ export function NotesPanel({ notes, onAdd }: { notes: Note[]; onAdd: (text: stri
       {notes.length ? (
         <ul className="mt-3 space-y-2">
           {notes.map((n) => (
-            <li key={n.id} className="rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]">
-              <p className="whitespace-pre-wrap text-[14px] leading-relaxed">{n.text}</p>
-              <p className="mt-1.5 text-[12px] text-subtle">
+            <li key={n.id} className="rounded-xl bg-surface-2 px-3.5 py-3 ring-1 ring-line">
+              <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{n.text}</p>
+              <p className="mt-1.5 text-[13px] text-subtle">
                 {n.author} · {timeAgo(n.createdAt)}
               </p>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-3 text-[13px] text-subtle">No notes yet.</p>
+        <p className="mt-3 text-[14px] text-subtle">No notes yet.</p>
       )}
     </div>
   );

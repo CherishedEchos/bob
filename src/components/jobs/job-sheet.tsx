@@ -34,8 +34,8 @@ export function JobSheet() {
 
 export function Section({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <section className={cn("border-t border-white/[0.06] px-5 py-5 sm:px-6", className)}>
-      <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-subtle">{title}</h3>
+    <section className={cn("border-t border-line px-5 py-5 sm:px-6", className)}>
+      <h3 className="mb-3 text-[14px] font-semibold uppercase tracking-wider text-subtle">{title}</h3>
       {children}
     </section>
   );
@@ -61,17 +61,17 @@ function JobDetail({ id }: { id: string }) {
           <JobTile kind={j.kind} className="size-[72px]" />
           <div className="min-w-0">
             <h2 className="text-[22px] font-bold leading-tight tracking-tight">{j.title}</h2>
-            <button className="mt-0.5 text-left text-[15px] text-foreground/85 hover:text-copper-200" onClick={() => ui.openCustomer(j.customerId)}>
+            <button className="mt-0.5 text-left text-[16px] text-foreground/85 hover:text-accent-fg" onClick={() => ui.openCustomer(j.customerId)}>
               {j.customerName}
             </button>
-            <p className="mt-0.5 flex items-center gap-1 text-[13.5px] text-muted-foreground">
-              <MapPin className="size-3.5 text-copper-400" /> {j.location}
+            <p className="mt-0.5 flex items-center gap-1 text-[14.5px] text-muted-foreground">
+              <MapPin className="size-3.5 text-accent-icon" /> {j.location}
             </p>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <JobStatusBadge status={j.status} />
-          {money && f.depositOverdue ? <span className="rounded-full bg-red-500/12 px-2.5 py-0.5 text-[12px] font-medium text-red-300 ring-1 ring-red-500/30">Deposit overdue</span> : null}
+          {money && f.depositOverdue ? <span className="rounded-full bg-red-500/12 px-2.5 py-0.5 text-[13px] font-medium text-danger-fg ring-1 ring-red-500/30">Deposit overdue</span> : null}
         </div>
 
         {money ? (
@@ -88,7 +88,7 @@ function JobDetail({ id }: { id: string }) {
             {f.expenses ? <MoneyRow label="Costs recorded" value={gbp(f.expenses)} /> : null}
             <div className="flex items-center gap-3 py-3">
               <ProgressBar value={f.paidPercent} className="flex-1" />
-              <span className="tabular text-[12.5px] text-muted-foreground">{f.paidPercent}% paid</span>
+              <span className="tabular text-[13.5px] text-muted-foreground">{f.paidPercent}% paid</span>
             </div>
           </div>
         ) : null}
@@ -164,8 +164,8 @@ function JobDetail({ id }: { id: string }) {
                 }}
                 aria-pressed={j.status === s}
                 className={cn(
-                  "h-10 rounded-xl text-[13px] font-medium ring-1 transition",
-                  j.status === s ? "bg-copper-500/18 text-copper-200 ring-copper-500/60" : "bg-white/[0.03] text-muted-foreground ring-white/10 hover:bg-white/[0.07] hover:text-foreground",
+                  "h-10 rounded-xl text-[14px] font-medium ring-1 transition",
+                  j.status === s ? "bg-copper-500/18 text-accent-fg ring-copper-500/60" : "bg-surface-2 text-muted-foreground ring-line hover:bg-surface-3 hover:text-foreground",
                 )}
               >
                 {JOB_STATUS_LABEL[s]}
@@ -180,20 +180,20 @@ function JobDetail({ id }: { id: string }) {
           {invoices.length ? (
             <ul className="space-y-2">
               {invoices.map((i) => (
-                <li key={i.id} className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]">
+                <li key={i.id} className="flex items-center justify-between rounded-xl bg-surface-2 px-3.5 py-3 ring-1 ring-line">
                   <div>
-                    <div className="text-[14px] font-medium">{i.number ?? i.draftRef}</div>
-                    <div className="text-[12.5px] text-muted-foreground">
+                    <div className="text-[15px] font-medium">{i.number ?? i.draftRef}</div>
+                    <div className="text-[13.5px] text-muted-foreground">
                       {invoiceStatusLabel(i)}
                       {i.dueDate ? ` · due ${formatDateKey(i.dueDate)}` : ""}
                     </div>
                   </div>
-                  <div className="tabular text-[15px] font-semibold">{gbp(i.total)}</div>
+                  <div className="tabular text-[16px] font-semibold">{gbp(i.total)}</div>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-[14px] text-muted-foreground">No invoices for this job yet.</p>
+            <p className="text-[15px] text-muted-foreground">No invoices for this job yet.</p>
           )}
         </Section>
       ) : null}
@@ -203,20 +203,20 @@ function JobDetail({ id }: { id: string }) {
           {payments.length ? (
             <ul className="space-y-2">
               {payments.map((p) => (
-                <li key={p.id} className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]">
+                <li key={p.id} className="flex items-center justify-between rounded-xl bg-surface-2 px-3.5 py-3 ring-1 ring-line">
                   <div>
-                    <div className="text-[14px] font-medium">{PAYMENT_TYPE_LABEL[p.type]}</div>
-                    <div className="text-[12.5px] text-muted-foreground">
+                    <div className="text-[15px] font-medium">{PAYMENT_TYPE_LABEL[p.type]}</div>
+                    <div className="text-[13.5px] text-muted-foreground">
                       {formatDateKey(p.receivedAt)} · {PAYMENT_METHOD_LABEL[p.method]}
                       {p.reference ? ` · ${p.reference}` : ""} · by {p.recordedBy}
                     </div>
                   </div>
-                  <div className="tabular text-[15px] font-semibold text-emerald-300">{gbp(p.amount)}</div>
+                  <div className="tabular text-[16px] font-semibold text-good-fg">{gbp(p.amount)}</div>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-[14px] text-muted-foreground">No payments recorded yet.</p>
+            <p className="text-[15px] text-muted-foreground">No payments recorded yet.</p>
           )}
         </Section>
       ) : null}
@@ -226,19 +226,19 @@ function JobDetail({ id }: { id: string }) {
           {expenses.length ? (
             <ul className="space-y-2">
               {expenses.map((e) => (
-                <li key={e.id} className="flex items-center justify-between gap-2 rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]">
+                <li key={e.id} className="flex items-center justify-between gap-2 rounded-xl bg-surface-2 px-3.5 py-3 ring-1 ring-line">
                   <div className="min-w-0">
-                    <div className="truncate text-[14px] font-medium">{e.description}</div>
-                    <div className="text-[12.5px] text-muted-foreground">
+                    <div className="truncate text-[15px] font-medium">{e.description}</div>
+                    <div className="text-[13.5px] text-muted-foreground">
                       {EXPENSE_CATEGORY_LABEL[e.category]} · {formatDateKey(e.incurredOn)} · by {e.recordedBy}
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="tabular text-[15px] font-semibold">{gbp(e.amount)}</span>
+                    <span className="tabular text-[16px] font-semibold">{gbp(e.amount)}</span>
                     {can("expenses.write") ? (
                       <button
                         aria-label={`Remove ${e.description}`}
-                        className="grid size-8 place-items-center rounded-lg text-subtle hover:bg-white/[0.06] hover:text-red-300"
+                        className="grid size-8 place-items-center rounded-lg text-subtle hover:bg-surface-3 hover:text-danger-fg"
                         onClick={async () => {
                           const r = await actions.removeExpense(e.id);
                           toast(r.ok ? "Cost removed" : "Couldn't remove", r.ok ? "success" : "error");
@@ -252,13 +252,13 @@ function JobDetail({ id }: { id: string }) {
               ))}
             </ul>
           ) : (
-            <p className="text-[14px] text-muted-foreground">No costs recorded. Tell Bob “add £450 of materials to this job”, or use Add a cost.</p>
+            <p className="text-[15px] text-muted-foreground">No costs recorded. Tell Bob “add £450 of materials to this job”, or use Add a cost.</p>
           )}
         </Section>
       ) : null}
 
       <Section title="Details">
-        <dl className="space-y-3 text-[14px]">
+        <dl className="space-y-3 text-[15px]">
           <div>
             <dt className="text-muted-foreground">Description</dt>
             <dd className="mt-0.5 whitespace-pre-wrap text-foreground/90">{j.description || "—"}</dd>

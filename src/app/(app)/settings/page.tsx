@@ -25,12 +25,12 @@ function Section({ icon: Icon, title, subtitle, children }: { icon: React.Compon
   return (
     <Card className="p-5">
       <div className="mb-4 flex items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-copper-500/12 text-copper-300 ring-1 ring-copper-500/25">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-copper-500/12 text-accent-fg ring-1 ring-copper-500/25">
           <Icon className="size-[18px]" />
         </span>
         <div>
           <h2 className="text-[17px] font-semibold">{title}</h2>
-          {subtitle ? <p className="text-[13.5px] text-muted-foreground">{subtitle}</p> : null}
+          {subtitle ? <p className="text-[14.5px] text-muted-foreground">{subtitle}</p> : null}
         </div>
       </div>
       {children}
@@ -66,7 +66,7 @@ function SettingsInner() {
               <ConnectionRow key={c.provider} c={c} owner={can("integrations.manage")} />
             ))}
           </div>
-          <p className="mt-3 text-[12.5px] text-subtle">
+          <p className="mt-3 text-[13.5px] text-subtle">
             Instagram and website forms aren&apos;t connected yet — log those enquiries manually and Bob includes them in reports.
           </p>
         </Section>
@@ -74,16 +74,16 @@ function SettingsInner() {
         <Section icon={Users} title="Team" subtitle="Who can use Bob for this business.">
           <ul className="space-y-2">
             {data.members.map((m) => (
-              <li key={m.id} className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3.5 py-2.5 ring-1 ring-white/[0.06]">
+              <li key={m.id} className="flex items-center justify-between rounded-xl bg-surface-2 px-3.5 py-2.5 ring-1 ring-line">
                 <div>
-                  <div className="text-[14px] font-medium">{m.name}</div>
-                  <div className="text-[12.5px] text-muted-foreground">{m.email}</div>
+                  <div className="text-[15px] font-medium">{m.name}</div>
+                  <div className="text-[13.5px] text-muted-foreground">{m.email}</div>
                 </div>
-                <span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[12px] text-muted-foreground ring-1 ring-white/10">{ROLE_LABEL[m.role]}</span>
+                <span className="rounded-full bg-surface-3 px-2.5 py-0.5 text-[13px] text-muted-foreground ring-1 ring-line">{ROLE_LABEL[m.role]}</span>
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-[12.5px] text-subtle">Owner: everything. Office: day-to-day admin and money. Site team: jobs, tasks, notes and costs — no financial records.</p>
+          <p className="mt-3 text-[13.5px] text-subtle">Owner: everything. Office: day-to-day admin and money. Site team: jobs, tasks, notes and costs — no financial records.</p>
         </Section>
         <PrivacySection org={org} owner={can("data.delete")} save={save} />
       </div>
@@ -212,7 +212,7 @@ function BobSection({ org, owner, save }: { org: OrgConfig; owner: boolean; save
   }, []);
   return (
     <Section icon={Bot} title="Bob" subtitle="How your assistant behaves.">
-      <div className="mb-4 space-y-2 text-[13.5px]">
+      <div className="mb-4 space-y-2 text-[14.5px]">
         <StatusLine ok={data.mode.aiEngine === "claude"} label="Understanding" value={data.mode.aiEngine === "claude" ? "Claude AI (live)" : "Demo rules engine — set ANTHROPIC_API_KEY on the server for full AI"} />
         <StatusLine ok={!!voice} label="Voice" value={voice === null ? "Checking…" : voice ? "Browser speech recognition available on this device" : "Not available in this browser — typing works the same"} />
         <StatusLine ok={false} label="Database" value="Local demo database (SQLite). Supabase is set up in code but not connected." />
@@ -228,7 +228,7 @@ function BobSection({ org, owner, save }: { org: OrgConfig; owner: boolean; save
           <Field label="Email sign-off" htmlFor="b-sign">
             <Textarea id="b-sign" value={signOff} onChange={(e) => setSignOff(e.target.value)} className="min-h-20" />
           </Field>
-          <label className="flex items-center gap-2 text-[14px]">
+          <label className="flex items-center gap-2 text-[15px]">
             <input type="checkbox" checked={readAloud} onChange={(e) => setReadAloud(e.target.checked)} className="size-4 accent-[#e4752f]" />
             Read Bob&apos;s replies aloud by default
           </label>
@@ -261,13 +261,13 @@ function ConnectionRow({ c, owner }: { c: Connection; owner: boolean }) {
     c.status === "error" ? `Problem: ${c.error ?? "needs reconnecting"}` :
     c.status === "not_configured" ? "Not available yet — server credentials needed" : "Not connected";
   return (
-    <div className="rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]">
+    <div className="rounded-xl bg-surface-2 px-3.5 py-3 ring-1 ring-line">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[14px] font-medium">
-            {PROVIDER_LABEL[c.provider] ?? c.provider} <span className="text-[12px] font-normal text-subtle">· {c.kind === "email" ? "Email" : "Accounting"}</span>
+          <div className="text-[15px] font-medium">
+            {PROVIDER_LABEL[c.provider] ?? c.provider} <span className="text-[13px] font-normal text-subtle">· {c.kind === "email" ? "Email" : "Accounting"}</span>
           </div>
-          <div className={cn("text-[12.5px]", c.status === "connected" ? "text-emerald-300" : c.status === "demo" ? "text-sky-200" : c.status === "error" ? "text-red-300" : "text-muted-foreground")}>
+          <div className={cn("text-[13.5px]", c.status === "connected" ? "text-good-fg" : c.status === "demo" ? "text-info-fg" : c.status === "error" ? "text-danger-fg" : "text-muted-foreground")}>
             {statusText}
             {c.lastSyncAt ? ` · synced ${timeAgo(c.lastSyncAt)}` : ""}
           </div>
@@ -306,7 +306,7 @@ function ConnectionRow({ c, owner }: { c: Connection; owner: boolean }) {
         ) : null}
       </div>
       {missing ? (
-        <p className="mt-2 text-[12px] text-amber-200">
+        <p className="mt-2 text-[13px] text-warn-fg">
           To enable this, the server needs: {missing.join(", ")}. See docs/SETUP.md.
         </p>
       ) : null}
@@ -321,7 +321,7 @@ function PrivacySection({ org, owner, save }: { org: OrgConfig; owner: boolean; 
   const [confirmReset, setConfirmReset] = React.useState(false);
   return (
     <Section icon={ShieldCheck} title="Data & privacy" subtitle="UK GDPR controls for your business data.">
-      <ul className="mb-4 space-y-1.5 text-[13px] text-muted-foreground">
+      <ul className="mb-4 space-y-1.5 text-[14px] text-muted-foreground">
         <li>• Your data is only visible to members of {org.shortName}. Every request is checked on the server.</li>
         <li>• Customer emails are treated as untrusted text — instructions inside them are ignored.</li>
         <li>• Nothing is sent to a customer without your explicit approval.</li>
@@ -350,7 +350,7 @@ function PrivacySection({ org, owner, save }: { org: OrgConfig; owner: boolean; 
         ) : null}
       </form>
       {owner ? (
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-white/[0.06] pt-4">
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
           <Button asChild variant="secondary" size="sm">
             <a href="/api/privacy/export">
               <Download /> Export all data
@@ -382,7 +382,7 @@ function PrivacySection({ org, owner, save }: { org: OrgConfig; owner: boolean; 
           ) : null}
         </div>
       ) : null}
-      <p className="mt-3 text-[12px] text-subtle">To erase one customer&apos;s personal data, open them under Customers → Privacy.</p>
+      <p className="mt-3 text-[13px] text-subtle">To erase one customer&apos;s personal data, open them under Customers → Privacy.</p>
     </Section>
   );
 }

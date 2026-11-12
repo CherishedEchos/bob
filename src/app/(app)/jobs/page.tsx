@@ -55,7 +55,7 @@ export default function JobsPage() {
               <li key={j.id}>
                 <button
                   onClick={() => ui.openJob(j.id)}
-                  className="card-surface flex h-full w-full flex-col rounded-2xl p-4 text-left transition hover:bg-white/[0.05]"
+                  className="card-surface flex h-full w-full flex-col rounded-2xl p-4 text-left transition hover:bg-surface-2"
                 >
                   <div className="flex w-full items-start gap-4">
                     <JobTile kind={j.kind} className="size-[72px]" />
@@ -63,9 +63,9 @@ export default function JobsPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="truncate text-[16px] font-semibold">{j.title}</div>
-                          <div className="truncate text-[14px] text-foreground/85">{j.customerName}</div>
-                          <div className="flex items-center gap-1 text-[13px] text-muted-foreground">
-                            <MapPin className="size-3.5 text-copper-400" /> {j.location}
+                          <div className="truncate text-[15px] text-foreground/85">{j.customerName}</div>
+                          <div className="flex items-center gap-1 text-[14px] text-muted-foreground">
+                            <MapPin className="size-3.5 text-accent-icon" /> {j.location}
                           </div>
                         </div>
                         <JobStatusBadge status={j.status} />
@@ -74,7 +74,7 @@ export default function JobsPage() {
                   </div>
                   {can("finance.read") ? (
                     <>
-                      <div className="mt-4 grid w-full grid-cols-3 gap-2 text-[13px]">
+                      <div className="mt-4 grid w-full grid-cols-3 gap-2 text-[14px]">
                         <Stat label="Price" value={gbp(j.quotedValue)} />
                         <Stat
                           label="Deposit"
@@ -85,13 +85,13 @@ export default function JobsPage() {
                       </div>
                       <div className="mt-3 flex w-full items-center gap-3">
                         <ProgressBar value={f.paidPercent} className="flex-1" />
-                        <span className="tabular text-[12px] text-muted-foreground">{f.paidPercent}%</span>
+                        <span className="tabular text-[13px] text-muted-foreground">{f.paidPercent}%</span>
                       </div>
                     </>
                   ) : null}
                   {j.nextAction ? (
-                    <div className="mt-3 flex w-full items-center gap-2 rounded-xl bg-white/[0.03] px-3 py-2 text-[13px] text-foreground/85 ring-1 ring-white/[0.06]">
-                      <ArrowRight className="size-3.5 shrink-0 text-copper-400" />
+                    <div className="mt-3 flex w-full items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-[14px] text-foreground/85 ring-1 ring-line">
+                      <ArrowRight className="size-3.5 shrink-0 text-accent-icon" />
                       <span className="truncate">{j.nextAction}</span>
                     </div>
                   ) : null}
@@ -109,12 +109,12 @@ export default function JobsPage() {
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "green" | "amber" | "red" }) {
   return (
-    <div className="rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-white/[0.06]">
-      <div className="text-[11.5px] text-subtle">{label}</div>
+    <div className="rounded-xl bg-surface-2 px-3 py-2 ring-1 ring-line">
+      <div className="text-[12.5px] text-subtle">{label}</div>
       <div
         className={
           "tabular mt-0.5 truncate font-semibold " +
-          (tone === "green" ? "text-emerald-300" : tone === "amber" ? "text-amber-200" : tone === "red" ? "text-red-300" : "")
+          (tone === "green" ? "text-good-fg" : tone === "amber" ? "text-warn-fg" : tone === "red" ? "text-danger-fg" : "")
         }
       >
         {value}

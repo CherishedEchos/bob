@@ -18,7 +18,7 @@ export function BobWordmark({ className, org }: { className?: string; org?: Pick
       <OrbAvatar />
       <div className="leading-none">
         <div className="text-[20px] font-bold tracking-tight">Bob</div>
-        {org ? <div className="mt-0.5 text-[12px] text-muted-foreground">for {org.shortName}</div> : null}
+        {org ? <div className="mt-0.5 text-[13px] text-muted-foreground">for {org.shortName}</div> : null}
       </div>
     </div>
   );
@@ -46,7 +46,7 @@ export function OrgLogo({ org, size = 36, className }: { org: Pick<OrgConfig, "l
     <span
       aria-label={org.name}
       style={{ width: size, height: size, fontSize: size * 0.38 }}
-      className={cn("grid shrink-0 place-items-center rounded-full bg-ink-700 font-bold text-copper-200 ring-1 ring-white/10", className)}
+      className={cn("grid shrink-0 place-items-center rounded-full bg-ink-700 font-bold text-accent-fg ring-1 ring-line", className)}
     >
       {initials}
     </span>

@@ -62,7 +62,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
         </main>
         <BottomNav />
       </div>
-      {!assistant ? <AskBobButton /> : null}
+      {!assistant && pathname !== "/today" ? <AskBobButton /> : null}
     </div>
   );
 }
@@ -72,7 +72,7 @@ function DemoBanner() {
   const { org } = useStore();
   if (org.dataMode !== "sample") return null;
   return (
-    <div role="note" className="flex shrink-0 items-center justify-center gap-2 bg-sky-500/10 px-3 py-1.5 text-center text-[12px] text-sky-100 ring-1 ring-sky-400/20">
+    <div role="note" className="flex shrink-0 items-center justify-center gap-2 bg-sky-500/10 px-3 py-1.5 text-center text-[13px] text-info-fg ring-1 ring-sky-400/20">
       <FlaskConical className="size-3.5 shrink-0" />
       <span>
         <strong className="font-semibold">Demo mode</strong>
@@ -86,7 +86,7 @@ function DemoBanner() {
 /* ------------------------------ Desktop sidebar ------------------------------ */
 
 const SIDEBAR_NAV = [
-  { href: "/overview", label: "Overview", icon: House },
+  { href: "/today", label: "Today", icon: House },
   { href: "/assistant", label: "Ask Bob", icon: AudioLines },
   { href: "/enquiries", label: "Enquiries", icon: Inbox, badge: "unanswered" as const },
   { href: "/jobs", label: "Jobs", icon: HardHat },
@@ -101,12 +101,12 @@ function Sidebar() {
   const counts = useNavCounts();
   const { org, can } = useStore();
   return (
-    <aside className="hidden w-[256px] shrink-0 flex-col border-r border-white/[0.06] bg-ink-900 lg:flex">
+    <aside className="theme-dark hidden w-[256px] shrink-0 flex-col border-r border-line bg-ink-900 lg:flex">
       <div className="flex items-center gap-3 px-5 pb-5 pt-6">
         <OrgLogo org={org} size={40} />
         <div className="min-w-0 leading-tight">
-          <div className="truncate text-[15px] font-bold">{org.shortName}</div>
-          <div className="flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
+          <div className="truncate text-[16px] font-bold">{org.shortName}</div>
+          <div className="flex items-center gap-1.5 text-[13.5px] text-muted-foreground">
             <span className="size-1.5 rounded-full bg-copper-400" /> with Bob
           </div>
         </div>
@@ -121,18 +121,18 @@ function Sidebar() {
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex h-11 items-center gap-3 rounded-xl px-3.5 text-[15px] font-medium transition",
-                active ? "bg-copper-500/14 text-copper-200 ring-1 ring-copper-500/40" : "text-muted-foreground hover:bg-white/[0.05] hover:text-foreground",
+                "flex h-11 items-center gap-3 rounded-xl px-3.5 text-[16px] font-medium transition",
+                active ? "bg-copper-500/14 text-accent-fg ring-1 ring-copper-500/40" : "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
               )}
             >
-              <item.icon className={cn("size-[19px]", active && "text-copper-400")} strokeWidth={1.8} />
+              <item.icon className={cn("size-[19px]", active && "text-accent-icon")} strokeWidth={1.8} />
               <span className="flex-1">{item.label}</span>
-              {count ? <span className="tabular grid h-5 min-w-5 place-items-center rounded-full bg-copper-500 px-1.5 text-[11px] font-semibold text-white">{count}</span> : null}
+              {count ? <span className="tabular grid h-5 min-w-5 place-items-center rounded-full bg-copper-500 px-1.5 text-[12px] font-semibold text-white">{count}</span> : null}
             </Link>
           );
         })}
       </nav>
-      <div className="border-t border-white/[0.06] p-3">
+      <div className="border-t border-line p-3">
         <UserMenu />
       </div>
     </aside>
@@ -162,9 +162,9 @@ function UserMenu() {
   const orgs = useWorkspaces();
   return (
     <div className="space-y-2">
-      <div className="rounded-xl bg-white/[0.03] px-3 py-2.5 ring-1 ring-white/[0.06]">
-        <div className="truncate text-[14px] font-medium">{user.name}</div>
-        <div className="truncate text-[12px] text-muted-foreground">
+      <div className="rounded-xl bg-surface-2 px-3 py-2.5 ring-1 ring-line">
+        <div className="truncate text-[15px] font-medium">{user.name}</div>
+        <div className="truncate text-[13px] text-muted-foreground">
           {ROLE_LABEL[user.role]} · {user.email}
         </div>
       </div>
@@ -174,7 +174,7 @@ function UserMenu() {
           <select
             value={org.id}
             onChange={(e) => void switchOrg(e.target.value)}
-            className="h-9 w-full rounded-lg bg-white/[0.04] px-2 text-[13px] text-muted-foreground ring-1 ring-white/10"
+            className="h-9 w-full rounded-lg bg-surface-2 px-2 text-[14px] text-muted-foreground ring-1 ring-line"
           >
             {orgs.map((o) => (
               <option key={o.id} value={o.id}>
@@ -185,10 +185,10 @@ function UserMenu() {
           </select>
         </label>
       ) : null}
-      <button onClick={() => void signOut()} className="flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-[13.5px] text-muted-foreground hover:bg-white/[0.05] hover:text-foreground">
+      <button onClick={() => void signOut()} className="flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-[14.5px] text-muted-foreground hover:bg-surface-2 hover:text-foreground">
         <LogOut className="size-4" /> Sign out
       </button>
-      <div className="px-3 pt-1 text-[11px] text-subtle">Bob by Cresaro</div>
+      <div className="px-3 pt-1 text-[12px] text-subtle">Bob by Cresaro</div>
     </div>
   );
 }
@@ -205,7 +205,7 @@ function MobileHeader() {
       </Link>
       <div className="flex items-center gap-1">
         <OrgLogo org={org} size={32} />
-        <button onClick={() => setMoreOpen(true)} aria-label="More" className="grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-white/[0.06]">
+        <button onClick={() => setMoreOpen(true)} aria-label="More" className="grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-surface-3">
           <LayoutGrid className="size-[22px]" />
         </button>
       </div>
@@ -219,7 +219,7 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
   const counts = useNavCounts();
   const orgs = useWorkspaces();
   const links = [
-    { href: "/overview", label: "Overview", icon: House, count: 0 },
+    { href: "/today", label: "Today", icon: House, count: 0 },
     { href: "/customers", label: "Customers", icon: Users, count: 0 },
     { href: "/tasks", label: "Tasks & reminders", icon: AlarmClock, count: counts.due },
     ...(can("activity.read") ? [{ href: "/activity", label: "Activity log", icon: History, count: 0 }] : []),
@@ -232,30 +232,30 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
           <OrgLogo org={org} size={40} />
           <div className="min-w-0">
             <div className="truncate font-semibold">{org.name}</div>
-            <div className="truncate text-[13px] text-muted-foreground">
+            <div className="truncate text-[14px] text-muted-foreground">
               {user.name} · {ROLE_LABEL[user.role]}
             </div>
           </div>
         </div>
         <div className="space-y-1.5">
           {links.map((l) => (
-            <Link key={l.href} href={l.href} onClick={() => onOpenChange(false)} className="flex h-13 items-center gap-3 rounded-2xl bg-white/[0.04] px-4 py-3.5 text-[15px] ring-1 ring-white/[0.08]">
-              <l.icon className="size-5 text-copper-400" />
+            <Link key={l.href} href={l.href} onClick={() => onOpenChange(false)} className="flex h-13 items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3.5 text-[16px] ring-1 ring-line">
+              <l.icon className="size-5 text-accent-icon" />
               <span className="flex-1">{l.label}</span>
-              {l.count ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-copper-500 px-1.5 text-[11px] font-semibold">{l.count}</span> : null}
+              {l.count ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-copper-500 px-1.5 text-[12px] font-semibold">{l.count}</span> : null}
             </Link>
           ))}
         </div>
         {orgs.length > 1 ? (
           <>
-            <div className="mt-5 text-[12px] uppercase tracking-wider text-subtle">Switch business</div>
+            <div className="mt-5 text-[13px] uppercase tracking-wider text-subtle">Switch business</div>
             <div className="mt-2 space-y-1.5">
               {orgs.map((o) => (
                 <button
                   key={o.id}
                   onClick={() => void switchOrg(o.id)}
                   aria-pressed={o.id === org.id}
-                  className={cn("flex h-11 w-full items-center gap-2 rounded-xl px-4 text-left text-[14px] ring-1", o.id === org.id ? "bg-copper-500/15 text-copper-200 ring-copper-500/50" : "bg-white/[0.04] text-muted-foreground ring-white/10")}
+                  className={cn("flex h-11 w-full items-center gap-2 rounded-xl px-4 text-left text-[15px] ring-1", o.id === org.id ? "bg-copper-500/15 text-accent-fg ring-copper-500/50" : "bg-surface-2 text-muted-foreground ring-line")}
                 >
                   <Building2 className="size-4" /> {o.name}
                   {o.isDemo ? " (demo)" : ""}
@@ -264,7 +264,7 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
             </div>
           </>
         ) : null}
-        <button onClick={() => void signOut()} className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[14px] text-muted-foreground ring-1 ring-white/10">
+        <button onClick={() => void signOut()} className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[15px] text-muted-foreground ring-1 ring-line">
           <LogOut className="size-4" /> Sign out
         </button>
       </SheetContent>
@@ -277,14 +277,14 @@ function BottomNav() {
   const { unanswered, due } = useNavCounts();
   const { can } = useStore();
   const items = [
-    { href: "/", label: "Bob", icon: AudioLines, count: 0 },
+    { href: "/today", label: "Today", icon: House, count: 0 },
     { href: "/enquiries", label: "Enquiries", icon: Inbox, count: unanswered },
+    { href: "/", label: "Ask Bob", icon: AudioLines, count: 0 },
     { href: "/jobs", label: "Jobs", icon: HardHat, count: 0 },
     can("finance.read") ? { href: "/invoices", label: "Money", icon: ReceiptText, count: 0 } : { href: "/tasks", label: "Tasks", icon: CheckSquare, count: due },
-    { href: "/overview", label: "Overview", icon: House, count: 0 },
   ];
   return (
-    <nav aria-label="Main" className="pb-safe shrink-0 border-t border-white/[0.07] bg-ink-900/95 backdrop-blur lg:hidden">
+    <nav aria-label="Main" className="pb-safe shrink-0 border-t border-line bg-card/95 backdrop-blur lg:hidden">
       <div className="mx-auto grid h-[64px] max-w-lg grid-cols-5">
         {items.map((item) => {
           const active = item.href === "/" ? isAssistantRoute(pathname) : pathname.startsWith(item.href);
@@ -293,12 +293,12 @@ function BottomNav() {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={cn("relative flex flex-col items-center justify-center gap-1 text-[11.5px] font-medium transition", active ? "text-copper-400" : "text-muted-foreground")}
+              className={cn("relative flex flex-col items-center justify-center gap-1 text-[12.5px] font-medium transition", active ? "text-accent-icon" : "text-muted-foreground")}
             >
               <span className="relative">
                 <item.icon className="size-6" strokeWidth={active ? 2 : 1.7} />
                 {item.count ? (
-                  <span className="tabular absolute -right-2.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-copper-500 px-1 text-[10.5px] font-semibold text-white ring-2 ring-ink-900">
+                  <span className="tabular absolute -right-2.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-copper-500 px-1 text-[10.5px] font-semibold text-white ring-2 ring-card">
                     {item.count}
                   </span>
                 ) : null}
@@ -320,7 +320,7 @@ function AskBobButton() {
     <button
       onClick={() => ui.setAssistantOpen(true)}
       aria-label="Ask Bob"
-      className="fixed bottom-[84px] right-4 z-40 flex items-center gap-3 rounded-full bg-ink-800/95 p-1.5 text-[15px] font-medium shadow-2xl ring-1 ring-copper-500/40 backdrop-blur transition hover:ring-copper-400 lg:bottom-6 lg:right-6 lg:py-2 lg:pl-2 lg:pr-5"
+      className="theme-dark fixed bottom-6 right-6 z-40 hidden items-center gap-3 rounded-full bg-ink-800 p-1.5 text-[16px] font-medium text-white shadow-2xl ring-1 ring-copper-500/40 transition hover:ring-copper-400 lg:flex lg:py-2 lg:pl-2 lg:pr-5"
     >
       <OrbAvatar className="size-10" />
       <span className="hidden lg:inline">Ask Bob</span>
@@ -332,7 +332,7 @@ function AssistantPanel() {
   const ui = useUI();
   return (
     <Sheet open={ui.assistantOpen} onOpenChange={ui.setAssistantOpen}>
-      <SheetContent title="Bob" className="bg-ink-950 sm:w-[460px] [&>button:last-child]:hidden">
+      <SheetContent title="Bob" className="bg-background sm:w-[480px] [&>button:last-child]:hidden">
         <AssistantView variant="panel" onClose={() => ui.setAssistantOpen(false)} />
       </SheetContent>
     </Sheet>

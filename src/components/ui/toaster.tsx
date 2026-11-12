@@ -43,14 +43,14 @@ export function Toaster() {
         return (
           <div
             key={t.id}
-            className="pointer-events-auto flex max-w-sm animate-fade-up items-center gap-2.5 rounded-2xl bg-ink-750/95 px-4 py-3 text-sm shadow-xl ring-1 ring-white/10 backdrop-blur"
+            className="theme-dark pointer-events-auto flex max-w-sm animate-fade-up items-center gap-2.5 rounded-2xl bg-ink-800 px-4 py-3 text-[16px] text-white shadow-xl ring-1 ring-black/10"
           >
             <Icon
               className={cn(
                 "size-4.5 shrink-0",
-                t.tone === "success" && "text-emerald-400",
-                t.tone === "error" && "text-red-400",
-                t.tone === "info" && "text-copper-400",
+                t.tone === "success" && "text-good-fg",
+                t.tone === "error" && "text-danger-fg",
+                t.tone === "info" && "text-accent-icon",
               )}
             />
             <span>{t.message}</span>

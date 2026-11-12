@@ -299,7 +299,7 @@ async function route(t: Turn, text: string, lower: string) {
   // Analytics & lookups (read-only)
   if (/\bhow many\b.*\benquir/.test(lower) || /\benquir\w*\b.*\b(last|this|past)\b.*\b(month|week|days)\b/.test(lower)) return enquiryStats(t, text);
   if (/\b(any|got any|have i (got|had) any) new (enquir|leads?|messages)/.test(lower) || /\bnew enquiries\b/.test(lower)) return listEnquiries(t, "new");
-  if (/\b(who|which) (haven'?t i|have i not|do i need to|still need to) (replied|reply|respond|got back)|\bunanswered\b|\bwaiting (on|for) (a )?repl/.test(lower)) return listEnquiries(t, "needs_reply");
+  if (/\b(who|which) (haven'?t i|have i not|do i need to|still need to) (replied|reply|respond|got back)|\bunanswered\b|\bwaiting (on|for) (a |my )?repl|\b(who|which|what|anyone|anybody)\b.*\bneeds? (a |my )?(reply|replies|response|answer)|\bneeds? (a |my )?repl(y|ies)\b.*\?$/.test(lower)) return listEnquiries(t, "needs_reply");
   if (/\bwhich quotes?\b.*\b(follow|chase)|\bquotes?\b.*\bneed(s)? (following|chasing)|\bchase\b.*\bquotes\b/.test(lower)) return quotesToChase(t);
   if (/\bhow many quotes\b|\bhow much (work )?(have i|did i|i've) quoted\b|\bquoted\b.*\b(this|last) (month|week)\b|\bvalue of (my )?quotes\b/.test(lower)) return quoteStatsReply(t, text);
   if (/\bhow many jobs\b.*\b(won|win)\b|\bjobs (have i|did i) won\b|\bhow many (jobs )?(have i|did i) win\b/.test(lower)) return jobsWon(t, text);

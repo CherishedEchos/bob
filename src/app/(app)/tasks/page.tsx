@@ -38,8 +38,8 @@ export default function TasksPage() {
           .filter(([, list]) => list.length)
           .map(([title, list]) => (
             <section key={title}>
-              <h2 className={cn("mb-2 text-[13px] font-semibold uppercase tracking-wider", title === "Overdue" ? "text-red-300" : "text-subtle")}>{title}</h2>
-              <Card className="divide-y divide-white/[0.05]">
+              <h2 className={cn("mb-2 text-[14px] font-semibold uppercase tracking-wider", title === "Overdue" ? "text-danger-fg" : "text-subtle")}>{title}</h2>
+              <Card className="divide-y divide-line">
                 {list.map((t) => (
                   <TaskRow key={t.id} task={t} />
                 ))}
@@ -48,8 +48,8 @@ export default function TasksPage() {
           ))}
         {done.length ? (
           <section>
-            <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wider text-subtle">Recently done</h2>
-            <Card className="divide-y divide-white/[0.05]">
+            <h2 className="mb-2 text-[14px] font-semibold uppercase tracking-wider text-subtle">Recently done</h2>
+            <Card className="divide-y divide-line">
               {done.map((t) => (
                 <TaskRow key={t.id} task={t} />
               ))}
@@ -75,13 +75,13 @@ function TaskRow({ task: t }: { task: Task }) {
           const r = await actions.setTaskDone(t.id, !t.done);
           if (!r.ok) toast("Couldn't update", "error");
         }}
-        className={cn("grid size-7 shrink-0 place-items-center rounded-full ring-1 transition", t.done ? "bg-emerald-500/80 text-ink-950 ring-emerald-400" : "ring-white/25 hover:ring-copper-400")}
+        className={cn("grid size-7 shrink-0 place-items-center rounded-full ring-1 transition", t.done ? "bg-emerald-500/80 text-ink-950 ring-emerald-400" : "ring-line-strong hover:ring-copper-400")}
       >
         {t.done ? <Check className="size-4" /> : null}
       </button>
       <div className="min-w-0 flex-1">
-        <div className={cn("text-[14.5px]", t.done && "text-muted-foreground line-through")}>{t.title}</div>
-        <div className="text-[12.5px] text-muted-foreground">
+        <div className={cn("text-[15.5px]", t.done && "text-muted-foreground line-through")}>{t.title}</div>
+        <div className="text-[13.5px] text-muted-foreground">
           {formatDateKey(t.dueDate)}
           {customer ? (
             <>
@@ -109,7 +109,7 @@ function TaskRow({ task: t }: { task: Task }) {
           const r = await actions.deleteTask(t.id);
           toast(r.ok ? "Reminder deleted" : "Couldn't delete", r.ok ? "success" : "error");
         }}
-        className="grid size-8 place-items-center rounded-lg text-subtle hover:bg-white/[0.06] hover:text-red-300"
+        className="grid size-8 place-items-center rounded-lg text-subtle hover:bg-surface-3 hover:text-danger-fg"
       >
         <Trash2 className="size-4" />
       </button>

@@ -54,6 +54,8 @@ const ERROR_TEXT: Record<string, string> = {
 export function useSpeechRecognition(onFinal: (text: string) => void) {
   const [supported, setSupported] = React.useState(false);
   const [listening, setListening] = React.useState(false);
+  const [starting, setStarting] = React.useState(false);
+  const watchdog = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [interim, setInterim] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const recRef = React.useRef<RecognitionLike | null>(null);
@@ -82,7 +84,11 @@ export function useSpeechRecognition(onFinal: (text: string) => void) {
     setInterim("");
     setError(null);
 
-    rec.onstart = () => setListening(true);
+    rec.onstart = () => {
+      if (watchdog.current) clearTimeout(watchdog.current);
+      setStarting(false);
+      setListening(true);
+    };
     rec.onresult = (e) => {
       let interimText = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -93,31 +99,46 @@ export function useSpeechRecognition(onFinal: (text: string) => void) {
       setInterim((finalRef.current + " " + interimText).trim());
     };
     rec.onerror = (e) => {
+      if (watchdog.current) clearTimeout(watchdog.current);
+      setStarting(false);
       if (e.error !== "aborted") setError(ERROR_TEXT[e.error] ?? "Voice stopped unexpectedly. Try again or type instead.");
     };
     rec.onend = () => {
       setListening(false);
+      setStarting(false);
       const text = finalRef.current.trim();
       setInterim("");
       if (text) onFinalRef.current(text);
     };
     recRef.current = rec;
+    setStarting(true);
+    // Some browsers accept start() but never begin listening or report an error.
+    watchdog.current = setTimeout(() => {
+      rec.abort();
+      setStarting(false);
+      setListening(false);
+      setError("The microphone didn't start. Check this site is allowed to use the microphone, or type instead.");
+    }, 4000);
     try {
       rec.start();
     } catch {
+      if (watchdog.current) clearTimeout(watchdog.current);
+      setStarting(false);
       setError("Couldn't start the microphone. Try again.");
     }
   }, []);
 
   const stop = React.useCallback(() => recRef.current?.stop(), []);
   const cancel = React.useCallback(() => {
+    if (watchdog.current) clearTimeout(watchdog.current);
+    setStarting(false);
     finalRef.current = "";
     recRef.current?.abort();
     setListening(false);
     setInterim("");
   }, []);
 
-  return { supported, listening, interim, error, clearError: () => setError(null), start, stop, cancel };
+  return { supported, listening, starting, interim, error, clearError: () => setError(null), start, stop, cancel };
 }
 
 /** Read replies aloud using on-device speech synthesis (off by default). */

@@ -203,13 +203,24 @@ export function tasksDue(tasks: Task[]): Task[] {
 
 /* ----------------------------- Priorities ----------------------------- */
 
+interface PriorityBase {
+  id: string;
+  title: string;
+  detail: string;
+  urgency: number;
+  /** The underlying issue (enquiry, job, invoice…). Items with the same key are merged. */
+  key: string;
+  /** Reminders folded into this item because they're about the same thing. */
+  taskIds?: string[];
+}
+
 export type PriorityItem =
-  | { kind: "reply"; id: string; title: string; detail: string; urgency: number; enquiryId: string }
-  | { kind: "followup"; id: string; title: string; detail: string; urgency: number; enquiryId: string }
-  | { kind: "quote"; id: string; title: string; detail: string; urgency: number; quoteId: string; enquiryId?: string }
-  | { kind: "deposit"; id: string; title: string; detail: string; urgency: number; jobId: string }
-  | { kind: "invoice"; id: string; title: string; detail: string; urgency: number; invoiceId: string }
-  | { kind: "task"; id: string; title: string; detail: string; urgency: number; taskId: string };
+  | (PriorityBase & { kind: "reply"; enquiryId: string })
+  | (PriorityBase & { kind: "followup"; enquiryId: string })
+  | (PriorityBase & { kind: "quote"; quoteId: string; enquiryId?: string; customerName: string })
+  | (PriorityBase & { kind: "deposit"; jobId: string; customerName: string })
+  | (PriorityBase & { kind: "invoice"; invoiceId: string; customerName: string })
+  | (PriorityBase & { kind: "task"; taskId: string });
 
 const gbp0 = (n: number) => `£${Math.round(n).toLocaleString("en-GB")}`;
 
@@ -234,6 +245,7 @@ export function todaysPriorities(
       title: `Reply to ${e.customerName}`,
       detail: `${e.title}, ${e.location} · waiting ${waited}`,
       urgency: (e.priority === "high" ? 0 : 10) + (hrs > 24 ? 0 : 5),
+      key: `enquiry:${e.id}`,
       enquiryId: e.id,
     });
   }
@@ -245,6 +257,7 @@ export function todaysPriorities(
       title: `Follow up with ${e.customerName}`,
       detail: `${e.title}, ${e.location}`,
       urgency: 12,
+      key: `enquiry:${e.id}`,
       enquiryId: e.id,
     });
   }
@@ -258,8 +271,10 @@ export function todaysPriorities(
       title: `Chase ${customerName(q.customerId)} about their quote`,
       detail: `${q.description}${opts.includeFinance ? ` · ${gbp0(q.amount)}` : ""} · sent ${Math.round(hoursSince(q.sentAt!) / 24)}d ago`,
       urgency: 14,
+      key: q.enquiryId ? `enquiry:${q.enquiryId}` : `quote:${q.id}`,
       quoteId: q.id,
       enquiryId: q.enquiryId,
+      customerName: customerName(q.customerId),
     });
   }
 
@@ -272,7 +287,9 @@ export function todaysPriorities(
         title: finance.depositOverdue ? `${job.customerName}'s deposit is overdue` : `${job.customerName}'s deposit is due soon`,
         detail: `${gbp0(finance.depositOutstanding)} · ${job.title}`,
         urgency: finance.depositOverdue ? 3 : 15,
+        key: `job:${job.id}`,
         jobId: job.id,
+        customerName: job.customerName,
       });
     }
     for (const inv of data.invoices.filter(isInvoiceOverdue)) {
@@ -282,20 +299,37 @@ export function todaysPriorities(
         title: `${customerName(inv.customerId)}'s invoice is overdue`,
         detail: `${gbp0(invoiceBalance(inv))} · due ${Math.abs(daysFromToday(inv.dueDate!))}d ago`,
         urgency: 4,
+        key: `invoice:${inv.id}`,
         invoiceId: inv.id,
+        customerName: customerName(inv.customerId),
       });
     }
   }
 
+  // Reminders about something already on the list are folded into that item,
+  // so an overdue deposit and "chase the deposit" appear once.
+  const byKey = new Map(items.map((i) => [i.key, i]));
   for (const r of tasksDue(data.tasks)) {
-    items.push({
+    const urgency = r.dueDate === todayKey() ? 6 : 2;
+    const key = r.relatedType && r.relatedId ? `${r.relatedType}:${r.relatedId}` : `task:${r.id}`;
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.taskIds = [...(existing.taskIds ?? []), r.id];
+      existing.urgency = Math.min(existing.urgency, urgency);
+      if (!existing.detail.includes("reminder")) existing.detail += ` · reminder ${r.dueDate === todayKey() ? "due today" : "overdue"}`;
+      continue;
+    }
+    const item: PriorityItem = {
       kind: "task",
       id: `task_${r.id}`,
       title: r.title,
       detail: r.dueDate === todayKey() ? "Due today" : "Overdue",
-      urgency: r.dueDate === todayKey() ? 6 : 2,
+      urgency,
+      key,
       taskId: r.id,
-    });
+    };
+    items.push(item);
+    byKey.set(key, item);
   }
 
   return items.sort((a, b) => a.urgency - b.urgency);

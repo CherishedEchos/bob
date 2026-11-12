@@ -44,11 +44,11 @@ function CustomerDetail({ id }: { id: string }) {
       <div className="px-5 pb-5 pt-6 sm:px-6">
         <h2 className="pr-12 text-[22px] font-bold leading-tight tracking-tight">{c.name}</h2>
         {c.town || c.address ? (
-          <p className="mt-1 flex items-center gap-1 text-[14px] text-muted-foreground">
-            <MapPin className="size-3.5 text-copper-400" /> {c.address ?? c.town}
+          <p className="mt-1 flex items-center gap-1 text-[15px] text-muted-foreground">
+            <MapPin className="size-3.5 text-accent-icon" /> {c.address ?? c.town}
           </p>
         ) : null}
-        <p className="mt-1 text-[12.5px] text-subtle">Customer since {timeAgo(c.createdAt)}</p>
+        <p className="mt-1 text-[13.5px] text-subtle">Customer since {timeAgo(c.createdAt)}</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           {c.phone ? (
             <Button asChild variant="secondary" size="sm">
@@ -78,10 +78,10 @@ function CustomerDetail({ id }: { id: string }) {
             <AlarmClock /> Reminder
           </Button>
         </div>
-        <dl className="mt-4 space-y-1 text-[13.5px] text-muted-foreground">
+        <dl className="mt-4 space-y-1 text-[14.5px] text-muted-foreground">
           {c.phone ? <div>Phone: <span className="text-foreground/90">{c.phone}</span></div> : null}
           {c.email ? <div>Email: <span className="text-foreground/90">{c.email}</span></div> : null}
-          {can("finance.read") && owed ? <div>Owes on invoices: <span className="font-semibold text-amber-200">{gbp(owed)}</span></div> : null}
+          {can("finance.read") && owed ? <div>Owes on invoices: <span className="font-semibold text-warn-fg">{gbp(owed)}</span></div> : null}
         </dl>
       </div>
 
@@ -90,10 +90,10 @@ function CustomerDetail({ id }: { id: string }) {
           <ul className="space-y-2">
             {jobs.map((j) => (
               <li key={j.id}>
-                <button onClick={() => ui.openJob(j.id)} className="flex w-full items-center justify-between gap-2 rounded-xl bg-white/[0.03] px-3.5 py-3 text-left ring-1 ring-white/[0.06] hover:bg-white/[0.06]">
+                <button onClick={() => ui.openJob(j.id)} className="flex w-full items-center justify-between gap-2 rounded-xl bg-surface-2 px-3.5 py-3 text-left ring-1 ring-line hover:bg-surface-3">
                   <div className="min-w-0">
-                    <div className="truncate text-[14px] font-medium">{j.title}</div>
-                    <div className="text-[12.5px] text-muted-foreground">
+                    <div className="truncate text-[15px] font-medium">{j.title}</div>
+                    <div className="text-[13.5px] text-muted-foreground">
                       {j.location}
                       {can("finance.read") ? ` · ${gbp(j.quotedValue)} · ${jobFinance(j, data.payments).paidPercent}% paid` : ""}
                     </div>
@@ -104,7 +104,7 @@ function CustomerDetail({ id }: { id: string }) {
             ))}
           </ul>
         ) : (
-          <p className="text-[14px] text-muted-foreground">No jobs yet.</p>
+          <p className="text-[15px] text-muted-foreground">No jobs yet.</p>
         )}
       </Section>
 
@@ -113,10 +113,10 @@ function CustomerDetail({ id }: { id: string }) {
           <ul className="space-y-2">
             {enquiries.map((e) => (
               <li key={e.id}>
-                <button onClick={() => ui.openEnquiry(e.id)} className="flex w-full items-center justify-between gap-2 rounded-xl bg-white/[0.03] px-3.5 py-3 text-left ring-1 ring-white/[0.06] hover:bg-white/[0.06]">
+                <button onClick={() => ui.openEnquiry(e.id)} className="flex w-full items-center justify-between gap-2 rounded-xl bg-surface-2 px-3.5 py-3 text-left ring-1 ring-line hover:bg-surface-3">
                   <div className="min-w-0">
-                    <div className="truncate text-[14px] font-medium">{e.title}</div>
-                    <div className="text-[12.5px] text-muted-foreground">{timeAgo(e.receivedAt)}</div>
+                    <div className="truncate text-[15px] font-medium">{e.title}</div>
+                    <div className="text-[13.5px] text-muted-foreground">{timeAgo(e.receivedAt)}</div>
                   </div>
                   <EnquiryStatusBadge status={e.status} />
                 </button>
@@ -124,7 +124,7 @@ function CustomerDetail({ id }: { id: string }) {
             ))}
           </ul>
         ) : (
-          <p className="text-[14px] text-muted-foreground">No enquiries linked.</p>
+          <p className="text-[15px] text-muted-foreground">No enquiries linked.</p>
         )}
       </Section>
 
@@ -132,12 +132,12 @@ function CustomerDetail({ id }: { id: string }) {
         <Section title="Invoices">
           <ul className="space-y-2">
             {invoices.map((i) => (
-              <li key={i.id} className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]">
+              <li key={i.id} className="flex items-center justify-between rounded-xl bg-surface-2 px-3.5 py-3 ring-1 ring-line">
                 <div>
-                  <div className="text-[14px] font-medium">{i.number ?? i.draftRef}</div>
-                  <div className="text-[12.5px] text-muted-foreground">{invoiceStatusLabel(i)}</div>
+                  <div className="text-[15px] font-medium">{i.number ?? i.draftRef}</div>
+                  <div className="text-[13.5px] text-muted-foreground">{invoiceStatusLabel(i)}</div>
                 </div>
-                <span className="tabular text-[15px] font-semibold">{gbp(i.total)}</span>
+                <span className="tabular text-[16px] font-semibold">{gbp(i.total)}</span>
               </li>
             ))}
           </ul>
@@ -151,12 +151,12 @@ function CustomerDetail({ id }: { id: string }) {
       {can("data.delete") ? (
         <Section title="Privacy" className="pb-10">
           {!confirmErase ? (
-            <Button variant="ghost" size="sm" className="-ml-2 text-red-300 hover:text-red-200" onClick={() => setConfirmErase(true)}>
+            <Button variant="ghost" size="sm" className="-ml-2 text-danger-fg hover:text-danger-fg" onClick={() => setConfirmErase(true)}>
               <ShieldAlert /> Erase {firstName(c.name)}&apos;s personal data
             </Button>
           ) : (
             <div className="rounded-2xl bg-red-500/10 p-3.5 ring-1 ring-red-500/30">
-              <p className="text-[13.5px]">
+              <p className="text-[14.5px]">
                 This removes {c.name}&apos;s contact details, notes, enquiries and reminders. Invoices and payments are kept but anonymised, because UK tax rules
                 require you to keep financial records. This can&apos;t be undone.
               </p>

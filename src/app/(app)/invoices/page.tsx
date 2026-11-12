@@ -62,11 +62,11 @@ function InvoicesInner() {
       <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
         {[
           { label: "Owed on invoices", value: gbp(owed), tone: "" },
-          { label: "Overdue", value: gbp(overdue), tone: overdue ? "text-red-300" : "" },
-          { label: "Deposits awaited", value: gbp(depositTotal), tone: depositTotal ? "text-amber-200" : "" },
+          { label: "Overdue", value: gbp(overdue), tone: overdue ? "text-danger-fg" : "" },
+          { label: "Deposits awaited", value: gbp(depositTotal), tone: depositTotal ? "text-warn-fg" : "" },
         ].map((s) => (
           <Card key={s.label} className="p-3 sm:p-4">
-            <div className="text-[12px] text-muted-foreground sm:text-[13px]">{s.label}</div>
+            <div className="text-[13px] text-muted-foreground sm:text-[14px]">{s.label}</div>
             <div className={cn("tabular mt-1 text-[18px] font-bold sm:text-[24px]", s.tone)}>{s.value}</div>
           </Card>
         ))}
@@ -100,16 +100,16 @@ function InvoicesInner() {
       {deposits.length ? (
         <section className="mt-10">
           <h2 className="mb-3 text-[19px] font-semibold tracking-tight">Deposits awaited</h2>
-          <Card className="divide-y divide-white/[0.05]">
+          <Card className="divide-y divide-line">
             {deposits.map(({ job, finance }) => (
-              <button key={job.id} onClick={() => ui.openJob(job.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-white/[0.03]">
-                <PoundSterling className="size-4 text-copper-300" />
-                <span className="min-w-0 flex-1 truncate text-[14px]">
+              <button key={job.id} onClick={() => ui.openJob(job.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-2">
+                <PoundSterling className="size-4 text-accent-fg" />
+                <span className="min-w-0 flex-1 truncate text-[15px]">
                   {job.customerName} — {job.title}
                 </span>
                 <span className="text-right">
-                  <span className="tabular block text-[14px] font-semibold">{gbp(finance.depositOutstanding)}</span>
-                  <span className={cn("block text-[12px]", finance.depositOverdue ? "text-red-300" : "text-muted-foreground")}>
+                  <span className="tabular block text-[15px] font-semibold">{gbp(finance.depositOutstanding)}</span>
+                  <span className={cn("block text-[13px]", finance.depositOverdue ? "text-danger-fg" : "text-muted-foreground")}>
                     {finance.depositOverdue ? "Overdue" : job.depositDueDate ? `Due ${formatDateInline(job.depositDueDate)}` : "No due date"}
                   </span>
                 </span>
@@ -134,27 +134,27 @@ function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expa
 
   return (
     <li className="card-surface overflow-hidden rounded-2xl">
-      <button onClick={onToggle} aria-expanded={expanded} className="flex w-full items-center gap-3 p-4 text-left hover:bg-white/[0.03]">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/[0.05] text-copper-300 ring-1 ring-white/10">
+      <button onClick={onToggle} aria-expanded={expanded} className="flex w-full items-center gap-3 p-4 text-left hover:bg-surface-2">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface-2 text-accent-fg ring-1 ring-line">
           <ReceiptText className="size-[18px]" />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[15px] font-semibold">{customer?.name ?? "Customer"}</div>
-          <div className="truncate text-[13px] text-muted-foreground">
+          <div className="truncate text-[16px] font-semibold">{customer?.name ?? "Customer"}</div>
+          <div className="truncate text-[14px] text-muted-foreground">
             {i.number ? `${i.number} · ` : ""}
             {i.draftRef} · {i.lines[0]?.description}
           </div>
         </div>
         <div className="text-right">
-          <div className="tabular text-[15px] font-semibold">{gbp(i.status === "draft" || i.status === "paid" ? i.total : invoiceBalance(i))}</div>
-          <div className={cn("text-[12.5px]", label === "Overdue" ? "text-red-300" : label === "Paid" ? "text-emerald-300" : label === "Draft" ? "text-sky-200" : "text-muted-foreground")}>
+          <div className="tabular text-[16px] font-semibold">{gbp(i.status === "draft" || i.status === "paid" ? i.total : invoiceBalance(i))}</div>
+          <div className={cn("text-[13.5px]", label === "Overdue" ? "text-danger-fg" : label === "Paid" ? "text-good-fg" : label === "Draft" ? "text-info-fg" : "text-muted-foreground")}>
             {label}
             {i.dueDate && i.status === "sent" ? ` · due ${formatDateInline(i.dueDate)}` : ""}
           </div>
         </div>
       </button>
       {expanded ? (
-        <div className="border-t border-white/[0.06] px-4 pb-4 pt-2">
+        <div className="border-t border-line px-4 pb-4 pt-2">
           <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
             <div>
               <MoneyRow label={i.amountsAre === "no_vat" ? "Amount (no VAT)" : "Net"} value={gbp(i.subtotal)} />
@@ -162,7 +162,7 @@ function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expa
               <MoneyRow label="Total" value={gbp(i.total)} strong />
               {i.amountPaid ? <MoneyRow label="Paid" value={gbp(i.amountPaid)} tone="green" /> : null}
             </div>
-            <dl className="mt-2 space-y-1 text-[13px] text-muted-foreground sm:mt-0">
+            <dl className="mt-2 space-y-1 text-[14px] text-muted-foreground sm:mt-0">
               {job ? (
                 <div>
                   Job:{" "}
@@ -173,7 +173,7 @@ function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expa
               ) : null}
               <div>Created by {i.createdBy} · {timeAgo(i.createdAt)}</div>
               {i.sentAt ? <div>Sent {timeAgo(i.sentAt)}{i.provider ? ` via ${i.provider === "demo_accounting" ? "demo accounting (simulated)" : i.provider}` : " (outside Bob)"}</div> : null}
-              {i.status === "draft" ? <div className="text-sky-200">Draft — not sent. Bob ref {i.draftRef} is not an invoice number.</div> : null}
+              {i.status === "draft" ? <div className="text-info-fg">Draft — not sent. Bob ref {i.draftRef} is not an invoice number.</div> : null}
             </dl>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">

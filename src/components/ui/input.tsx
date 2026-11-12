@@ -2,11 +2,11 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
-  "w-full rounded-xl bg-white/[0.04] px-3.5 text-[15px] text-foreground ring-1 ring-input placeholder:text-subtle outline-none transition focus:bg-white/[0.06] focus:ring-2 focus:ring-copper-500/70 disabled:opacity-50 aria-[invalid=true]:ring-destructive/70";
+  "w-full rounded-xl bg-card px-3.5 text-[16px] text-foreground ring-1 ring-input placeholder:text-subtle outline-none transition focus:ring-2 focus:ring-copper-500/70 disabled:opacity-50 aria-[invalid=true]:ring-destructive/70";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (
-    <input ref={ref} className={cn(fieldBase, "h-11", className)} {...props} />
+    <input ref={ref} className={cn(fieldBase, "h-12", className)} {...props} />
   ),
 );
 Input.displayName = "Input";
@@ -24,7 +24,7 @@ export const NativeSelect = React.forwardRef<HTMLSelectElement, React.SelectHTML
       ref={ref}
       className={cn(
         fieldBase,
-        "h-11 appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23a7a09a%22 stroke-width=%222%22><path d=%22m6 9 6 6 6-6%22/></svg>')] bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-9 [&>option]:bg-ink-800",
+        "h-12 appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23a7a09a%22 stroke-width=%222%22><path d=%22m6 9 6 6 6-6%22/></svg>')] bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-9 [&>option]:bg-card",
         className,
       )}
       {...props}
@@ -36,7 +36,7 @@ export const NativeSelect = React.forwardRef<HTMLSelectElement, React.SelectHTML
 NativeSelect.displayName = "NativeSelect";
 
 export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
-  return <label className={cn("mb-1.5 block text-[13px] font-medium text-muted-foreground", className)} {...props} />;
+  return <label className={cn("mb-1.5 block text-[14px] font-medium text-muted-foreground", className)} {...props} />;
 }
 
 export function Field({
@@ -59,11 +59,11 @@ export function Field({
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
       {error ? (
-        <p role="alert" className="mt-1.5 text-[13px] text-red-300">
+        <p role="alert" className="mt-1.5 text-[14px] text-danger-fg">
           {error}
         </p>
       ) : hint ? (
-        <p className="mt-1.5 text-[12px] text-subtle">{hint}</p>
+        <p className="mt-1.5 text-[13px] text-subtle">{hint}</p>
       ) : null}
     </div>
   );

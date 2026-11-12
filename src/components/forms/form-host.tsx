@@ -25,7 +25,7 @@ const TITLES: Record<FormPrefill["form"], [string, string]> = {
   job: ["New job", "Add the basics now — you can fill in the rest later."],
   payment: ["Record a payment", "Log money you've already received against a job."],
   reminder: ["Set a reminder", "It shows on your overview and Bob mentions it when it's due."],
-  enquiry: ["Log an enquiry", "Capture a phone call, message or form that came in."],
+  enquiry: ["Add an enquiry", "A call, message, email or form that came in. Use made-up details in the demo."],
   customer: ["New customer", "Only add details you actually have."],
   invoice: ["Invoice draft", "Saved as a draft. Nothing is sent from here."],
   expense: ["Add a cost", "Record materials, labour or hire against a job."],
@@ -68,7 +68,7 @@ function FormActions({ submitLabel, onCancel, busy }: { submitLabel: string; onC
 
 function FormError({ errors }: { errors: FieldErrors }) {
   return errors._ ? (
-    <p role="alert" className="rounded-xl bg-red-500/10 px-3 py-2 text-[13.5px] text-red-200 ring-1 ring-red-500/25">
+    <p role="alert" className="rounded-xl bg-red-500/10 px-3 py-2 text-[14.5px] text-danger-fg ring-1 ring-red-500/25">
       {errors._}
     </p>
   ) : null;
@@ -169,7 +169,7 @@ function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }
                   key={pct}
                   type="button"
                   onClick={() => f.setValues((s) => ({ ...s, depositRequired: String(Math.round((quote * pct) / 100)) }))}
-                  className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[12px] text-muted-foreground ring-1 ring-white/10 hover:text-foreground"
+                  className="rounded-full bg-surface-2 px-2.5 py-1 text-[13px] text-muted-foreground ring-1 ring-line hover:text-foreground"
                 >
                   {pct}%
                 </button>
@@ -255,7 +255,7 @@ function PaymentForm({ prefill }: { prefill: Extract<FormPrefill, { form: "payme
         </NativeSelect>
       </Field>
       {fin ? (
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-[14px] text-muted-foreground">
           {gbp(fin.balance)} left to pay{fin.depositOutstanding ? ` · deposit outstanding ${gbp(fin.depositOutstanding)}` : ""}
         </p>
       ) : null}
@@ -298,7 +298,7 @@ function PaymentForm({ prefill }: { prefill: Extract<FormPrefill, { form: "payme
         ) : null}
       </div>
       {checking ? (
-        <div className="rounded-2xl bg-copper-500/10 p-3.5 text-[14px] ring-1 ring-copper-500/35">
+        <div className="rounded-2xl bg-copper-500/10 p-3.5 text-[15px] ring-1 ring-copper-500/35">
           Record <strong>{gbp(parseFloat(values.amount || "0"))}</strong> from {job?.customerName} received {formatDateInline(values.receivedAt)}? Only do this once the money is in
           your account.
         </div>
@@ -345,7 +345,7 @@ function ReminderForm({ prefill }: { prefill: Extract<FormPrefill, { form: "remi
             ["Tomorrow", 1],
             ["Next week", 7],
           ].map(([l, d]) => (
-            <button key={l} type="button" onClick={() => f.setValues((s) => ({ ...s, dueDate: addDaysKey(d as number) }))} className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[12px] text-muted-foreground ring-1 ring-white/10 hover:text-foreground">
+            <button key={l} type="button" onClick={() => f.setValues((s) => ({ ...s, dueDate: addDaysKey(d as number) }))} className="rounded-full bg-surface-2 px-2.5 py-1 text-[13px] text-muted-foreground ring-1 ring-line hover:text-foreground">
               {l}
             </button>
           ))}
@@ -381,7 +381,7 @@ function EnquiryForm() {
     const res = await actions.createEnquiry(values);
     f.setBusy(false);
     if (!res.ok) return f.setErrors(res.errors);
-    toast(`Enquiry logged for ${values.customerName}`);
+    toast(`Enquiry added for ${values.customerName}`);
     ui.closeForm();
     ui.openEnquiry(res.value.id);
   };
@@ -420,7 +420,7 @@ function EnquiryForm() {
           <Textarea id="ef-desc" value={values.description} onChange={set("description")} />
         </Field>
       </div>
-      <FormActions submitLabel="Log enquiry" onCancel={ui.closeForm} busy={f.busy} />
+      <FormActions submitLabel="Add enquiry" onCancel={ui.closeForm} busy={f.busy} />
     </form>
   );
 }
@@ -561,7 +561,7 @@ function InvoiceForm({ prefill }: { prefill: Extract<FormPrefill, { form: "invoi
         </Field>
       </div>
       {preview ? (
-        <div className="rounded-xl bg-white/[0.03] px-3.5 py-2 ring-1 ring-white/[0.06]">
+        <div className="rounded-xl bg-surface-2 px-3.5 py-2 ring-1 ring-line">
           <MoneyRow label="Net" value={gbp(preview.subtotal)} />
           {preview.vat ? <MoneyRow label={`VAT ${preview.vatRate}%`} value={gbp(preview.vat)} /> : null}
           <MoneyRow label="Total" value={gbp(preview.total)} strong />

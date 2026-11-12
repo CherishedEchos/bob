@@ -43,9 +43,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const value = React.useMemo<UIValue>(
     () => ({
       ...state,
-      openEnquiry: (id) => setState((s) => ({ ...s, enquiryId: id, jobId: null, customerId: null })),
-      openJob: (id) => setState((s) => ({ ...s, jobId: id, enquiryId: null, customerId: null })),
-      openCustomer: (id) => setState((s) => ({ ...s, customerId: id, jobId: null, enquiryId: null })),
+      openEnquiry: (id) => setState((s) => ({ ...s, enquiryId: id, jobId: null, customerId: null, assistantOpen: false })),
+      openJob: (id) => setState((s) => ({ ...s, jobId: id, enquiryId: null, customerId: null, assistantOpen: false })),
+      openCustomer: (id) => setState((s) => ({ ...s, customerId: id, jobId: null, enquiryId: null, assistantOpen: false })),
       openForm: (form) => setState((s) => ({ ...s, form })),
       closeEnquiry: () => setState((s) => ({ ...s, enquiryId: null })),
       closeJob: () => setState((s) => ({ ...s, jobId: null })),

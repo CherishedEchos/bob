@@ -11,7 +11,7 @@ export default function ActivityPage() {
   return (
     <>
       <PageHeader title="Activity log" subtitle="Every change — from the dashboard, from Bob (after approval) or from integrations. Newest first." />
-      <Card className="divide-y divide-white/[0.06]">
+      <Card className="divide-y divide-line">
         {data.activity.map((a) => {
           const clickable =
             (a.entityType === "job" && data.jobs.some((j) => j.id === a.entityId)) ||
@@ -22,12 +22,12 @@ export default function ActivityPage() {
               key={a.id}
               disabled={!clickable}
               onClick={() => (a.entityType === "job" ? ui.openJob(a.entityId!) : a.entityType === "customer" ? ui.openCustomer(a.entityId!) : ui.openEnquiry(a.entityId!))}
-              className="flex w-full items-start gap-3 px-4 py-3.5 text-left enabled:hover:bg-white/[0.03]"
+              className="flex w-full items-start gap-3 px-4 py-3.5 text-left enabled:hover:bg-surface-2"
             >
               <span className="mt-1.5 size-2 shrink-0 rounded-full bg-copper-500" />
               <div className="min-w-0 flex-1">
-                <p className="text-[14.5px]">{a.summary}</p>
-                <p className="mt-0.5 text-[12.5px] text-subtle">
+                <p className="text-[15.5px]">{a.summary}</p>
+                <p className="mt-0.5 text-[13.5px] text-subtle">
                   {a.actor}
                   {a.via === "bob" ? " via Bob" : a.via === "integration" ? " (integration)" : ""} · {timeAgo(a.at)} · {new Date(a.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                 </p>

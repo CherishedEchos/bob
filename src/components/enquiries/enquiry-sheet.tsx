@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { AlarmClock, AlertTriangle, CalendarCheck, Copy, FileText, HardHat, Mail, MapPin, Phone, Save, Send, UserRound } from "lucide-react";
+import { AlarmClock, AlertTriangle, CalendarCheck, CheckCheck, Copy, FileText, HardHat, Mail, MapPin, Phone, Save, Send, UserRound } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
-import { ENQUIRY_STATUSES, ENQUIRY_STATUS_LABEL, PRIORITY_LABEL, SOURCE_LABEL } from "@/lib/derive";
+import { ENQUIRY_STATUSES, ENQUIRY_STATUS_LABEL, PRIORITY_LABEL, SOURCE_LABEL, needsReply } from "@/lib/derive";
 import type { ActionView } from "@/lib/bob/types";
 import type { Priority } from "@/lib/types";
 import { addDaysKey, cn, copyToClipboard, timeAgo, firstName, formatDateInline } from "@/lib/utils";
@@ -27,7 +27,7 @@ export function EnquirySheet() {
   return (
     <Sheet open={!!enquiry} onOpenChange={(o) => !o && ui.closeEnquiry()}>
       {enquiry ? (
-        <SheetContent title={`Enquiry from ${enquiry.customerName}`}>
+        <SheetContent title={`Enquiry from ${enquiry.customerName}`} className="lg:w-[min(1000px,94vw)]">
           <EnquiryDetail id={enquiry.id} />
         </SheetContent>
       ) : null}
@@ -36,20 +36,10 @@ export function EnquirySheet() {
 }
 
 function EnquiryDetail({ id }: { id: string }) {
-  const { data, actions, can, propose, decide } = useStore();
+  const { data, actions, can } = useStore();
   const ui = useUI();
   const e = data.enquiries.find((x) => x.id === id)!;
-  const [reply, setReply] = React.useState(e.draftReply ?? e.suggestedReply);
-  const [confirmReplied, setConfirmReplied] = React.useState(false);
-  const [pending, setPending] = React.useState<ActionView | null>(null);
-  const emailConnected = data.connections.some((c) => c.kind === "email" && (c.status === "connected" || c.status === "demo"));
   const write = can("enquiries.write");
-
-  React.useEffect(() => {
-    setReply(e.draftReply ?? e.suggestedReply);
-    setConfirmReplied(false);
-    setPending(null);
-  }, [e.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setFollowUp = async (date: string | null) => {
     const res = await actions.updateEnquiry(e.id, { followUpDate: date });
@@ -63,13 +53,13 @@ function EnquiryDetail({ id }: { id: string }) {
           <SourceIcon source={e.source} className="size-11 rounded-2xl" />
           <div className="min-w-0">
             <h2 className="text-[22px] font-bold leading-tight tracking-tight">{e.customerName}</h2>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[14px] text-muted-foreground">
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[15px] text-muted-foreground">
               {e.title}
               <span aria-hidden>·</span>
-              <MapPin className="size-3.5 text-copper-400" />
+              <MapPin className="size-3.5 text-accent-icon" />
               {e.location}
             </p>
-            <p className="mt-1 text-[13px] text-subtle">
+            <p className="mt-1 text-[14px] text-subtle">
               {SOURCE_LABEL[e.source]}
               {e.provider ? ` (${e.provider === "demo_inbox" ? "demo inbox" : e.provider})` : ""} · received {timeAgo(e.receivedAt)}
             </p>
@@ -79,7 +69,7 @@ function EnquiryDetail({ id }: { id: string }) {
           <EnquiryStatusBadge status={e.status} />
           <PriorityBadge priority={e.priority} />
           {e.followUpDate ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[12px] text-muted-foreground ring-1 ring-white/10">
+            <span className="inline-flex items-center gap-1 rounded-full bg-surface-3 px-2.5 py-0.5 text-[13px] text-muted-foreground ring-1 ring-line">
               <CalendarCheck className="size-3" /> Follow up {formatDateInline(e.followUpDate)}
             </span>
           ) : null}
@@ -118,37 +108,32 @@ function EnquiryDetail({ id }: { id: string }) {
             </Button>
           ) : null}
         </div>
-        <dl className="mt-3 space-y-1 text-[13.5px] text-muted-foreground">
+        <dl className="mt-3 space-y-1 text-[14.5px] text-muted-foreground">
           {e.phone ? <div>Phone: <span className="text-foreground/90">{e.phone}</span></div> : null}
           {e.email ? <div>Email: <span className="text-foreground/90">{e.email}</span></div> : null}
         </dl>
       </div>
 
-      <Section title="Conversation">
-        {e.messages.length ? (
+      <ReplyPanel id={e.id} />
+
+      {e.messages.length > 1 ? (
+        <Section title="Full conversation">
           <ol className="space-y-2.5">
-            {e.messages.map((m) => {
-              const flagged = m.direction === "inbound" && SUSPICIOUS.test(m.body);
-              return (
-                <li key={m.id} className={cn("rounded-2xl px-3.5 py-3 ring-1", m.direction === "inbound" ? "bg-white/[0.03] ring-white/[0.07]" : "ml-6 bg-copper-500/8 ring-copper-500/20")}>
-                  <div className="mb-1 flex items-center justify-between gap-2 text-[12px] text-subtle">
-                    <span>{m.direction === "inbound" ? firstName(e.customerName) : "You"}{m.subject ? ` · ${m.subject}` : ""}</span>
-                    <span>{timeAgo(m.at)}</span>
-                  </div>
-                  {flagged ? (
-                    <div className="mb-1.5 flex items-center gap-1.5 text-[12px] text-amber-200">
-                      <AlertTriangle className="size-3.5" /> Contains instructions aimed at an assistant — Bob ignores them.
-                    </div>
-                  ) : null}
-                  <p className="whitespace-pre-wrap text-[14.5px] leading-relaxed text-foreground/90">{m.body}</p>
-                </li>
-              );
-            })}
+            {e.messages.map((m) => (
+              <li key={m.id} className={cn("rounded-2xl px-3.5 py-3 ring-1", m.direction === "inbound" ? "bg-card ring-line" : "ml-6 bg-copper-500/8 ring-copper-500/20")}>
+                <div className="mb-1 flex items-center justify-between gap-2 text-[13px] text-subtle">
+                  <span>
+                    {m.direction === "inbound" ? firstName(e.customerName) : "You"}
+                    {m.subject ? ` · ${m.subject}` : ""}
+                  </span>
+                  <span>{timeAgo(m.at)}</span>
+                </div>
+                <p className="whitespace-pre-wrap text-[15.5px] leading-relaxed text-foreground/90">{m.body}</p>
+              </li>
+            ))}
           </ol>
-        ) : (
-          <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-foreground/90">{e.description || "No details recorded."}</p>
-        )}
-      </Section>
+        </Section>
+      ) : null}
 
       {write ? (
         <Section title="Status">
@@ -163,8 +148,8 @@ function EnquiryDetail({ id }: { id: string }) {
                 }}
                 aria-pressed={e.status === s}
                 className={cn(
-                  "h-10 rounded-xl text-[13px] font-medium ring-1 transition",
-                  e.status === s ? "bg-copper-500/18 text-copper-200 ring-copper-500/60" : "bg-white/[0.03] text-muted-foreground ring-white/10 hover:bg-white/[0.07] hover:text-foreground",
+                  "h-10 rounded-xl text-[14px] font-medium ring-1 transition",
+                  e.status === s ? "bg-copper-500/18 text-accent-fg ring-copper-500/60" : "bg-surface-2 text-muted-foreground ring-line hover:bg-surface-3 hover:text-foreground",
                 )}
               >
                 {ENQUIRY_STATUS_LABEL[s]}
@@ -173,7 +158,7 @@ function EnquiryDetail({ id }: { id: string }) {
           </div>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <div className="text-[13px] font-medium text-muted-foreground">Priority</div>
+              <div className="text-[14px] font-medium text-muted-foreground">Priority</div>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 {(["high", "medium", "low"] as Priority[]).map((p) => (
                   <button
@@ -185,8 +170,8 @@ function EnquiryDetail({ id }: { id: string }) {
                     }}
                     aria-pressed={e.priority === p}
                     className={cn(
-                      "h-10 rounded-xl text-[13px] font-medium ring-1 transition",
-                      e.priority === p ? "bg-copper-500/18 text-copper-200 ring-copper-500/60" : "bg-white/[0.03] text-muted-foreground ring-white/10 hover:bg-white/[0.07]",
+                      "h-10 rounded-xl text-[14px] font-medium ring-1 transition",
+                      e.priority === p ? "bg-copper-500/18 text-accent-fg ring-copper-500/60" : "bg-surface-2 text-muted-foreground ring-line hover:bg-surface-3",
                     )}
                   >
                     {PRIORITY_LABEL[p]}
@@ -195,7 +180,7 @@ function EnquiryDetail({ id }: { id: string }) {
               </div>
             </div>
             <label className="block">
-              <span className="text-[13px] font-medium text-muted-foreground">Assigned to</span>
+              <span className="text-[14px] font-medium text-muted-foreground">Assigned to</span>
               <NativeSelect
                 className="mt-2"
                 value={e.assignedUserId ?? ""}
@@ -237,83 +222,6 @@ function EnquiryDetail({ id }: { id: string }) {
       ) : null}
 
       {write ? (
-        <Section title={e.draftReply ? "Your saved draft reply" : "Suggested reply"}>
-          <Textarea value={reply} onChange={(ev) => setReply(ev.target.value)} aria-label="Reply text" className="min-h-48 text-[14.5px]" />
-          <p className="mt-2 text-[12.5px] text-subtle">
-            {emailConnected && e.email
-              ? "Sending goes through your connected mailbox and asks for your approval first."
-              : `Sending isn't connected for this enquiry — copy this into ${e.source === "instagram" ? "Instagram" : e.source === "email" ? "your email" : "a text message"}, then mark as replied.`}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {emailConnected && e.email && can("email.send") ? (
-              <Button
-                size="sm"
-                onClick={async () => {
-                  const r = await propose("send_email", { to: e.email, subject: `Re: ${e.title}`, body: reply, enquiryId: e.id, customerId: e.customerId, purpose: "reply" });
-                  if (r.ok) setPending(r.action);
-                  else toast(r.error, "error");
-                }}
-              >
-                <Send /> Send…
-              </Button>
-            ) : null}
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={async () => {
-                const ok = await copyToClipboard(reply);
-                toast(ok ? "Reply copied" : "Couldn't copy — select the text instead", ok ? "success" : "error");
-              }}
-            >
-              <Copy /> Copy
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={async () => {
-                const res = await actions.saveDraftReply(e.id, reply);
-                toast(res.ok ? "Draft saved (not sent)" : Object.values(res.errors)[0] ?? "Couldn't save", res.ok ? "success" : "error");
-              }}
-            >
-              <Save /> Save draft
-            </Button>
-            {!confirmReplied ? (
-              <Button size="sm" variant="outline" onClick={() => setConfirmReplied(true)}>
-                Mark as replied
-              </Button>
-            ) : null}
-          </div>
-          {pending ? (
-            <ActionCard
-              action={pending}
-              onDecide={async (d, edits) => {
-                const v = await decide(pending.id, d, edits);
-                if (v) setPending(v);
-              }}
-            />
-          ) : null}
-          {confirmReplied ? (
-            <div className="mt-3 rounded-2xl bg-copper-500/10 p-3.5 ring-1 ring-copper-500/35">
-              <p className="text-[14px]">Have you sent your reply to {firstName(e.customerName)}?</p>
-              <div className="mt-3 flex gap-2">
-                <Button size="sm" variant="secondary" onClick={() => setConfirmReplied(false)}>Not yet</Button>
-                <Button
-                  size="sm"
-                  onClick={async () => {
-                    const res = await actions.markEnquiryReplied(e.id);
-                    setConfirmReplied(false);
-                    if (res.ok) toast(`${firstName(e.customerName)} marked as replied`);
-                  }}
-                >
-                  Yes, mark as replied
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </Section>
-      ) : null}
-
-      {write ? (
         <Section title="Next step">
           <div className="flex flex-wrap gap-2">
             {e.jobId ? (
@@ -347,5 +255,167 @@ function EnquiryDetail({ id }: { id: string }) {
         <NotesPanel notes={e.notes} onAdd={(t) => actions.addEnquiryNote(e.id, t)} />
       </Section>
     </div>
+  );
+}
+
+/**
+ * Reply workspace: the customer's message beside the draft (stacked on
+ * phones). Drafts save when you leave the box or copy. Copying never changes
+ * the status — only "Mark as replied" does.
+ */
+function ReplyPanel({ id }: { id: string }) {
+  const { data, actions, can, propose, decide } = useStore();
+  const e = data.enquiries.find((x) => x.id === id)!;
+  const [reply, setReply] = React.useState(e.draftReply ?? e.suggestedReply);
+  const [saved, setSaved] = React.useState<"saved" | "unsaved" | "saving">(e.draftReply ? "saved" : "unsaved");
+  const [confirmReplied, setConfirmReplied] = React.useState(false);
+  const [pending, setPending] = React.useState<ActionView | null>(null);
+  const emailConnected = data.connections.some((c) => c.kind === "email" && (c.status === "connected" || c.status === "demo"));
+  const write = can("enquiries.write");
+  const inbound = e.messages.filter((m) => m.direction === "inbound");
+  const latest = inbound.at(-1);
+  const flagged = inbound.some((m) => SUSPICIOUS.test(m.body));
+  const channel = e.source === "instagram" ? "Instagram" : e.source === "email" ? "your email" : e.source === "phone" ? "a text message" : "your usual app";
+  const replied = !needsReply(e);
+
+  React.useEffect(() => {
+    setReply(e.draftReply ?? e.suggestedReply);
+    setSaved(e.draftReply ? "saved" : "unsaved");
+    setConfirmReplied(false);
+    setPending(null);
+  }, [e.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A draft saved elsewhere (e.g. by Bob) replaces what's shown — unless you're mid-edit.
+  const lastServerDraft = React.useRef(e.draftReply);
+  React.useEffect(() => {
+    if (e.draftReply === lastServerDraft.current) return;
+    const untouched = saved !== "unsaved" || reply === (lastServerDraft.current ?? e.suggestedReply);
+    lastServerDraft.current = e.draftReply;
+    if (untouched && e.draftReply !== undefined) {
+      setReply(e.draftReply);
+      setSaved("saved");
+    }
+  }, [e.draftReply]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const save = async (quiet = false) => {
+    if (!write || (saved === "saved" && reply === (e.draftReply ?? ""))) return true;
+    setSaved("saving");
+    const res = await actions.saveDraftReply(e.id, reply);
+    setSaved(res.ok ? "saved" : "unsaved");
+    if (!quiet || !res.ok) toast(res.ok ? "Draft saved (not sent)" : Object.values(res.errors)[0] ?? "Couldn't save", res.ok ? "success" : "error");
+    return res.ok;
+  };
+
+  return (
+    <section className="border-t border-line px-5 py-5 sm:px-6">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-[14px] font-semibold uppercase tracking-wider text-subtle">{replied ? "Your reply" : "Reply"}</h3>
+        {replied ? (
+          <span className="rounded-full bg-emerald-500/12 px-2.5 py-0.5 text-[13px] font-medium text-good-fg ring-1 ring-emerald-500/30">
+            Replied{e.lastContactAt ? ` ${timeAgo(e.lastContactAt)}` : ""}
+          </span>
+        ) : null}
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div>
+          <div className="mb-1.5 text-[14px] font-medium text-muted-foreground">
+            What {firstName(e.customerName)} said{latest ? ` · ${timeAgo(latest.at)}` : ""}
+          </div>
+          <div className="rounded-2xl bg-card p-4 ring-1 ring-line">
+            {latest?.subject ? <div className="mb-1 text-[14px] font-medium text-muted-foreground">{latest.subject}</div> : null}
+            {flagged ? (
+              <div className="mb-2 flex items-center gap-1.5 text-[14px] text-warn-fg">
+                <AlertTriangle className="size-4" /> Contains instructions aimed at an assistant — Bob ignores them.
+              </div>
+            ) : null}
+            <p className="whitespace-pre-wrap text-[16px] leading-relaxed">{latest?.body ?? (e.description || "No message recorded.")}</p>
+          </div>
+        </div>
+        <div>
+          <div className="mb-1.5 flex items-center justify-between text-[14px] font-medium text-muted-foreground">
+            <label htmlFor={`reply-${e.id}`}>{e.draftReply ? "Your draft" : "Suggested reply"}</label>
+            <span aria-live="polite" className={cn("text-[13px]", saved === "saved" ? "text-good-fg" : "text-subtle")}>
+              {saved === "saving" ? "Saving…" : saved === "saved" ? "Draft saved" : write ? "Not saved yet" : ""}
+            </span>
+          </div>
+          <Textarea
+            id={`reply-${e.id}`}
+            value={reply}
+            readOnly={!write}
+            onChange={(ev) => {
+              setReply(ev.target.value);
+              setSaved("unsaved");
+            }}
+            onBlur={() => void save(true)}
+            className="min-h-56 text-[16px]"
+          />
+          <p className="mt-2 text-[14px] text-subtle">
+            {emailConnected && e.email ? "Sending goes through your connected mailbox and needs your approval." : `Nothing is sent from Bob here. Copy it into ${channel}, then mark it replied.`}
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            {emailConnected && e.email && can("email.send") ? (
+              <Button
+                onClick={async () => {
+                  const r = await propose("send_email", { to: e.email, subject: `Re: ${e.title}`, body: reply, enquiryId: e.id, customerId: e.customerId, purpose: "reply" });
+                  if (r.ok) setPending(r.action);
+                  else toast(r.error, "error");
+                }}
+              >
+                <Send /> Send…
+              </Button>
+            ) : null}
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                await save(true);
+                const ok = await copyToClipboard(reply);
+                toast(ok ? "Copied — it stays in Needs your reply until you mark it replied" : "Couldn't copy — select the text instead", ok ? "success" : "error");
+              }}
+            >
+              <Copy /> Copy
+            </Button>
+            {write ? (
+              <Button variant="secondary" disabled={saved === "saved"} onClick={() => void save()}>
+                <Save /> Save draft
+              </Button>
+            ) : null}
+            {write && !replied && !confirmReplied ? (
+              <Button variant="outline" className="col-span-2" onClick={() => setConfirmReplied(true)}>
+                <CheckCheck /> Mark as replied
+              </Button>
+            ) : null}
+          </div>
+          {pending ? (
+            <ActionCard
+              action={pending}
+              onDecide={async (d, edits) => {
+                const v = await decide(pending.id, d, edits);
+                if (v) setPending(v);
+              }}
+            />
+          ) : null}
+          {confirmReplied ? (
+            <div className="mt-3 rounded-2xl bg-copper-500/10 p-4 ring-1 ring-copper-500/35">
+              <p className="text-[16px]">Have you sent your reply to {firstName(e.customerName)}?</p>
+              <div className="mt-3 flex gap-2">
+                <Button variant="secondary" onClick={() => setConfirmReplied(false)}>
+                  Not yet
+                </Button>
+                <Button
+                  onClick={async () => {
+                    await save(true);
+                    const res = await actions.markEnquiryReplied(e.id);
+                    setConfirmReplied(false);
+                    toast(res.ok ? `${firstName(e.customerName)} marked as replied` : "Couldn't update", res.ok ? "success" : "error");
+                  }}
+                >
+                  Yes, mark as replied
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </section>
   );
 }
