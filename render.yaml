@@ -1,0 +1,25 @@
+# Render Blueprint — a demo deployment of Bob (fictional/sample data only).
+# Free plan: the SQLite database lives on the instance's temporary disk, so it
+# resets to the seeded demo data whenever the service restarts or redeploys.
+# For anything persistent, use a paid plan with a disk (set BOB_DB_PATH to a
+# path on it) or move to Supabase (supabase/migrations).
+services:
+  - type: web
+    name: bob
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci && npm run build
+    startCommand: npx next start -p $PORT -H 0.0.0.0
+    healthCheckPath: /login
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Keep demo logins only while the workspace holds fictional data.
+      - key: BOB_SHOW_DEMO_LOGINS
+        value: "true"
+      - key: BOB_ENCRYPTION_KEY
+        generateValue: true
+      # Optional: set in the Render dashboard to switch on the Claude engine.
+      - key: ANTHROPIC_API_KEY
+        sync: false
