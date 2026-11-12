@@ -9,7 +9,7 @@ import { useBob } from "@/lib/bob/provider";
 import type { BobMessage, Chip } from "@/lib/bob/types";
 import { stopSpeaking } from "@/lib/voice/speech-output";
 import { useVoiceComposer, type ComposerPhase } from "@/lib/voice/use-voice-composer";
-import { ComposerStatus, ReadAloudButton, SpeakRepliesToggle } from "./voice-bits";
+import { ComposerStatus, ReadAloudButton, SpeakRepliesToggle, useTtsStatus } from "./voice-bits";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { todaysPriorities } from "@/lib/derive";
@@ -36,6 +36,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
 
   const c = useVoiceComposer({ inputRef });
+  const tts = useTtsStatus();
   const { speech, draft, setDraft, phase } = c;
   const inConversation = !home && messages.length > 0;
   const orbState: OrbState = speech.listening ? "listening" : thinking || phase === "sending" ? "thinking" : "idle";
@@ -148,7 +149,9 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
                 </MenuItem>
                 <div className="px-3 pb-1.5 pt-2 text-[12.5px] leading-snug text-subtle">
                   Engine: {data.mode.aiEngine === "claude" ? "Claude (live AI)" : "Bob rules engine (demo — no AI key configured)"}.
-                  Voice: {speech.supported ? "your browser's speech recognition" : "not available in this browser"}.
+                  Voice input: {speech.supported ? "your browser's speech recognition" : "not available in this browser"}.
+                  <br />
+                  Spoken replies: {tts?.configured ? `ElevenLabs (voice …${tts.voiceId?.slice(-4)})` : "this device's voice (ElevenLabs not set up)"}.
                 </div>
               </div>
             ) : null}

@@ -1,6 +1,7 @@
 "use client";
 
-import { Square, Volume2, VolumeX } from "lucide-react";
+import * as React from "react";
+import { Loader2, Square, Volume2, VolumeX } from "lucide-react";
 import { useBob } from "@/lib/bob/provider";
 import type { BobMessage } from "@/lib/bob/types";
 import type { ComposerNotice, ComposerPhase } from "@/lib/voice/use-voice-composer";
@@ -92,30 +93,55 @@ export function SpeakRepliesToggle({ className, withLabel = true }: { className?
   );
 }
 
-/** Read aloud / Stop speaking for one of Bob's replies. */
+/** Read aloud / Stop speaking for one of Bob's replies, and which voice played it. */
 export function ReadAloudButton({ message, request }: { message: BobMessage; request?: string }) {
   const out = useSpeechOutput();
   if (!out.supported) return null;
+  const loading = out.loadingId === message.id;
   const speaking = out.speakingId === message.id;
   const text = spokenSummary([message], request);
   if (!text) return null;
+  const played = out.lastVoice?.id === message.id ? out.lastVoice.engine : null;
   return (
-    <button
-      type="button"
-      onClick={() => {
-        if (speaking) stopSpeaking();
-        else {
-          prime();
-          speakReply(message.id, text);
-        }
-      }}
-      className={cn(
-        "mt-1.5 inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-[13.5px] font-medium transition",
-        speaking ? "bg-copper-500/12 text-accent-fg" : "text-subtle hover:text-foreground",
-      )}
-    >
-      {speaking ? <Square className="size-3.5 fill-current" /> : <Volume2 className="size-4" />}
-      {speaking ? "Stop speaking" : "Read aloud"}
-    </button>
+    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+      <button
+        type="button"
+        onClick={() => {
+          if (speaking || loading) stopSpeaking();
+          else {
+            prime();
+            speakReply(message.id, text);
+          }
+        }}
+        className={cn(
+          "inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-[13.5px] font-medium transition",
+          speaking || loading ? "bg-copper-500/12 text-accent-fg" : "text-subtle hover:text-foreground",
+        )}
+      >
+        {loading ? <Loader2 className="size-4 animate-spin" /> : speaking ? <Square className="size-3.5 fill-current" /> : <Volume2 className="size-4" />}
+        {loading ? "Getting Bob's voice…" : speaking ? "Stop speaking" : "Read aloud"}
+      </button>
+      {played ? (
+        <span data-voice={played} className={cn("rounded-md px-1.5 py-0.5 text-[12px] font-medium", played === "elevenlabs" ? "bg-copper-500/12 text-accent-fg" : "bg-surface-3 text-subtle")}>
+          {played === "elevenlabs" ? "ElevenLabs voice" : "Device voice (fallback)"}
+        </span>
+      ) : null}
+    </div>
   );
+}
+
+/** What the server is set up to speak with — for the Ask Bob menu. */
+export function useTtsStatus() {
+  const [status, setStatus] = React.useState<{ configured: boolean; voiceId?: string } | null>(null);
+  React.useEffect(() => {
+    let live = true;
+    fetch("/api/tts", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => live && setStatus(j))
+      .catch(() => live && setStatus(null));
+    return () => {
+      live = false;
+    };
+  }, []);
+  return status;
 }

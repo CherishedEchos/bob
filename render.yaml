@@ -23,3 +23,10 @@ services:
       # Optional: set in the Render dashboard to switch on the Claude engine.
       - key: ANTHROPIC_API_KEY
         sync: false
+      # Bob's spoken replies. Set in the Render dashboard (kept server-side).
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      # Bob's voice. Set/change it in the dashboard to switch voice (e.g. Cockney);
+      # if unset the app uses Hj01EoUVZleioJaYx5b0.
+      - key: ELEVENLABS_VOICE_ID
+        sync: false
