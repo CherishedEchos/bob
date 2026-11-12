@@ -11,7 +11,7 @@ import { ENQUIRY_SOURCES, ENQUIRY_STATUSES, ENQUIRY_STATUS_LABEL, SOURCE_LABEL, 
 import type { Enquiry, EnquirySource, EnquiryStatus } from "@/lib/types";
 import { cn, timeAgo, formatDateInline } from "@/lib/utils";
 import { EmptyState, PageHeader } from "@/components/common/bits";
-import { EnquiryStatusBadge, PriorityBadge, SourceIcon } from "@/components/common/status";
+import { EnquiryStatusBadge, PriorityBadge, SourceChip, SourceIcon } from "@/components/common/status";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
 
@@ -167,7 +167,7 @@ function EnquiriesInner() {
           {list.map((e) => (
             <li key={e.id}>
               <button onClick={() => ui.openEnquiry(e.id)} className="card-surface flex w-full items-start gap-3.5 rounded-2xl p-4 text-left transition hover:bg-surface-2">
-                <SourceIcon source={e.source} className="size-11 rounded-2xl" />
+                <SourceIcon source={e.source} provider={e.provider} className="size-11 rounded-xl" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-[17px] font-semibold">{e.customerName}</span>
@@ -179,6 +179,7 @@ function EnquiriesInner() {
                   </div>
                   <p className="mt-1 line-clamp-2 text-[15px] text-muted-foreground lg:max-w-3xl">{e.messages.filter((m) => m.direction === "inbound").at(-1)?.body ?? e.description}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <SourceChip source={e.source} />
                     <EnquiryStatusBadge status={e.status} />
                     {e.priority === "high" ? <PriorityBadge priority="high" /> : null}
                     {e.followUpDate ? (
@@ -186,7 +187,7 @@ function EnquiriesInner() {
                         <CalendarCheck className="size-3.5" /> Follow up {formatDateInline(e.followUpDate)}
                       </span>
                     ) : null}
-                    <span className="text-[14px] text-subtle">· {SOURCE_LABEL[e.source]} · {timeAgo(e.receivedAt)}</span>
+                    <span className="text-[14px] text-subtle">· {timeAgo(e.receivedAt)}</span>
                   </div>
                 </div>
               </button>

@@ -57,7 +57,7 @@ function EnquiryDetail({ id }: { id: string }) {
     <div className="flex-1 overflow-y-auto">
       <div className="px-5 pb-5 pt-6 sm:px-6">
         <div className="flex items-start gap-3 pr-12">
-          <SourceIcon source={e.source} className="size-11 rounded-2xl" />
+          <SourceIcon source={e.source} provider={e.provider} className="size-11 rounded-xl" />
           <div className="min-w-0">
             <h2 className="text-[22px] font-bold leading-tight tracking-tight">{e.customerName}</h2>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[15px] text-muted-foreground">

@@ -38,7 +38,7 @@ export function AssistantCard({ card, onNavigate }: { card: Card; onNavigate?: (
         <CardShell>
           {list.map((e) => (
             <button key={e.id} className={rowCls} onClick={() => ui.openEnquiry(e.id)}>
-              <SourceIcon source={e.source} />
+              <SourceIcon source={e.source} provider={e.provider} />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-semibold">{e.customerName}</div>
                 <div className="truncate text-[13.5px] text-muted-foreground">

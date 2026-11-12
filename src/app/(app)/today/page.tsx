@@ -12,6 +12,7 @@ import type { Job, Snapshot } from "@/lib/types";
 import { cn, gbp, timeAgo, formatDateInline } from "@/lib/utils";
 import { usePriorityAction } from "@/components/common/priority-card";
 import { JobTile } from "@/components/common/job-tile";
+import { SourceIcon } from "@/components/common/status";
 import { Button } from "@/components/ui/button";
 import { Orb } from "@/components/assistant/orb";
 
@@ -216,9 +217,13 @@ function AttentionRow({ item, onAskBob }: { item: PriorityItem; onAskBob: (t: st
   return (
     <li className="flex items-center gap-3 px-4 py-3 lg:px-5">
       <button onClick={open} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-        <span className={cn("grid size-9 shrink-0 place-items-center rounded-lg ring-1", urgent ? "bg-red-500/10 text-danger-fg ring-red-400/25" : "bg-copper-500/10 text-accent-icon ring-copper-500/25")}>
-          <Icon className="size-[17px]" />
-        </span>
+        {"source" in item ? (
+          <SourceIcon source={item.source} provider={item.provider} />
+        ) : (
+          <span className={cn("grid size-9 shrink-0 place-items-center rounded-[10px] ring-1", urgent ? "bg-red-500/10 text-danger-fg ring-red-400/25" : "bg-copper-500/10 text-accent-icon ring-copper-500/25")}>
+            <Icon className="size-[17px]" />
+          </span>
+        )}
         <span className="min-w-0">
           <span className="block truncate text-[15.5px] font-medium">{item.who}</span>
           <span className="mt-0.5 block truncate text-[14px] text-muted-foreground">{item.why}</span>

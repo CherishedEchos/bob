@@ -218,8 +218,8 @@ interface PriorityBase {
 }
 
 export type PriorityItem =
-  | (PriorityBase & { kind: "reply"; enquiryId: string })
-  | (PriorityBase & { kind: "followup"; enquiryId: string })
+  | (PriorityBase & { kind: "reply"; enquiryId: string; source: EnquirySource; provider?: string })
+  | (PriorityBase & { kind: "followup"; enquiryId: string; source: EnquirySource; provider?: string })
   | (PriorityBase & { kind: "quote"; quoteId: string; enquiryId?: string; customerName: string })
   | (PriorityBase & { kind: "deposit"; jobId: string; customerName: string })
   | (PriorityBase & { kind: "invoice"; invoiceId: string; customerName: string })
@@ -252,6 +252,8 @@ export function todaysPriorities(
       urgency: (e.priority === "high" ? 0 : 10) + (hrs > 24 ? 0 : 5),
       key: `enquiry:${e.id}`,
       enquiryId: e.id,
+      source: e.source,
+      provider: e.provider,
     });
   }
 
@@ -266,6 +268,8 @@ export function todaysPriorities(
       urgency: 12,
       key: `enquiry:${e.id}`,
       enquiryId: e.id,
+      source: e.source,
+      provider: e.provider,
     });
   }
 
