@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * BOB_SHOW_DEMO_LOGINS=false — turn that off before any real data is added.
  */
 export default async function LoginPage() {
-  if (await getContext()) redirect("/");
+  if (await getContext()) redirect("/today");
   const showDemo = process.env.BOB_SHOW_DEMO_LOGINS !== "false";
   const demo = showDemo
     ? [

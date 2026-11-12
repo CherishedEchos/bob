@@ -18,6 +18,8 @@ export type FormPrefill =
 
 interface UIState {
   enquiryId: string | null;
+  /** Where to take the user inside the enquiry (e.g. straight to the reply). */
+  enquiryFocus: "reply" | null;
   jobId: string | null;
   customerId: string | null;
   form: FormPrefill | null;
@@ -25,7 +27,7 @@ interface UIState {
 }
 
 interface UIValue extends UIState {
-  openEnquiry(id: string): void;
+  openEnquiry(id: string, opts?: { focus?: "reply" }): void;
   openJob(id: string): void;
   openCustomer(id: string): void;
   openForm(prefill: FormPrefill): void;
@@ -39,11 +41,11 @@ interface UIValue extends UIState {
 const UIContext = React.createContext<UIValue | null>(null);
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = React.useState<UIState>({ enquiryId: null, jobId: null, customerId: null, form: null, assistantOpen: false });
+  const [state, setState] = React.useState<UIState>({ enquiryId: null, enquiryFocus: null, jobId: null, customerId: null, form: null, assistantOpen: false });
   const value = React.useMemo<UIValue>(
     () => ({
       ...state,
-      openEnquiry: (id) => setState((s) => ({ ...s, enquiryId: id, jobId: null, customerId: null, assistantOpen: false })),
+      openEnquiry: (id, opts) => setState((s) => ({ ...s, enquiryId: id, enquiryFocus: opts?.focus ?? null, jobId: null, customerId: null, assistantOpen: false })),
       openJob: (id) => setState((s) => ({ ...s, jobId: id, enquiryId: null, customerId: null, assistantOpen: false })),
       openCustomer: (id) => setState((s) => ({ ...s, customerId: id, jobId: null, enquiryId: null, assistantOpen: false })),
       openForm: (form) => setState((s) => ({ ...s, form })),

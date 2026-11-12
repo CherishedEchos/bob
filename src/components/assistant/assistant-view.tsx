@@ -464,7 +464,7 @@ function MessageRow({
   if (message.role === "user") {
     return (
       <div className="flex animate-fade-up flex-col items-end">
-        <div className="max-w-[85%] rounded-3xl rounded-br-lg bg-ink-800 px-4 py-3 text-white">
+        <div className="max-w-[85%] rounded-3xl rounded-br-lg bg-ink-700 px-4 py-3 text-white ring-1 ring-line">
           {message.via === "voice" ? (
             <div className="mb-1.5 flex items-center gap-1.5 text-[13px] text-copper-300">
               <AudioLines className="size-3.5" /> You said

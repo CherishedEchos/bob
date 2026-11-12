@@ -111,11 +111,11 @@ function EnquiriesInner() {
                 onClick={() => setTab(t.value)}
                 className={cn(
                   "flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-2 text-[15px] font-semibold transition sm:flex-none sm:px-4",
-                  active ? "bg-card text-foreground shadow-sm ring-1 ring-line" : "text-muted-foreground hover:text-foreground",
+                  active ? "bg-surface-3 text-foreground ring-1 ring-line-strong" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {t.label}
-                <span className={cn("tabular rounded-full px-1.5 text-[12px]", active && t.value === "reply" && count ? "bg-primary text-white" : "bg-black/[0.06]")}>{count}</span>
+                <span className={cn("tabular rounded-full px-1.5 text-[12px]", active && t.value === "reply" && count ? "bg-primary text-white" : "bg-surface-3")}>{count}</span>
               </button>
             );
           })}

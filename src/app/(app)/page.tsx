@@ -1,14 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import * as React from "react";
-import { useRouter } from "next/navigation";
-import { AssistantView } from "@/components/assistant/assistant-view";
-
-/** Home: the voice assistant on phones; desktop lands on Today. */
+/** Everyone lands on Today. Ask Bob lives at /assistant. */
 export default function HomePage() {
-  const router = useRouter();
-  React.useEffect(() => {
-    if (window.matchMedia("(min-width: 1024px)").matches) router.replace("/today");
-  }, [router]);
-  return <AssistantView variant="page" />;
+  redirect("/today");
 }

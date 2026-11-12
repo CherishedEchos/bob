@@ -7,6 +7,13 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   const hasSession = Boolean(request.cookies.get("bob_session")?.value);
+  // Land on Today, decided on the server so nothing else renders first.
+  if (request.nextUrl.pathname === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = hasSession ? "/today" : "/login";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
   if (hasSession) return NextResponse.next();
   if (request.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "Please sign in." }, { status: 401 });

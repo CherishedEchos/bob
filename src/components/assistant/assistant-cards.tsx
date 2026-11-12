@@ -317,7 +317,7 @@ export function ActionCard({
 
   const openLink = (l: NonNullable<ActionView["links"]>[number]) => {
     if (l.kind === "job") ui.openJob(l.id);
-    else if (l.kind === "enquiry") ui.openEnquiry(l.id);
+    else if (l.kind === "enquiry") ui.openEnquiry(l.id, { focus: "reply" });
     else if (l.kind === "customer") ui.openCustomer(l.id);
     else if (l.kind === "invoice") {
       router.push(`/invoices?open=${l.id}`);

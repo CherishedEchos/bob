@@ -74,9 +74,9 @@ export function SourceIcon({ source, className }: { source: EnquirySource; class
       className={cn(
         "grid size-9 shrink-0 place-items-center rounded-xl ring-1",
         source === "email" && "bg-sky-400/10 text-info-fg ring-sky-400/20",
-        source === "instagram" && "bg-pink-400/10 text-pink-700 ring-pink-400/20",
+        source === "instagram" && "bg-pink-400/10 text-pink-300 ring-pink-400/20",
         source === "phone" && "bg-emerald-400/10 text-good-fg ring-emerald-400/20",
-        source === "website" && "bg-violet-400/10 text-violet-700 ring-violet-400/20",
+        source === "website" && "bg-violet-400/10 text-violet-300 ring-violet-400/20",
         source === "manual" && "bg-surface-2 text-muted-foreground ring-line",
         className,
       )}

@@ -13,7 +13,7 @@ const badgeVariants = cva(
         amber: "bg-amber-400/12 text-warn-fg ring-amber-400/30",
         red: "bg-red-500/12 text-danger-fg ring-red-500/30",
         blue: "bg-sky-400/10 text-info-fg ring-sky-400/25",
-        violet: "bg-violet-400/10 text-violet-700 ring-violet-400/25",
+        violet: "bg-violet-400/10 text-violet-300 ring-violet-400/25",
       },
     },
     defaultVariants: { tone: "neutral" },

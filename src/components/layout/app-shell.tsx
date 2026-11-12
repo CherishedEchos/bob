@@ -113,7 +113,7 @@ function Sidebar() {
       </div>
       <nav className="flex-1 space-y-1 px-3" aria-label="Main">
         {SIDEBAR_NAV.filter((i) => !i.perm || can(i.perm)).map((item) => {
-          const active = pathname === item.href || (item.href === "/assistant" && pathname === "/");
+          const active = pathname === item.href;
           const count = item.badge ? counts[item.badge] : 0;
           return (
             <Link
@@ -149,7 +149,7 @@ function useWorkspaces() {
 
 async function switchOrg(orgId: string) {
   const r = await api("/api/auth/switch-org", { json: { orgId } });
-  if (r.status === 200) window.location.href = "/";
+  if (r.status === 200) window.location.href = "/today";
 }
 
 async function signOut() {
@@ -200,7 +200,7 @@ function MobileHeader() {
   const [moreOpen, setMoreOpen] = React.useState(false);
   return (
     <header className="flex h-[60px] shrink-0 items-center justify-between bg-background/90 px-3 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
-      <Link href="/" aria-label="Bob home">
+      <Link href="/today" aria-label="Today">
         <BobWordmark org={org} />
       </Link>
       <div className="flex items-center gap-1">
@@ -279,15 +279,15 @@ function BottomNav() {
   const items = [
     { href: "/today", label: "Today", icon: House, count: 0 },
     { href: "/enquiries", label: "Enquiries", icon: Inbox, count: unanswered },
-    { href: "/", label: "Ask Bob", icon: AudioLines, count: 0 },
+    { href: "/assistant", label: "Ask Bob", icon: AudioLines, count: 0 },
     { href: "/jobs", label: "Jobs", icon: HardHat, count: 0 },
     can("finance.read") ? { href: "/invoices", label: "Money", icon: ReceiptText, count: 0 } : { href: "/tasks", label: "Tasks", icon: CheckSquare, count: due },
   ];
   return (
-    <nav aria-label="Main" className="pb-safe shrink-0 border-t border-line bg-card/95 backdrop-blur lg:hidden">
+    <nav aria-label="Main" className="pb-safe shrink-0 border-t border-line bg-ink-900/95 backdrop-blur lg:hidden">
       <div className="mx-auto grid h-[64px] max-w-lg grid-cols-5">
         {items.map((item) => {
-          const active = item.href === "/" ? isAssistantRoute(pathname) : pathname.startsWith(item.href);
+          const active = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}

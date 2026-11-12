@@ -38,6 +38,13 @@ export function EnquirySheet() {
 function EnquiryDetail({ id }: { id: string }) {
   const { data, actions, can } = useStore();
   const ui = useUI();
+  const replyRef = React.useRef<HTMLDivElement>(null);
+  // "Draft reply" from Today or Bob lands straight on the reply, not the contact details.
+  React.useEffect(() => {
+    if (ui.enquiryFocus !== "reply") return;
+    const t = setTimeout(() => replyRef.current?.scrollIntoView({ block: "start" }), 150);
+    return () => clearTimeout(t);
+  }, [id, ui.enquiryFocus]);
   const e = data.enquiries.find((x) => x.id === id)!;
   const write = can("enquiries.write");
 
@@ -114,7 +121,9 @@ function EnquiryDetail({ id }: { id: string }) {
         </dl>
       </div>
 
-      <ReplyPanel id={e.id} />
+      <div ref={replyRef} className="scroll-mt-2">
+        <ReplyPanel id={e.id} />
+      </div>
 
       {e.messages.length > 1 ? (
         <Section title="Full conversation">
@@ -347,12 +356,12 @@ function ReplyPanel({ id }: { id: string }) {
               setSaved("unsaved");
             }}
             onBlur={() => void save(true)}
-            className="min-h-56 text-[16px]"
+            className="min-h-48 text-[16px] sm:min-h-56"
           />
           <p className="mt-2 text-[14px] text-subtle">
             {emailConnected && e.email ? "Sending goes through your connected mailbox and needs your approval." : `Nothing is sent from Bob here. Copy it into ${channel}, then mark it replied.`}
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <div className="sticky bottom-0 z-10 -mx-5 mt-3 grid grid-cols-2 gap-2 border-t border-line bg-ink-900/95 px-5 py-3 backdrop-blur sm:static sm:mx-0 sm:flex sm:flex-wrap sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
             {emailConnected && e.email && can("email.send") ? (
               <Button
                 onClick={async () => {

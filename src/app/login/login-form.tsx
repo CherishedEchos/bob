@@ -24,7 +24,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
     setError(null);
     const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (res.ok) {
-      window.location.href = "/";
+      window.location.href = "/today";
       return;
     }
     const json = (await res.json().catch(() => ({}))) as { error?: string };
