@@ -55,7 +55,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-dvh overflow-hidden bg-background">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <DemoBanner />
+        {pathname !== "/today" ? <DemoBanner /> : null}
         {!assistant ? <MobileHeader /> : null}
         <main className={cn("min-h-0 flex-1", assistant ? "overflow-hidden" : "overflow-y-auto bg-app")}>
           {assistant ? children : <div className="mx-auto w-full max-w-6xl px-4 pb-24 pt-4 lg:px-10 lg:pb-10 lg:pt-8">{children}</div>}

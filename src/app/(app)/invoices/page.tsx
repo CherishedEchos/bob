@@ -21,7 +21,8 @@ function InvoicesInner() {
   const { data, can } = useStore();
   const ui = useUI();
   const params = useSearchParams();
-  const [filter, setFilter] = React.useState<Filter>("outstanding");
+  const initialFilter = params.get("filter") as Filter | null;
+  const [filter, setFilter] = React.useState<Filter>(initialFilter && ["outstanding", "overdue", "draft", "paid", "all"].includes(initialFilter) ? initialFilter : "outstanding");
   const [open, setOpen] = React.useState<string | null>(params.get("open"));
   const accounting = data.connections.find((c) => c.kind === "accounting" && (c.status === "connected" || c.status === "demo"));
 

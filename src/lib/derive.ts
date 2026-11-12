@@ -207,6 +207,9 @@ interface PriorityBase {
   id: string;
   title: string;
   detail: string;
+  /** Compact form for scanning: the customer or job, and why it needs attention. */
+  who: string;
+  why: string;
   urgency: number;
   /** The underlying issue (enquiry, job, invoice…). Items with the same key are merged. */
   key: string;
@@ -244,6 +247,8 @@ export function todaysPriorities(
       id: `reply_${e.id}`,
       title: `Reply to ${e.customerName}`,
       detail: `${e.title}, ${e.location} · waiting ${waited}`,
+      who: e.customerName,
+      why: `Awaiting your reply · ${waited} · ${e.title}`,
       urgency: (e.priority === "high" ? 0 : 10) + (hrs > 24 ? 0 : 5),
       key: `enquiry:${e.id}`,
       enquiryId: e.id,
@@ -256,6 +261,8 @@ export function todaysPriorities(
       id: `follow_${e.id}`,
       title: `Follow up with ${e.customerName}`,
       detail: `${e.title}, ${e.location}`,
+      who: e.customerName,
+      why: `Follow-up due · ${e.title}`,
       urgency: 12,
       key: `enquiry:${e.id}`,
       enquiryId: e.id,
@@ -270,6 +277,8 @@ export function todaysPriorities(
       id: `quote_${q.id}`,
       title: `Chase ${customerName(q.customerId)} about their quote`,
       detail: `${q.description}${opts.includeFinance ? ` · ${gbp0(q.amount)}` : ""} · sent ${Math.round(hoursSince(q.sentAt!) / 24)}d ago`,
+      who: customerName(q.customerId),
+      why: `Quote${opts.includeFinance ? ` of ${gbp0(q.amount)}` : ""} unanswered · sent ${Math.round(hoursSince(q.sentAt!) / 24)}d ago`,
       urgency: 14,
       key: q.enquiryId ? `enquiry:${q.enquiryId}` : `quote:${q.id}`,
       quoteId: q.id,
@@ -286,6 +295,8 @@ export function todaysPriorities(
         id: `dep_${job.id}`,
         title: finance.depositOverdue ? `${job.customerName}'s deposit is overdue` : `${job.customerName}'s deposit is due soon`,
         detail: `${gbp0(finance.depositOutstanding)} · ${job.title}`,
+        who: job.customerName,
+        why: `${gbp0(finance.depositOutstanding)} deposit ${finance.depositOverdue ? "overdue" : "due soon"} · ${job.title}`,
         urgency: finance.depositOverdue ? 3 : 15,
         key: `job:${job.id}`,
         jobId: job.id,
@@ -298,6 +309,8 @@ export function todaysPriorities(
         id: `inv_${inv.id}`,
         title: `${customerName(inv.customerId)}'s invoice is overdue`,
         detail: `${gbp0(invoiceBalance(inv))} · due ${Math.abs(daysFromToday(inv.dueDate!))}d ago`,
+        who: customerName(inv.customerId),
+        why: `Invoice ${gbp0(invoiceBalance(inv))} overdue · ${Math.abs(daysFromToday(inv.dueDate!))}d`,
         urgency: 4,
         key: `invoice:${inv.id}`,
         invoiceId: inv.id,
@@ -317,6 +330,7 @@ export function todaysPriorities(
       existing.taskIds = [...(existing.taskIds ?? []), r.id];
       existing.urgency = Math.min(existing.urgency, urgency);
       if (!existing.detail.includes("reminder")) existing.detail += ` · reminder ${r.dueDate === todayKey() ? "due today" : "overdue"}`;
+      if (!existing.why.includes("reminder")) existing.why += " · reminder set";
       continue;
     }
     const item: PriorityItem = {
@@ -324,6 +338,8 @@ export function todaysPriorities(
       id: `task_${r.id}`,
       title: r.title,
       detail: r.dueDate === todayKey() ? "Due today" : "Overdue",
+      who: r.title,
+      why: r.dueDate === todayKey() ? "Reminder due today" : "Reminder overdue",
       urgency,
       key,
       taskId: r.id,
