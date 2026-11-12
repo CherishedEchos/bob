@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AlarmClock, ArrowUpRight, Check, FileText, ReceiptText, Reply, ChevronRight, FlaskConical, HardHat, Mic, PartyPopper, Plus, SendHorizontal, Sparkles } from "lucide-react";
+import { AlarmClock, ArrowUpRight, Check, FileText, ReceiptText, Reply, ChevronRight, FlaskConical, HardHat, Mic, Loader2, PartyPopper, Plus, SendHorizontal, Sparkles } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { useBob } from "@/lib/bob/provider";
-import { useSpeechRecognition, stopSpeaking } from "@/lib/voice/use-speech";
+import { useVoiceComposer } from "@/lib/voice/use-voice-composer";
+import { ComposerStatus, SpeakRepliesToggle } from "@/components/assistant/voice-bits";
 import { JOB_STATUS_LABEL, isActiveJob, isInvoiceOverdue, jobFinance, needsReply, quoteNeedsFollowUp, tasksDue, todaysPriorities, type PriorityItem } from "@/lib/derive";
 import type { Job, Snapshot } from "@/lib/types";
 import { cn, gbp, timeAgo, formatDateInline } from "@/lib/utils";
@@ -79,7 +80,7 @@ export default function TodayPage() {
       </header>
 
       {/* 3b · Ask Bob — straight after the header on phones, right column on desktop */}
-      <AskBobPanel onAsk={askBob} className="lg:col-span-2 lg:col-start-4 lg:row-start-3 lg:self-start" />
+      <AskBobPanel className="lg:col-span-2 lg:col-start-4 lg:row-start-3 lg:self-start" />
 
       {/* 3a · Needs attention */}
       <section aria-labelledby="attn" className="panel overflow-hidden lg:col-span-3 lg:col-start-1 lg:row-start-3 lg:self-start">
@@ -270,60 +271,68 @@ function AttentionRow({ item, onAskBob }: { item: PriorityItem; onAskBob: (t: st
 /* ------------------------------ Ask Bob ------------------------------ */
 
 /**
- * Voice and typing go through the same Bob request; nothing here acts without
- * approval. Mic states are spelled out: starting → listening (words appear as
- * they're captured) → heard and sent automatically (no Send needed).
+ * Voice and typing share one request flow (useVoiceComposer). Pause after
+ * speaking to auto-send; tap Stop to check and edit first. Nothing Bob
+ * prepares is carried out without approval.
  */
-function AskBobPanel({ onAsk, className }: { onAsk: (t: string, via?: "voice" | "text") => void; className?: string }) {
-  const [text, setText] = React.useState("");
-  const [heard, setHeard] = React.useState<string | null>(null);
-  const speech = useSpeechRecognition((t) => {
-    setHeard(t);
-    onAsk(t, "voice");
-  });
-  const toggleMic = () => {
-    if (speech.listening) speech.stop();
-    else if (speech.starting) speech.cancel();
-    else {
-      stopSpeaking();
-      setHeard(null);
-      speech.start();
-    }
-  };
-  const live = speech.starting || speech.listening;
+function AskBobPanel({ className }: { className?: string }) {
+  const ui = useUI();
+  const inputRef = React.useRef<HTMLTextAreaElement>(null);
+  const c = useVoiceComposer({ inputRef, onSent: () => ui.setAssistantOpen(true) });
+  const { speech, phase } = c;
+  const busy = phase === "stopping" || phase === "sending";
+  const recording = phase === "starting" || phase === "listening";
+  const showActions = !!c.draft.trim() && phase === "idle" && c.fromVoice;
+
+  React.useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 132)}px`;
+  }, [c.draft]);
+
   return (
     <section aria-labelledby="askbob" className={cn("panel relative overflow-hidden p-3 lg:p-5", className)}>
       <div className="flex items-center gap-2.5 lg:flex-col lg:gap-2 lg:pb-1 lg:pt-1 lg:text-center">
-        <Orb state={speech.listening ? "listening" : "idle"} size={34} className="shrink-0 lg:hidden" />
-        <Orb state={speech.listening ? "listening" : "idle"} size={96} className="hidden lg:block" />
-        <div className="min-w-0">
+        <Orb state={speech.listening ? "listening" : phase === "sending" ? "thinking" : "idle"} size={34} className="shrink-0 lg:hidden" />
+        <Orb state={speech.listening ? "listening" : phase === "sending" ? "thinking" : "idle"} size={96} className="hidden lg:block" />
+        <div className="min-w-0 flex-1">
           <h2 id="askbob" className="text-[16px] font-semibold lg:text-[17px]">
             Ask Bob
           </h2>
           <p className="hidden text-[14px] leading-snug text-muted-foreground lg:block">Talk or type. Bob looks it up, or prepares it for your OK.</p>
         </div>
+        <SpeakRepliesToggle className="lg:mt-1" />
       </div>
 
       <button
         type="button"
-        onClick={toggleMic}
-        disabled={!speech.supported}
-        aria-pressed={speech.listening}
+        onClick={c.toggleMic}
+        disabled={!speech.supported || busy}
+        aria-pressed={recording}
         className={cn(
-          "mt-2.5 flex h-12 w-full items-center justify-center gap-2 rounded-[10px] text-[16px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 lg:mt-4",
-          live ? "bg-red-500/15 text-red-100 ring-1 ring-red-400/50" : "bg-primary text-white hover:bg-copper-600",
+          "mt-2.5 flex h-12 w-full items-center justify-center gap-2 rounded-[10px] text-[16px] font-semibold transition disabled:cursor-not-allowed lg:mt-4",
+          recording ? "bg-red-500/15 text-red-100 ring-1 ring-red-400/50" : busy ? "bg-surface-3 text-foreground ring-1 ring-line-strong" : "bg-primary text-white hover:bg-copper-600 disabled:opacity-45",
         )}
       >
-        {speech.listening ? (
+        {phase === "listening" ? (
           <>
             <span className="relative flex size-2.5">
               <span className="absolute inset-0 animate-ping rounded-full bg-red-400" />
               <span className="relative size-2.5 rounded-full bg-red-500" />
             </span>
-            Listening · tap to finish
+            Stop
           </>
-        ) : speech.starting ? (
+        ) : phase === "starting" ? (
           "Starting the mic…"
+        ) : phase === "stopping" ? (
+          <>
+            <Loader2 className="size-4 animate-spin" /> Finishing…
+          </>
+        ) : phase === "sending" ? (
+          <>
+            <Loader2 className="size-4 animate-spin" /> Sending to Bob…
+          </>
         ) : (
           <>
             <Mic className="size-5" /> Tap to talk
@@ -331,75 +340,63 @@ function AskBobPanel({ onAsk, className }: { onAsk: (t: string, via?: "voice" | 
         )}
       </button>
 
-      <VoiceStatus speech={speech} heard={heard} />
+      <ComposerStatus phase={phase} interim={speech.interim} error={speech.error} notice={c.notice} supported={speech.supported} />
 
-      <form
-        className="mt-2 flex gap-2 lg:mt-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (text.trim()) onAsk(text.trim());
-          setText("");
-          setHeard(null);
-        }}
-      >
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Or type a question…"
+      <form className="mt-2 flex items-end gap-2 lg:mt-3" onSubmit={c.submit}>
+        <textarea
+          ref={inputRef}
+          rows={1}
+          value={c.draft}
+          onChange={(e) => c.setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              c.submit();
+            }
+          }}
+          readOnly={busy || recording}
+          placeholder={recording ? "Listening…" : "Or type a question…"}
           aria-label="Type a question for Bob"
           enterKeyHint="send"
-          className="h-12 min-w-0 flex-1 rounded-[10px] bg-black/30 px-3.5 text-[16px] text-foreground outline-none ring-1 ring-line-strong placeholder:text-subtle focus:ring-2 focus:ring-copper-500/80"
-        />
-        <button
-          type="submit"
-          aria-label="Send to Bob"
-          disabled={!text.trim()}
+          maxLength={2000}
           className={cn(
-            "grid size-12 shrink-0 place-items-center rounded-[10px] ring-1 transition disabled:opacity-40",
-            text.trim() ? "bg-copper-500/20 text-accent-fg ring-copper-500/50" : "bg-surface-3 text-foreground ring-line-strong",
+            "min-h-12 min-w-0 flex-1 resize-none rounded-[10px] bg-black/30 px-3.5 py-3 text-[16px] leading-6 text-foreground outline-none ring-1 ring-line-strong placeholder:text-subtle focus:ring-2 focus:ring-copper-500/80",
+            busy && "opacity-70",
           )}
-        >
-          <SendHorizontal className="size-[18px]" />
-        </button>
+        />
+        {showActions ? null : (
+          <button
+            type="submit"
+            aria-label="Send to Bob"
+            disabled={!c.draft.trim() || phase !== "idle"}
+            className={cn(
+              "grid size-12 shrink-0 place-items-center rounded-[10px] ring-1 transition disabled:opacity-40",
+              c.draft.trim() ? "bg-copper-500/20 text-accent-fg ring-copper-500/50" : "bg-surface-3 text-foreground ring-line-strong",
+            )}
+          >
+            <SendHorizontal className="size-[18px]" />
+          </button>
+        )}
       </form>
 
-      <button onClick={() => onAsk(EXAMPLE)} className="mt-3 hidden w-full items-center gap-2 rounded-lg px-1 py-1.5 text-left text-[14px] text-muted-foreground transition hover:text-foreground lg:flex">
+      {showActions ? (
+        <div className="mt-2 flex gap-2">
+          <button type="button" onClick={c.discard} className="h-11 rounded-[10px] px-4 text-[15px] font-medium text-muted-foreground ring-1 ring-line-strong hover:text-foreground">
+            Discard
+          </button>
+          <button type="button" onClick={() => c.submit()} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-[10px] bg-primary text-[15px] font-semibold text-white hover:bg-copper-600">
+            <SendHorizontal className="size-4" /> Send to Bob
+          </button>
+        </div>
+      ) : null}
+
+      <button onClick={() => c.ask(EXAMPLE)} className="mt-3 hidden w-full items-center gap-2 rounded-lg px-1 py-1.5 text-left text-[14px] text-muted-foreground transition hover:text-foreground lg:flex">
         <Sparkles className="size-4 shrink-0 text-accent-icon" />
         <span>
           Try: <span className="text-foreground">“{EXAMPLE}”</span>
         </span>
       </button>
     </section>
-  );
-}
-
-function VoiceStatus({ speech, heard }: { speech: ReturnType<typeof useSpeechRecognition>; heard: string | null }) {
-  let body: React.ReactNode = null;
-  if (speech.starting) body = <span className="text-muted-foreground">Allow the microphone if your phone asks.</span>;
-  else if (speech.listening)
-    body = speech.interim ? (
-      <span>
-        <span className="text-subtle">Hearing: </span>“{speech.interim}”
-      </span>
-    ) : (
-      <span className="text-muted-foreground">Speak now — your words will appear here.</span>
-    );
-  else if (speech.error) body = <span className="text-warn-fg">{speech.error} Typing still works.</span>;
-  else if (heard)
-    body = (
-      <span className="flex items-start gap-1.5">
-        <Check className="mt-0.5 size-4 shrink-0 text-good-fg" />
-        <span>
-          Heard “{heard}” <span className="text-muted-foreground">· sent to Bob, no need to tap Send</span>
-        </span>
-      </span>
-    );
-  else if (!speech.supported) body = <span className="text-subtle">Voice isn&apos;t available in this browser. Typing works the same.</span>;
-  if (!body) return null;
-  return (
-    <p role="status" aria-live="polite" className="mt-2 px-0.5 text-[14px] leading-snug text-foreground">
-      {body}
-    </p>
   );
 }
 

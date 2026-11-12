@@ -3,10 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AudioLines, Bell, Mic, MoreHorizontal, Pencil, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
+import { AudioLines, Bell, Loader2, Mic, MoreHorizontal, Pencil, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
 import { useBob } from "@/lib/bob/provider";
 import type { BobMessage, Chip } from "@/lib/bob/types";
-import { useSpeechRecognition, stopSpeaking } from "@/lib/voice/use-speech";
+import { stopSpeaking } from "@/lib/voice/speech-output";
+import { useVoiceComposer, type ComposerPhase } from "@/lib/voice/use-voice-composer";
+import { ComposerStatus, ReadAloudButton } from "./voice-bits";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { tasksDue, todaysPriorities } from "@/lib/derive";
@@ -22,22 +24,20 @@ function greetingNow() {
 }
 
 export function AssistantView({ variant = "page", onClose }: { variant?: "page" | "panel"; onClose?: () => void }) {
-  const { messages, thinking, ready, send, decide, newConversation, readAloud, setReadAloud } = useBob();
+  const { messages, thinking, ready, decide, newConversation, speakReplies, setSpeakReplies } = useBob();
   const { data, org, user, can } = useStore();
   const ui = useUI();
   const router = useRouter();
-  const [draft, setDraft] = React.useState("");
   const [menuOpen, setMenuOpen] = React.useState(false);
-  const [home, setHome] = React.useState(true);
+  // Opened as a panel (e.g. after asking from Today), show the conversation straight away.
+  const [home, setHome] = React.useState(variant !== "panel");
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
 
-  const speech = useSpeechRecognition((text) => {
-    setHome(false);
-    void send(text, "voice");
-  });
+  const c = useVoiceComposer({ inputRef });
+  const { speech, draft, setDraft, phase } = c;
   const inConversation = !home && messages.length > 0;
-  const orbState: OrbState = speech.listening ? "listening" : thinking ? "thinking" : "idle";
+  const orbState: OrbState = speech.listening ? "listening" : thinking || phase === "sending" ? "thinking" : "idle";
   const dueCount = tasksDue(data.tasks).length;
   const priorities = React.useMemo(() => todaysPriorities(data, { includeFinance: can("finance.read") }), [data, can]);
   const name = /^(owner|office|site team)$/i.test(user.name) ? "" : `, ${firstName(user.name)}`;
@@ -52,17 +52,11 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
     if (el && inConversation) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages.length, thinking, speech.interim, inConversation]);
 
-  const toggleMic = () => {
-    if (speech.listening) speech.stop();
-    else {
-      stopSpeaking();
-      speech.start();
-    }
-  };
+  const toggleMic = c.toggleMic;
 
-  const ask = (text: string, via: "voice" | "text" = "text") => {
+  const ask = (text: string) => {
     setHome(false);
-    void send(text, via);
+    c.ask(text);
   };
 
   const runChip = (chip: Chip) => {
@@ -86,8 +80,8 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
   const submitText = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!draft.trim() || thinking) return;
-    ask(draft, "text");
-    setDraft("");
+    setHome(false);
+    c.submit();
   };
 
   const lastAssistantId = [...messages].reverse().find((m) => m.role === "assistant")?.id;
@@ -145,17 +139,18 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
             <div className="absolute right-0 top-12 z-20 w-72 rounded-2xl bg-card p-1.5 shadow-2xl ring-1 ring-line">
               <MenuItem
                 onClick={() => {
-                  setReadAloud(!readAloud);
-                  if (readAloud) stopSpeaking();
+                  setSpeakReplies(!speakReplies);
                   setMenuOpen(false);
                 }}
               >
-                {readAloud ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
-                {readAloud ? "Stop reading replies aloud" : "Read replies aloud"}
+                {speakReplies ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+                <span className="flex-1">Speak replies to voice requests</span>
+                <span className={cn("rounded-md px-1.5 text-[12px] font-semibold", speakReplies ? "bg-copper-500/15 text-accent-fg" : "bg-surface-3 text-subtle")}>{speakReplies ? "On" : "Off"}</span>
               </MenuItem>
               <MenuItem
                 onClick={() => {
                   speech.cancel();
+                  c.discard();
                   stopSpeaking();
                   void newConversation();
                   setHome(true);
@@ -188,7 +183,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
                 >
                   <Orb state={orbState} size={variant === "panel" ? 120 : 140} />
                 </button>
-                <VoiceStatus listening={speech.listening} starting={speech.starting} thinking={thinking} interim={speech.interim} idleTitle="Hey, how can I help?" idleSub={`${greetingNow()}${name}`} />
+                <VoiceStatus phase={phase} thinking={thinking} interim={speech.interim} idleTitle="Hey, how can I help?" idleSub={`${greetingNow()}${name}`} />
               </div>
               <Composer
                 dark
@@ -197,11 +192,13 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
                 setDraft={setDraft}
                 onSubmit={submitText}
                 thinking={thinking}
-                listening={speech.listening}
+                phase={phase}
+                fromVoice={c.fromVoice}
+                onDiscard={c.discard}
                 supported={speech.supported}
                 onMic={toggleMic}
               />
-              <SpeechHelp error={speech.error} supported={speech.supported} onClear={speech.clearError} dark />
+              <ComposerStatus dark phase={phase === "listening" || phase === "starting" ? "idle" : phase} interim="" error={speech.error} notice={c.notice} supported={speech.supported} />
             </div>
 
             {messages.length > 0 ? (
@@ -244,10 +241,11 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
         ) : (
           <div className="mx-auto max-w-2xl space-y-4 px-4 pb-6 pt-2 lg:px-6" aria-live="polite">
             {!ready ? <p className="text-center text-[14px] text-subtle">Loading conversation…</p> : null}
-            {messages.map((m) => (
+            {messages.map((m, i) => (
               <MessageRow
                 key={m.id}
                 message={m}
+                request={m.role === "assistant" ? [...messages.slice(0, i)].reverse().find((x) => x.role === "user")?.text : undefined}
                 showChips={m.id === lastAssistantId && !thinking}
                 canEdit={m.id === lastUserId && !thinking}
                 onEdit={() => {
@@ -259,7 +257,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
                 onNavigate={onClose}
               />
             ))}
-            {speech.listening ? (
+            {speech.listening || phase === "stopping" ? (
               <div className="flex justify-end">
                 <div className="max-w-[85%] rounded-3xl rounded-br-lg bg-ink-800 px-4 py-3 text-[16px] text-white/85">
                   <span className="mr-2 inline-block size-2.5 animate-pulse rounded-full bg-red-500 align-middle" />
@@ -286,23 +284,35 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
       {inConversation ? (
         <div className="shrink-0 border-t border-line bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:px-6">
           <div className="mx-auto max-w-2xl">
-            {speech.listening || speech.starting || thinking ? (
-              <div role="status" className={cn("mb-2 flex items-center justify-center gap-2 rounded-full py-2 text-[15px] font-medium", speech.listening ? "bg-red-500/10 text-danger-fg" : "bg-copper-500/10 text-accent-fg")}>
-                <span className={cn("size-2.5 rounded-full", speech.listening ? "animate-pulse bg-red-500" : "animate-pulse bg-copper-500")} />
-                {speech.listening ? "Listening — tap the mic again to stop" : speech.starting ? "Starting the microphone…" : "Bob is working on it…"}
+            {phase !== "idle" || thinking ? (
+              <div role="status" className={cn("mb-2 flex items-center justify-center gap-2 rounded-full px-3 py-2 text-center text-[15px] font-medium", speech.listening ? "bg-red-500/10 text-danger-fg" : "bg-copper-500/10 text-accent-fg")}>
+                <span className={cn("size-2.5 shrink-0 rounded-full", speech.listening ? "animate-pulse bg-red-500" : "animate-pulse bg-copper-500")} />
+                {phase === "listening"
+                  ? "Listening — pause to send, or tap Stop to check it first"
+                  : phase === "starting"
+                    ? "Starting the microphone…"
+                    : phase === "stopping"
+                      ? "Getting the last of what you said…"
+                      : phase === "sending"
+                        ? "Sending to Bob…"
+                        : "Bob is working on it…"}
               </div>
             ) : null}
-            <SpeechHelp error={speech.error} supported={speech.supported} onClear={speech.clearError} />
-            <Composer
-              inputRef={inputRef}
-              draft={draft}
-              setDraft={setDraft}
-              onSubmit={submitText}
-              thinking={thinking}
-              listening={speech.listening}
-              supported={speech.supported}
-              onMic={toggleMic}
-            />
+            {phase === "idle" ? <ComposerStatus phase="idle" interim="" error={speech.error} notice={c.notice} supported={speech.supported} /> : null}
+            <div className="mt-2">
+              <Composer
+                inputRef={inputRef}
+                draft={draft}
+                setDraft={setDraft}
+                onSubmit={submitText}
+                thinking={thinking}
+                phase={phase}
+                fromVoice={c.fromVoice}
+                onDiscard={c.discard}
+                supported={speech.supported}
+                onMic={toggleMic}
+              />
+            </div>
           </div>
         </div>
       ) : null}
@@ -310,24 +320,26 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
   );
 }
 
-function VoiceStatus({ listening, starting, thinking, interim, idleTitle, idleSub }: { listening: boolean; starting: boolean; thinking: boolean; interim: string; idleTitle: string; idleSub: string }) {
+function VoiceStatus({ phase, thinking, interim, idleTitle, idleSub }: { phase: ComposerPhase; thinking: boolean; interim: string; idleTitle: string; idleSub: string }) {
   return (
     <div className="min-h-[76px] px-2 pb-3 text-center" aria-live="polite">
-      {starting ? (
+      {phase === "starting" ? (
         <>
           <p className="text-[22px] font-semibold tracking-tight">Starting the microphone…</p>
           <p className="mt-1 text-[16px] text-white/70">Allow microphone access if your phone asks.</p>
         </>
-      ) : listening ? (
+      ) : phase === "listening" ? (
         <>
           <p className="flex items-center justify-center gap-2 text-[22px] font-semibold tracking-tight">
             <span className="size-3 animate-pulse rounded-full bg-red-500" /> Listening…
           </p>
-          <p className="mt-1 text-[17px] text-white/85">{interim || "Go ahead — tap the orb or mic to stop."}</p>
+          <p className="mt-1 text-[17px] text-white/85">{interim ? `“${interim}”` : "Pause when you're done and I'll send it — or tap Stop to check it first."}</p>
         </>
-      ) : thinking ? (
+      ) : phase === "stopping" ? (
+        <p className="text-[20px] font-semibold tracking-tight">Getting the last of what you said…</p>
+      ) : phase === "sending" || thinking ? (
         <>
-          <p className="text-[22px] font-semibold tracking-tight">Working on it…</p>
+          <p className="text-[22px] font-semibold tracking-tight">{phase === "sending" ? "Sending to Bob…" : "Working on it…"}</p>
           <p className="mt-1 text-[16px] text-white/70">Checking your records</p>
         </>
       ) : (
@@ -347,7 +359,9 @@ function Composer({
   setDraft,
   onSubmit,
   thinking,
-  listening,
+  phase,
+  fromVoice,
+  onDiscard,
   supported,
   onMic,
 }: {
@@ -357,60 +371,77 @@ function Composer({
   setDraft: (v: string) => void;
   onSubmit: (e?: React.FormEvent) => void;
   thinking: boolean;
-  listening: boolean;
+  phase: ComposerPhase;
+  fromVoice: boolean;
+  onDiscard: () => void;
   supported: boolean;
   onMic: () => void;
 }) {
+  const recording = phase === "listening" || phase === "starting";
+  const busy = phase === "stopping" || phase === "sending";
+  const hasText = !!draft.trim() && !recording;
   return (
-    <form onSubmit={onSubmit} className="flex items-end gap-2">
-      <textarea
-        ref={inputRef}
-        value={draft}
-        rows={1}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            onSubmit();
-          }
-        }}
-        placeholder={listening ? "Listening…" : "Type to Bob, or tap the mic"}
-        aria-label="Message Bob"
-        maxLength={2000}
-        className={cn(
-          "max-h-32 min-h-[52px] min-w-0 flex-1 resize-none rounded-3xl px-5 py-3.5 text-[17px] leading-6 outline-none focus:ring-2 focus:ring-copper-500/80",
-          dark ? "bg-white/10 text-white ring-1 ring-white/15 placeholder:text-white/50" : "bg-card text-foreground ring-1 ring-line-strong placeholder:text-subtle",
+    <div>
+      <form onSubmit={onSubmit} className="flex items-end gap-2">
+        <textarea
+          ref={inputRef}
+          value={draft}
+          rows={fromVoice && hasText ? 3 : 1}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onSubmit();
+            }
+          }}
+          readOnly={busy || recording}
+          placeholder={recording ? "Listening…" : "Type to Bob, or tap the mic"}
+          aria-label="Message Bob"
+          maxLength={2000}
+          className={cn(
+            "max-h-40 min-h-[52px] min-w-0 flex-1 resize-none rounded-3xl px-5 py-3.5 text-[17px] leading-6 outline-none focus:ring-2 focus:ring-copper-500/80",
+            dark ? "bg-white/10 text-white ring-1 ring-white/15 placeholder:text-white/50" : "bg-card text-foreground ring-1 ring-line-strong placeholder:text-subtle",
+            busy && "opacity-70",
+          )}
+        />
+        {busy ? (
+          <span className="grid size-[52px] shrink-0 place-items-center rounded-full bg-surface-3 text-accent-fg" aria-hidden>
+            <Loader2 className="size-6 animate-spin" />
+          </span>
+        ) : hasText && !fromVoice ? (
+          <button
+            type="submit"
+            disabled={thinking}
+            aria-label="Send to Bob"
+            className="grid size-[52px] shrink-0 place-items-center rounded-full bg-primary text-white transition disabled:opacity-40"
+          >
+            <SendHorizontal className="size-6" />
+          </button>
+        ) : hasText && fromVoice ? null : (
+          <MicButton listening={recording} disabled={!supported} onClick={onMic} />
         )}
-      />
-      {draft.trim() ? (
-        <button
-          type="submit"
-          disabled={thinking}
-          aria-label="Send"
-          className="grid size-[52px] shrink-0 place-items-center rounded-full bg-primary text-white shadow-[0_4px_14px_-4px_rgb(226_112_31/0.7)] transition disabled:opacity-40"
-        >
-          <SendHorizontal className="size-6" />
-        </button>
-      ) : (
-        <MicButton listening={listening} disabled={!supported} onClick={onMic} />
-      )}
-    </form>
+      </form>
+      {hasText && fromVoice && !busy ? (
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={onDiscard}
+            className={cn("h-12 rounded-full px-5 text-[15px] font-medium ring-1", dark ? "text-white/80 ring-white/20" : "text-muted-foreground ring-line-strong hover:text-foreground")}
+          >
+            Discard
+          </button>
+          <button
+            type="button"
+            onClick={() => onSubmit()}
+            disabled={thinking}
+            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-[16px] font-semibold text-white transition disabled:opacity-40"
+          >
+            <SendHorizontal className="size-5" /> Send to Bob
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
-}
-
-function SpeechHelp({ error, supported, onClear, dark }: { error: string | null; supported: boolean; onClear: () => void; dark?: boolean }) {
-  if (error)
-    return (
-      <div role="alert" className={cn("mt-3 flex items-start gap-2 rounded-2xl px-4 py-3 text-[15px] ring-1", dark ? "bg-amber-400/15 text-amber-100 ring-amber-300/30" : "bg-amber-400/15 text-warn-fg ring-amber-500/30")}>
-        <span className="flex-1">{error} Typing still works.</span>
-        <button onClick={onClear} aria-label="Dismiss" className="grid size-8 place-items-center">
-          <X className="size-4" />
-        </button>
-      </div>
-    );
-  if (!supported)
-    return <p className={cn("mt-2 text-center text-[14px]", dark ? "text-white/60" : "text-subtle")}>Voice isn&apos;t available in this browser — typing works the same.</p>;
-  return null;
 }
 
 function MenuItem({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
@@ -446,6 +477,7 @@ function MicButton({ listening, onClick, disabled }: { listening: boolean; onCli
 
 function MessageRow({
   message,
+  request,
   showChips,
   canEdit,
   onEdit,
@@ -454,6 +486,7 @@ function MessageRow({
   onNavigate,
 }: {
   message: BobMessage;
+  request?: string;
   showChips: boolean;
   canEdit: boolean;
   onEdit: () => void;
@@ -492,6 +525,7 @@ function MessageRow({
           </div>
         ) : null}
         {message.action ? <ActionCard action={message.action} onDecide={onDecide} onNavigate={onNavigate} /> : null}
+        {!message.id.startsWith("err_") ? <ReadAloudButton message={message} request={request} /> : null}
         {showChips && message.chips?.length ? (
           <div className="mt-2.5 flex flex-wrap gap-2">
             {message.chips.map((c, i) => (

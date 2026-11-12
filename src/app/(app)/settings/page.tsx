@@ -230,7 +230,7 @@ function BobSection({ org, owner, save }: { org: OrgConfig; owner: boolean; save
           </Field>
           <label className="flex items-center gap-2 text-[15px]">
             <input type="checkbox" checked={readAloud} onChange={(e) => setReadAloud(e.target.checked)} className="size-4 accent-[#e4752f]" />
-            Read Bob&apos;s replies aloud by default
+            Speak Bob&apos;s replies to voice requests by default
           </label>
         </fieldset>
         {owner ? <Button type="submit">Save</Button> : null}
