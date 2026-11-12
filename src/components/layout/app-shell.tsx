@@ -77,7 +77,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
         {/* Today and Ask Bob show demo mode in their own headers. */}
         {pathname !== "/today" && !assistant ? <DemoBanner /> : null}
         {!assistant ? <MobileHeader /> : null}
-        <main className={cn("min-h-0 flex-1 overscroll-contain", assistant ? "overflow-hidden" : "overflow-y-auto bg-app")}>
+        <main className={cn("min-h-0 flex-1 overscroll-contain", assistant ? "overflow-hidden" : pathname.startsWith("/enquiries") ? "overflow-y-auto bg-inbox" : "overflow-y-auto bg-app")}>
           {assistant ? children : <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-4 lg:px-10 lg:pb-10 lg:pt-8">{children}</div>}
         </main>
         {/* Ask Bob has its own back button and bottom controls. */}
@@ -93,10 +93,10 @@ function DemoBanner() {
   const { org } = useStore();
   if (org.dataMode !== "sample") return null;
   return (
-    <div role="note" className="flex shrink-0 items-center justify-center gap-2 bg-sky-500/10 px-3 py-1.5 text-center text-[13px] text-info-fg ring-1 ring-sky-400/20">
-      <FlaskConical className="size-3.5 shrink-0" />
+    <div role="note" className="flex shrink-0 items-center justify-center gap-2 border-b border-line bg-card px-3 py-1.5 text-center text-[13px] text-muted-foreground">
+      <FlaskConical className="size-3.5 shrink-0 text-subtle" />
       <span>
-        <strong className="font-semibold">Demo mode</strong>
+        <strong className="font-medium text-foreground/85">Demo mode</strong>
         <span className="hidden sm:inline"> — {org.isDemo ? "a fictional business" : "fictional sample data"}. Nothing is sent to real customers.</span>
         <span className="sm:hidden"> · sample data, nothing is sent</span>
       </span>

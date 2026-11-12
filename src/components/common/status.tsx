@@ -1,4 +1,4 @@
-import { Mail, Phone, Globe, PenLine } from "lucide-react";
+import { Flag, Mail, Phone, Globe, PenLine } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import {
   ENQUIRY_STATUS_LABEL,
@@ -48,7 +48,7 @@ export function JobStatusBadge({ status, className }: { status: JobStatus; class
 export function PriorityBadge({ priority }: { priority: Priority }) {
   if (priority !== "high") return <Badge tone="neutral">{PRIORITY_LABEL[priority]}</Badge>;
   return (
-<Badge tone="red">High priority</Badge>
+<HighPriority />
   );
 }
 
@@ -89,25 +89,19 @@ function GmailMark({ className }: { className?: string }) {
   );
 }
 
+/**
+ * Channel mark: a white glyph on the channel's colour at about half strength,
+ * so Instagram, email and phone are recognisable without shouting.
+ */
 export function SourceIcon({ source, provider, className }: { source: EnquirySource; provider?: string; className?: string }) {
-  if (source === "email" && provider === "gmail") {
-    return (
-      <span title="Came in by email (Gmail)" className={cn("grid size-9 shrink-0 place-items-center rounded-[10px] bg-white", className)}>
-        <GmailMark className="size-[60%]" />
-        <span className="sr-only">Gmail</span>
-      </span>
-    );
-  }
+  const gmail = source === "email" && provider === "gmail";
   const Icon = SOURCE_ICON[source];
-  const st = SOURCE_STYLE[source];
+  const label = gmail ? "Gmail" : SOURCE_LABEL[source];
   return (
-    <span
-      title={`Came in by ${SOURCE_LABEL[source].toLowerCase()}`}
-      style={{ background: st.bg, color: st.fg }}
-      className={cn("grid size-9 shrink-0 place-items-center rounded-[10px] shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]", className)}
-    >
-      <Icon className="size-[52%]" aria-hidden />
-      <span className="sr-only">{SOURCE_LABEL[source]}</span>
+    <span title={`Came in by ${label}`} className={cn("relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-raised", className)}>
+      <span aria-hidden className="absolute inset-0 opacity-[0.42]" style={{ background: SOURCE_STYLE[source].bg }} />
+      {gmail ? <GmailMark className="relative size-[55%] opacity-90" /> : <Icon className="relative size-[50%] text-white/90" aria-hidden />}
+      <span className="sr-only">{label}</span>
     </span>
   );
 }
@@ -119,6 +113,32 @@ export function SourceChip({ source, className }: { source: EnquirySource; class
     <span className={cn("inline-flex h-6 items-center gap-1.5 rounded-md px-2 text-[12.5px] font-medium ring-1", SOURCE_STYLE[source].chip, className)}>
       <Icon className="size-3.5" aria-hidden />
       {source === "manual" ? "Manual" : SOURCE_LABEL[source]}
+    </span>
+  );
+}
+
+/**
+ * One wording and colour for an enquiry's state, used in the inbox list and the
+ * detail pane alike. Colour is an extra cue; the words always show.
+ */
+export function enquiryState(e: { status: EnquiryStatus; draftReply?: string; priority: Priority; followUpDate?: string }, followUpDue: boolean) {
+  const waiting = e.status === "new" || e.status === "awaiting_reply";
+  const open = e.status !== "won" && e.status !== "lost";
+  const main: { label: string; tone: "amber" | "green" | "neutral" } = waiting
+    ? e.draftReply
+      ? { label: "Draft saved", tone: "green" }
+      : { label: "Needs your reply", tone: "amber" }
+    : followUpDue
+      ? { label: "Follow-up due", tone: "amber" }
+      : { label: ENQUIRY_STATUS_LABEL[e.status], tone: e.status === "won" ? "green" : "neutral" };
+  return { main, high: open && e.priority === "high" };
+}
+
+/** "High priority": a small flag and the word. Red is kept for overdue money. */
+export function HighPriority({ className }: { className?: string }) {
+  return (
+    <span className={cn("inline-flex items-center gap-1 whitespace-nowrap text-[13.5px] font-medium text-foreground/80", className)}>
+      <Flag className="size-3.5 fill-current text-[#d9d9de]" aria-hidden /> High priority
     </span>
   );
 }

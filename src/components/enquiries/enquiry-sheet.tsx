@@ -6,7 +6,7 @@ import * as React from "react";
 import { AlarmClock, AlertTriangle, CalendarCheck, CheckCheck, Copy, FileText, HardHat, Mail, MapPin, Phone, Save, Send, UserRound } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
-import { ENQUIRY_STATUSES, ENQUIRY_STATUS_LABEL, PRIORITY_LABEL, SOURCE_LABEL, needsReply } from "@/lib/derive";
+import { ENQUIRY_STATUSES, ENQUIRY_STATUS_LABEL, PRIORITY_LABEL, SOURCE_LABEL, followUpDue, needsReply } from "@/lib/derive";
 import type { ActionView } from "@/lib/bob/types";
 import type { Priority } from "@/lib/types";
 import { addDaysKey, cn, copyToClipboard, timeAgo, firstName, formatDateInline } from "@/lib/utils";
@@ -14,7 +14,8 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect, Textarea } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
-import { EnquiryStatusBadge, PriorityBadge, SourceIcon, InstagramGlyph } from "@/components/common/status";
+import { HighPriority, SourceIcon, InstagramGlyph, enquiryState } from "@/components/common/status";
+import { StatusText } from "@/components/common/bits";
 import { NotesPanel } from "@/components/common/notes";
 import { ActionCard } from "@/components/assistant/assistant-cards";
 import { Section } from "@/components/jobs/job-sheet";
@@ -75,9 +76,16 @@ export function EnquiryDetail({ id, inline = false }: { id: string; inline?: boo
             </p>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <EnquiryStatusBadge status={e.status} />
-          <PriorityBadge priority={e.priority} />
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1">
+          {(() => {
+            const st = enquiryState(e, !needsReply(e) && followUpDue(e));
+            return (
+              <>
+                <StatusText tone={st.main.tone}>{st.main.label}</StatusText>
+                {st.high ? <HighPriority /> : null}
+              </>
+            );
+          })()}
           {e.followUpDate ? (
             <span className="inline-flex items-center gap-1 text-[13px] text-muted-foreground">
               <CalendarCheck className="size-3" /> Follow up {formatDateInline(e.followUpDate)}
@@ -242,6 +250,7 @@ export function EnquiryDetail({ id, inline = false }: { id: string; inline?: boo
               </Button>
             ) : (
               <Button
+                variant="secondary"
                 onClick={() =>
                   ui.openForm({
                     form: "job",
@@ -333,9 +342,7 @@ function ReplyPanel({ id }: { id: string }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-[14px] font-semibold uppercase tracking-wider text-subtle">{replied ? "Your reply" : "Reply"}</h3>
         {replied ? (
-          <span className="rounded-full bg-emerald-500/12 px-2.5 py-0.5 text-[13px] font-medium text-good-fg ring-1 ring-emerald-500/30">
-            Replied{e.lastContactAt ? ` ${timeAgo(e.lastContactAt)}` : ""}
-          </span>
+          <StatusText tone="green">Replied{e.lastContactAt ? ` ${timeAgo(e.lastContactAt)}` : ""}</StatusText>
         ) : null}
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -343,21 +350,27 @@ function ReplyPanel({ id }: { id: string }) {
           <div className="mb-1.5 text-[14px] font-medium text-muted-foreground">
             What {firstName(e.customerName)} said{latest ? ` · ${timeAgo(latest.at)}` : ""}
           </div>
-          <div className="rounded-2xl bg-card p-4 ring-1 ring-line">
+          <div className="rounded-2xl border-l-2 border-white/15 bg-white/[0.03] p-4">
             {latest?.subject ? <div className="mb-1 text-[14px] font-medium text-muted-foreground">{latest.subject}</div> : null}
             {flagged ? (
               <div className="mb-2 flex items-center gap-1.5 text-[14px] text-warn-fg">
                 <AlertTriangle className="size-4" /> Contains instructions aimed at an assistant — Bob ignores them.
               </div>
             ) : null}
-            <p className="whitespace-pre-wrap text-[16px] leading-relaxed">{latest?.body ?? (e.description || "No message recorded.")}</p>
+            <p className="whitespace-pre-wrap text-[16px] leading-relaxed text-foreground/90">{latest?.body ?? (e.description || "No message recorded.")}</p>
           </div>
         </div>
         <div>
           <div className="mb-1.5 flex items-center justify-between text-[14px] font-medium text-muted-foreground">
             <label htmlFor={`reply-${e.id}`}>{e.draftReply ? "Your draft" : "Suggested reply"}</label>
-            <span aria-live="polite" className={cn("text-[13px]", saved === "saved" ? "text-good-fg" : "text-subtle")}>
-              {saved === "saving" ? "Saving…" : saved === "saved" ? "Draft saved" : write ? "Not saved yet" : ""}
+            <span aria-live="polite">
+              {saved === "saving" ? (
+                <StatusText tone="neutral">Saving…</StatusText>
+              ) : saved === "saved" ? (
+                <StatusText tone="green">Draft saved</StatusText>
+              ) : write ? (
+                <StatusText tone="neutral">Not saved yet</StatusText>
+              ) : null}
             </span>
           </div>
           <Textarea
@@ -369,7 +382,7 @@ function ReplyPanel({ id }: { id: string }) {
               setSaved("unsaved");
             }}
             onBlur={() => void save(true)}
-            className="min-h-48 text-[16px] sm:min-h-56"
+            className="min-h-48 rounded-2xl border-0 bg-[#0f0f11] text-[16px] leading-relaxed text-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.03)] ring-1 ring-white/[0.12] transition focus:bg-[#0d0d0f] focus:outline-none focus:ring-2 focus:ring-copper-400 focus:ring-offset-2 focus:ring-offset-card sm:min-h-56"
           />
           <p className="mt-2 text-[14px] text-subtle">
             {emailConnected && e.email ? "Sending goes through your connected mailbox and needs your approval." : `Nothing is sent from Bob here. Copy it into ${channel}, then mark it replied.`}
@@ -402,7 +415,7 @@ function ReplyPanel({ id }: { id: string }) {
               </Button>
             ) : null}
             {write && !replied && !confirmReplied ? (
-              <Button variant="outline" className="col-span-2" onClick={() => setConfirmReplied(true)}>
+              <Button variant="secondary" className="col-span-2" onClick={() => setConfirmReplied(true)}>
                 <CheckCheck /> Mark as replied
               </Button>
             ) : null}

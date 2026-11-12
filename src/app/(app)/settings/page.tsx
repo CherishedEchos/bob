@@ -41,7 +41,7 @@ function WebsiteFormSection({ slug }: { slug: string }) {
         <div>
           <div className="mb-1.5 text-[14px] font-medium text-foreground/90">Form link</div>
           <div className="flex gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-xl bg-[#0f0e0c] px-3.5 py-3 text-[14px] ring-1 ring-line-strong">{link}</code>
+            <code className="min-w-0 flex-1 truncate rounded-xl bg-[#0f0f11] px-3.5 py-3 text-[14px] ring-1 ring-line-strong">{link}</code>
             <Button variant="secondary" onClick={() => void copy(link, "Link")}>
               <Copy /> Copy
             </Button>
@@ -49,7 +49,7 @@ function WebsiteFormSection({ slug }: { slug: string }) {
         </div>
         <div>
           <div className="mb-1.5 text-[14px] font-medium text-foreground/90">Add it to your website</div>
-          <code className="block break-all rounded-xl bg-[#0f0e0c] px-3.5 py-3 text-[13px] leading-relaxed text-muted-foreground ring-1 ring-line-strong">{embed}</code>
+          <code className="block break-all rounded-xl bg-[#0f0f11] px-3.5 py-3 text-[13px] leading-relaxed text-muted-foreground ring-1 ring-line-strong">{embed}</code>
           <div className="mt-2 flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => void copy(embed, "Embed code")}>
               <Copy /> Copy embed code

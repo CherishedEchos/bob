@@ -10,9 +10,9 @@ import { useUI } from "@/lib/store/ui";
 import { useIsDesktop } from "@/lib/use-media";
 import { ENQUIRY_SOURCES, ENQUIRY_STATUSES, ENQUIRY_STATUS_LABEL, SOURCE_LABEL, followUpDue, isOpenEnquiry, needsReply, sortEnquiries } from "@/lib/derive";
 import type { Enquiry, EnquirySource, EnquiryStatus } from "@/lib/types";
-import { cn, timeAgo, formatDateInline } from "@/lib/utils";
-import { EmptyState, StatusText, rowActionClass } from "@/components/common/bits";
-import { SourceIcon } from "@/components/common/status";
+import { cn, timeAgo } from "@/lib/utils";
+import { EmptyState, StatusText } from "@/components/common/bits";
+import { HighPriority, SourceIcon, enquiryState } from "@/components/common/status";
 import { EnquiryDetail } from "@/components/enquiries/enquiry-sheet";
 import { Input, NativeSelect } from "@/components/ui/input";
 
@@ -179,7 +179,7 @@ function EnquiriesInner() {
           ) : null}
 
           {tab === "reply" && waiting > 1 && can("enquiries.write") ? (
-            <Link href="/replies" className="mb-3 flex min-h-12 items-center justify-between gap-3 rounded-xl bg-copper-500/[0.09] px-4 text-[15px] font-semibold text-accent-fg transition hover:bg-copper-500/[0.15]">
+            <Link href="/replies" className="mb-3 flex min-h-[52px] items-center justify-between gap-3 rounded-xl bg-[#f28c3c] px-4 text-[16px] font-semibold text-[#1b1007] shadow-[0_6px_20px_-10px_rgb(242_140_60/0.7)] transition hover:bg-[#f69a50] active:bg-[#e47d2e]">
               <span className="flex items-center gap-2">
                 <Sparkles className="size-4" /> Draft all {waiting} replies
               </span>
@@ -220,36 +220,40 @@ function InboxRow({ e, selected, onOpen, canReply }: { e: Enquiry; selected: boo
   const preview = e.messages.filter((m) => m.direction === "inbound").at(-1)?.body ?? e.description;
   const waiting = needsReply(e);
   const due = !waiting && followUpDue(e);
-  const next = waiting
-    ? { text: e.draftReply ? "Draft saved — ready to send" : "Needs your reply", tone: "amber" as const, action: e.draftReply ? "Review" : "Draft reply" }
-    : due
-      ? { text: `Follow up ${formatDateInline(e.followUpDate!)}`, tone: "amber" as const, action: "Follow up" }
-      : e.followUpDate && isOpenEnquiry(e)
-        ? { text: `Follow up ${formatDateInline(e.followUpDate)}`, tone: "neutral" as const }
-        : { text: ENQUIRY_STATUS_LABEL[e.status], tone: e.status === "won" ? ("green" as const) : ("neutral" as const) };
+  const state = enquiryState(e, due);
+  const action = waiting ? (e.draftReply ? "Review" : "Draft reply") : due ? "Follow up" : null;
   return (
-    <li className={cn("relative flex items-start gap-3 px-4 py-3.5 lg:px-4", selected && "bg-raised")}>
-      {selected ? <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-copper-500" /> : null}
+    <li className={cn("group relative flex items-start gap-3 px-4 py-3.5 transition-colors", selected ? "bg-raised" : "hover:bg-surface-2")}>
+      {selected ? <span aria-hidden className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-copper-500" /> : null}
       <button type="button" onClick={() => onOpen(waiting && !desktopRow() ? "reply" : undefined)} aria-current={selected || undefined} className="flex min-w-0 flex-1 items-start gap-3 text-left">
         <SourceIcon source={e.source} provider={e.provider} className="mt-0.5" />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline justify-between gap-3">
             <span className="t-name truncate">{e.customerName}</span>
-            <span className={cn("shrink-0 text-[13px] tabular", waiting ? "font-medium text-accent-fg" : "text-subtle")}>{timeAgo(e.receivedAt)}</span>
+            <span className="shrink-0 text-[13px] tabular text-subtle">{timeAgo(e.receivedAt)}</span>
           </span>
-          <span className="mt-0.5 block truncate text-[14.5px] text-foreground/85">
-            {e.title} · {e.location}
+          <span className="mt-0.5 block truncate text-[14.5px]">
+            <span className="text-foreground/85">{e.title}</span>
+            <span className="text-muted-foreground"> · {e.location}</span>
           </span>
-          <span className="mt-0.5 line-clamp-1 text-[14px] text-muted-foreground">{preview}</span>
-          <span className="mt-1.5 flex items-center gap-3">
-            <StatusText tone={next.tone}>{next.text}</StatusText>
-            {e.priority === "high" && isOpenEnquiry(e) ? <StatusText tone="red">High priority</StatusText> : null}
+          <span className="mt-0.5 line-clamp-1 text-[14px] text-subtle">{preview}</span>
+          <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <StatusText tone={state.main.tone}>{state.main.label}</StatusText>
+            {state.high ? <HighPriority /> : null}
           </span>
         </span>
       </button>
-      {next.action && canReply ? (
-        <button type="button" onClick={() => onOpen("reply")} aria-label={`${next.action}: ${e.customerName}`} className={cn(rowActionClass, "mt-0.5 hidden self-center sm:inline-flex")}>
-          {next.action}
+      {action && canReply ? (
+        <button
+          type="button"
+          onClick={() => onOpen("reply")}
+          aria-label={`${action}: ${e.customerName}`}
+          className={cn(
+            "mt-0.5 hidden h-10 shrink-0 items-center self-center whitespace-nowrap rounded-lg px-3 text-[14.5px] font-semibold transition sm:inline-flex",
+            selected ? "text-accent-fg" : "text-muted-foreground group-hover:text-accent-fg hover:bg-surface-3",
+          )}
+        >
+          {action}
         </button>
       ) : null}
     </li>

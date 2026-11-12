@@ -11,22 +11,22 @@
 
   /* Charcoal workspace with amber accents. Text colours tuned for contrast on #0e0d0c. */
   /* Three surfaces: page (near-black) → panel (warm charcoal) → raised (rows, drawers, menus). */
-  --color-background: #0b0a09;
+  --color-background: #111113;
   --color-foreground: #f7f4f0;
 
-  --color-ink-950: #0c0b0a;
-  --color-ink-900: #121110;
-  --color-ink-850: #171514;
-  --color-ink-800: #1d1b19;
-  --color-ink-750: #242120;
-  --color-ink-700: #2d2a27;
-  --color-ink-600: #3a3632;
+  --color-ink-950: #0c0c0e;
+  --color-ink-900: #111113;
+  --color-ink-850: #161618;
+  --color-ink-800: #1c1c1f;
+  --color-ink-750: #222226;
+  --color-ink-700: #2b2b30;
+  --color-ink-600: #38383e;
 
-  --color-card: #161412;
-  --color-raised: #211e1b;
-  --color-raised-hover: #2a2622;
+  --color-card: #19191c;
+  --color-raised: #222226;
+  --color-raised-hover: #2a2a2f;
   --color-card-foreground: #f7f4f0;
-  --color-popover: #211e1b;
+  --color-popover: #222226;
   --color-popover-foreground: #f7f4f0;
 
   --color-copper-200: #ffd2b0;
@@ -39,12 +39,12 @@
 
   --color-primary: #ec7a2e;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #262321;
+  --color-secondary: #232327;
   --color-secondary-foreground: #f7f4f0;
-  --color-muted: #1d1b19;
-  --color-muted-foreground: #dcd5cd;
-  --color-subtle: #b9b1a9;
-  --color-accent: #2d2a27;
+  --color-muted: #1c1c1f;
+  --color-muted-foreground: #c4c4cb;
+  --color-subtle: #92929b;
+  --color-accent: #2b2b30;
   --color-accent-foreground: #f7f4f0;
   --color-destructive: #e5484d;
   --color-success: #3fbf7f;
@@ -52,15 +52,15 @@
   --color-info: #6fa8ff;
 
   /* Semantic helpers */
-  --color-line: rgb(255 236 214 / 0.085);
-  --color-line-strong: rgb(255 236 214 / 0.17);
-  --color-surface-2: rgb(255 240 225 / 0.045);
-  --color-surface-3: rgb(255 240 225 / 0.08);
+  --color-line: rgb(255 255 255 / 0.07);
+  --color-line-strong: rgb(255 255 255 / 0.13);
+  --color-surface-2: rgb(255 255 255 / 0.035);
+  --color-surface-3: rgb(255 255 255 / 0.065);
   --color-accent-fg: #ffc396;
   --color-accent-icon: #f7944f;
-  --color-danger-fg: #ffa8a8;
-  --color-warn-fg: #ffd98a;
-  --color-good-fg: #8ae6b8;
+  --color-danger-fg: #ef9f9f;
+  --color-warn-fg: #f2b76c;
+  --color-good-fg: #8fcca6;
   --color-info-fg: #b0ceff;
 
   --color-border: rgb(255 255 255 / 0.09);
@@ -167,8 +167,8 @@
   .bg-app {
     background-color: var(--color-background);
     background-image:
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 0.92  0 0 0 0 0.85  0 0 0 0.055 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
-      radial-gradient(1100px 520px at 50% -12%, rgb(236 122 46 / 0.06), transparent 62%);
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 0.92  0 0 0 0 0.85  0 0 0 0.022 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      radial-gradient(1100px 520px at 50% -12%, rgb(236 122 46 / 0.03), transparent 62%);
     background-size: 160px 160px, auto;
   }
   /* Panels (cards, lists): warm charcoal, fine border, a hairline highlight on top. */
@@ -177,13 +177,13 @@
     background: var(--color-card);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-2xl);
-    box-shadow: inset 0 1px 0 rgb(255 240 225 / 0.035), 0 1px 2px rgb(0 0 0 / 0.25);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03), 0 1px 2px rgb(0 0 0 / 0.3);
   }
   /* Raised: selected rows, drawers, menus, popovers. */
   .raised {
     background: var(--color-raised);
     border: 1px solid var(--color-line-strong);
-    box-shadow: inset 0 1px 0 rgb(255 240 225 / 0.05), 0 12px 32px -12px rgb(0 0 0 / 0.6);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.045), 0 12px 32px -12px rgb(0 0 0 / 0.6);
   }
   /* Type scale */
   .t-page {
@@ -231,18 +231,18 @@
   /* Charcoal scope: sidebar, Bob's orb panels. Same components, dark tokens. */
   .theme-dark {
     color-scheme: dark;
-    --color-background: #121110;
+    --color-background: #141416;
     --color-foreground: #f6f3ef;
-    --color-card: #1d1b19;
+    --color-card: #1c1c1f;
     --color-card-foreground: #f6f3ef;
-    --color-popover: #242120;
+    --color-popover: #242428;
     --color-popover-foreground: #f6f3ef;
-    --color-secondary: #2a2724;
+    --color-secondary: #2a2a2f;
     --color-secondary-foreground: #f6f3ef;
-    --color-muted: #1d1b19;
-    --color-muted-foreground: #b3aca5;
-    --color-subtle: #8a837c;
-    --color-accent: #2d2a27;
+    --color-muted: #1c1c1f;
+    --color-muted-foreground: #b6b6be;
+    --color-subtle: #8e8e97;
+    --color-accent: #2b2b30;
     --color-accent-foreground: #f6f3ef;
     --color-line: rgb(255 255 255 / 0.1);
     --color-line-strong: rgb(255 255 255 / 0.25);
@@ -251,7 +251,7 @@
     --color-accent-fg: #ffc396;
     --color-accent-icon: #f7944f;
     --color-danger-fg: #ff9b9b;
-    --color-warn-fg: #ffd98a;
+    --color-warn-fg: #f2b76c;
     --color-good-fg: #7fe0ae;
     --color-info-fg: #a9c9ff;
     --color-border: rgb(255 255 255 / 0.08);
@@ -271,4 +271,9 @@
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* Behind the inbox: plain canvas, no texture. */
+.bg-inbox {
+  background: var(--color-background);
 }

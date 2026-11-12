@@ -192,7 +192,7 @@ export function SnapPhotoButton({ className, label = false, inputId, hideTrigger
                 onChange={(e) => setCaption(e.target.value)}
                 maxLength={200}
                 placeholder="e.g. Damp patch behind the units"
-                className="h-12 w-full rounded-xl bg-[#0f0e0c] px-3.5 text-[16px] text-foreground outline-none ring-1 ring-line-strong placeholder:text-subtle focus:ring-2 focus:ring-copper-400/80"
+                className="h-12 w-full rounded-xl bg-[#0f0f11] px-3.5 text-[16px] text-foreground outline-none ring-1 ring-line-strong placeholder:text-subtle focus:ring-2 focus:ring-copper-400/80"
               />
             </div>
           </div>

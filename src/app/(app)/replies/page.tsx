@@ -323,7 +323,7 @@ function ReplyCard({
             value={row.body}
             readOnly={done || row.sending}
             onChange={(e) => onChange(e.target.value)}
-            className="block w-full resize-none rounded-xl bg-[#0f0e0c] px-3.5 py-3 text-[15.5px] leading-relaxed text-foreground outline-none ring-1 ring-line-strong focus:ring-2 focus:ring-copper-400/80 read-only:text-muted-foreground"
+            className="block w-full resize-none rounded-xl bg-[#0f0f11] px-3.5 py-3 text-[15.5px] leading-relaxed text-foreground outline-none ring-1 ring-line-strong focus:ring-2 focus:ring-copper-400/80 read-only:text-muted-foreground"
           />
         </div>
 
