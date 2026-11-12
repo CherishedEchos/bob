@@ -13,6 +13,7 @@ import { toast } from "@/components/ui/toaster";
 import { EnquiryStatusBadge, JobStatusBadge } from "@/components/common/status";
 import { NotesPanel } from "@/components/common/notes";
 import { Section } from "@/components/jobs/job-sheet";
+import { QuotesList } from "@/components/common/quotes-list";
 
 export function CustomerSheet() {
   const ui = useUI();
@@ -144,6 +145,11 @@ function CustomerDetail({ id }: { id: string }) {
         </Section>
       ) : null}
 
+      {data.quotes.some((q) => q.customerId === id) ? (
+        <Section title="Quotes">
+          <QuotesList quotes={data.quotes.filter((q) => q.customerId === id)} />
+        </Section>
+      ) : null}
       <Section title="Notes">
         <NotesPanel notes={c.notes} onAdd={(t) => actions.addCustomerNote(c.id, t)} />
       </Section>

@@ -53,6 +53,10 @@ export const TABLES = {
     jobId: "text", amount: "real", category: "text", description: "text", incurredOn: "text",
     recordedBy: "text", createdAt: "text",
   },
+  photos: {
+    relatedType: "text", relatedId: "text", caption: "text", mimeType: "text", data: "text", width: "real", height: "real",
+    bytes: "real", createdAt: "text", createdBy: "text",
+  },
   tasks: {
     title: "text", dueDate: "text", done: "bool", customerId: "text", relatedType: "text", relatedId: "text",
     assignedUserId: "text", createdAt: "text", createdBy: "text", completedAt: "text",

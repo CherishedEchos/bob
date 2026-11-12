@@ -17,6 +17,7 @@ import type { Ctx } from "@/server/context";
 import * as R from "@/server/services/records";
 import * as F from "@/server/services/finance";
 import * as Rep from "@/server/services/reports";
+import { morningBriefing } from "./briefing";
 import { getAccountingProvider, getEmailProvider } from "@/server/integrations/registry";
 import { detectInjection } from "@/server/integrations/safety";
 import { syncInbox } from "@/server/integrations/inbox";
@@ -26,7 +27,7 @@ import { runReadTool } from "./tools";
 import { mentionScore, resolveCustomers, resolveEnquiries, resolveJobs } from "./resolve";
 import {
   cleanUtterance, detectMethod, findAmounts, isAffirmative, parseDeposit, parseDueDate, parseDueTerms,
-  parseExpenseCategory, parseLocation, parsePeriod, parseVat, parseVatRate, parseWorkTitle, stripDatePhrases, titleCase,
+  normaliseSpokenNumbers, parseExpenseCategory, parseLocation, parsePeriod, parseVat, parseVatRate, parseWorkTitle, stripDatePhrases, titleCase,
 } from "./nlu";
 import {
   depositReminderDraft, enquiryFollowUpDraft, greetingFor, invoiceReminderDraft, listNames, plural, quoteFollowUpDraft, replyDraft, type Draft,
@@ -62,6 +63,7 @@ type JobFlow = {
   startDate?: string;
   status?: JobStatus;
 };
+type QuoteFlow = { type: "quote"; text: string; customerId?: string; customerQuery?: string; enquiryId?: string };
 type ReminderFlow = { type: "reminder"; text: string; title?: string; dueDate?: string; customerId?: string; relatedType?: "enquiry" | "job"; relatedId?: string; resolvedPeople?: boolean };
 type ExpenseFlow = { type: "expense"; text: string; jobId?: string; amount?: number; category?: ExpenseCategory; description?: string };
 type PaymentFlow = { type: "payment"; text: string; jobId?: string; amount?: number; ptype?: PaymentType; method?: PaymentMethod; useDeposit?: boolean; useBalance?: boolean };
@@ -70,7 +72,7 @@ type LookupFlow = { type: "job_lookup"; text: string; jobId?: string };
 type StatusFlow = { type: "job_status"; text: string; jobId?: string; status: JobStatus };
 type DepositFlow = { type: "deposit_check"; text: string; jobId?: string };
 
-export type Flow = InvoiceFlow | JobFlow | ReminderFlow | ExpenseFlow | PaymentFlow | DraftFlow | LookupFlow | StatusFlow | DepositFlow;
+export type Flow = InvoiceFlow | JobFlow | QuoteFlow | ReminderFlow | ExpenseFlow | PaymentFlow | DraftFlow | LookupFlow | StatusFlow | DepositFlow;
 
 export interface BobState {
   flow?: Flow;
@@ -293,6 +295,10 @@ async function route(t: Turn, text: string, lower: string) {
   if (/\b(what can you do|help me|how do (i|you) use|what do you do)\b/.test(lower) || lower === "help") return help(t);
 
   // Today / priorities (not "what's happening with the kitchen job")
+  if (/\b(morning |daily )?briefing\b|\bread me my day\b|\bbrief me\b|\bhow'?s my day( looking)?\b/.test(lower)) {
+    const b = morningBriefing(t.ctx);
+    return say(t, b.text, b.suggestion ? { chips: [{ kind: "send", label: b.suggestion.label, text: b.suggestion.request }] } : undefined);
+  }
   if (!/\b(job|kitchen|extension|loft|wardrobes?|decking|staircase|stairs|bathroom|garden room|media wall)\b/.test(lower) && (/\b(what('?s| is| have i got| needs?)( got)? (on|sorting|doing|happening)( today)?|what needs (sorting|doing|my attention)|today'?s (priorities|summary|list)|my day|anything (urgent|i need to)|what should i (do|focus on)|priorities)\b/.test(lower) || /^(today|what'?s on)\??$/.test(lower)))
     return summary(t, false);
 
@@ -302,6 +308,12 @@ async function route(t: Turn, text: string, lower: string) {
   if (/\b(who|which) (haven'?t i|have i not|do i need to|still need to) (replied|reply|respond|got back)|\bunanswered\b|\bwaiting (on|for) (a |my )?repl|\b(who|which|what|anyone|anybody)\b.*\bneeds? (a |my )?(reply|replies|response|answer)|\bneeds? (a |my )?repl(y|ies)\b.*\?$/.test(lower)) return listEnquiries(t, "needs_reply");
   if (/^follow[- ]?up on (my )?enquir|\b(which|what) enquir\w*\b.*\b(follow|chas)|\b(who|what) (needs?|do i need to) (follow(ing)?[- ]?up|chas)|\bfollow[- ]?ups?\b.*\b(due|today)\b/.test(lower)) return followUps(t);
   if (/\bwhich quotes?\b.*\b(follow|chase)|\bquotes?\b.*\bneed(s)? (following|chasing)|\bchase\b.*\bquotes\b/.test(lower)) return quotesToChase(t);
+  if (
+    !/\b(chase|follow|how many|which|need)\b/.test(lower) &&
+    (/^(?:(?:can|could) you |please )?(?:(?:draft|make|do|write|create|put together|record|start|price up)\s+)?(?:me\s+)?(?:a |an )?(?:new )?(?:draft )?quote\b(?!s)/.test(lower) ||
+      /\b(?:draft|make|write|create|put together|price up)\b.*\bquote\b(?!s)/.test(lower))
+  )
+    return runFlow(t, { type: "quote", text });
   if (/\bhow many quotes\b|\bhow much (work )?(have i|did i|i've) quoted\b|\bquoted\b.*\b(this|last) (month|week)\b|\bvalue of (my )?quotes\b/.test(lower)) return quoteStatsReply(t, text);
   if (/\bhow many jobs\b.*\b(won|win)\b|\bjobs (have i|did i) won\b|\bhow many (jobs )?(have i|did i) win\b/.test(lower)) return jobsWon(t, text);
   if (/\b(jobs?|work)\b.*\b(booked|starting|lined up|on)\b.*\b(next week|this week|today|tomorrow)\b|\bwhat('?s| is) booked\b/.test(lower)) return jobsBooked(t, text);
@@ -607,6 +619,8 @@ async function runFlow(t: Turn, flow: Flow): Promise<void> {
       return reminderFlow(t, flow);
     case "job":
       return jobFlow(t, flow);
+    case "quote":
+      return quoteFlow(t, flow);
     case "invoice":
       return invoiceFlow(t, flow);
     case "expense":
@@ -664,6 +678,11 @@ function fillFlow(flow: Flow, text: string): Flow {
       const start = text.match(/\bstart(?:ing|s)?\b(.*)$/i);
       if (start) f.startDate = parseDueDate(start[1])?.date ?? f.startDate;
       f.text = `${flow.text} ${text}`;
+      return f;
+    }
+    case "quote": {
+      const f = { ...flow, text: `${flow.text}, ${text}` };
+      if (!f.customerId && text.trim().split(/\s+/).length <= 4 && !/\d/.test(text)) f.customerQuery = text.replace(/[^A-Za-z\s'&-]/g, "").trim();
       return f;
     }
     case "reminder": {
@@ -729,6 +748,108 @@ async function reminderFlow(t: Turn, f: ReminderFlow) {
 const lowerFirst = (s: string) => (s ? s[0].toLowerCase() + s.slice(1) : s);
 
 /* ---------------------------------- Job ---------------------------------- */
+
+/* -------------------------------- Quote (voice-to-quote) -------------------------------- */
+
+const OPEN_FOR_QUOTE = new Set(["new", "awaiting_reply", "replied", "quote_required"]);
+
+/**
+ * "Quote for a kitchen, four metres, shaker style, island, about twelve grand"
+ * → a draft quote to check. The price must come from the user; Bob never guesses it.
+ */
+async function quoteFlow(t: Turn, f: QuoteFlow) {
+  const ctx = t.ctx;
+  const raw = normaliseSpokenNumbers(f.text);
+
+  // Who is it for? An explicit name, the answer to "who's it for?", or the enquiry being discussed.
+  if (!f.customerId) {
+    const named =
+      f.customerQuery ??
+      raw.match(/\bquote\s+(?:for|to)\s+(?!a\b|an\b|the\b|my\b)([A-Z][A-Za-z'-]+(?:\s+(?:and|&)\s+[A-Z][A-Za-z'-]+)?(?:\s+[A-Z][A-Za-z'-]+)?)/)?.[1] ??
+      raw.match(/\bfor\s+(?!a\b|an\b|the\b|about\b|around\b)([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+)?)(?:'s)?\b/)?.[1];
+    if (named) {
+      const name = named.replace(/'s$/, "").trim();
+      const matches = resolveCustomers(ctx, name);
+      if (matches.items.length > 1)
+        return offerChoice(t, "customer", matches.items.map((c) => ({ id: c.id, label: `${c.name}${c.town ? ` (${c.town})` : ""}` })), { ...f, customerQuery: undefined }, `Which ${firstName(matches.items[0].name)} is the quote for?`);
+      if (matches.items.length === 1) f.customerId = matches.items[0].id;
+      else {
+        // Not a saved customer yet? They may have just enquired.
+        const enq = resolveEnquiries(ctx, name).enquiries.filter((e) => OPEN_FOR_QUOTE.has(e.status));
+        if (enq.length > 1)
+          return offerChoice(t, "enquiry", enq.map((e) => ({ id: e.id, label: `${e.customerName} — ${e.title}` })), { ...f, customerQuery: undefined }, `Which enquiry is the quote for?`);
+        if (enq.length === 1) {
+          f.enquiryId = enq[0].id;
+          f.customerId = enq[0].customerId;
+        } else {
+          f.customerQuery = undefined;
+          return ask(t, f, `I can't find ${titleCase(name)} in your customers or enquiries. Who's the quote for?`);
+        }
+      }
+    } else if (t.state.focus?.enquiryId) {
+      const e = R.getEnquiry(ctx, t.state.focus.enquiryId);
+      if (e) {
+        f.enquiryId = e.id;
+        f.customerId = e.customerId;
+      }
+    } else if (t.state.focus?.customerId) f.customerId = t.state.focus.customerId;
+  }
+  if (f.enquiryId && !f.customerId) f.customerId = R.getEnquiry(ctx, f.enquiryId)?.customerId;
+  if (!f.customerId && !f.enquiryId) {
+    const open = R.listEnquiries(ctx).filter((e) => OPEN_FOR_QUOTE.has(e.status)).slice(0, 3);
+    t.state.flow = f;
+    return say(t, "Who's the quote for?", { chips: open.map((e) => ({ kind: "send" as const, label: e.customerName, text: e.customerName })) });
+  }
+
+  // Link it to their open enquiry about the same work, if there is one.
+  const title = parseWorkTitle(raw);
+  if (!f.enquiryId && f.customerId) {
+    const theirs = R.listEnquiries(ctx).filter((e) => e.customerId === f.customerId && OPEN_FOR_QUOTE.has(e.status));
+    const kw = title?.toLowerCase().split(/\s+/)[0];
+    const match = (kw && theirs.find((e) => e.title.toLowerCase().includes(kw))) || (theirs.length === 1 ? theirs[0] : undefined);
+    if (match) f.enquiryId = match.id;
+  }
+  const enquiry = f.enquiryId ? R.getEnquiry(ctx, f.enquiryId) : undefined;
+  const customer = { name: (f.customerId ? R.getCustomer(ctx, f.customerId)?.name : undefined) ?? enquiry?.customerName ?? "them" };
+
+  // The price: £/k/grand amounts, or a bare figure of £100+.
+  const amount = findAmounts(raw)[0] ?? (() => {
+    const m = raw.match(/\b(\d{3,7}(?:\.\d{1,2})?)\b(?!\s*(?:mm|cm|m\b|metres?|meters?|sq))/i);
+    return m ? parseFloat(m[1]) : undefined;
+  })();
+  const approximate = /\b(about|around|roughly|approx\w*|ish|ballpark)\b/i.test(raw);
+
+  // What's included: the comma-separated bits that aren't the price or the customer.
+  const workTitle = title ?? enquiry?.title;
+  const firstWord = workTitle?.toLowerCase().split(/\s+/)[0];
+  const details = raw
+    .replace(/^.*?\bquote\b\s*(?:for|to)?\s*(?:an?\s+|the\s+)?/i, "")
+    .split(/,|;|\bwith\b|\bplus\b/i)
+    .map((p) =>
+      p
+        .replace(/\b(?:about|around|roughly|approx\w*|ish|ballpark|at|for)\b/gi, " ")
+        .replace(/£\s?[\d,.]+\s*(?:k|grand)?|\b[\d,.]+\s*(?:k|grand|pounds|quid)\b|\b\d{3,7}(?:\.\d{1,2})?\b(?!\s*(?:mm|cm|m\b|metres?|meters?))/gi, " ")
+        .replace(new RegExp(`\\b${customer.name.split(/\s+/)[0]}(?:'s)?\\b`, "gi"), " ")
+        .replace(/\b(\d+(?:\.\d+)?)\s*(?:metres?|meters?)\b/gi, "$1 m")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter((p) => p.length > 1 && !/^(and|a|an|the)$/i.test(p) && (!firstWord || p.toLowerCase() !== firstWord))
+    .map((p) => p.replace(/^(and|a|an)\s+/i, ""));
+  const extras = details.filter((d) => !workTitle || !workTitle.toLowerCase().includes(d.toLowerCase()));
+
+  if (!workTitle && !extras.length) return ask(t, f, `What's the work for ${firstName(customer.name)} — kitchen, loft, decking…?`);
+  if (amount === undefined) return ask(t, f, `What's your price for ${firstName(customer.name)}'s ${(workTitle ?? "job").toLowerCase()}? I won't guess it.`);
+
+  const description = `${workTitle ?? "Work"}${extras.length ? `: ${extras.join(", ")}` : ""}`.slice(0, 200);
+  await act(
+    t,
+    "create_quote",
+    { customerId: f.customerId, enquiryId: f.enquiryId, description, amount, approximate },
+    `Here's a draft quote for ${customer.name}${enquiry ? ` (their ${enquiry.title.toLowerCase()} enquiry)` : ""} — check it and I'll save it.`,
+    f,
+  );
+}
 
 async function jobFlow(t: Turn, f: JobFlow) {
   const ctx = t.ctx;

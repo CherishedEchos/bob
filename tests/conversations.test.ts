@@ -208,3 +208,59 @@ describe("Ask Bob shortcuts", () => {
     expect(c.text).toContain(due[0].who);
   });
 });
+
+describe("Morning briefing", () => {
+  it("speaks the day from records, short enough for one spoken reply", async () => {
+    const ctx = ctxFor(N93_OWNER);
+    const replies = Rep.todaySummary(ctx).priorities.filter((p) => p.kind === "reply");
+    const c = await new Chat(ctx).say("Give me my morning briefing");
+    expect(c.text).toMatch(/Here's your day/);
+    expect(c.text).toContain(`${replies.length} people are waiting for a reply`);
+    expect(c.text).toMatch(/deposit is (overdue|due soon)/);
+    expect(c.text.length).toBeLessThanOrEqual(600);
+  });
+});
+
+describe("Voice-to-quote", () => {
+  const line = (c: Chat, label: string) => c.action?.lines.find((l) => l.label === label)?.value;
+
+  it("turns a spoken quote into a draft to approve, linked to the customer's enquiry", async () => {
+    const ctx = ctxFor(N93_OWNER);
+    const c = await new Chat(ctx).say("Quote for Hannah, kitchen, four metres, shaker style, island, about twelve grand", "voice");
+    expect(c.action?.tool).toBe("create_quote");
+    expect(c.action?.status).toBe("pending");
+    expect(line(c, "Customer")).toBe("Hannah Whitfield");
+    expect(line(c, "Price")).toMatch(/£12,000/);
+    expect(line(c, "Work")).toMatch(/Kitchen/i);
+    expect(line(c, "Work")).toMatch(/4 m/);
+    expect(line(c, "Work")).toMatch(/shaker style/);
+    expect(line(c, "Work")).toMatch(/island/);
+    expect(c.action?.notices.some((n) => /about £12,000/.test(n.text))).toBe(true);
+    const enquiryId = R.listEnquiries(ctx).find((e) => e.customerName === "Hannah Whitfield")!.id;
+    const done = await c.approve();
+    expect(done.status).toBe("executed");
+    const q = R.listQuotes(ctx).find((x) => x.enquiryId === enquiryId)!;
+    expect(q).toMatchObject({ status: "draft", amount: 12000 });
+    // A draft isn't with the customer yet, so the enquiry isn't marked as quoted.
+    expect(R.getEnquiry(ctx, enquiryId)!.status).not.toBe("quoted");
+  });
+
+  it("asks who it's for, then never guesses the price", async () => {
+    const ctx = ctxFor(N93_OWNER);
+    const c = await new Chat(ctx).say("Quote for a garden room, insulated, with electrics");
+    expect(c.text).toMatch(/Who's the quote for/);
+    await c.say("Ben Taylor");
+    expect(c.text).toMatch(/What's your price/);
+    expect(c.action).toBeUndefined();
+    await c.say("£18,500");
+    expect(c.action?.tool).toBe("create_quote");
+    expect(line(c, "Price")).toMatch(/£18,500/);
+    expect(line(c, "Work")).toMatch(/insulated/);
+  });
+
+  it("leaves the existing quote questions alone", async () => {
+    const c = await new Chat(ctxFor(N93_OWNER)).say("Which quotes need chasing?");
+    expect(c.action).toBeUndefined();
+    expect(c.text).toMatch(/quote/i);
+  });
+});

@@ -14,6 +14,7 @@ import { ROLE_LABEL } from "@/lib/auth/permissions";
 import { needsReply, tasksDue } from "@/lib/derive";
 import { cn } from "@/lib/utils";
 import { BobLogo, OrgLogo } from "@/components/brand/logo";
+import { InstallBob } from "@/components/common/install-bob";
 import { Toaster } from "@/components/ui/toaster";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AssistantView } from "@/components/assistant/assistant-view";
@@ -222,7 +223,7 @@ function MobileHeader() {
   const { org } = useStore();
   const [moreOpen, setMoreOpen] = React.useState(false);
   return (
-    <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-line bg-card/95 px-3 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
+    <header className="flex h-[calc(52px+env(safe-area-inset-top))] shrink-0 items-center justify-between border-b border-line bg-card/95 px-3 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
       <Link href="/today" aria-label="Today">
         <BobLogo height={24} />
       </Link>
@@ -262,12 +263,15 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
         </div>
         <div className="space-y-1.5">
           {links.map((l) => (
-            <Link key={l.href} href={l.href} onClick={() => onOpenChange(false)} className="flex h-13 items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3.5 text-[16px] ring-1 ring-line">
+            <Link key={l.href} href={l.href} onClick={() => onOpenChange(false)} className="flex h-13 items-center gap-3 rounded-xl bg-card px-4 py-3.5 text-[16px] ring-1 ring-line active:bg-raised">
               <l.icon className="size-5 text-accent-icon" />
               <span className="flex-1">{l.label}</span>
               {l.count ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-copper-500 px-1.5 text-[12px] font-semibold">{l.count}</span> : null}
             </Link>
           ))}
+        </div>
+        <div className="mt-4">
+          <InstallBob compact />
         </div>
         {orgs.length > 1 ? (
           <>

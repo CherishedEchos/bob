@@ -36,6 +36,63 @@ export function sentenceCase(s: string): string {
   return t ? t[0].toUpperCase() + t.slice(1).toLowerCase() : t;
 }
 
+/* ---------------------------- Spoken numbers ---------------------------- */
+
+const NUM: Record<string, number> = {
+  zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+  twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90,
+};
+
+/**
+ * Speech recognition often writes numbers as words: "twelve grand", "four
+ * metres", "twelve thousand five hundred". Turn runs of number words into
+ * digits so the usual parsers can read them. "a" and "one" on their own are
+ * left alone ("a kitchen", "one more thing").
+ */
+export function normaliseSpokenNumbers(text: string): string {
+  const words = text.split(/(\s+|-)/);
+  const out: string[] = [];
+  let run: string[] = [];
+  const flush = () => {
+    if (!run.length) return;
+    const meaningful = run.filter((w) => !/^(and|a|half|\s+|-)$/i.test(w));
+    const halves = run.some((w) => /^half$/i.test(w));
+    if (!meaningful.length || (meaningful.length === 1 && /^one$/i.test(meaningful[0]) && !halves)) {
+      out.push(...run);
+    } else {
+      let total = 0;
+      let current = 0;
+      for (const raw of run) {
+        const w = raw.toLowerCase();
+        if (w in NUM) current += NUM[w];
+        else if (w === "hundred") current = (current || 1) * 100;
+        else if (w === "thousand") {
+          total += (current || 1) * 1000;
+          current = 0;
+        } else if (w === "half") current += 0.5;
+      }
+      // Keep the trailing whitespace/hyphen tokens out of the number.
+      let trail = "";
+      while (run.length && /^(\s+|-|and|a)$/i.test(run[run.length - 1])) trail = run.pop()! + trail;
+      out.push(String(total + current), trail);
+    }
+    run = [];
+  };
+  for (const tok of words) {
+    const w = tok.toLowerCase();
+    const isNum = w in NUM || w === "hundred" || w === "thousand";
+    const glue = /^(\s+|-)$/.test(tok) || ((w === "and" || w === "a" || w === "half") && run.length > 0);
+    if (isNum || (glue && run.length)) run.push(tok);
+    else {
+      flush();
+      out.push(tok);
+    }
+  }
+  flush();
+  return out.join("");
+}
+
 /* ---------------------------- Money ---------------------------- */
 
 export function parseAmount(raw: string): number | null {

@@ -1,5 +1,7 @@
 "use client";
 
+import { PhotoGrid } from "@/components/common/photos";
+
 import * as React from "react";
 import { AlarmClock, AlertTriangle, CalendarCheck, CheckCheck, Copy, FileText, HardHat, Mail, MapPin, Phone, Save, Send, UserRound } from "lucide-react";
 import { useStore } from "@/lib/store/store";
@@ -16,6 +18,7 @@ import { EnquiryStatusBadge, PriorityBadge, SourceIcon, InstagramGlyph } from "@
 import { NotesPanel } from "@/components/common/notes";
 import { ActionCard } from "@/components/assistant/assistant-cards";
 import { Section } from "@/components/jobs/job-sheet";
+import { QuotesList } from "@/components/common/quotes-list";
 
 /** Same heuristic the server uses — shown as a warning only. */
 const SUSPICIOUS = /\b(ignore|disregard)\b.{0,40}\binstructions?\b|\byou are now\b|\badmin mode\b|\bsystem prompt\b|\bmark\b.{0,40}\bpaid\b/i;
@@ -259,6 +262,16 @@ function EnquiryDetail({ id }: { id: string }) {
           </div>
         </Section>
       ) : null}
+
+      {data.quotes.some((q) => q.enquiryId === e.id) ? (
+        <Section title="Quotes">
+          <QuotesList quotes={data.quotes.filter((q) => q.enquiryId === e.id)} />
+        </Section>
+      ) : null}
+
+      <Section title="Photos">
+        <PhotoGrid relatedType="enquiry" relatedId={e.id} />
+      </Section>
 
       <Section title="Notes" className="pb-10">
         <NotesPanel notes={e.notes} onAdd={(t) => actions.addEnquiryNote(e.id, t)} />

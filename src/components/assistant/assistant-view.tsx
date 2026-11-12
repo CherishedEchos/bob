@@ -10,6 +10,7 @@ import type { BobMessage, Chip } from "@/lib/bob/types";
 import { stopSpeaking } from "@/lib/voice/speech-output";
 import { useVoiceComposer, type ComposerPhase } from "@/lib/voice/use-voice-composer";
 import { ComposerStatus, ReadAloudButton, SpeakRepliesToggle, useTtsStatus } from "./voice-bits";
+import { SnapPhotoButton } from "@/components/common/photos";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { todaysPriorities } from "@/lib/derive";
@@ -108,7 +109,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
     <div className={cn("relative flex h-full min-h-0 flex-col", variant === "page" && "bg-app")}>
       {/* ------------------------------ Header ------------------------------ */}
       {variant === "page" ? (
-        <header className="relative z-10 grid h-16 shrink-0 grid-cols-[92px_minmax(0,1fr)_92px] items-center px-2 pt-[env(safe-area-inset-top)] lg:px-6">
+        <header className="relative z-10 grid h-[calc(4rem+env(safe-area-inset-top))] shrink-0 grid-cols-[92px_minmax(0,1fr)_92px] items-center px-2 pt-[env(safe-area-inset-top)] lg:px-6">
           <Link href="/today" aria-label="Back to Today" className="grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-surface-3">
             <ChevronLeft className="size-7" strokeWidth={1.8} />
           </Link>
@@ -158,7 +159,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
           </div>
         </header>
       ) : (
-      <header className="relative z-10 flex h-[68px] shrink-0 items-center justify-between gap-2 px-4 pt-[env(safe-area-inset-top)] lg:px-6">
+      <header className="relative z-10 flex h-[calc(68px+env(safe-area-inset-top))] shrink-0 items-center justify-between gap-2 px-4 pt-[env(safe-area-inset-top)] lg:px-6">
         {inConversation ? (
           <button onClick={() => setHome(true)} className="flex items-center gap-2.5 rounded-full pr-2 text-left hover:bg-surface-2" aria-label="Back to Bob home">
             <BobWordmark />
@@ -570,7 +571,7 @@ function AskBobHome({
                     {phase === "listening" ? "Tap to stop" : phase === "starting" ? "Starting…" : phase === "stopping" ? "Finishing…" : phase === "sending" ? "Sending to Bob…" : "Tap to talk"}
                   </span>
                 </div>
-                <span />
+                <SnapPhotoButton className="mr-2 size-12 justify-self-end rounded-full text-white/85 hover:bg-surface-3" />
               </div>
             </>
           )}

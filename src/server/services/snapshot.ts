@@ -1,4 +1,5 @@
 import "server-only";
+import { listPhotos } from "@/server/services/photos";
 import type { Snapshot } from "@/lib/types";
 import { can } from "@/lib/auth/permissions";
 import { scoped } from "@/server/db";
@@ -29,6 +30,7 @@ export function buildSnapshot(ctx: Ctx): Snapshot {
     payments: finance ? listPayments(ctx) : [],
     expenses: finance ? listExpenses(ctx) : [],
     tasks: listTasks(ctx),
+    photos: listPhotos(ctx),
     activity: can(ctx.role, "activity.read") ? scoped(ctx).list("activity", { order: "at DESC", limit: 150 }) : [],
     connections: listConnections(ctx),
     mode: { database: "local-sqlite", aiEngine: activeEngine() },

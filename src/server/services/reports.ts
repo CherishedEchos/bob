@@ -117,10 +117,10 @@ export function enquiryCoverage(ctx: Ctx): { connected: string[]; note: string }
   const connected = emailLive ? [emailLive.provider === "demo_inbox" ? "demo inbox" : emailLive.provider] : [];
   const gaps: string[] = [];
   if (!emailLive) gaps.push("email");
-  gaps.push("Instagram", "your website form");
+  gaps.push("Instagram");
   const note = `These figures only include enquiries recorded in Bob. ${
     emailLive ? `Email comes in from your ${connected[0]}; ` : ""
-  }${listJoin(gaps)} ${gaps.length === 1 ? "isn't" : "aren't"} connected yet, so those only count if they were added to Bob.`;
+  }Your website form feeds Bob directly; ${listJoin(gaps)} ${gaps.length === 1 ? "isn't" : "aren't"} connected yet, so those only count if they were added to Bob.`;
   return { connected, note };
 }
 

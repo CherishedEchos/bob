@@ -681,6 +681,86 @@ const sendEmail: ActionTool<EmailArgs> = {
   },
 };
 
+interface CreateQuoteArgs {
+  customerId?: string;
+  enquiryId?: string;
+  description: string;
+  amount: number;
+  approximate?: boolean;
+}
+
+const createQuote: ActionTool<CreateQuoteArgs> = {
+  kind: "action",
+  name: "create_quote",
+  description:
+    "Save a DRAFT quote for an existing customer from what the user described (e.g. by voice). Never invent the price — amount must come from the user. Nothing is sent to the customer.",
+  category: "internal",
+  permission: "quotes.write",
+  confirmation: "always",
+  schema: z
+    .object({
+      customerId: id.optional(),
+      enquiryId: id.optional(),
+      description: z.string().trim().min(2).max(200),
+      amount: money,
+      approximate: z.boolean().optional(),
+    })
+    .refine((v) => v.customerId || v.enquiryId, { message: "Who is the quote for?" }),
+  prepare(ctx, a) {
+    const customer = a.customerId ? R.getCustomer(ctx, a.customerId) : undefined;
+    if (a.customerId && !customer) return notFound("customer");
+    const enquiry = a.enquiryId ? R.getEnquiry(ctx, a.enquiryId) : undefined;
+    if (a.enquiryId && !enquiry) return notFound("enquiry");
+    if (!customer && !can(ctx.role, "customers.write")) return { ok: false, message: "Your account can't add new customers.", code: "forbidden" };
+    const notices: ActionNotice[] = [{ tone: "info", text: "Saved as a draft quote. Nothing is sent to the customer." }];
+    if (!customer && enquiry) notices.push({ tone: "info", text: `${enquiry.customerName} will be added to your customers from their enquiry.` });
+    if (a.approximate) notices.push({ tone: "warning", text: `You said "about ${gbp(a.amount)}" — I've used ${gbp(a.amount)}. Change it if you need to.` });
+    notices.push({ tone: "info", text: "VAT isn't set on this quote — check it before you send it." });
+    return ready({
+      payload: a,
+      title: "Draft quote",
+      lines: [
+        { label: "Customer", value: customer?.name ?? enquiry?.customerName ?? "", emphasis: true },
+        ...(enquiry ? [{ label: "Enquiry", value: `${enquiry.title}, ${enquiry.location}` }] : []),
+        { label: "Work", value: a.description },
+        { label: "Price", value: gbp(a.amount), emphasis: true },
+        { label: "Status", value: "Draft — not sent" },
+      ],
+      notices,
+      approveLabel: "Save draft quote",
+    });
+  },
+  execute(ctx, a) {
+    let customerId = a.customerId;
+    if (!customerId && a.enquiryId) {
+      const c = R.ensureCustomerForEnquiry(ctx, a.enquiryId);
+      if (!c.ok) return { ok: false, error: c.error };
+      customerId = c.value.customerId;
+    }
+    const r = R.createQuote(ctx, { customerId, enquiryId: a.enquiryId, description: a.description, amount: a.amount, status: "draft" });
+    if (!r.ok) return { ok: false, error: r.error };
+    const name = R.getCustomer(ctx, customerId!)?.name ?? "the customer";
+    return {
+      ok: true,
+      message: `Draft quote saved for ${name}: ${gbp(a.amount)}. It hasn't been sent.`,
+      result: { quoteId: r.value.id },
+      undo: { quoteId: r.value.id },
+      links: a.enquiryId ? [{ label: "Open enquiry", kind: "enquiry", id: a.enquiryId }] : [{ label: "Open customer", kind: "customer", id: customerId! }],
+    };
+  },
+  undo(ctx, u) {
+    const { quoteId } = u as { quoteId: string };
+    const q = scoped(ctx).get<{ status: string }>("quotes", quoteId);
+    if (!q) return { ok: false, error: "That quote has already gone." };
+    if (q.status !== "draft") return { ok: false, error: "That quote has been sent, so it can't be undone here." };
+    tx(() => {
+      scoped(ctx).remove("quotes", quoteId);
+      R.audit(ctx, "quote.removed", "Draft quote removed (undo)", "quote", quoteId);
+    });
+    return { ok: true, message: "Draft quote removed." };
+  },
+};
+
 const saveEmailDraft: ActionTool<{ enquiryId: string; body: string }> = {
   kind: "action",
   name: "save_email_draft",
@@ -979,7 +1059,7 @@ const setEnquiryStatus: ActionTool<{ enquiryId: string; status: Enquiry["status"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const actionTools: ActionTool<any, any>[] = [
-  createFollowUp, addNote, createJob, updateJob, addJobExpense, sendEmail, saveEmailDraft, createInvoice, sendInvoice, recordPayment, markReplied, setEnquiryStatus,
+  createFollowUp, addNote, createJob, updateJob, addJobExpense, sendEmail, saveEmailDraft, createQuote, createInvoice, sendInvoice, recordPayment, markReplied, setEnquiryStatus,
 ];
 
 export const TOOLS: Record<string, AnyTool> = Object.fromEntries([...readTools, ...actionTools].map((t) => [t.name, t]));

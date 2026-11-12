@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   description: "You do the work. Bob does the admin. A voice-first assistant for trade businesses.",
   applicationName: "Bob",
   appleWebApp: { capable: true, title: "Bob", statusBarStyle: "black-translucent" },
-  icons: { icon: "/brand/ninety3-logo.png", apple: "/brand/ninety3-logo.png" },
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
   // Private business tool: keep it out of search engines.
   robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0c0b0a",
+  themeColor: "#0b0a09",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

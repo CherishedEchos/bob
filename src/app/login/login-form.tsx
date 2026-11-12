@@ -43,7 +43,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
         <div className="absolute -left-32 bottom-[-20%] size-[460px] rounded-full bg-[radial-gradient(circle,rgb(255_130_28/0.07),transparent_60%)] blur-3xl" />
       </div>
 
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-5 pb-8 pt-6 sm:px-8 lg:px-12 lg:pt-10">
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-5 pb-8 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-8 lg:px-12 lg:pt-10">
         <header className="flex items-center justify-between">
           <BobLogo height={30} title="Bob" />
           <span className="rounded-md bg-white/[0.06] px-2.5 py-1 text-[12.5px] font-medium text-white/70 ring-1 ring-white/10">Demo preview</span>

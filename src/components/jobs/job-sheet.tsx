@@ -1,5 +1,7 @@
 "use client";
 
+import { PhotoGrid } from "@/components/common/photos";
+
 import * as React from "react";
 import { AlarmClock, Check, Hammer, Inbox, MapPin, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
 import { useStore } from "@/lib/store/store";
@@ -282,6 +284,10 @@ function JobDetail({ id }: { id: string }) {
             </div>
           ) : null}
         </dl>
+      </Section>
+
+      <Section title="Photos">
+        <PhotoGrid relatedType="job" relatedId={j.id} />
       </Section>
 
       <Section title="Notes" className="pb-10">

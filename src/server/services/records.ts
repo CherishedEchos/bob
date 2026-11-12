@@ -471,6 +471,28 @@ export function removeExpense(ctx: Ctx, id: string): Result<Expense> {
 
 /* --------------------------------- Quotes --------------------------------- */
 
+/**
+ * Make sure an enquiry has a customer record: reuse one with the same email,
+ * phone or name, otherwise create it from the enquiry's details.
+ */
+export function ensureCustomerForEnquiry(ctx: Ctx, enquiryId: string): Result<{ customerId: string; created: boolean }> {
+  const e = getEnquiry(ctx, enquiryId);
+  if (!e) return fail("not_found", "Enquiry not found");
+  if (e.customerId && getCustomer(ctx, e.customerId)) return ok({ customerId: e.customerId, created: false });
+  const norm = (v?: string) => (v ?? "").replace(/\s+/g, "").toLowerCase();
+  const existing = listCustomers(ctx).find(
+    (c) => (e.email && norm(c.email) === norm(e.email)) || (e.phone && norm(c.phone) === norm(e.phone)) || norm(c.name) === norm(e.customerName),
+  );
+  if (existing) {
+    scoped(ctx).update<Enquiry>("enquiries", e.id, { customerId: existing.id });
+    return ok({ customerId: existing.id, created: false });
+  }
+  const created = createCustomer(ctx, { name: e.customerName, email: e.email, phone: e.phone, instagramHandle: e.instagramHandle, town: e.location });
+  if (!created.ok) return created;
+  scoped(ctx).update<Enquiry>("enquiries", e.id, { customerId: created.value.id });
+  return ok({ customerId: created.value.id, created: true });
+}
+
 export function listQuotes(ctx: Ctx): Quote[] {
   return scoped(ctx).list<Quote>("quotes", { order: "created_at DESC" });
 }
@@ -486,7 +508,8 @@ export function createQuote(ctx: Ctx, input: unknown): Result<Quote> {
   const quote: Quote = { id: uid("quo"), ...v, sentAt: v.status === "sent" ? now() : undefined, createdAt: now() };
   tx(() => {
     scoped(ctx).insert("quotes", quote);
-    if (v.enquiryId) scoped(ctx).update<Enquiry>("enquiries", v.enquiryId, { status: "quoted", lastContactAt: now() });
+    // A draft isn't with the customer yet, so the enquiry only becomes "quoted" once it's sent.
+    if (v.enquiryId && v.status === "sent") scoped(ctx).update<Enquiry>("enquiries", v.enquiryId, { status: "quoted", lastContactAt: now() });
     audit(ctx, "quote.recorded", `Quote ${v.status === "sent" ? "recorded as sent" : "drafted"} for ${c.name}: ${gbp(v.amount)}`, "quote", quote.id);
   });
   return ok(quote);
@@ -503,6 +526,7 @@ export function setQuoteStatus(ctx: Ctx, id: string, status: Quote["status"]): R
       respondedAt: status === "accepted" || status === "declined" ? now() : q.respondedAt,
       sentAt: status === "sent" && !q.sentAt ? now() : q.sentAt,
     })!;
+    if (q.enquiryId && status === "sent" && q.status === "draft") scoped(ctx).update<Enquiry>("enquiries", q.enquiryId, { status: "quoted", lastContactAt: now() });
     if (q.enquiryId && (status === "accepted" || status === "declined"))
       scoped(ctx).update<Enquiry>("enquiries", q.enquiryId, { status: status === "accepted" ? "won" : "lost" });
     audit(ctx, "quote.status_changed", `Quote ${status}: ${q.description}`, "quote", id);

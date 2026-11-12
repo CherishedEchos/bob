@@ -1,4 +1,5 @@
 import "server-only";
+import { removePhotosFor } from "@/server/services/photos";
 /**
  * UK GDPR controls: export, erasure (anonymisation), retention and sample-data
  * reset. Financial records are anonymised rather than deleted because HMRC
@@ -33,6 +34,8 @@ export function eraseCustomer(ctx: Ctx, customerId: string): Result<{ enquiriesD
   if (!c) return fail("not_found", "Customer not found");
   return tx(() => {
     const enquiries = db.list<Enquiry>("enquiries", { where: "customer_id = ?", params: [customerId] });
+    // Photos can show people and homes: remove those on their enquiries and jobs.
+    removePhotosFor(ctx, [...enquiries.map((e) => e.id), ...db.list<{ id: string }>("jobs", { where: "customer_id = ?", params: [customerId] }).map((j) => j.id)]);
     for (const e of enquiries) db.remove("enquiries", e.id);
     for (const t of db.list<Task>("tasks", { where: "customer_id = ?", params: [customerId] })) db.remove("tasks", t.id);
     db.update<Customer>("customers", customerId, {

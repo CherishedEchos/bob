@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { Bot, Building2, Download, Link2, PoundSterling, RotateCcw, ShieldCheck, Unlink, Users } from "lucide-react";
+import { Bot, Building2, Copy, Download, ExternalLink, Globe, Link2, PoundSterling, RotateCcw, ShieldCheck, Unlink, Users } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import type { Connection, OrgConfig, Snapshot } from "@/lib/types";
 import { ROLE_LABEL } from "@/lib/auth/permissions";
 import { cn, timeAgo } from "@/lib/utils";
 import { Card, PageHeader } from "@/components/common/bits";
+import { InstallBob } from "@/components/common/install-bob";
 import { Button } from "@/components/ui/button";
 import { Field, Input, NativeSelect, Textarea } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
@@ -20,6 +21,52 @@ const PROVIDER_LABEL: Record<string, string> = {
   demo_inbox: "Demo inbox",
   demo_accounting: "Demo accounting",
 };
+
+/** The public website enquiry form: link, embed code and the demo example site. */
+function WebsiteFormSection({ slug }: { slug: string }) {
+  const [origin, setOrigin] = React.useState("");
+  React.useEffect(() => setOrigin(window.location.origin), []);
+  const link = `${origin}/f/${slug}`;
+  const embed = `<iframe src="${link}?embed=1" title="Enquiry form" style="width:100%;height:640px;border:0"></iframe>`;
+  const copy = async (text: string, what: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(`${what} copied`, "success");
+    } catch {
+      toast("Couldn't copy — select it and copy instead", "error");
+    }
+  };
+  return (
+    <Section icon={Globe} title="Website enquiry form" subtitle="Enquiries from your website land straight in Bob, with a reply drafted.">
+      <div className="space-y-3">
+        <div>
+          <div className="mb-1.5 text-[14px] font-medium text-foreground/90">Form link</div>
+          <div className="flex gap-2">
+            <code className="min-w-0 flex-1 truncate rounded-xl bg-[#0f0e0c] px-3.5 py-3 text-[14px] ring-1 ring-line-strong">{link}</code>
+            <Button variant="secondary" onClick={() => void copy(link, "Link")}>
+              <Copy /> Copy
+            </Button>
+          </div>
+        </div>
+        <div>
+          <div className="mb-1.5 text-[14px] font-medium text-foreground/90">Add it to your website</div>
+          <code className="block break-all rounded-xl bg-[#0f0e0c] px-3.5 py-3 text-[13px] leading-relaxed text-muted-foreground ring-1 ring-line-strong">{embed}</code>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => void copy(embed, "Embed code")}>
+              <Copy /> Copy embed code
+            </Button>
+            <Button asChild variant="ghost">
+              <a href={`/example-site/${slug}`} target="_blank" rel="noreferrer">
+                <ExternalLink /> See it on an example website
+              </a>
+            </Button>
+          </div>
+        </div>
+        <p className="text-[13px] text-subtle">Spam protection and rate limits are built in. Messages are treated as plain text — never as instructions to Bob.</p>
+      </div>
+    </Section>
+  );
+}
 
 function Section({ icon: Icon, title, subtitle, children }: { icon: React.ComponentType<{ className?: string }>; title: string; subtitle?: string; children: React.ReactNode }) {
   return (
@@ -57,6 +104,9 @@ function SettingsInner() {
   return (
     <>
       <PageHeader title="Settings" subtitle={`${org.name}${owner ? "" : " · only the owner can change these"}`} />
+      <div className="mb-5 max-w-xl">
+        <InstallBob />
+      </div>
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <BusinessSection org={org} owner={owner} save={save} />
         <FinanceSection org={org} owner={owner} save={save} />
@@ -67,9 +117,10 @@ function SettingsInner() {
             ))}
           </div>
           <p className="mt-3 text-[13.5px] text-subtle">
-            Instagram and website forms aren&apos;t connected yet — log those enquiries manually and Bob includes them in reports.
+            Instagram isn&apos;t connected yet — log those enquiries manually and Bob includes them in reports.
           </p>
         </Section>
+        <WebsiteFormSection slug={org.slug} />
         <BobSection org={org} owner={owner} save={save} />
         <Section icon={Users} title="Team" subtitle="Who can use Bob for this business.">
           <ul className="space-y-2">

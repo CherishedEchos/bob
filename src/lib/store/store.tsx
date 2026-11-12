@@ -9,6 +9,7 @@
  * the UI only reports success when the server confirms it.
  */
 import * as React from "react";
+import { toast } from "@/components/ui/toaster";
 import type { AppUser, EnquiryStatus, JobStatus, Note, OrgConfig, Snapshot, Task } from "@/lib/types";
 import type { ActionView } from "@/lib/bob/types";
 import type { FieldErrors } from "@/lib/validation";
@@ -96,15 +97,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = React.useCallback(async () => {
     const r = await api<Snapshot & { error?: string }>("/api/data");
-    if (r.status === 200) apply(r.body);
-    else setError(r.body.error ?? "Couldn't load your data");
+    if (r.status === 200) {
+      // Announce enquiries that arrived on their own (website form, inbox) since the last load.
+      const before = dataRef.current;
+      if (before && before.org.id === r.body.org.id) {
+        const known = new Set(before.enquiries.map((e) => e.id));
+        const fresh = r.body.enquiries.filter((e) => !known.has(e.id) && e.source !== "manual");
+        if (fresh.length === 1) toast(`New ${fresh[0].source === "website" ? "website " : ""}enquiry from ${fresh[0].customerName} — reply drafted`, "success");
+        else if (fresh.length > 1) toast(`${fresh.length} new enquiries`, "success");
+      }
+      apply(r.body);
+    } else setError(r.body.error ?? "Couldn't load your data");
   }, [apply]);
 
   React.useEffect(() => {
     void refresh();
     const onFocus = () => void refresh();
     window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
+    // Pick up enquiries that arrive by themselves (website form) while Bob is open.
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 20000);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(timer);
+    };
   }, [refresh]);
 
   const actions = React.useMemo<StoreActions>(() => {

@@ -2,16 +2,18 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AlarmClock, ArrowUpRight, Check, FileText, ReceiptText, Reply, ChevronRight, FlaskConical, HardHat, Mic, Loader2, PartyPopper, Plus, SendHorizontal, Sparkles } from "lucide-react";
+import { AlarmClock, ArrowUpRight, Check, FileText, ReceiptText, Reply, ChevronRight, FlaskConical, HardHat, Mic, Loader2, PartyPopper, Play, Plus, SendHorizontal, Sparkles, X } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { useBob } from "@/lib/bob/provider";
 import { useVoiceComposer } from "@/lib/voice/use-voice-composer";
-import { ComposerStatus, SpeakRepliesToggle } from "@/components/assistant/voice-bits";
+import { ComposerStatus, ReadAloudButton, SpeakRepliesToggle } from "@/components/assistant/voice-bits";
+import { prime, speakReply, stopSpeaking } from "@/lib/voice/speech-output";
 import { JOB_STATUS_LABEL, isActiveJob, isInvoiceOverdue, jobFinance, needsReply, quoteNeedsFollowUp, tasksDue, todaysPriorities, type PriorityItem } from "@/lib/derive";
 import type { Job, Snapshot } from "@/lib/types";
 import { cn, gbp, timeAgo, formatDateInline } from "@/lib/utils";
 import { usePriorityAction } from "@/components/common/priority-card";
+import { SnapPhotoButton } from "@/components/common/photos";
 import { JobTile } from "@/components/common/job-tile";
 import { JobStatusBadge, SourceIcon } from "@/components/common/status";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,7 @@ interface Reports {
 
 /** Spacing scale: 4 · 8 · 12 · 16 · 24 · 32. Panels pad 16 (phone) / 20 (desktop). */
 const ROWS = 4;
+const BRIEFING_ID = "morning-briefing";
 const EXAMPLE = "What needs sorting today?";
 
 export default function TodayPage() {
@@ -39,6 +42,18 @@ export default function TodayPage() {
   const shown = showAll ? priorities : priorities.slice(0, ROWS);
   const activeJobs = data.jobs.filter(isActiveJob);
   const date = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const shortDate = new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const [briefing, setBriefing] = React.useState<{ text: string; suggestion?: { label: string; request: string } } | null>(null);
+  const [briefingLoading, setBriefingLoading] = React.useState(false);
+  const playBriefing = async () => {
+    prime(); // the tap unlocks audio for the spoken briefing (iOS)
+    setBriefingLoading(true);
+    const r = await api<{ text: string; suggestion?: { label: string; request: string } }>("/api/briefing");
+    setBriefingLoading(false);
+    if (r.status !== 200) return;
+    setBriefing(r.body);
+    speakReply(BRIEFING_ID, r.body.text);
+  };
   const askBob = (t: string, via: "voice" | "text" = "text") => {
     void send(t, via);
     ui.setAssistantOpen(true);
@@ -51,7 +66,8 @@ export default function TodayPage() {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-6">
       {/* 1 · Header */}
-      <header className="flex items-center justify-between gap-3 lg:col-span-5 lg:row-start-1">
+      <div className="space-y-4 lg:col-span-5 lg:row-start-1">
+      <header className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
             <h1 className="t-page">Today</h1>
@@ -64,20 +80,71 @@ export default function TodayPage() {
               </span>
             ) : null}
           </div>
-          <p className="t-meta mt-0.5 lg:text-[15px]">{date}</p>
+          <div className="mt-0.5 flex items-center gap-2">
+            <p className="t-meta whitespace-nowrap lg:text-[15px]">
+              <span className="sm:hidden">{shortDate}</span>
+              <span className="hidden sm:inline">{date}</span>
+            </p>
+            <button
+              type="button"
+              onClick={playBriefing}
+              disabled={briefingLoading}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-copper-500/12 px-2.5 text-[13.5px] font-semibold text-accent-fg ring-1 ring-copper-500/35 transition hover:bg-copper-500/18 active:bg-copper-500/25 disabled:opacity-60"
+            >
+              {briefingLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5 fill-current" />} Briefing
+            </button>
+          </div>
         </div>
-        {can("enquiries.write") ? (
-          <Button
-            size="sm"
-            aria-label="Add enquiry"
-            className="h-11 bg-raised px-3.5 text-[15px] text-foreground ring-1 ring-line-strong hover:bg-raised-hover active:bg-surface-3 lg:h-10 lg:px-4"
-            onClick={() => ui.openForm({ form: "enquiry" })}
-          >
-            <Plus /> <span className="lg:hidden">Add</span>
-            <span className="hidden lg:inline">Add enquiry</span>
-          </Button>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-2">
+          <SnapPhotoButton className="size-11 rounded-xl bg-raised text-foreground ring-1 ring-line-strong hover:bg-raised-hover active:bg-surface-3 lg:h-10 lg:w-auto lg:px-3.5 lg:text-[15px] lg:font-semibold" label={false} />
+          {can("enquiries.write") ? (
+            <Button
+              size="sm"
+              aria-label="Add enquiry"
+              className="h-11 bg-raised px-3.5 text-[15px] text-foreground ring-1 ring-line-strong hover:bg-raised-hover active:bg-surface-3 lg:h-10 lg:px-4"
+              onClick={() => ui.openForm({ form: "enquiry" })}
+            >
+              <Plus /> <span className="lg:hidden">Add</span>
+              <span className="hidden lg:inline">Add enquiry</span>
+            </Button>
+          ) : null}
+        </div>
       </header>
+      {briefing ? (
+        <section aria-label="Morning briefing" className="panel relative p-4 lg:p-5">
+          <button
+            type="button"
+            aria-label="Close briefing"
+            onClick={() => {
+              stopSpeaking();
+              setBriefing(null);
+            }}
+            className="absolute right-2 top-2 grid size-10 place-items-center rounded-full text-subtle hover:bg-surface-3 hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+          <div className="t-eyebrow text-accent-fg">Morning briefing</div>
+          <p className="mt-1.5 pr-8 text-[16px] leading-relaxed text-foreground">{briefing.text}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <ReadAloudButton message={{ id: BRIEFING_ID, role: "assistant", text: briefing.text, createdAt: "" }} />
+            {briefing.suggestion ? (
+              <button
+                type="button"
+                onClick={() => {
+                  stopSpeaking();
+                  setBriefing(null);
+                  askBob(briefing.suggestion!.request);
+                }}
+                className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-[13.5px] font-medium text-accent-fg hover:bg-copper-500/10"
+              >
+                {briefing.suggestion.label} <ChevronRight className="size-4" />
+              </button>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      </div>
 
       {/* 3b · Ask Bob — straight after the header on phones, right column on desktop */}
       <AskBobPanel className="lg:col-span-2 lg:col-start-4 lg:row-start-3 lg:self-start" />

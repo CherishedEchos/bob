@@ -267,6 +267,18 @@ export interface ModeInfo {
 }
 
 /** Everything the dashboard needs for one organisation, scoped server-side. */
+/** A site photo filed against a job or enquiry. The image itself loads from /api/photos/{id}. */
+export interface Photo {
+  id: ID;
+  relatedType: "job" | "enquiry";
+  relatedId: ID;
+  caption?: string;
+  width?: number;
+  height?: number;
+  createdAt: string;
+  createdBy: string;
+}
+
 export interface Snapshot {
   org: OrgConfig;
   user: AppUser;
@@ -279,6 +291,7 @@ export interface Snapshot {
   payments: Payment[];
   expenses: Expense[];
   tasks: Task[];
+  photos: Photo[];
   activity: ActivityEntry[];
   connections: Connection[];
   mode: ModeInfo;
