@@ -110,6 +110,12 @@
     font-size: 17px;
     -webkit-tap-highlight-color: transparent;
   }
+  /* App-like on phones: the page itself never scrolls or bounces; only the
+     content area does, so the header and bottom tabs stay put. */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
   body {
     background: var(--color-background);
     color: var(--color-foreground);

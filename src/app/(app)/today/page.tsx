@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Check, ChevronRight, FlaskConical, HardHat, Mic, PartyPopper, Plus, SendHorizontal, Sparkles } from "lucide-react";
+import { AlarmClock, ArrowUpRight, Check, FileText, ReceiptText, Reply, ChevronRight, FlaskConical, HardHat, Mic, PartyPopper, Plus, SendHorizontal, Sparkles } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { useBob } from "@/lib/bob/provider";
@@ -12,7 +12,7 @@ import type { Job, Snapshot } from "@/lib/types";
 import { cn, gbp, timeAgo, formatDateInline } from "@/lib/utils";
 import { usePriorityAction } from "@/components/common/priority-card";
 import { JobTile } from "@/components/common/job-tile";
-import { SourceIcon } from "@/components/common/status";
+import { JobStatusBadge, SourceIcon } from "@/components/common/status";
 import { Button } from "@/components/ui/button";
 import { Orb } from "@/components/assistant/orb";
 
@@ -128,7 +128,7 @@ export default function TodayPage() {
                       <span className="text-accent-fg">Next:</span> {nextStep(j, data, finance)}
                     </span>
                   </span>
-                  <span className="hidden shrink-0 text-[13px] text-subtle sm:block">{JOB_STATUS_LABEL[j.status]}</span>
+                  <JobStatusBadge status={j.status} className="hidden shrink-0 sm:inline-flex" />
                   <ChevronRight className="size-4 shrink-0 text-subtle" />
                 </button>
               </li>
@@ -187,27 +187,47 @@ function PanelHead({ id, title, count, href }: { id: string; title: string; coun
 
 /* ------------------------------ Summary ------------------------------ */
 
+type Tone = "amber" | "sky" | "rose" | "violet";
+const TONE: Record<Tone, { num: string; icon: string; bar: string; wash: string }> = {
+  amber: { num: "text-[#ffb27a]", icon: "bg-copper-500/15 text-[#ffb27a] ring-copper-400/30", bar: "bg-[#f7944f]", wash: "from-copper-500/[0.10]" },
+  sky: { num: "text-[#8fc3ff]", icon: "bg-sky-500/15 text-[#8fc3ff] ring-sky-400/30", bar: "bg-[#5aa2ff]", wash: "from-sky-500/[0.09]" },
+  rose: { num: "text-[#ff9a9a]", icon: "bg-red-500/15 text-[#ff9a9a] ring-red-400/30", bar: "bg-[#f25f5f]", wash: "from-red-500/[0.09]" },
+  violet: { num: "text-[#c4b0ff]", icon: "bg-violet-500/15 text-[#c4b0ff] ring-violet-400/30", bar: "bg-[#9b7bff]", wash: "from-violet-500/[0.09]" },
+};
+
 function Summary({ data, finance, className }: { data: Snapshot; finance: boolean; className?: string }) {
   const awaiting = data.enquiries.filter(needsReply).length;
   const quotes = data.quotes.filter(quoteNeedsFollowUp).length;
-  const figures = [
-    { value: awaiting, label: "Awaiting reply", href: "/enquiries?tab=reply" },
-    { value: quotes, label: "Quotes to chase", href: "/enquiries?tab=follow" },
+  const figures: { value: number; label: string; href: string; tone: Tone; Icon: React.ComponentType<{ className?: string }> }[] = [
+    { value: awaiting, label: "Awaiting reply", href: "/enquiries?tab=reply", tone: "amber", Icon: Reply },
+    { value: quotes, label: "Quotes to chase", href: "/enquiries?tab=follow", tone: "sky", Icon: FileText },
     finance
-      ? { value: data.invoices.filter(isInvoiceOverdue).length, label: "Overdue invoices", href: "/invoices?filter=overdue" }
-      : { value: tasksDue(data.tasks).length, label: "Reminders due", href: "/tasks" },
+      ? { value: data.invoices.filter(isInvoiceOverdue).length, label: "Overdue invoices", href: "/invoices?filter=overdue", tone: "rose", Icon: ReceiptText }
+      : { value: tasksDue(data.tasks).length, label: "Reminders due", href: "/tasks", tone: "violet", Icon: AlarmClock },
   ];
   return (
-    <nav aria-label="Summary" className={cn("panel grid grid-cols-3 divide-x divide-line", className)}>
-      {figures.map((f) => (
-        <Link key={f.label} href={f.href} className="group flex flex-col gap-1 px-3 py-3 transition first:rounded-l-[12px] last:rounded-r-[12px] hover:bg-surface-2 sm:px-5 lg:py-5">
-          <span className="flex items-start justify-between">
-            <span className={cn("tabular text-[30px] font-semibold leading-none tracking-tight lg:text-[40px]", f.value ? "text-foreground" : "text-subtle")}>{f.value}</span>
-            <ArrowUpRight className="hidden size-4 text-subtle transition group-hover:text-accent-fg sm:block" />
-          </span>
-          <span className="text-[13px] leading-tight text-muted-foreground sm:text-[14px] lg:text-[15px]">{f.label}</span>
-        </Link>
-      ))}
+    <nav aria-label="Summary" className={cn("panel grid grid-cols-3 divide-x divide-line overflow-hidden", className)}>
+      {figures.map((f) => {
+        const t = TONE[f.tone];
+        const on = f.value > 0;
+        return (
+          <Link
+            key={f.label}
+            href={f.href}
+            className={cn("group relative flex flex-col gap-1.5 bg-gradient-to-b to-transparent px-3 py-3 transition hover:bg-surface-2 sm:px-5 lg:py-5", on ? t.wash : "from-transparent")}
+          >
+            <span aria-hidden className={cn("absolute inset-x-0 top-0 h-[2px]", on ? t.bar : "bg-transparent")} />
+            <span className="flex items-center justify-between">
+              <span className={cn("grid size-7 place-items-center rounded-lg ring-1 lg:size-8", on ? t.icon : "bg-surface-2 text-subtle ring-line")}>
+                <f.Icon className="size-3.5 lg:size-4" />
+              </span>
+              <ArrowUpRight className="hidden size-4 text-subtle transition group-hover:text-accent-fg sm:block" />
+            </span>
+            <span className={cn("tabular text-[30px] font-semibold leading-none tracking-tight lg:text-[40px]", on ? t.num : "text-subtle")}>{f.value}</span>
+            <span className="text-[13px] leading-tight text-muted-foreground sm:text-[14px] lg:text-[15px]">{f.label}</span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }
