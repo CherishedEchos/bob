@@ -3,14 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AudioLines, CalendarDays, ChevronLeft, FileText, Keyboard, Loader2, MessageCircle, Mic, MoreHorizontal, Pencil, Phone, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
+import { AudioLines, CalendarDays, Play, ChevronLeft, FileText, Keyboard, Loader2, MessageCircle, Mic, MoreHorizontal, Pencil, Phone, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
 import { flushSync } from "react-dom";
 import { useBob } from "@/lib/bob/provider";
 import type { BobMessage, Chip } from "@/lib/bob/types";
 import { stopSpeaking } from "@/lib/voice/speech-output";
 import { useVoiceComposer, type ComposerPhase } from "@/lib/voice/use-voice-composer";
 import { ComposerStatus, ReadAloudButton, SpeakRepliesToggle, useTtsStatus } from "./voice-bits";
-import { SnapPhotoButton } from "@/components/common/photos";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { todaysPriorities } from "@/lib/derive";
@@ -91,6 +90,14 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
 
   const shortcuts: Shortcut[] = [
     { label: "What needs my attention today?", icon: MessageCircle, run: () => ask("What needs my attention today?") },
+    {
+      label: "Hear today's briefing",
+      icon: Play,
+      run: () => {
+        setHome(false);
+        c.hearBriefing();
+      },
+    },
     ...(can("jobs.write") ? [{ label: "Add a new job", icon: CalendarDays, run: () => ui.openForm({ form: "job" }) }] : []),
     ...(can("payments.record") ? [{ label: "Record a payment", icon: FileText, run: () => ui.openForm({ form: "payment" }) }] : []),
     { label: "Follow up on enquiries", icon: Phone, run: () => ask("Follow up on enquiries") },
@@ -416,7 +423,7 @@ function useOrbSize() {
   React.useEffect(() => {
     const calc = () => {
       const h = window.visualViewport?.height ?? window.innerHeight;
-      setSize(Math.round(Math.max(128, Math.min(224, h - 494))));
+      setSize(Math.round(Math.max(112, Math.min(220, h - 548))));
     };
     calc();
     window.addEventListener("resize", calc);
@@ -571,7 +578,7 @@ function AskBobHome({
                     {phase === "listening" ? "Tap to stop" : phase === "starting" ? "Starting…" : phase === "stopping" ? "Finishing…" : phase === "sending" ? "Sending to Bob…" : "Tap to talk"}
                   </span>
                 </div>
-                <SnapPhotoButton className="mr-2 size-12 justify-self-end rounded-full text-white/85 hover:bg-surface-3" />
+                <span aria-hidden />
               </div>
             </>
           )}

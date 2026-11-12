@@ -1,4 +1,4 @@
-import { Mail, Phone, Flame, Globe, PenLine } from "lucide-react";
+import { Mail, Phone, Globe, PenLine } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import {
   ENQUIRY_STATUS_LABEL,
@@ -48,9 +48,7 @@ export function JobStatusBadge({ status, className }: { status: JobStatus; class
 export function PriorityBadge({ priority }: { priority: Priority }) {
   if (priority !== "high") return <Badge tone="neutral">{PRIORITY_LABEL[priority]}</Badge>;
   return (
-    <Badge tone="red">
-      <Flame /> High
-    </Badge>
+<Badge tone="red">High priority</Badge>
   );
 }
 

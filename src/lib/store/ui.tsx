@@ -32,6 +32,8 @@ interface UIValue extends UIState {
   openCustomer(id: string): void;
   openForm(prefill: FormPrefill): void;
   closeEnquiry(): void;
+  /** Where an inline enquiry (desktop list + detail) should scroll to. */
+  setEnquiryFocus(focus: "reply" | null): void;
   closeJob(): void;
   closeCustomer(): void;
   closeForm(): void;
@@ -50,6 +52,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       openCustomer: (id) => setState((s) => ({ ...s, customerId: id, jobId: null, enquiryId: null, assistantOpen: false })),
       openForm: (form) => setState((s) => ({ ...s, form })),
       closeEnquiry: () => setState((s) => ({ ...s, enquiryId: null })),
+      setEnquiryFocus: (enquiryFocus) => setState((s) => ({ ...s, enquiryFocus })),
       closeJob: () => setState((s) => ({ ...s, jobId: null })),
       closeCustomer: () => setState((s) => ({ ...s, customerId: null })),
       closeForm: () => setState((s) => ({ ...s, form: null })),

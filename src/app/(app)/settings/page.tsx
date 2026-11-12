@@ -2,12 +2,11 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { Bot, Building2, Copy, Download, ExternalLink, Globe, Link2, PoundSterling, RotateCcw, ShieldCheck, Unlink, Users } from "lucide-react";
+import { Bot, Building2, ChevronRight, Copy, Smartphone, Download, ExternalLink, Globe, Link2, PoundSterling, RotateCcw, ShieldCheck, Unlink, Users } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import type { Connection, OrgConfig, Snapshot } from "@/lib/types";
 import { ROLE_LABEL } from "@/lib/auth/permissions";
 import { cn, timeAgo } from "@/lib/utils";
-import { Card, PageHeader } from "@/components/common/bits";
 import { InstallBob } from "@/components/common/install-bob";
 import { Button } from "@/components/ui/button";
 import { Field, Input, NativeSelect, Textarea } from "@/components/ui/input";
@@ -68,20 +67,29 @@ function WebsiteFormSection({ slug }: { slug: string }) {
   );
 }
 
-function Section({ icon: Icon, title, subtitle, children }: { icon: React.ComponentType<{ className?: string }>; title: string; subtitle?: string; children: React.ReactNode }) {
+/** One settings row: a short label that opens to reveal its controls. */
+function Section({ icon: Icon, title, subtitle, children, defaultOpen = false }: { icon: React.ComponentType<{ className?: string }>; title: string; subtitle?: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = React.useState(defaultOpen);
+  const id = React.useId();
   return (
-    <Card className="p-5">
-      <div className="mb-4 flex items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-copper-500/12 text-accent-fg ring-1 ring-copper-500/25">
-          <Icon className="size-[18px]" />
-        </span>
-        <div>
-          <h2 className="text-[17px] font-semibold">{title}</h2>
-          {subtitle ? <p className="text-[14.5px] text-muted-foreground">{subtitle}</p> : null}
+    <li>
+      <h2 className="m-0">
+        <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)} className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-2 lg:px-5">
+          <Icon className="size-5 shrink-0 text-accent-icon" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[16px] font-semibold">{title}</span>
+            {subtitle && !open ? <span className="mt-0.5 block truncate text-[14px] text-muted-foreground">{subtitle}</span> : null}
+          </span>
+          <ChevronRight className={cn("size-5 shrink-0 text-subtle transition-transform", open && "rotate-90")} />
+        </button>
+      </h2>
+      {open ? (
+        <div id={id} className="px-4 pb-5 lg:px-5">
+          {subtitle ? <p className="mb-4 text-[14.5px] text-muted-foreground">{subtitle}</p> : null}
+          {children}
         </div>
-      </div>
-      {children}
-    </Card>
+      ) : null}
+    </li>
   );
 }
 
@@ -102,12 +110,16 @@ function SettingsInner() {
   };
 
   return (
-    <>
-      <PageHeader title="Settings" subtitle={`${org.name}${owner ? "" : " · only the owner can change these"}`} />
-      <div className="mb-5 max-w-xl">
-        <InstallBob />
+    <div className="mx-auto max-w-3xl">
+      <div className="mb-4">
+        <h1 className="t-page">Settings</h1>
+        <p className="t-meta mt-0.5 lg:text-[15px]">{`${org.name}${owner ? "" : " · only the owner can change these"}`}</p>
       </div>
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+      <ul className="panel divide-y divide-line overflow-hidden">
+        <Section icon={Smartphone} title="Install Bob on your phone" subtitle="Add Bob to your home screen so it opens like an app.">
+          <InstallBob />
+          <p className="text-[14px] text-muted-foreground">Already installed? Bob opens full-screen from your home screen icon.</p>
+        </Section>
         <BusinessSection org={org} owner={owner} save={save} />
         <FinanceSection org={org} owner={owner} save={save} />
         <Section icon={Link2} title="Connected accounts" subtitle="Bob uses official sign-in pages (OAuth). He never asks for your passwords.">
@@ -123,22 +135,22 @@ function SettingsInner() {
         <WebsiteFormSection slug={org.slug} />
         <BobSection org={org} owner={owner} save={save} />
         <Section icon={Users} title="Team" subtitle="Who can use Bob for this business.">
-          <ul className="space-y-2">
+          <ul className="divide-y divide-line">
             {data.members.map((m) => (
-              <li key={m.id} className="flex items-center justify-between rounded-xl bg-surface-2 px-3.5 py-2.5 ring-1 ring-line">
+              <li key={m.id} className="flex items-center justify-between py-2.5">
                 <div>
                   <div className="text-[15px] font-medium">{m.name}</div>
                   <div className="text-[13.5px] text-muted-foreground">{m.email}</div>
                 </div>
-                <span className="rounded-full bg-surface-3 px-2.5 py-0.5 text-[13px] text-muted-foreground ring-1 ring-line">{ROLE_LABEL[m.role]}</span>
+                <span className="text-[14px] text-muted-foreground">{ROLE_LABEL[m.role]}</span>
               </li>
             ))}
           </ul>
           <p className="mt-3 text-[13.5px] text-subtle">Owner: everything. Office: day-to-day admin and money. Site team: jobs, tasks, notes and costs — no financial records.</p>
         </Section>
         <PrivacySection org={org} owner={can("data.delete")} save={save} />
-      </div>
-    </>
+      </ul>
+    </div>
   );
 }
 

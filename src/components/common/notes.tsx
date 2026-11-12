@@ -44,9 +44,9 @@ export function NotesPanel({ notes, onAdd }: { notes: Note[]; onAdd: (text: stri
         </div>
       </form>
       {notes.length ? (
-        <ul className="mt-3 space-y-2">
+        <ul className="mt-2 divide-y divide-line">
           {notes.map((n) => (
-            <li key={n.id} className="rounded-xl bg-surface-2 px-3.5 py-3 ring-1 ring-line">
+            <li key={n.id} className="py-3">
               <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{n.text}</p>
               <p className="mt-1.5 text-[13px] text-subtle">
                 {n.author} · {timeAgo(n.createdAt)}

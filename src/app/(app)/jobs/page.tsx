@@ -1,118 +1,93 @@
 "use client";
 
 import * as React from "react";
-import { HardHat, MapPin, Plus, ArrowRight } from "lucide-react";
+import { HardHat, Plus } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
-import { JOB_STATUS_LABEL, isActiveJob, jobFinance } from "@/lib/derive";
-import type { Job, JobStatus } from "@/lib/types";
+import { isActiveJob, jobFinance, jobNextStep } from "@/lib/derive";
+import type { Job } from "@/lib/types";
 import { gbp } from "@/lib/utils";
-import { EmptyState, FilterChips, PageHeader, ProgressBar } from "@/components/common/bits";
+import { EmptyState, ListRow, StatusText, Tabs } from "@/components/common/bits";
 import { JobStatusBadge } from "@/components/common/status";
 import { JobTile } from "@/components/common/job-tile";
-import { Button } from "@/components/ui/button";
 
-type Filter = "active" | JobStatus | "all";
+type Filter = "active" | "done" | "all";
+const TESTS: Record<Filter, (j: Job) => boolean> = {
+  active: isActiveJob,
+  done: (j) => j.status === "completed" || j.status === "lost",
+  all: () => true,
+};
 
+/** Name, status and next step. Photos, notes, costs and payments live in the job. */
 export default function JobsPage() {
   const { data, can } = useStore();
   const ui = useUI();
+  const finance = can("finance.read");
   const [filter, setFilter] = React.useState<Filter>("active");
-  const match = (j: Job) => (filter === "all" ? true : filter === "active" ? isActiveJob(j) : j.status === filter);
-  const list = data.jobs.filter(match);
-  const statuses: JobStatus[] = ["awaiting_deposit", "scheduled", "in_progress", "snagging", "quoted", "completed", "lost"];
+  const list = data.jobs.filter(TESTS[filter]);
+  const active = data.jobs.filter(isActiveJob);
 
   return (
-    <>
-      <PageHeader
-        title="Jobs"
-        subtitle={`${data.jobs.filter(isActiveJob).length} active${can("finance.read") ? ` · ${gbp(data.jobs.filter(isActiveJob).reduce((s, j) => s + j.quotedValue, 0))} on the books` : ""}`}
-        actions={
-          can("jobs.write") ? (
-            <Button onClick={() => ui.openForm({ form: "job" })}>
-              <Plus /> New job
-            </Button>
-          ) : null
-        }
-      />
-      <div className="mb-4">
-        <FilterChips
-          label="Filter jobs"
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: "active" as Filter, label: "Active", count: data.jobs.filter(isActiveJob).length },
-            ...statuses.map((s) => ({ value: s as Filter, label: JOB_STATUS_LABEL[s], count: data.jobs.filter((j) => j.status === s).length })),
-            { value: "all" as Filter, label: "All", count: data.jobs.length },
-          ]}
-        />
+    <div className="mx-auto max-w-3xl">
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="t-page">Jobs</h1>
+          <p className="t-meta mt-0.5 lg:text-[15px]">
+            {active.length} active{finance ? ` · ${gbp(active.reduce((s, j) => s + j.quotedValue, 0))} on the books` : ""}
+          </p>
+        </div>
+        {can("jobs.write") ? (
+          <button type="button" onClick={() => ui.openForm({ form: "job" })} className="flex h-11 items-center gap-1.5 rounded-xl bg-raised px-4 text-[15px] font-semibold ring-1 ring-line-strong transition hover:bg-raised-hover">
+            <Plus className="size-[18px]" /> Add job
+          </button>
+        ) : null}
       </div>
+      <Tabs
+        label="Jobs"
+        className="mb-3"
+        value={filter}
+        onChange={setFilter}
+        options={[
+          { value: "active", label: "Active", count: active.length },
+          { value: "done", label: "Finished", count: data.jobs.filter(TESTS.done).length },
+          { value: "all", label: "All", count: data.jobs.length },
+        ]}
+      />
       {list.length ? (
-        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <ul className="panel divide-y divide-line overflow-hidden">
           {list.map((j) => {
-            const f = jobFinance(j, data.payments);
+            const f = finance ? jobFinance(j, data.payments) : null;
             return (
-              <li key={j.id}>
-                <button
-                  onClick={() => ui.openJob(j.id)}
-                  className="card-surface flex h-full w-full flex-col p-4 text-left transition hover:bg-surface-2 active:bg-raised"
-                >
-                  <div className="flex w-full items-start gap-3">
-                    <JobTile kind={j.kind} className="size-11 rounded-lg [&_svg]:size-5" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="t-name truncate">{j.title}</span>
-                        <JobStatusBadge status={j.status} className="shrink-0" />
-                      </div>
-                      <div className="mt-0.5 flex min-w-0 items-center gap-1 text-[14px] text-foreground/85">
-                        <span className="truncate">{j.customerName}</span>
-                        <span className="shrink-0 text-subtle">·</span>
-                        <MapPin className="size-3.5 shrink-0 text-subtle" />
-                        <span className="truncate">{j.location}</span>
-                      </div>
-                    </div>
-                  </div>
-                  {can("finance.read") ? (
-                    <div className="mt-3 w-full">
-                      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[14px]">
-                        <Stat label="Price" value={gbp(j.quotedValue)} />
-                        <Stat
-                          label="Deposit"
-                          value={j.depositRequired === 0 ? "None" : f.depositOutstanding === 0 ? "Paid" : `${gbp(f.depositOutstanding)} due`}
-                          tone={j.depositRequired === 0 ? undefined : f.depositOutstanding === 0 ? "green" : f.depositOverdue ? "red" : "amber"}
-                        />
-                        <Stat label="Left" value={gbp(f.balance)} />
-                      </div>
-                      <div className="mt-2 flex w-full items-center gap-3">
-                        <ProgressBar value={f.paidPercent} className="flex-1" />
-                        <span className="tabular text-[13px] text-muted-foreground">{f.paidPercent}% paid</span>
-                      </div>
-                    </div>
-                  ) : null}
-                  {j.nextAction ? (
-                    <div className="mt-3 flex w-full items-center gap-2 border-t border-line pt-3 text-[14px] text-foreground/85">
-                      <ArrowRight className="size-3.5 shrink-0 text-accent-icon" />
-                      <span className="text-accent-fg">Next:</span>
-                      <span className="truncate">{j.nextAction}</span>
-                    </div>
-                  ) : null}
-                </button>
-              </li>
+              <ListRow
+                key={j.id}
+                onOpen={() => ui.openJob(j.id)}
+                openLabel={`${j.title} for ${j.customerName}`}
+                leading={<JobTile kind={j.kind} className="size-10 rounded-lg [&_svg]:size-5" />}
+                title={`${j.title} · ${j.customerName}`}
+                aside={f ? gbp(j.quotedValue) : undefined}
+                meta={
+                  <>
+                    <span className="block">
+                      <span className="text-accent-fg">Next:</span> {jobNextStep(j, data, finance)}
+                    </span>
+                    <span className="mt-1 flex flex-wrap items-center gap-x-3">
+                      <JobStatusBadge status={j.status} />
+                      {f && j.depositRequired > 0 && f.depositOutstanding > 0 && isActiveJob(j) ? (
+                        <StatusText tone={f.depositOverdue ? "red" : "amber"}>
+                          {gbp(f.depositOutstanding)} deposit {f.depositOverdue ? "overdue" : "due"}
+                        </StatusText>
+                      ) : null}
+                      <span className="text-[13.5px] text-subtle">{j.location}</span>
+                    </span>
+                  </>
+                }
+              />
             );
           })}
         </ul>
       ) : (
-        <EmptyState icon={HardHat} title="No jobs here" body="Try another filter, or add a new job." />
+        <EmptyState icon={HardHat} title="No jobs here" body="Try another list, or add a new job." />
       )}
-    </>
-  );
-}
-
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "green" | "amber" | "red" }) {
-  return (
-    <span className="inline-flex items-baseline gap-1.5">
-      <span className="text-[13px] text-subtle">{label}</span>
-      <span className={"tabular font-semibold " + (tone === "green" ? "text-good-fg" : tone === "amber" ? "text-warn-fg" : tone === "red" ? "text-danger-fg" : "text-foreground")}>{value}</span>
-    </span>
+    </div>
   );
 }

@@ -6,7 +6,7 @@ import type {
   Enquiry, EnquirySource, EnquiryStatus, Expense, ExpenseCategory, Invoice, Job, JobStatus, Payment, PaymentMethod,
   PaymentType, Priority, Quote, Snapshot, Task,
 } from "@/lib/types";
-import { daysFromToday, hoursSince, todayKey } from "@/lib/utils";
+import { daysFromToday, formatDateInline, gbp, hoursSince, todayKey } from "@/lib/utils";
 
 /* ----------------------------- Labels ----------------------------- */
 
@@ -381,4 +381,17 @@ export function inferJobKind(text: string): Job["kind"] {
   if (/stair|banister|balustrade/.test(t)) return "staircase";
   if (/bathroom|shower|en-?suite/.test(t)) return "bathroom";
   return "general";
+}
+
+/** A job's next step, from its records only (open task, next action, deposit, start date). */
+export function jobNextStep(job: Job, data: Pick<Snapshot, "tasks" | "payments">, finance: boolean): string {
+  const task = data.tasks.filter((t) => !t.done && t.relatedType === "job" && t.relatedId === job.id).sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0];
+  if (task) return `${task.title} · ${formatDateInline(task.dueDate)}`;
+  if (job.nextAction) return job.nextAction;
+  if (finance) {
+    const f = jobFinance(job, data.payments);
+    if (f.depositOutstanding > 0 && job.status !== "quoted") return `Collect ${gbp(f.depositOutstanding)} deposit`;
+  }
+  if (job.startDate && job.status === "scheduled") return `Starts ${formatDateInline(job.startDate)}`;
+  return JOB_STATUS_LABEL[job.status];
 }

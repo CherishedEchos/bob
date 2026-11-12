@@ -9,7 +9,7 @@ import type { ActionView } from "@/lib/bob/types";
 import type { Invoice } from "@/lib/types";
 import { invoiceBalance, invoiceStatusLabel, isInvoiceOutstanding, isInvoiceOverdue, jobsAwaitingDeposit } from "@/lib/derive";
 import { cn, formatDateInline, gbp, timeAgo } from "@/lib/utils";
-import { Card, EmptyState, FilterChips, PageHeader } from "@/components/common/bits";
+import { EmptyState, ListPanel, ListRow, StatusText, Tabs } from "@/components/common/bits";
 import { Button } from "@/components/ui/button";
 import { MoneyRow } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
@@ -47,79 +47,75 @@ function InvoicesInner() {
   const depositTotal = deposits.reduce((s, d) => s + d.finance.depositOutstanding, 0);
 
   return (
-    <>
-      <PageHeader
-        title="Invoices"
-        subtitle={accounting ? `Connected: ${accounting.accountLabel ?? accounting.provider}` : "No accounting system connected — invoices are drafts in Bob until Xero or QuickBooks is connected."}
-        actions={
-          can("invoices.draft") ? (
-            <Button onClick={() => ui.openForm({ form: "invoice" })}>
-              <Plus /> New invoice draft
-            </Button>
-          ) : null
-        }
-      />
+    <div className="mx-auto max-w-3xl">
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="t-page">Money</h1>
+          <p className="t-meta mt-0.5 lg:text-[15px]">{accounting ? `Invoices sync with ${accounting.accountLabel ?? accounting.provider}` : "Invoices stay as drafts in Bob until Xero or QuickBooks is connected"}</p>
+        </div>
+        {can("invoices.draft") ? (
+          <button type="button" onClick={() => ui.openForm({ form: "invoice" })} className="flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-raised px-4 text-[15px] font-semibold ring-1 ring-line-strong transition hover:bg-raised-hover">
+            <Plus className="size-[18px]" /> Invoice
+          </button>
+        ) : null}
+      </div>
 
-      <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
+      <div className="panel mb-4 grid grid-cols-3 divide-x divide-line">
         {[
-          { label: "Owed on invoices", value: gbp(owed), tone: "" },
-          { label: "Overdue", value: gbp(overdue), tone: overdue ? "text-danger-fg" : "" },
-          { label: "Deposits awaited", value: gbp(depositTotal), tone: depositTotal ? "text-warn-fg" : "" },
-        ].map((s) => (
-          <Card key={s.label} className="p-3 sm:p-4">
-            <div className="text-[13px] text-muted-foreground sm:text-[14px]">{s.label}</div>
-            <div className={cn("tabular mt-1 text-[18px] font-bold sm:text-[24px]", s.tone)}>{s.value}</div>
-          </Card>
+          { label: "Owed", value: gbp(owed), tone: "" },
+          { label: "Overdue", value: gbp(overdue), tone: overdue ? "text-danger-fg" : "text-subtle" },
+          { label: "Deposits due", value: gbp(depositTotal), tone: depositTotal ? "text-warn-fg" : "text-subtle" },
+        ].map((x) => (
+          <div key={x.label} className="px-4 py-3 lg:px-5">
+            <div className={cn("tabular text-[19px] font-semibold sm:text-[22px]", x.tone)}>{x.value}</div>
+            <div className="text-[13.5px] text-muted-foreground">{x.label}</div>
+          </div>
         ))}
       </div>
 
-      <div className="mb-4">
-        <FilterChips
-          label="Filter invoices"
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: "outstanding", label: "Outstanding", count: data.invoices.filter(isInvoiceOutstanding).length },
-            { value: "overdue", label: "Overdue", count: data.invoices.filter(isInvoiceOverdue).length },
-            { value: "draft", label: "Drafts", count: data.invoices.filter((i) => i.status === "draft").length },
-            { value: "paid", label: "Paid" },
-            { value: "all", label: "All" },
-          ]}
-        />
-      </div>
+      <Tabs
+        label="Invoices"
+        className="mb-3"
+        value={filter}
+        onChange={setFilter}
+        options={[
+          { value: "outstanding", label: "Owed", count: data.invoices.filter(isInvoiceOutstanding).length },
+          { value: "overdue", label: "Overdue", count: data.invoices.filter(isInvoiceOverdue).length, highlight: true },
+          { value: "draft", label: "Drafts", count: data.invoices.filter((i) => i.status === "draft").length },
+          { value: "all", label: "All" },
+        ]}
+      />
 
       {list.length ? (
-        <ul className="space-y-3">
+        <ul className="panel divide-y divide-line overflow-hidden">
           {list.map((i) => (
             <InvoiceRow key={i.id} invoice={i} expanded={open === i.id} onToggle={() => setOpen(open === i.id ? null : i.id)} />
           ))}
         </ul>
       ) : (
-        <EmptyState icon={ReceiptText} title="Nothing here" body={filter === "draft" ? "Ask Bob to “invoice Sophie £7,500 for the Copthorne job”." : "Try another filter."} />
+        <EmptyState icon={ReceiptText} title="Nothing here" body={filter === "draft" ? "Ask Bob to “invoice Sophie £7,500 for the Copthorne job”." : "Nothing in this list."} />
       )}
 
       {deposits.length ? (
-        <section className="mt-10">
-          <h2 className="mb-3 text-[19px] font-semibold tracking-tight">Deposits awaited</h2>
-          <Card className="divide-y divide-line">
+        <ListPanel id="deposits" title="Deposits due" count={deposits.length} className="mt-5">
+          <ul className="divide-y divide-line">
             {deposits.map(({ job, finance }) => (
-              <button key={job.id} onClick={() => ui.openJob(job.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-2">
-                <PoundSterling className="size-4 text-accent-fg" />
-                <span className="min-w-0 flex-1 truncate text-[15px]">
-                  {job.customerName} — {job.title}
-                </span>
-                <span className="text-right">
-                  <span className="tabular block text-[15px] font-semibold">{gbp(finance.depositOutstanding)}</span>
-                  <span className={cn("block text-[13px]", finance.depositOverdue ? "text-danger-fg" : "text-muted-foreground")}>
+              <ListRow
+                key={job.id}
+                onOpen={() => ui.openJob(job.id)}
+                title={`${job.customerName} · ${job.title}`}
+                aside={<span className="text-[15px] font-semibold text-foreground">{gbp(finance.depositOutstanding)}</span>}
+                meta={
+                  <StatusText tone={finance.depositOverdue ? "red" : "amber"}>
                     {finance.depositOverdue ? "Overdue" : job.depositDueDate ? `Due ${formatDateInline(job.depositDueDate)}` : "No due date"}
-                  </span>
-                </span>
-              </button>
+                  </StatusText>
+                }
+              />
             ))}
-          </Card>
-        </section>
+          </ul>
+        </ListPanel>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -134,13 +130,10 @@ function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expa
   const result = (ok: boolean, msg: string, err?: Record<string, string>) => toast(ok ? msg : Object.values(err ?? {})[0] ?? "Couldn't do that", ok ? "success" : "error");
 
   return (
-    <li className="card-surface overflow-hidden rounded-2xl">
-      <button onClick={onToggle} aria-expanded={expanded} className="flex w-full items-center gap-3 p-4 text-left hover:bg-surface-2">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface-2 text-accent-fg ring-1 ring-line">
-          <ReceiptText className="size-[18px]" />
-        </span>
+    <li className={cn(expanded && "bg-surface-2/50")}>
+      <button onClick={onToggle} aria-expanded={expanded} className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2 lg:px-5">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[16px] font-semibold">{customer?.name ?? "Customer"}</div>
+          <div className="t-name truncate">{customer?.name ?? "Customer"}</div>
           <div className="truncate text-[14px] text-muted-foreground">
             {i.number ? `${i.number} · ` : ""}
             {i.draftRef} · {i.lines[0]?.description}
@@ -148,14 +141,14 @@ function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expa
         </div>
         <div className="text-right">
           <div className="tabular text-[16px] font-semibold">{gbp(i.status === "draft" || i.status === "paid" ? i.total : invoiceBalance(i))}</div>
-          <div className={cn("text-[13.5px]", label === "Overdue" ? "text-danger-fg" : label === "Paid" ? "text-good-fg" : label === "Draft" ? "text-info-fg" : "text-muted-foreground")}>
+          <StatusText tone={label === "Overdue" ? "red" : label === "Paid" ? "green" : label === "Draft" ? "blue" : "neutral"}>
             {label}
             {i.dueDate && i.status === "sent" ? ` · due ${formatDateInline(i.dueDate)}` : ""}
-          </div>
+          </StatusText>
         </div>
       </button>
       {expanded ? (
-        <div className="border-t border-line px-4 pb-4 pt-2">
+        <div className="border-t border-line px-4 pb-4 pt-2 lg:px-5">
           <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
             <div>
               <MoneyRow label={i.amountsAre === "no_vat" ? "Amount (no VAT)" : "Net"} value={gbp(i.subtotal)} />

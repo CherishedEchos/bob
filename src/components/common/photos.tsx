@@ -115,7 +115,7 @@ function rankJobs(jobs: Job[]): Job[] {
 }
 
 /** "Snap a photo": take it, Bob suggests the job, tap to file it. */
-export function SnapPhotoButton({ className, label = false }: { className?: string; label?: boolean }) {
+export function SnapPhotoButton({ className, label = false, inputId, hideTrigger = false }: { className?: string; label?: boolean; inputId?: string; hideTrigger?: boolean }) {
   const { data, refresh, can } = useStore();
   const [file, setFile] = React.useState<File | null>(null);
   const [preview, setPreview] = React.useState<string | null>(null);
@@ -148,23 +148,35 @@ export function SnapPhotoButton({ className, label = false }: { className?: stri
 
   return (
     <>
-      <label className={cn("inline-flex cursor-pointer items-center justify-center gap-2", className)} aria-label="Add photo" title="Add photo">
-        <Camera className="size-[22px]" strokeWidth={1.7} />
-        {label ? <span>Photo</span> : null}
-        <input
-          ref={input}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="sr-only"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (!f) return;
-            setFile(f);
-            setPreview(URL.createObjectURL(f));
-          }}
-        />
-      </label>
+      {(() => {
+        const fileInput = (
+          <input
+            ref={input}
+            id={inputId}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="sr-only"
+            tabIndex={hideTrigger ? -1 : undefined}
+            aria-hidden={hideTrigger || undefined}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              setFile(f);
+              setPreview(URL.createObjectURL(f));
+            }}
+          />
+        );
+        // From a menu item: the menu's <label htmlFor> opens this picker.
+        if (hideTrigger) return fileInput;
+        return (
+          <label className={cn("inline-flex cursor-pointer items-center justify-center gap-2", className)} aria-label="Add photo" title="Add photo">
+            <Camera className="size-[22px]" strokeWidth={1.7} />
+            {label ? <span>Photo</span> : null}
+            {fileInput}
+          </label>
+        );
+      })()}
       <Sheet open={!!file} onOpenChange={(o) => !o && close()}>
         <SheetContent side="bottom" title="File this photo" className="flex max-h-[92dvh] flex-col p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           <div className="t-section pr-12">File this photo</div>

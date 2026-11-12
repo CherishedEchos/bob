@@ -2,18 +2,19 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+/** Restrained status label: coloured dot + readable text, no box. */
 const badgeVariants = cva(
-  "inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[12.5px] font-medium ring-1 ring-inset [&_svg]:size-3",
+  "inline-flex h-6 items-center gap-1.5 whitespace-nowrap text-[13px] font-medium before:size-1.5 before:shrink-0 before:rounded-full before:content-[''] [&_svg]:size-3",
   {
     variants: {
       tone: {
-        neutral: "bg-surface-3 text-muted-foreground ring-line",
-        copper: "bg-copper-500/15 text-accent-fg ring-copper-500/35",
-        green: "bg-emerald-500/12 text-good-fg ring-emerald-500/30",
-        amber: "bg-amber-400/12 text-warn-fg ring-amber-400/30",
-        red: "bg-red-500/12 text-danger-fg ring-red-500/30",
-        blue: "bg-sky-400/10 text-info-fg ring-sky-400/25",
-        violet: "bg-violet-400/10 text-violet-300 ring-violet-400/25",
+        neutral: "text-muted-foreground before:bg-subtle",
+        copper: "text-accent-fg before:bg-copper-400",
+        green: "text-good-fg before:bg-emerald-400",
+        amber: "text-warn-fg before:bg-amber-400",
+        red: "text-danger-fg before:bg-red-400",
+        blue: "text-info-fg before:bg-sky-400",
+        violet: "text-violet-300 before:bg-violet-400",
       },
     },
     defaultVariants: { tone: "neutral" },

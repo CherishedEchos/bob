@@ -18,7 +18,6 @@ import { InstallBob } from "@/components/common/install-bob";
 import { Toaster } from "@/components/ui/toaster";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AssistantView } from "@/components/assistant/assistant-view";
-import { OrbAvatar } from "@/components/assistant/orb";
 import { EnquirySheet } from "@/components/enquiries/enquiry-sheet";
 import { JobSheet } from "@/components/jobs/job-sheet";
 import { CustomerSheet } from "@/components/customers/customer-sheet";
@@ -84,7 +83,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
         {/* Ask Bob has its own back button and bottom controls. */}
         {!assistant ? <BottomNav /> : null}
       </div>
-      {!assistant && pathname !== "/today" && pathname !== "/replies" ? <AskBobButton /> : null}
+
     </div>
   );
 }
@@ -113,7 +112,7 @@ const SIDEBAR_NAV = [
   { href: "/enquiries", label: "Enquiries", icon: Inbox, badge: "unanswered" as const },
   { href: "/jobs", label: "Jobs", icon: HardHat },
   { href: "/customers", label: "Customers", icon: Users },
-  { href: "/invoices", label: "Invoices", icon: ReceiptText, perm: "finance.read" as const },
+  { href: "/invoices", label: "Money", icon: ReceiptText, perm: "finance.read" as const },
   { href: "/tasks", label: "Tasks", icon: CheckSquare, badge: "due" as const },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -339,22 +338,6 @@ function BottomNav() {
         })}
       </div>
     </nav>
-  );
-}
-
-/* ------------------------------ Ask Bob (desktop + mobile pages) ------------------------------ */
-
-function AskBobButton() {
-  const ui = useUI();
-  return (
-    <button
-      onClick={() => ui.setAssistantOpen(true)}
-      aria-label="Ask Bob"
-      className="theme-dark fixed bottom-6 right-6 z-40 hidden items-center gap-3 rounded-full bg-ink-800 p-1.5 text-[16px] font-medium text-white shadow-2xl ring-1 ring-copper-500/40 transition hover:ring-copper-400 lg:flex lg:py-2 lg:pl-2 lg:pr-5"
-    >
-      <OrbAvatar className="size-10" />
-      <span className="hidden lg:inline">Ask Bob</span>
-    </button>
   );
 }
 

@@ -38,7 +38,7 @@ export function EnquirySheet() {
   );
 }
 
-function EnquiryDetail({ id }: { id: string }) {
+export function EnquiryDetail({ id, inline = false }: { id: string; inline?: boolean }) {
   const { data, actions, can } = useStore();
   const ui = useUI();
   const replyRef = React.useRef<HTMLDivElement>(null);
@@ -59,7 +59,7 @@ function EnquiryDetail({ id }: { id: string }) {
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="px-5 pb-5 pt-6 sm:px-6">
-        <div className="flex items-start gap-3 pr-12">
+        <div className={cn("flex items-start gap-3", !inline && "pr-12")}>
           <SourceIcon source={e.source} provider={e.provider} className="size-11 rounded-xl" />
           <div className="min-w-0">
             <h2 className="text-[22px] font-bold leading-tight tracking-tight">{e.customerName}</h2>
@@ -79,7 +79,7 @@ function EnquiryDetail({ id }: { id: string }) {
           <EnquiryStatusBadge status={e.status} />
           <PriorityBadge priority={e.priority} />
           {e.followUpDate ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-surface-3 px-2.5 py-0.5 text-[13px] text-muted-foreground ring-1 ring-line">
+            <span className="inline-flex items-center gap-1 text-[13px] text-muted-foreground">
               <CalendarCheck className="size-3" /> Follow up {formatDateInline(e.followUpDate)}
             </span>
           ) : null}

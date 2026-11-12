@@ -88,10 +88,10 @@ function CustomerDetail({ id }: { id: string }) {
 
       <Section title={`Jobs (${jobs.length})`}>
         {jobs.length ? (
-          <ul className="space-y-2">
+          <ul className="divide-y divide-line">
             {jobs.map((j) => (
               <li key={j.id}>
-                <button onClick={() => ui.openJob(j.id)} className="flex w-full items-center justify-between gap-2 rounded-xl bg-surface-2 px-3.5 py-3 text-left ring-1 ring-line hover:bg-surface-3">
+                <button onClick={() => ui.openJob(j.id)} className="flex w-full items-center justify-between gap-2 py-3 text-left transition hover:text-accent-fg">
                   <div className="min-w-0">
                     <div className="truncate text-[15px] font-medium">{j.title}</div>
                     <div className="text-[13.5px] text-muted-foreground">
@@ -111,10 +111,10 @@ function CustomerDetail({ id }: { id: string }) {
 
       <Section title={`Enquiries (${enquiries.length})`}>
         {enquiries.length ? (
-          <ul className="space-y-2">
+          <ul className="divide-y divide-line">
             {enquiries.map((e) => (
               <li key={e.id}>
-                <button onClick={() => ui.openEnquiry(e.id)} className="flex w-full items-center justify-between gap-2 rounded-xl bg-surface-2 px-3.5 py-3 text-left ring-1 ring-line hover:bg-surface-3">
+                <button onClick={() => ui.openEnquiry(e.id)} className="flex w-full items-center justify-between gap-2 py-3 text-left transition hover:text-accent-fg">
                   <div className="min-w-0">
                     <div className="truncate text-[15px] font-medium">{e.title}</div>
                     <div className="text-[13.5px] text-muted-foreground">{timeAgo(e.receivedAt)}</div>
@@ -131,9 +131,9 @@ function CustomerDetail({ id }: { id: string }) {
 
       {can("finance.read") && invoices.length ? (
         <Section title="Invoices">
-          <ul className="space-y-2">
+          <ul className="divide-y divide-line">
             {invoices.map((i) => (
-              <li key={i.id} className="flex items-center justify-between rounded-xl bg-surface-2 px-3.5 py-3 ring-1 ring-line">
+              <li key={i.id} className="flex items-center justify-between py-3">
                 <div>
                   <div className="text-[15px] font-medium">{i.number ?? i.draftRef}</div>
                   <div className="text-[13.5px] text-muted-foreground">{invoiceStatusLabel(i)}</div>
