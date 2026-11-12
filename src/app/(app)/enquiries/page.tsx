@@ -11,7 +11,8 @@ import { ENQUIRY_SOURCES, ENQUIRY_STATUSES, ENQUIRY_STATUS_LABEL, SOURCE_LABEL, 
 import type { Enquiry, EnquirySource, EnquiryStatus } from "@/lib/types";
 import { cn, timeAgo, formatDateInline } from "@/lib/utils";
 import { EmptyState, PageHeader } from "@/components/common/bits";
-import { EnquiryStatusBadge, PriorityBadge, SourceChip, SourceIcon } from "@/components/common/status";
+import { EnquiryStatusBadge, PriorityBadge, SourceIcon } from "@/components/common/status";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
 
@@ -21,10 +22,10 @@ type Tab = "reply" | "follow" | "all";
 const needsFollowUp = (e: Enquiry) =>
   !needsReply(e) && isOpenEnquiry(e) && (followUpDue(e) || e.status === "quote_required" || e.status === "quoted" || !!e.followUpDate);
 
-const TABS: { value: Tab; label: string; test: (e: Enquiry) => boolean }[] = [
-  { value: "reply", label: "Needs your reply", test: needsReply },
-  { value: "follow", label: "Follow up", test: needsFollowUp },
-  { value: "all", label: "All", test: () => true },
+const TABS: { value: Tab; label: string; short: string; test: (e: Enquiry) => boolean }[] = [
+  { value: "reply", label: "Needs your reply", short: "Reply", test: needsReply },
+  { value: "follow", label: "Follow up", short: "Follow up", test: needsFollowUp },
+  { value: "all", label: "All", short: "All", test: () => true },
 ];
 
 function EnquiriesInner() {
@@ -62,15 +63,10 @@ function EnquiriesInner() {
         title="Enquiries"
         subtitle={waiting ? `${waiting} waiting for your reply` : "Nobody is waiting for a reply"}
         actions={
-          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-            {can("enquiries.write") ? (
-              <Button className="flex-1 sm:flex-none" onClick={() => ui.openForm({ form: "enquiry" })}>
-                <Plus /> Add enquiry
-              </Button>
-            ) : null}
+          <div className="flex gap-2">
             <Button
               variant="secondary"
-              className="flex-1 sm:flex-none"
+              className="hidden sm:inline-flex"
               onClick={() => {
                 void send("Who haven't I replied to?", "text");
                 ui.setAssistantOpen(true);
@@ -81,6 +77,8 @@ function EnquiriesInner() {
             {inbox && can("enquiries.write") ? (
               <Button
                 variant="ghost"
+                aria-label={inbox.status === "demo" ? "Check demo inbox" : "Check inbox"}
+                className="h-10 px-3 sm:h-12 sm:px-5"
                 disabled={syncing}
                 onClick={async () => {
                   setSyncing(true);
@@ -91,15 +89,21 @@ function EnquiriesInner() {
                   toast(`${n ? `${n} new enquir${n === 1 ? "y" : "ies"} imported` : "No new enquiries"}${r.value.flagged.length ? ` · ${r.value.flagged.length} flagged as suspicious` : ""}`);
                 }}
               >
-                <RefreshCw className={syncing ? "animate-spin" : ""} /> {inbox.status === "demo" ? "Check demo inbox" : "Check inbox"}
+                <RefreshCw className={syncing ? "animate-spin" : ""} /> <span className="hidden sm:inline">{inbox.status === "demo" ? "Check demo inbox" : "Check inbox"}</span>
+              </Button>
+            ) : null}
+            {can("enquiries.write") ? (
+              <Button aria-label="Add enquiry" className="h-10 px-3.5 sm:h-12 sm:px-5" onClick={() => ui.openForm({ form: "enquiry" })}>
+                <Plus /> <span className="sm:hidden">Add</span>
+                <span className="hidden sm:inline">Add enquiry</span>
               </Button>
             ) : null}
           </div>
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div role="tablist" aria-label="Enquiry lists" className="flex w-full gap-1 rounded-2xl bg-surface-3 p-1 sm:w-auto">
+      <div className="mb-4 flex items-center gap-2">
+        <div role="tablist" aria-label="Enquiry lists" className="flex min-w-0 flex-1 gap-1 rounded-xl bg-card p-1 ring-1 ring-line sm:flex-none">
           {TABS.map((t) => {
             const count = data.enquiries.filter(t.test).length;
             const active = tab === t.value;
@@ -110,23 +114,31 @@ function EnquiriesInner() {
                 aria-selected={active}
                 onClick={() => setTab(t.value)}
                 className={cn(
-                  "flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-2 text-[15px] font-semibold transition sm:flex-none sm:px-4",
-                  active ? "bg-surface-3 text-foreground ring-1 ring-line-strong" : "text-muted-foreground hover:text-foreground",
+                  "flex h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 text-[14px] font-semibold sm:text-[14.5px] transition active:bg-surface-2 sm:flex-none sm:px-4",
+                  active ? "bg-raised text-[#faf9f6] ring-1 ring-line-strong" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {t.label}
-                <span className={cn("tabular rounded-full px-1.5 text-[12px]", active && t.value === "reply" && count ? "bg-primary text-white" : "bg-surface-3")}>{count}</span>
+                <span className="sm:hidden">{t.short}</span>
+                <span className="hidden sm:inline">{t.label}</span>
+                <span className={cn("tabular rounded-md px-1.5 text-[12px]", active && t.value === "reply" && count ? "bg-copper-500/20 text-accent-fg" : "bg-surface-3 text-muted-foreground")}>{count}</span>
               </button>
             );
           })}
         </div>
-        <Button variant="secondary" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((o) => !o)}>
-          <SlidersHorizontal /> Filters{activeFilters ? ` (${activeFilters})` : ""}
+        <Button
+          variant="secondary"
+          aria-label={`Filters${activeFilters ? ` (${activeFilters} on)` : ""}`}
+          aria-expanded={filtersOpen}
+          className="h-12 shrink-0 px-3.5 sm:px-5"
+          onClick={() => setFiltersOpen((o) => !o)}
+        >
+          <SlidersHorizontal /> <span className="hidden sm:inline">Filters</span>
+          {activeFilters ? <span className="tabular rounded-md bg-copper-500/20 px-1.5 text-[12px] text-accent-fg">{activeFilters}</span> : null}
         </Button>
       </div>
 
       {filtersOpen ? (
-        <div className="card-surface mb-4 grid grid-cols-1 gap-3 rounded-2xl p-4 sm:grid-cols-3">
+        <div className="card-surface mb-4 grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-subtle" />
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, job or town" aria-label="Search enquiries" className="pl-10" />
@@ -163,36 +175,44 @@ function EnquiriesInner() {
       ) : null}
 
       {list.length ? (
-        <ul className="space-y-3">
-          {list.map((e) => (
-            <li key={e.id}>
-              <button onClick={() => ui.openEnquiry(e.id)} className="card-surface flex w-full items-start gap-3.5 rounded-2xl p-4 text-left transition hover:bg-surface-2">
-                <SourceIcon source={e.source} provider={e.provider} className="size-11 rounded-xl" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="text-[17px] font-semibold">{e.customerName}</span>
-                    {needsReply(e) ? <span className="size-2 rounded-full bg-copper-500" aria-label="Needs reply" /> : null}
-                    {e.draftReply && needsReply(e) ? <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[12px] font-medium text-info-fg ring-1 ring-sky-500/20">Draft saved</span> : null}
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-1 text-[15.5px] text-foreground/85">
-                    {e.title} <span className="text-subtle">·</span> <MapPin className="size-3.5 text-accent-icon" /> {e.location}
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-[15px] text-muted-foreground lg:max-w-3xl">{e.messages.filter((m) => m.direction === "inbound").at(-1)?.body ?? e.description}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <SourceChip source={e.source} />
-                    <EnquiryStatusBadge status={e.status} />
-                    {e.priority === "high" ? <PriorityBadge priority="high" /> : null}
-                    {e.followUpDate ? (
-                      <span className={cn("inline-flex items-center gap-1 text-[14px]", followUpDue(e) ? "text-warn-fg" : "text-subtle")}>
-                        <CalendarCheck className="size-3.5" /> Follow up {formatDateInline(e.followUpDate)}
+        <ul className="panel divide-y divide-line overflow-hidden">
+          {list.map((e) => {
+            const preview = e.messages.filter((m) => m.direction === "inbound").at(-1)?.body ?? e.description;
+            const waiting = needsReply(e);
+            return (
+              <li key={e.id}>
+                <button onClick={() => ui.openEnquiry(e.id)} className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2 active:bg-raised sm:px-5">
+                  <SourceIcon source={e.source} provider={e.provider} className="mt-0.5 size-10 rounded-lg" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="t-name truncate">{e.customerName}</span>
+                        {waiting ? <span className="size-2 shrink-0 rounded-full bg-copper-400" aria-label="Needs reply" /> : null}
                       </span>
-                    ) : null}
-                    <span className="text-[14px] text-subtle">· {timeAgo(e.receivedAt)}</span>
+                      <span className={cn("shrink-0 text-[13px] tabular", waiting ? "font-medium text-accent-fg" : "text-subtle")}>{timeAgo(e.receivedAt)}</span>
+                    </div>
+                    <div className="mt-0.5 flex min-w-0 items-center gap-1 text-[14px] text-foreground/85">
+                      <span className="truncate">{e.title}</span>
+                      <span className="shrink-0 text-subtle">·</span>
+                      <MapPin className="size-3.5 shrink-0 text-subtle" />
+                      <span className="truncate">{e.location}</span>
+                    </div>
+                    <p className="mt-0.5 line-clamp-1 text-[14px] text-muted-foreground lg:max-w-3xl">{preview}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <EnquiryStatusBadge status={e.status} />
+                      {e.priority === "high" ? <PriorityBadge priority="high" /> : null}
+                      {e.draftReply && waiting ? <Badge tone="blue">Draft saved</Badge> : null}
+                      {e.followUpDate ? (
+                        <span className={cn("inline-flex items-center gap-1 text-[13px]", followUpDue(e) ? "font-medium text-warn-fg" : "text-subtle")}>
+                          <CalendarCheck className="size-3.5" /> Follow up {formatDateInline(e.followUpDate)}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              </button>
-            </li>
-          ))}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <EmptyState icon={Inbox} title={caughtUp ? "You're all caught up" : "Nothing here"} body={caughtUp ? "Nobody is waiting for a reply." : "No enquiries match."} />

@@ -35,7 +35,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
 
   const primary = demo[0]?.accounts[0];
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-[#0b0a09]">
+    <main className="bg-app relative min-h-dvh overflow-hidden">
       {/* Warm workshop-light glow, like the brand hero */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -right-40 top-[-10%] size-[620px] rounded-full bg-[radial-gradient(circle,rgb(255_130_28/0.20),transparent_62%)] blur-2xl" />
@@ -79,7 +79,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
               <div className="mt-8">
                 <Button
                   size="lg"
-                  className="h-14 w-full rounded-[12px] text-[17px] sm:w-auto sm:px-8"
+                  className="h-14 w-full text-[17px] sm:w-auto sm:px-8"
                   disabled={!!busy}
                   onClick={() => void signIn(undefined, { email: primary.email, password: demoPassword })}
                 >
@@ -99,7 +99,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
             ) : null}
 
             <div className="mt-8 space-y-2.5">
-              <details className="group rounded-[12px] bg-white/[0.03] px-4 py-3 ring-1 ring-white/10" open={!demoPassword}>
+              <details className="group panel px-4 py-3" open={!demoPassword}>
                 <summary className="cursor-pointer list-none text-[15px] font-medium text-white/85 marker:hidden">
                   <span className="inline-flex items-center gap-2">
                     <LogIn className="size-4 text-white/50" /> Sign in with an account
@@ -119,7 +119,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
               </details>
 
               {demo.length && demoPassword ? (
-                <details className="rounded-[12px] bg-white/[0.03] px-4 py-3 ring-1 ring-white/10">
+                <details className="panel px-4 py-3">
                   <summary className="cursor-pointer list-none text-[15px] font-medium text-white/85 marker:hidden">
                     <span className="inline-flex items-center gap-2">
                       <Users className="size-4 text-white/50" /> Other demo logins

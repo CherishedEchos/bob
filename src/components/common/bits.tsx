@@ -17,8 +17,8 @@ export function PageHeader({
   return (
     <div className={cn("mb-6 flex flex-wrap items-end justify-between gap-4", className)}>
       <div>
-        <h1 className="text-[28px] font-bold tracking-tight lg:text-[32px]">{title}</h1>
-        {subtitle ? <p className="mt-1 text-[16px] text-muted-foreground">{subtitle}</p> : null}
+        <h1 className="t-page">{title}</h1>
+        {subtitle ? <p className="t-meta mt-1 text-[15px]">{subtitle}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
@@ -38,9 +38,9 @@ export function SectionHeader({
 }) {
   return (
     <div className={cn("mb-3 flex items-center justify-between", className)}>
-      <h2 className="text-[19px] font-semibold tracking-tight">{title}</h2>
+      <h2 className="t-section">{title}</h2>
       {href ? (
-        <Link href={href} className="flex items-center gap-1 rounded-md text-[15px] font-medium text-accent-icon hover:text-accent-fg">
+        <Link href={href} className="flex h-9 items-center gap-0.5 rounded-md px-1 text-[14.5px] font-medium text-accent-fg hover:text-copper-200">
           {linkLabel} <ChevronRight className="size-4" />
         </Link>
       ) : null}
@@ -49,7 +49,7 @@ export function SectionHeader({
 }
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("card-surface rounded-2xl", className)} {...props} />;
+  return <div className={cn("card-surface", className)} {...props} />;
 }
 
 export function EmptyState({
@@ -64,12 +64,12 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="card-surface flex flex-col items-center rounded-2xl px-6 py-10 text-center">
-      <div className="mb-3 grid size-12 place-items-center rounded-full bg-copper-500/10 text-accent-icon ring-1 ring-copper-500/25">
+    <div className="card-surface flex flex-col items-center px-6 py-10 text-center">
+      <div className="mb-3 grid size-12 place-items-center rounded-xl bg-raised text-accent-icon ring-1 ring-line-strong">
         <Icon className="size-5" />
       </div>
-      <p className="font-medium">{title}</p>
-      {body ? <p className="mt-1 max-w-xs text-sm text-muted-foreground">{body}</p> : null}
+      <p className="t-name">{title}</p>
+      {body ? <p className="t-meta mt-1 max-w-xs">{body}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
@@ -98,15 +98,15 @@ export function FilterChips<T extends string>({
             aria-checked={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              "flex h-11 shrink-0 items-center gap-1.5 rounded-full px-4 text-[14px] font-medium ring-1 transition",
+              "flex h-10 shrink-0 items-center gap-1.5 rounded-lg px-3.5 text-[14px] font-semibold ring-1 transition active:bg-surface-3",
               active
-                ? "bg-copper-500/18 text-accent-fg ring-copper-500/60"
-                : "bg-surface-2 text-muted-foreground ring-line hover:bg-surface-3 hover:text-foreground",
+                ? "bg-raised text-[#faf9f6] ring-line-strong"
+                : "bg-card text-muted-foreground ring-line hover:bg-surface-3 hover:text-foreground",
             )}
           >
             {o.label}
             {typeof o.count === "number" ? (
-              <span className={cn("tabular rounded-full px-1.5 text-[12px]", active ? "bg-copper-500/30" : "bg-surface-3")}>
+              <span className={cn("tabular rounded-md px-1.5 text-[12px]", active ? "bg-copper-500/20 text-accent-fg" : "bg-surface-3")}>
                 {o.count}
               </span>
             ) : null}

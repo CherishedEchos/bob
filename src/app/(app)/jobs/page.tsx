@@ -55,43 +55,44 @@ export default function JobsPage() {
               <li key={j.id}>
                 <button
                   onClick={() => ui.openJob(j.id)}
-                  className="card-surface flex h-full w-full flex-col rounded-2xl p-4 text-left transition hover:bg-surface-2"
+                  className="card-surface flex h-full w-full flex-col p-4 text-left transition hover:bg-surface-2 active:bg-raised"
                 >
-                  <div className="flex w-full items-start gap-4">
-                    <JobTile kind={j.kind} className="size-[72px]" />
+                  <div className="flex w-full items-start gap-3">
+                    <JobTile kind={j.kind} className="size-11 rounded-lg [&_svg]:size-5" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="truncate text-[16px] font-semibold">{j.title}</div>
-                          <div className="truncate text-[15px] text-foreground/85">{j.customerName}</div>
-                          <div className="flex items-center gap-1 text-[14px] text-muted-foreground">
-                            <MapPin className="size-3.5 text-accent-icon" /> {j.location}
-                          </div>
-                        </div>
-                        <JobStatusBadge status={j.status} />
+                        <span className="t-name truncate">{j.title}</span>
+                        <JobStatusBadge status={j.status} className="shrink-0" />
+                      </div>
+                      <div className="mt-0.5 flex min-w-0 items-center gap-1 text-[14px] text-foreground/85">
+                        <span className="truncate">{j.customerName}</span>
+                        <span className="shrink-0 text-subtle">·</span>
+                        <MapPin className="size-3.5 shrink-0 text-subtle" />
+                        <span className="truncate">{j.location}</span>
                       </div>
                     </div>
                   </div>
                   {can("finance.read") ? (
-                    <>
-                      <div className="mt-4 grid w-full grid-cols-3 gap-2 text-[14px]">
+                    <div className="mt-3 w-full">
+                      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[14px]">
                         <Stat label="Price" value={gbp(j.quotedValue)} />
                         <Stat
                           label="Deposit"
                           value={j.depositRequired === 0 ? "None" : f.depositOutstanding === 0 ? "Paid" : `${gbp(f.depositOutstanding)} due`}
                           tone={j.depositRequired === 0 ? undefined : f.depositOutstanding === 0 ? "green" : f.depositOverdue ? "red" : "amber"}
                         />
-                        <Stat label="Left to pay" value={gbp(f.balance)} />
+                        <Stat label="Left" value={gbp(f.balance)} />
                       </div>
-                      <div className="mt-3 flex w-full items-center gap-3">
+                      <div className="mt-2 flex w-full items-center gap-3">
                         <ProgressBar value={f.paidPercent} className="flex-1" />
-                        <span className="tabular text-[13px] text-muted-foreground">{f.paidPercent}%</span>
+                        <span className="tabular text-[13px] text-muted-foreground">{f.paidPercent}% paid</span>
                       </div>
-                    </>
+                    </div>
                   ) : null}
                   {j.nextAction ? (
-                    <div className="mt-3 flex w-full items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-[14px] text-foreground/85 ring-1 ring-line">
+                    <div className="mt-3 flex w-full items-center gap-2 border-t border-line pt-3 text-[14px] text-foreground/85">
                       <ArrowRight className="size-3.5 shrink-0 text-accent-icon" />
+                      <span className="text-accent-fg">Next:</span>
                       <span className="truncate">{j.nextAction}</span>
                     </div>
                   ) : null}
@@ -109,16 +110,9 @@ export default function JobsPage() {
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "green" | "amber" | "red" }) {
   return (
-    <div className="rounded-xl bg-surface-2 px-3 py-2 ring-1 ring-line">
-      <div className="text-[12.5px] text-subtle">{label}</div>
-      <div
-        className={
-          "tabular mt-0.5 truncate font-semibold " +
-          (tone === "green" ? "text-good-fg" : tone === "amber" ? "text-warn-fg" : tone === "red" ? "text-danger-fg" : "")
-        }
-      >
-        {value}
-      </div>
-    </div>
+    <span className="inline-flex items-baseline gap-1.5">
+      <span className="text-[13px] text-subtle">{label}</span>
+      <span className={"tabular font-semibold " + (tone === "green" ? "text-good-fg" : tone === "amber" ? "text-warn-fg" : tone === "red" ? "text-danger-fg" : "text-foreground")}>{value}</span>
+    </span>
   );
 }

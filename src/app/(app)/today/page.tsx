@@ -54,7 +54,7 @@ export default function TodayPage() {
       <header className="flex items-center justify-between gap-3 lg:col-span-5 lg:row-start-1">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
-            <h1 className="text-[24px] font-semibold tracking-tight lg:text-[30px]">Today</h1>
+            <h1 className="t-page">Today</h1>
             {org.dataMode === "sample" ? (
               <span
                 title={org.isDemo ? "A fictional business. Nothing is sent to real customers." : "Fictional sample data. Nothing is sent to real customers."}
@@ -64,13 +64,13 @@ export default function TodayPage() {
               </span>
             ) : null}
           </div>
-          <p className="mt-0.5 text-[14.5px] text-muted-foreground lg:text-[15px]">{date}</p>
+          <p className="t-meta mt-0.5 lg:text-[15px]">{date}</p>
         </div>
         {can("enquiries.write") ? (
           <Button
             size="sm"
             aria-label="Add enquiry"
-            className="h-11 rounded-[10px] bg-surface-2 px-3.5 text-[15px] text-foreground ring-1 ring-line-strong hover:bg-surface-3 lg:h-10 lg:bg-primary lg:px-4 lg:text-white lg:ring-0 lg:hover:bg-copper-600"
+            className="h-11 bg-raised px-3.5 text-[15px] text-foreground ring-1 ring-line-strong hover:bg-raised-hover active:bg-surface-3 lg:h-10 lg:px-4"
             onClick={() => ui.openForm({ form: "enquiry" })}
           >
             <Plus /> <span className="lg:hidden">Add</span>
@@ -85,7 +85,7 @@ export default function TodayPage() {
       {/* 3a · Needs attention */}
       <section aria-labelledby="attn" className="panel overflow-hidden lg:col-span-3 lg:col-start-1 lg:row-start-3 lg:self-start">
         <div className="flex items-center justify-between px-4 pb-2 pt-4 lg:px-5">
-          <h2 id="attn" className="text-[17px] font-semibold">
+          <h2 id="attn" className="t-section">
             Needs attention
             {priorities.length ? <span className="ml-2 text-[14px] font-normal text-subtle tabular">{priorities.length}</span> : null}
           </h2>
@@ -173,7 +173,7 @@ export default function TodayPage() {
 function PanelHead({ id, title, count, href }: { id: string; title: string; count?: number; href?: string }) {
   return (
     <div className="flex items-center justify-between px-4 pb-2 pt-4 lg:px-5">
-      <h2 id={id} className="text-[17px] font-semibold">
+      <h2 id={id} className="t-section">
         {title}
         {count ? <span className="ml-2 text-[14px] font-normal text-subtle tabular">{count}</span> : null}
       </h2>
@@ -251,7 +251,7 @@ function AttentionRow({ item, onAskBob }: { item: PriorityItem; onAskBob: (t: st
           </span>
         )}
         <span className="min-w-0">
-          <span className="block truncate text-[15.5px] font-medium">{item.who}</span>
+          <span className="t-name block truncate">{item.who}</span>
           <span className="mt-0.5 block truncate text-[14px] text-muted-foreground">{item.why}</span>
         </span>
       </button>
@@ -297,7 +297,7 @@ function AskBobPanel({ className }: { className?: string }) {
         <Orb state={speech.listening ? "listening" : phase === "sending" ? "thinking" : "idle"} size={34} className="shrink-0 lg:hidden" />
         <Orb state={speech.listening ? "listening" : phase === "sending" ? "thinking" : "idle"} size={96} className="hidden lg:block" />
         <div className="min-w-0 flex-1">
-          <h2 id="askbob" className="text-[16px] font-semibold lg:text-[17px]">
+          <h2 id="askbob" className="t-section">
             Ask Bob
           </h2>
           <p className="hidden text-[14px] leading-snug text-muted-foreground lg:block">Talk or type. Bob looks it up, or prepares it for your OK.</p>
@@ -360,7 +360,7 @@ function AskBobPanel({ className }: { className?: string }) {
           enterKeyHint="send"
           maxLength={2000}
           className={cn(
-            "min-h-12 min-w-0 flex-1 resize-none rounded-[10px] bg-black/30 px-3.5 py-3 text-[16px] leading-6 text-foreground outline-none ring-1 ring-line-strong placeholder:text-subtle focus:ring-2 focus:ring-copper-500/80",
+            "min-h-12 min-w-0 flex-1 resize-none rounded-[10px] bg-[#0f0e0c] px-3.5 py-3 text-[16px] leading-6 text-foreground outline-none ring-1 ring-line-strong placeholder:text-subtle focus:ring-2 focus:ring-copper-500/80",
             busy && "opacity-70",
           )}
         />

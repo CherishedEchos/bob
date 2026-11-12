@@ -126,7 +126,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
               </button>
             ) : null}
             {menuOpen ? (
-              <div className="absolute right-0 top-12 z-20 w-72 rounded-2xl bg-card p-1.5 shadow-2xl ring-1 ring-line">
+              <div className="absolute right-0 top-12 z-20 w-72 raised rounded-2xl p-1.5">
                 <MenuItem
                   onClick={() => {
                     setHome(true);
@@ -185,7 +185,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
             </span>
           )}
           {menuOpen ? (
-            <div className="absolute right-0 top-12 z-20 w-72 rounded-2xl bg-card p-1.5 shadow-2xl ring-1 ring-line">
+            <div className="absolute right-0 top-12 z-20 w-72 raised rounded-2xl p-1.5">
               <MenuItem
                 onClick={() => {
                   setSpeakReplies(!speakReplies);
@@ -499,7 +499,7 @@ function AskBobHome({
                   type="button"
                   onClick={s.run}
                   disabled={busy || recording}
-                  className="flex h-11 w-full items-center gap-4 rounded-[14px] bg-white/[0.035] px-4 text-left text-[16.5px] text-[#FAF9F6] ring-1 ring-white/[0.13] transition hover:bg-white/[0.06] active:scale-[0.99] disabled:opacity-50"
+                  className="flex h-11 w-full items-center gap-4 rounded-xl bg-card px-4 text-left text-[16px] text-[#FAF9F6] shadow-[inset_0_1px_0_rgb(255_240_225/0.04)] ring-1 ring-line-strong transition hover:bg-raised active:scale-[0.99] active:bg-raised-hover disabled:opacity-40"
                 >
                   <s.icon className="size-[22px] shrink-0 text-white/85" strokeWidth={1.6} />
                   <span className="truncate">{s.label}</span>

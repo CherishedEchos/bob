@@ -122,7 +122,7 @@ function Sidebar() {
   const counts = useNavCounts();
   const { org, can } = useStore();
   return (
-    <aside className="theme-dark hidden w-[256px] shrink-0 flex-col border-r border-line bg-ink-900 lg:flex">
+    <aside className="hidden w-[256px] shrink-0 flex-col border-r border-line bg-card lg:flex">
       <div className="flex items-center gap-3 px-5 pb-5 pt-6">
         <OrgLogo org={org} size={40} />
         <div className="min-w-0 leading-tight">
@@ -142,8 +142,8 @@ function Sidebar() {
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex h-11 items-center gap-3 rounded-xl px-3.5 text-[16px] font-medium transition",
-                active ? "bg-copper-500/14 text-accent-fg ring-1 ring-copper-500/40" : "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
+                "relative flex h-11 items-center gap-3 rounded-xl px-3.5 text-[15.5px] font-medium transition active:bg-surface-3",
+                active ? "bg-raised text-[#faf9f6] ring-1 ring-line-strong before:absolute before:inset-y-2.5 before:-left-3 before:w-[3px] before:rounded-r before:bg-copper-400" : "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
               )}
             >
               <item.icon className={cn("size-[19px]", active && "text-accent-icon")} strokeWidth={1.8} />
@@ -222,7 +222,7 @@ function MobileHeader() {
   const { org } = useStore();
   const [moreOpen, setMoreOpen] = React.useState(false);
   return (
-    <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-line bg-background/90 px-3 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
+    <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-line bg-card/95 px-3 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
       <Link href="/today" aria-label="Today">
         <BobLogo height={24} />
       </Link>
@@ -307,7 +307,7 @@ function BottomNav() {
     can("finance.read") ? { href: "/invoices", label: "Money", icon: ReceiptText, count: 0 } : { href: "/tasks", label: "Tasks", icon: CheckSquare, count: due },
   ];
   return (
-    <nav aria-label="Main" className="pb-safe shrink-0 border-t border-line bg-ink-900/95 backdrop-blur lg:hidden">
+    <nav aria-label="Main" className="pb-safe shrink-0 border-t border-line bg-card/95 backdrop-blur lg:hidden">
       <div className="mx-auto grid h-[64px] max-w-lg grid-cols-5">
         {items.map((item) => {
           const active = pathname.startsWith(item.href);
@@ -316,7 +316,10 @@ function BottomNav() {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={cn("relative flex flex-col items-center justify-center gap-1 text-[12.5px] font-medium transition", active ? "text-accent-icon" : "text-muted-foreground")}
+              className={cn(
+                "relative flex flex-col items-center justify-center gap-1 text-[12.5px] font-medium transition active:bg-surface-2",
+                active ? "text-accent-fg before:absolute before:inset-x-5 before:top-0 before:h-[2px] before:rounded-b before:bg-copper-400" : "text-muted-foreground",
+              )}
             >
               <span className="relative">
                 <item.icon className="size-6" strokeWidth={active ? 2 : 1.7} />
