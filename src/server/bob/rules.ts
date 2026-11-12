@@ -18,6 +18,7 @@ import * as R from "@/server/services/records";
 import * as F from "@/server/services/finance";
 import * as Rep from "@/server/services/reports";
 import { BRIEFING_REQUEST, morningBriefing } from "./briefing";
+import { BATCH_REPLY_ALL, BATCH_REPLY_THEM, outstandingIds, prepareBatch } from "@/server/services/batch-replies";
 import { getAccountingProvider, getEmailProvider } from "@/server/integrations/registry";
 import { detectInjection } from "@/server/integrations/safety";
 import { syncInbox } from "@/server/integrations/inbox";
@@ -80,6 +81,8 @@ export interface BobState {
   lastFlow?: Flow;
   lastActionId?: string;
   focus?: { customerId?: string; jobId?: string; enquiryId?: string };
+  /** The last list of enquiries Bob showed, for "reply to all of them". */
+  lastList?: { kind: "needs_reply" | "new" | "follow_up" | "open"; label: string; ids: string[] };
 }
 
 export interface Reply {
@@ -299,6 +302,8 @@ async function route(t: Turn, text: string, lower: string) {
     const b = morningBriefing(t.ctx);
     return say(t, b.text, b.suggestion ? { chips: [{ kind: "send", label: b.suggestion.label, text: b.suggestion.request }] } : undefined);
   }
+  if (BATCH_REPLY_ALL.test(lower)) return batchReplies(t, outstandingIds(t.ctx), "outstanding");
+  if (BATCH_REPLY_THEM.test(lower)) return batchRepliesToList(t);
   if (!/\b(job|kitchen|extension|loft|wardrobes?|decking|staircase|stairs|bathroom|garden room|media wall)\b/.test(lower) && (/\b(what('?s| is| have i got| needs?)( got)? (on|sorting|doing|happening)( today)?|what needs (sorting|doing|my attention)|today'?s (priorities|summary|list)|my day|anything (urgent|i need to)|what should i (do|focus on)|priorities)\b/.test(lower) || /^(today|what'?s on)\??$/.test(lower)))
     return summary(t, false);
 
@@ -448,7 +453,60 @@ function listEnquiries(t: Turn, filter: "new" | "needs_reply" | "open") {
         ? `${plural(list.length, "person is", "people are")} waiting for a reply: ${listNames(list.map((e) => e.customerName), 4)}.`
         : `${plural(list.length, "open enquiry", "open enquiries")}.`;
   t.state.focus = { ...t.state.focus, enquiryId: first.id };
-  say(t, lead, { cards: r.cards, chips: [{ kind: "send", label: `Draft a reply to ${firstName(first.customerName)}`, text: `Draft a reply to ${first.customerName}` }] });
+  t.state.lastList = {
+    kind: filter,
+    label: filter === "new" ? plural(list.length, "new enquiry", "new enquiries") : filter === "needs_reply" ? `the ${plural(list.length, "enquiry", "enquiries")} waiting for a reply` : plural(list.length, "open enquiry", "open enquiries"),
+    ids: list.map((e) => e.id),
+  };
+  const chips: Chip[] = [{ kind: "send", label: `Draft a reply to ${firstName(first.customerName)}`, text: `Draft a reply to ${first.customerName}` }];
+  if (filter !== "open" && list.length > 1) chips.unshift({ kind: "send", label: `Draft all ${list.length} replies`, text: "Reply to all of them" });
+  say(t, lead, { cards: r.cards, chips });
+}
+
+/**
+ * "Reply to all outstanding enquiries": draft one reply each, then hand over
+ * to the review screen. Nothing is sent from the conversation — only the
+ * Send button on the review screen authorises sending.
+ */
+function batchReplies(t: Turn, ids: string[], what: "outstanding" | "list") {
+  if (!can(t.ctx.role, "enquiries.write")) return say(t, "Your account can't reply to enquiries. The owner or office can do that.");
+  if (!ids.length) return say(t, "You're all caught up — nobody's waiting on a reply.");
+  const r = prepareBatch(t.ctx, ids);
+  if (!r.ok) return say(t, r.error);
+  const { items, alreadyReplied, mode } = r.value;
+  if (!items.length) return say(t, `${listNames(alreadyReplied.map((a) => firstName(a.customerName)), 3)} ${alreadyReplied.length === 1 ? "has" : "have"} already had a reply, so there's nothing left to draft.`);
+  const flagged = items.filter((i) => i.flags.length);
+  const manual = items.filter((i) => !i.sendable);
+  const parts = [
+    `I've drafted ${plural(items.length, "reply", "replies")}${what === "outstanding" ? ", one for each enquiry waiting on you" : ""}.`,
+    flagged.length
+      ? `${plural(flagged.length, "needs", "need")} a decision first — ${listNames(flagged.map((i) => `${firstName(i.customerName)} (${[...new Set(i.flags.map((f) => (f.kind === "commitment" ? "a promise" : f.kind)))].join(" and ")})`), 4)}.`
+      : "",
+    alreadyReplied.length ? `${listNames(alreadyReplied.map((a) => firstName(a.customerName)), 3)} already had a reply, so I left ${alreadyReplied.length === 1 ? "them" : "those"} out.` : "",
+    manual.length && mode !== "copy" ? `${plural(manual.length, "is", "are")} Instagram or phone, so you'll copy ${manual.length === 1 ? "that one" : "those"} across yourself.` : "",
+    "Nothing is sent until you approve each one and tap Send.",
+  ].filter(Boolean);
+  t.state.lastList = { kind: "needs_reply", label: `the ${plural(items.length, "enquiry", "enquiries")} waiting for a reply`, ids: items.map((i) => i.enquiryId) };
+  say(t, parts.join(" "), {
+    chips: [{ kind: "link", label: `Review ${plural(items.length, "draft", "drafts")}`, href: `/replies?ids=${items.map((i) => i.enquiryId).join(",")}` }],
+  });
+}
+
+/** "Reply to all of them" — the list in context, or ask which list. */
+function batchRepliesToList(t: Turn) {
+  const last = t.state.lastList;
+  const outstanding = outstandingIds(t.ctx);
+  if (last && (last.kind === "needs_reply" || last.kind === "new")) return batchReplies(t, last.ids, "list");
+  const offer: Chip[] = outstanding.length
+    ? [{ kind: "send", label: `The ${outstanding.length} waiting for a reply`, text: "Reply to all outstanding enquiries" }]
+    : [];
+  if (last) {
+    return say(t, `Just checking — do you mean ${last.label}, or the ${plural(outstanding.length, "enquiry", "enquiries")} still waiting for a first reply? I can batch-draft first replies; follow-ups I'll do one at a time.`, {
+      chips: [...offer, { kind: "send", label: "Not now", text: "No" }],
+    });
+  }
+  if (!outstanding.length) return say(t, "You're all caught up — nobody's waiting on a reply.");
+  say(t, `Which ones do you mean? I can draft replies to the ${plural(outstanding.length, "enquiry", "enquiries")} waiting for a reply.`, { chips: offer });
 }
 
 /** Enquiries with a follow-up due and quotes waiting on an answer — from the same list as Today. */
@@ -463,6 +521,7 @@ function followUps(t: Turn) {
   const names = due.map((p) => p.who);
   const ids = due.map((p) => p.enquiryId).filter(Boolean) as string[];
   const first = due[0];
+  t.state.lastList = { kind: "follow_up", label: `the ${plural(due.length, "follow-up", "follow-ups")}`, ids };
   say(t, `${plural(due.length, "enquiry needs", "enquiries need")} following up: ${listNames(names, 4)}.`, {
     cards: ids.length ? [{ type: "enquiries", ids }] : undefined,
     chips: [{ kind: "send", label: `Draft a follow-up to ${firstName(first.who)}`, text: `Draft a follow-up to ${first.who}` }],

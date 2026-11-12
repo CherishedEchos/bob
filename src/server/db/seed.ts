@@ -45,7 +45,7 @@ interface Cast {
   phoneBase: number;
   people: Record<
     | "sophie" | "sophie2" | "dave" | "sarah" | "james" | "smith" | "patel" | "fletcher" | "claire" | "hannah"
-    | "tom" | "emma" | "ben" | "rachel" | "laura" | "nadia" | "greg" | "amy" | "unique",
+    | "tom" | "emma" | "ben" | "rachel" | "laura" | "nadia" | "greg" | "amy" | "unique" | "chris",
     Person
   >;
 }
@@ -96,6 +96,7 @@ const NINETY3: Cast = {
     greg: { first: "Greg", last: "Wilson" },
     amy: { first: "Amy", last: "Shah" },
     unique: { first: "Harriet", last: "Quill" },
+    chris: { first: "Chris", last: "Walker" },
   },
 };
 
@@ -144,6 +145,7 @@ const RIDGEWAY: Cast = {
     greg: { first: "Neil", last: "Foster" },
     amy: { first: "Ella", last: "Marsh" },
     unique: { first: "Bartholomew", last: "Vane" },
+    chris: { first: "Rob", last: "Turner" },
   },
 };
 
@@ -280,6 +282,12 @@ function buildScenario(c: Cast) {
     key: "stairs_bh", person: "emma", source: "instagram", instagram: true, title: "Staircase refurbishment",
     location: "Burgess Hill", at: hoursAgo(7), status: "new", priority: "low", customer: false,
     description: "Do you do staircase makeovers? Want to swap the spindles for glass and put oak treads on.",
+  });
+  addEnquiry({
+    key: "office_cuckfield", person: "chris", source: "email", title: "Garden office", location: "Cuckfield",
+    at: hoursAgo(30), status: "new", priority: "medium", customer: false,
+    description:
+      "Hi, we'd like a timber garden office at the end of the garden, about 3.5m x 2.5m with power. Could you start on Monday 1st December? We really need it finished before Christmas. Thanks, " + P.chris.first,
   });
   addEnquiry({
     key: "bathroom_reigate", person: "sophie2", source: "website", title: "Bathroom refit", location: "Reigate",

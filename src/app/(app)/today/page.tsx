@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AlarmClock, ArrowUpRight, Check, FileText, ReceiptText, Reply, ChevronRight, FlaskConical, HardHat, Mic, Loader2, PartyPopper, Play, Plus, SendHorizontal } from "lucide-react";
+import { AlarmClock, ArrowUpRight, Check, FileText, ReceiptText, Reply, ChevronRight, FlaskConical, HardHat, Mic, Loader2, PartyPopper, Play, Plus, SendHorizontal, Sparkles } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { useBob } from "@/lib/bob/provider";
@@ -206,10 +206,11 @@ const TONE: Record<Tone, { num: string; icon: string; bar: string; wash: string 
 };
 
 function Summary({ data, finance, className }: { data: Snapshot; finance: boolean; className?: string }) {
+  const { can } = useStore();
   const awaiting = data.enquiries.filter(needsReply).length;
   const quotes = data.quotes.filter(quoteNeedsFollowUp).length;
-  const figures: { value: number; label: string; href: string; tone: Tone; Icon: React.ComponentType<{ className?: string }> }[] = [
-    { value: awaiting, label: "Awaiting reply", href: "/enquiries?tab=reply", tone: "amber", Icon: Reply },
+  const figures: { value: number; label: string; href: string; tone: Tone; Icon: React.ComponentType<{ className?: string }>; batch?: boolean }[] = [
+    { value: awaiting, label: "Awaiting reply", href: "/enquiries?tab=reply", tone: "amber", Icon: Reply, batch: awaiting > 0 && can("enquiries.write") },
     { value: quotes, label: "Quotes to chase", href: "/enquiries?tab=follow", tone: "sky", Icon: FileText },
     finance
       ? { value: data.invoices.filter(isInvoiceOverdue).length, label: "Overdue invoices", href: "/invoices?filter=overdue", tone: "rose", Icon: ReceiptText }
@@ -221,21 +222,32 @@ function Summary({ data, finance, className }: { data: Snapshot; finance: boolea
         const t = TONE[f.tone];
         const on = f.value > 0;
         return (
-          <Link
+          <div
             key={f.label}
-            href={f.href}
             className={cn("group relative flex flex-col gap-1.5 bg-gradient-to-b to-transparent px-3 py-3 transition hover:bg-surface-2 sm:px-5 lg:py-5", on ? t.wash : "from-transparent")}
           >
+            {/* The whole tile opens the list; the Draft replies button sits above it. */}
+            <Link href={f.href} aria-label={`${f.value} ${f.label}`} className="absolute inset-0 z-0" />
             <span aria-hidden className={cn("absolute inset-x-0 top-0 h-[2px]", on ? t.bar : "bg-transparent")} />
-            <span className="flex items-center justify-between">
+            <span aria-hidden className="pointer-events-none flex items-center justify-between">
               <span className={cn("grid size-7 place-items-center rounded-lg ring-1 lg:size-8", on ? t.icon : "bg-surface-2 text-subtle ring-line")}>
                 <f.Icon className="size-3.5 lg:size-4" />
               </span>
               <ArrowUpRight className="hidden size-4 text-subtle transition group-hover:text-accent-fg sm:block" />
             </span>
-            <span className={cn("tabular text-[30px] font-semibold leading-none tracking-tight lg:text-[40px]", on ? t.num : "text-subtle")}>{f.value}</span>
-            <span className="text-[13px] leading-tight text-muted-foreground sm:text-[14px] lg:text-[15px]">{f.label}</span>
-          </Link>
+            <span aria-hidden className={cn("pointer-events-none tabular text-[30px] font-semibold leading-none tracking-tight lg:text-[40px]", on ? t.num : "text-subtle")} data-figure={f.label}>
+              {f.value}
+            </span>
+            <span aria-hidden className="pointer-events-none text-[13px] leading-tight text-muted-foreground sm:text-[14px] lg:text-[15px]">{f.label}</span>
+            {f.batch ? (
+              <Link
+                href="/replies"
+                className="relative z-10 mt-1 inline-flex h-8 w-fit items-center gap-1.5 whitespace-nowrap rounded-lg bg-copper-500/15 px-2 text-[13px] sm:px-2.5 font-semibold text-accent-fg ring-1 ring-copper-500/30 transition hover:bg-copper-500/25"
+              >
+                <Sparkles className="hidden size-3.5 sm:block" /> Draft replies
+              </Link>
+            ) : null}
+          </div>
         );
       })}
     </nav>

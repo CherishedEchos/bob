@@ -84,7 +84,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
         {/* Ask Bob has its own back button and bottom controls. */}
         {!assistant ? <BottomNav /> : null}
       </div>
-      {!assistant && pathname !== "/today" ? <AskBobButton /> : null}
+      {!assistant && pathname !== "/today" && pathname !== "/replies" ? <AskBobButton /> : null}
     </div>
   );
 }

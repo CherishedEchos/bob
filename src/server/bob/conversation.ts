@@ -12,6 +12,7 @@ import { getActionView } from "./actions";
 import { claudeConfigured, claudeTurn } from "./claude";
 import { rulesTurn, type BobState, type Reply } from "./rules";
 import { BRIEFING_REQUEST } from "./briefing";
+import { isBatchReplyRequest } from "@/server/services/batch-replies";
 
 interface StoredPayload {
   text: string;
@@ -94,8 +95,9 @@ export async function handleTurn(ctx: Ctx, input: { conversationId?: string; tex
 
   const userMsg = appendMessage(bobCtx, conv.id, "user", { text: input.text, via: input.via });
 
-  // The briefing is built only from records, so it's the same whichever engine is on.
-  let engine = BRIEFING_REQUEST.test(input.text) ? "rules" : activeEngine();
+  // The briefing and batch replies are built only from records (and batch
+  // replies go to a review screen), so they're the same whichever engine is on.
+  let engine = BRIEFING_REQUEST.test(input.text) || isBatchReplyRequest(input.text) ? "rules" : activeEngine();
   let out: { replies: Reply[]; state: BobState; changed: boolean };
   try {
     out = engine === "claude" ? await claudeTurn(bobCtx, input.text, history, state, conv.id) : await rulesTurn(bobCtx, input.text, state, conv.id);
