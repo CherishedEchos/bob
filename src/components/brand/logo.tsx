@@ -12,7 +12,17 @@ import { OrbAvatar } from "@/components/assistant/orb";
  * NOTE: public/brand/ninety3-logo.png is cropped from the supplied reference
  * mock-up as a stand-in. Replace it with Ninety3's original artwork.
  */
-export function BobWordmark({ className, org }: { className?: string; org?: Pick<OrgConfig, "shortName"> }) {
+export function BobWordmark({ className, org, compact }: { className?: string; org?: Pick<OrgConfig, "shortName">; compact?: boolean }) {
+  if (compact)
+    return (
+      <div className={cn("flex items-center gap-2", className)}>
+        <OrbAvatar className="size-8" />
+        <div className="flex items-baseline gap-1.5 leading-none">
+          <span className="text-[18px] font-bold tracking-tight">Bob</span>
+          {org ? <span className="text-[13.5px] text-muted-foreground">for {org.shortName}</span> : null}
+        </div>
+      </div>
+    );
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
       <OrbAvatar />

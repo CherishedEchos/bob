@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Check, ChevronRight, FlaskConical, HardHat, Mic, PartyPopper, Plus, SendHorizontal, Sparkles, Square } from "lucide-react";
+import { ArrowUpRight, Check, ChevronRight, FlaskConical, HardHat, Mic, PartyPopper, Plus, SendHorizontal, Sparkles } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { useBob } from "@/lib/bob/provider";
@@ -66,18 +66,20 @@ export default function TodayPage() {
           <p className="mt-0.5 text-[14.5px] text-muted-foreground lg:text-[15px]">{date}</p>
         </div>
         {can("enquiries.write") ? (
-          <Button size="sm" aria-label="Add enquiry" className="h-10 rounded-[10px] px-3 text-[15px] sm:px-4" onClick={() => ui.openForm({ form: "enquiry" })}>
-            <Plus /> <span className="sm:hidden">Add</span>
-            <span className="hidden sm:inline">Add enquiry</span>
+          <Button
+            size="sm"
+            aria-label="Add enquiry"
+            className="h-11 rounded-[10px] bg-surface-2 px-3.5 text-[15px] text-foreground ring-1 ring-line-strong hover:bg-surface-3 lg:h-10 lg:bg-primary lg:px-4 lg:text-white lg:ring-0 lg:hover:bg-copper-600"
+            onClick={() => ui.openForm({ form: "enquiry" })}
+          >
+            <Plus /> <span className="lg:hidden">Add</span>
+            <span className="hidden lg:inline">Add enquiry</span>
           </Button>
         ) : null}
       </header>
 
       {/* 3b · Ask Bob — straight after the header on phones, right column on desktop */}
       <AskBobPanel onAsk={askBob} className="lg:col-span-2 lg:col-start-4 lg:row-start-3 lg:self-start" />
-
-      {/* 2 · Three-number summary */}
-      <Summary data={data} finance={finance} className="lg:col-span-5 lg:row-start-2" />
 
       {/* 3a · Needs attention */}
       <section aria-labelledby="attn" className="panel overflow-hidden lg:col-span-3 lg:col-start-1 lg:row-start-3 lg:self-start">
@@ -105,6 +107,9 @@ export default function TodayPage() {
           </div>
         )}
       </section>
+
+      {/* 2 · Three-number summary — under the priorities on phones, top row on desktop */}
+      <Summary data={data} finance={finance} className="lg:col-span-5 lg:row-start-2" />
 
       {/* 4 · Active jobs with next steps */}
       <section aria-labelledby="jobs" className="panel overflow-hidden lg:col-span-5 lg:row-start-4">
@@ -244,29 +249,38 @@ function AttentionRow({ item, onAskBob }: { item: PriorityItem; onAskBob: (t: st
 
 /* ------------------------------ Ask Bob ------------------------------ */
 
-/** Voice and typing go through the same Bob request; nothing here acts without approval. */
+/**
+ * Voice and typing go through the same Bob request; nothing here acts without
+ * approval. Mic states are spelled out: starting → listening (words appear as
+ * they're captured) → heard and sent automatically (no Send needed).
+ */
 function AskBobPanel({ onAsk, className }: { onAsk: (t: string, via?: "voice" | "text") => void; className?: string }) {
   const [text, setText] = React.useState("");
-  const speech = useSpeechRecognition((t) => onAsk(t, "voice"));
+  const [heard, setHeard] = React.useState<string | null>(null);
+  const speech = useSpeechRecognition((t) => {
+    setHeard(t);
+    onAsk(t, "voice");
+  });
   const toggleMic = () => {
     if (speech.listening) speech.stop();
+    else if (speech.starting) speech.cancel();
     else {
       stopSpeaking();
+      setHeard(null);
       speech.start();
     }
   };
   const live = speech.starting || speech.listening;
-  const status = speech.starting ? "Starting the microphone…" : speech.listening ? speech.interim || "Listening… tap Stop when you're done" : null;
   return (
-    <section aria-labelledby="askbob" className={cn("panel relative overflow-hidden p-4 lg:p-5", className)}>
-      <div className="flex items-center gap-3 lg:flex-col lg:items-center lg:gap-2 lg:pb-1 lg:pt-1 lg:text-center">
-        <Orb state={speech.listening ? "listening" : "idle"} size={40} className="shrink-0 lg:hidden" />
+    <section aria-labelledby="askbob" className={cn("panel relative overflow-hidden p-3 lg:p-5", className)}>
+      <div className="flex items-center gap-2.5 lg:flex-col lg:gap-2 lg:pb-1 lg:pt-1 lg:text-center">
+        <Orb state={speech.listening ? "listening" : "idle"} size={34} className="shrink-0 lg:hidden" />
         <Orb state={speech.listening ? "listening" : "idle"} size={96} className="hidden lg:block" />
         <div className="min-w-0">
-          <h2 id="askbob" className="text-[17px] font-semibold">
+          <h2 id="askbob" className="text-[16px] font-semibold lg:text-[17px]">
             Ask Bob
           </h2>
-          <p className="hidden text-[14px] leading-snug text-muted-foreground sm:block">Talk or type. Bob looks it up, or prepares it for your OK.</p>
+          <p className="hidden text-[14px] leading-snug text-muted-foreground lg:block">Talk or type. Bob looks it up, or prepares it for your OK.</p>
         </div>
       </div>
 
@@ -276,25 +290,28 @@ function AskBobPanel({ onAsk, className }: { onAsk: (t: string, via?: "voice" | 
         disabled={!speech.supported}
         aria-pressed={speech.listening}
         className={cn(
-          "mt-3 flex h-12 w-full items-center lg:mt-4 justify-center gap-2 rounded-[10px] text-[16px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-45",
+          "mt-2.5 flex h-12 w-full items-center justify-center gap-2 rounded-[10px] text-[16px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 lg:mt-4",
           live ? "bg-red-500/15 text-red-100 ring-1 ring-red-400/50" : "bg-primary text-white hover:bg-copper-600",
         )}
       >
-        {live ? <Square className="size-4 fill-current" /> : <Mic className="size-5" />}
-        {live ? "Stop" : "Tap to talk"}
+        {speech.listening ? (
+          <>
+            <span className="relative flex size-2.5">
+              <span className="absolute inset-0 animate-ping rounded-full bg-red-400" />
+              <span className="relative size-2.5 rounded-full bg-red-500" />
+            </span>
+            Listening · tap to finish
+          </>
+        ) : speech.starting ? (
+          "Starting the mic…"
+        ) : (
+          <>
+            <Mic className="size-5" /> Tap to talk
+          </>
+        )}
       </button>
 
-      {status ? (
-        <p role="status" className="mt-2 flex items-center gap-2 text-[14.5px] text-foreground">
-          <span className="size-2 shrink-0 animate-pulse rounded-full bg-red-500" /> {status}
-        </p>
-      ) : speech.error ? (
-        <p role="alert" className="mt-2 text-[14px] text-warn-fg">
-          {speech.error} Typing still works.
-        </p>
-      ) : !speech.supported ? (
-        <p className="mt-2 text-[13.5px] text-subtle">Voice isn&apos;t available in this browser. Typing works the same.</p>
-      ) : null}
+      <VoiceStatus speech={speech} heard={heard} />
 
       <form
         className="mt-2 flex gap-2 lg:mt-3"
@@ -302,6 +319,7 @@ function AskBobPanel({ onAsk, className }: { onAsk: (t: string, via?: "voice" | 
           e.preventDefault();
           if (text.trim()) onAsk(text.trim());
           setText("");
+          setHeard(null);
         }}
       >
         <input
@@ -316,19 +334,52 @@ function AskBobPanel({ onAsk, className }: { onAsk: (t: string, via?: "voice" | 
           type="submit"
           aria-label="Send to Bob"
           disabled={!text.trim()}
-          className="grid size-12 shrink-0 place-items-center rounded-[10px] bg-surface-3 text-foreground ring-1 ring-line-strong transition hover:bg-copper-500/15 hover:text-accent-fg disabled:opacity-40"
+          className={cn(
+            "grid size-12 shrink-0 place-items-center rounded-[10px] ring-1 transition disabled:opacity-40",
+            text.trim() ? "bg-copper-500/20 text-accent-fg ring-copper-500/50" : "bg-surface-3 text-foreground ring-line-strong",
+          )}
         >
           <SendHorizontal className="size-[18px]" />
         </button>
       </form>
 
-      <button onClick={() => onAsk(EXAMPLE)} className="mt-2 flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-[14px] lg:mt-3 lg:py-1.5 text-muted-foreground transition hover:text-foreground">
+      <button onClick={() => onAsk(EXAMPLE)} className="mt-3 hidden w-full items-center gap-2 rounded-lg px-1 py-1.5 text-left text-[14px] text-muted-foreground transition hover:text-foreground lg:flex">
         <Sparkles className="size-4 shrink-0 text-accent-icon" />
         <span>
           Try: <span className="text-foreground">“{EXAMPLE}”</span>
         </span>
       </button>
     </section>
+  );
+}
+
+function VoiceStatus({ speech, heard }: { speech: ReturnType<typeof useSpeechRecognition>; heard: string | null }) {
+  let body: React.ReactNode = null;
+  if (speech.starting) body = <span className="text-muted-foreground">Allow the microphone if your phone asks.</span>;
+  else if (speech.listening)
+    body = speech.interim ? (
+      <span>
+        <span className="text-subtle">Hearing: </span>“{speech.interim}”
+      </span>
+    ) : (
+      <span className="text-muted-foreground">Speak now — your words will appear here.</span>
+    );
+  else if (speech.error) body = <span className="text-warn-fg">{speech.error} Typing still works.</span>;
+  else if (heard)
+    body = (
+      <span className="flex items-start gap-1.5">
+        <Check className="mt-0.5 size-4 shrink-0 text-good-fg" />
+        <span>
+          Heard “{heard}” <span className="text-muted-foreground">· sent to Bob, no need to tap Send</span>
+        </span>
+      </span>
+    );
+  else if (!speech.supported) body = <span className="text-subtle">Voice isn&apos;t available in this browser. Typing works the same.</span>;
+  if (!body) return null;
+  return (
+    <p role="status" aria-live="polite" className="mt-2 px-0.5 text-[14px] leading-snug text-foreground">
+      {body}
+    </p>
   );
 }
 

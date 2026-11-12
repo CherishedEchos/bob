@@ -58,7 +58,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
         {pathname !== "/today" ? <DemoBanner /> : null}
         {!assistant ? <MobileHeader /> : null}
         <main className={cn("min-h-0 flex-1", assistant ? "overflow-hidden" : "overflow-y-auto bg-app")}>
-          {assistant ? children : <div className="mx-auto w-full max-w-6xl px-4 pb-24 pt-4 lg:px-10 lg:pb-10 lg:pt-8">{children}</div>}
+          {assistant ? children : <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-4 lg:px-10 lg:pb-10 lg:pt-8">{children}</div>}
         </main>
         <BottomNav />
       </div>
@@ -199,12 +199,12 @@ function MobileHeader() {
   const { org } = useStore();
   const [moreOpen, setMoreOpen] = React.useState(false);
   return (
-    <header className="flex h-[60px] shrink-0 items-center justify-between bg-background/90 px-3 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
+    <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-line bg-background/90 px-3 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
       <Link href="/today" aria-label="Today">
-        <BobWordmark org={org} />
+        <BobWordmark org={org} compact />
       </Link>
       <div className="flex items-center gap-1">
-        <OrgLogo org={org} size={32} />
+        <OrgLogo org={org} size={28} />
         <button onClick={() => setMoreOpen(true)} aria-label="More" className="grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-surface-3">
           <LayoutGrid className="size-[22px]" />
         </button>

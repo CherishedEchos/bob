@@ -248,7 +248,7 @@ export function todaysPriorities(
       title: `Reply to ${e.customerName}`,
       detail: `${e.title}, ${e.location} · waiting ${waited}`,
       who: e.customerName,
-      why: `Awaiting your reply · ${waited} · ${e.title}`,
+      why: `Awaiting reply · ${waited} · ${e.title}`,
       urgency: (e.priority === "high" ? 0 : 10) + (hrs > 24 ? 0 : 5),
       key: `enquiry:${e.id}`,
       enquiryId: e.id,
