@@ -36,7 +36,21 @@ export function ttsStatus(env: Record<string, string | undefined> = process.env)
   return c ? { configured: true as const, voiceId: c.voiceId, model: c.modelId } : { configured: false as const };
 }
 
-export type TtsResult = { ok: true; audio: ArrayBuffer; contentType: string; voiceId: string; cached: boolean } | { ok: false; status: number; error: string };
+export type TtsResult =
+  | { ok: true; audio: ArrayBuffer; contentType: string; voiceId: string; cached: boolean }
+  | { ok: false; status: number; error: string; reason?: string };
+
+/** ElevenLabs' own explanation (e.g. "voice_not_found", "free_users_not_allowed"), trimmed. Never contains the key. */
+async function upstreamReason(res: Response): Promise<string> {
+  try {
+    const j = (await res.json()) as { detail?: { status?: string; message?: string } | string };
+    const d = j.detail;
+    const text = typeof d === "string" ? d : [d?.status, d?.message].filter(Boolean).join(": ");
+    return (text || `HTTP ${res.status}`).replace(/sk_[A-Za-z0-9]+/g, "[key]").slice(0, 220);
+  } catch {
+    return `HTTP ${res.status}`;
+  }
+}
 
 // Small in-memory cache so replaying the same reply doesn't spend credits again.
 const CACHE_MAX = 60;
@@ -72,8 +86,9 @@ export async function synthesize(text: string, opts: { env?: Record<string, stri
     return { ok: false, status: 502, error: "voice_unavailable" };
   }
   if (!res.ok) {
-    console.warn(`[tts] ElevenLabs returned ${res.status}`);
-    return { ok: false, status: res.status === 401 ? 503 : 502, error: res.status === 401 ? "not_configured" : "voice_unavailable" };
+    const reason = await upstreamReason(res);
+    console.warn(`[tts] ElevenLabs returned ${res.status}: ${reason}`);
+    return { ok: false, status: res.status === 401 ? 503 : 502, error: res.status === 401 ? "not_configured" : "voice_unavailable", reason: `ElevenLabs ${res.status} — ${reason}` };
   }
   const audio = await res.arrayBuffer();
   const contentType = res.headers.get("content-type") || "audio/mpeg";

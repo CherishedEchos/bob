@@ -126,6 +126,7 @@ export function ReadAloudButton({ message, request }: { message: BobMessage; req
           {played === "elevenlabs" ? "ElevenLabs voice" : "Device voice (fallback)"}
         </span>
       ) : null}
+      {played === "browser" && out.fallbackReason ? <span className="w-full text-[12px] text-subtle">Why: {out.fallbackReason}</span> : null}
     </div>
   );
 }

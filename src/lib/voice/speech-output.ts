@@ -27,9 +27,11 @@ interface State {
   blocked: boolean;
   /** Which voice the most recent reply played with. */
   lastVoice: { id: string; engine: VoiceEngine } | null;
+  /** Why ElevenLabs wasn't used last time (shown next to the fallback label). */
+  fallbackReason: string | null;
 }
 
-let state: State = { speakingId: null, loadingId: null, blocked: false, lastVoice: null };
+let state: State = { speakingId: null, loadingId: null, blocked: false, lastVoice: null, fallbackReason: null };
 const listeners = new Set<() => void>();
 let recording = false;
 let pending: { id: string; text: string } | null = null;
@@ -136,11 +138,14 @@ async function playEleven(id: string, text: string, my: number): Promise<boolean
       signal: fetchCtl.signal,
     });
   } catch {
+    if (my === token) set({ fallbackReason: "Couldn't reach the voice service" });
     return my !== token; // aborted (superseded) counts as handled; otherwise fall back
   }
   if (my !== token) return true;
   if (!res.ok) {
     if (res.status === 503) elevenOffUntil = Date.now() + 5 * 60 * 1000;
+    const j = (await res.json().catch(() => null)) as { error?: string; reason?: string } | null;
+    set({ fallbackReason: j?.reason ?? (j?.error === "not_configured" ? "ElevenLabs isn't set up" : `Voice service error ${res.status}`) });
     return false;
   }
   const blob = await res.blob();
@@ -167,7 +172,7 @@ async function playEleven(id: string, text: string, my: number): Promise<boolean
     }
     return false;
   }
-  if (my === token) set({ speakingId: id, loadingId: null, blocked: false, lastVoice: { id, engine: "elevenlabs" } });
+  if (my === token) set({ speakingId: id, loadingId: null, blocked: false, lastVoice: { id, engine: "elevenlabs" }, fallbackReason: null });
   return true;
 }
 

@@ -26,7 +26,7 @@ export const POST = authed(async (req, ctx) => {
   const text = typeof body.text === "string" ? body.text : "";
   if (limited(ctx.userId)) throw new HttpError(429, "Too many spoken replies — try again in a few minutes.");
   const r = await synthesize(text);
-  if (!r.ok) return Response.json({ error: r.error }, { status: r.status, headers: { "Cache-Control": "no-store" } });
+  if (!r.ok) return Response.json({ error: r.error, reason: r.reason }, { status: r.status, headers: { "Cache-Control": "no-store" } });
   return new Response(r.audio, {
     headers: {
       "Content-Type": r.contentType,
