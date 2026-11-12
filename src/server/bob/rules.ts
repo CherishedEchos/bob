@@ -17,7 +17,7 @@ import type { Ctx } from "@/server/context";
 import * as R from "@/server/services/records";
 import * as F from "@/server/services/finance";
 import * as Rep from "@/server/services/reports";
-import { morningBriefing } from "./briefing";
+import { BRIEFING_REQUEST, morningBriefing } from "./briefing";
 import { getAccountingProvider, getEmailProvider } from "@/server/integrations/registry";
 import { detectInjection } from "@/server/integrations/safety";
 import { syncInbox } from "@/server/integrations/inbox";
@@ -295,7 +295,7 @@ async function route(t: Turn, text: string, lower: string) {
   if (/\b(what can you do|help me|how do (i|you) use|what do you do)\b/.test(lower) || lower === "help") return help(t);
 
   // Today / priorities (not "what's happening with the kitchen job")
-  if (/\b(morning |daily )?briefing\b|\bread me my day\b|\bbrief me\b|\bhow'?s my day( looking)?\b/.test(lower)) {
+  if (BRIEFING_REQUEST.test(lower)) {
     const b = morningBriefing(t.ctx);
     return say(t, b.text, b.suggestion ? { chips: [{ kind: "send", label: b.suggestion.label, text: b.suggestion.request }] } : undefined);
   }

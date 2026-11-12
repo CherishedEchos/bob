@@ -2,13 +2,12 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AlarmClock, ArrowUpRight, Check, FileText, ReceiptText, Reply, ChevronRight, FlaskConical, HardHat, Mic, Loader2, PartyPopper, Play, Plus, SendHorizontal, Sparkles, X } from "lucide-react";
+import { AlarmClock, ArrowUpRight, Check, FileText, ReceiptText, Reply, ChevronRight, FlaskConical, HardHat, Mic, Loader2, PartyPopper, Play, Plus, SendHorizontal } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { useBob } from "@/lib/bob/provider";
 import { useVoiceComposer } from "@/lib/voice/use-voice-composer";
-import { ComposerStatus, ReadAloudButton, SpeakRepliesToggle } from "@/components/assistant/voice-bits";
-import { prime, speakReply, stopSpeaking } from "@/lib/voice/speech-output";
+import { ComposerStatus, SpeakRepliesToggle } from "@/components/assistant/voice-bits";
 import { JOB_STATUS_LABEL, isActiveJob, isInvoiceOverdue, jobFinance, needsReply, quoteNeedsFollowUp, tasksDue, todaysPriorities, type PriorityItem } from "@/lib/derive";
 import type { Job, Snapshot } from "@/lib/types";
 import { cn, gbp, timeAgo, formatDateInline } from "@/lib/utils";
@@ -28,8 +27,6 @@ interface Reports {
 
 /** Spacing scale: 4 · 8 · 12 · 16 · 24 · 32. Panels pad 16 (phone) / 20 (desktop). */
 const ROWS = 4;
-const BRIEFING_ID = "morning-briefing";
-const EXAMPLE = "What needs sorting today?";
 
 export default function TodayPage() {
   const { data, can, org } = useStore();
@@ -43,17 +40,6 @@ export default function TodayPage() {
   const activeJobs = data.jobs.filter(isActiveJob);
   const date = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
   const shortDate = new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-  const [briefing, setBriefing] = React.useState<{ text: string; suggestion?: { label: string; request: string } } | null>(null);
-  const [briefingLoading, setBriefingLoading] = React.useState(false);
-  const playBriefing = async () => {
-    prime(); // the tap unlocks audio for the spoken briefing (iOS)
-    setBriefingLoading(true);
-    const r = await api<{ text: string; suggestion?: { label: string; request: string } }>("/api/briefing");
-    setBriefingLoading(false);
-    if (r.status !== 200) return;
-    setBriefing(r.body);
-    speakReply(BRIEFING_ID, r.body.text);
-  };
   const askBob = (t: string, via: "voice" | "text" = "text") => {
     void send(t, via);
     ui.setAssistantOpen(true);
@@ -66,7 +52,7 @@ export default function TodayPage() {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-6">
       {/* 1 · Header */}
-      <div className="space-y-4 lg:col-span-5 lg:row-start-1">
+      <div className="lg:col-span-5 lg:row-start-1">
       <header className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
@@ -80,20 +66,10 @@ export default function TodayPage() {
               </span>
             ) : null}
           </div>
-          <div className="mt-0.5 flex items-center gap-2">
-            <p className="t-meta whitespace-nowrap lg:text-[15px]">
-              <span className="sm:hidden">{shortDate}</span>
-              <span className="hidden sm:inline">{date}</span>
-            </p>
-            <button
-              type="button"
-              onClick={playBriefing}
-              disabled={briefingLoading}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-copper-500/12 px-2.5 text-[13.5px] font-semibold text-accent-fg ring-1 ring-copper-500/35 transition hover:bg-copper-500/18 active:bg-copper-500/25 disabled:opacity-60"
-            >
-              {briefingLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5 fill-current" />} Briefing
-            </button>
-          </div>
+          <p className="t-meta mt-0.5 whitespace-nowrap lg:text-[15px]">
+            <span className="sm:hidden">{shortDate}</span>
+            <span className="hidden sm:inline">{date}</span>
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <SnapPhotoButton className="size-11 rounded-xl bg-raised text-foreground ring-1 ring-line-strong hover:bg-raised-hover active:bg-surface-3 lg:h-10 lg:w-auto lg:px-3.5 lg:text-[15px] lg:font-semibold" label={false} />
@@ -110,40 +86,6 @@ export default function TodayPage() {
           ) : null}
         </div>
       </header>
-      {briefing ? (
-        <section aria-label="Morning briefing" className="panel relative p-4 lg:p-5">
-          <button
-            type="button"
-            aria-label="Close briefing"
-            onClick={() => {
-              stopSpeaking();
-              setBriefing(null);
-            }}
-            className="absolute right-2 top-2 grid size-10 place-items-center rounded-full text-subtle hover:bg-surface-3 hover:text-foreground"
-          >
-            <X className="size-4" />
-          </button>
-          <div className="t-eyebrow text-accent-fg">Morning briefing</div>
-          <p className="mt-1.5 pr-8 text-[16px] leading-relaxed text-foreground">{briefing.text}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <ReadAloudButton message={{ id: BRIEFING_ID, role: "assistant", text: briefing.text, createdAt: "" }} />
-            {briefing.suggestion ? (
-              <button
-                type="button"
-                onClick={() => {
-                  stopSpeaking();
-                  setBriefing(null);
-                  askBob(briefing.suggestion!.request);
-                }}
-                className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-[13.5px] font-medium text-accent-fg hover:bg-copper-500/10"
-              >
-                {briefing.suggestion.label} <ChevronRight className="size-4" />
-              </button>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-
       </div>
 
       {/* 3b · Ask Bob — straight after the header on phones, right column on desktop */}
@@ -407,6 +349,15 @@ function AskBobPanel({ className }: { className?: string }) {
         )}
       </button>
 
+      <button
+        type="button"
+        onClick={c.hearBriefing}
+        disabled={busy || recording}
+        className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-raised text-[15px] font-semibold text-foreground ring-1 ring-line-strong transition hover:bg-raised-hover active:bg-surface-3 disabled:opacity-45"
+      >
+        <Play className="size-3.5 fill-current text-accent-icon" /> Hear today&apos;s briefing
+      </button>
+
       <ComposerStatus phase={phase} interim={speech.interim} error={speech.error} notice={c.notice} supported={speech.supported} />
 
       <form className="mt-2 flex items-end gap-2 lg:mt-3" onSubmit={c.submit}>
@@ -457,12 +408,6 @@ function AskBobPanel({ className }: { className?: string }) {
         </div>
       ) : null}
 
-      <button onClick={() => c.ask(EXAMPLE)} className="mt-3 hidden w-full items-center gap-2 rounded-lg px-1 py-1.5 text-left text-[14px] text-muted-foreground transition hover:text-foreground lg:flex">
-        <Sparkles className="size-4 shrink-0 text-accent-icon" />
-        <span>
-          Try: <span className="text-foreground">“{EXAMPLE}”</span>
-        </span>
-      </button>
     </section>
   );
 }

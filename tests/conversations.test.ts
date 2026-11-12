@@ -264,3 +264,24 @@ describe("Voice-to-quote", () => {
     expect(c.text).toMatch(/quote/i);
   });
 });
+
+describe("Hear today's briefing (button)", () => {
+  it("gives the same record-based briefing with a first-task shortcut", async () => {
+    const c = await new Chat(ctxFor(N93_OWNER)).say("Hear today's briefing");
+    expect(c.text).toMatch(/Here's your day/);
+    const chip = c.last.flatMap((m) => m.chips ?? [])[0];
+    expect(chip?.label).toMatch(/^Draft \w+'s reply$/);
+    expect(c.action).toBeUndefined();
+  });
+});
+
+describe("Briefing shortcut", () => {
+  it("goes straight to the right draft even when the customer has two enquiries", async () => {
+    const c = new Chat(ctxFor(N93_OWNER));
+    await c.say("Hear today's briefing");
+    const chip = c.last.flatMap((m) => m.chips ?? [])[0] as { text: string };
+    await c.say(chip.text);
+    expect(c.action?.tool).toBe("save_email_draft");
+    expect(c.text).not.toMatch(/Which enquiry/);
+  });
+});

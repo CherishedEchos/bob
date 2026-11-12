@@ -18,7 +18,7 @@ interface BobValue {
   speakReplies: boolean;
   setSpeakReplies(v: boolean): void;
   /** "ok" once Bob has answered; "failed" keeps the caller's text for a retry; "busy" while another request is in flight. */
-  send(text: string, via?: "voice" | "text"): Promise<SendResult>;
+  send(text: string, via?: "voice" | "text", opts?: { speak?: boolean }): Promise<SendResult>;
   decide(actionId: string, decision: "approve" | "cancel" | "undo", edits?: Record<string, string>): Promise<ActionView | null>;
   newConversation(): Promise<void>;
 }
@@ -69,7 +69,7 @@ export function BobProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const send = React.useCallback(
-    async (text: string, via: "voice" | "text" = "text"): Promise<SendResult> => {
+    async (text: string, via: "voice" | "text" = "text", opts: { speak?: boolean } = {}): Promise<SendResult> => {
       const trimmed = text.trim();
       if (!trimmed) return "failed";
       if (inFlight.current) return "busy"; // one request at a time — no duplicate submissions
@@ -86,8 +86,8 @@ export function BobProvider({ children }: { children: React.ReactNode }) {
         convRef.current = r.body.conversationId;
         setMessages((m) => [...m.filter((x) => x.id !== tempId), ...r.body.messages]);
         if (r.body.changed) void refresh();
-        // Spoken replies only for voice requests (typed requests stay silent).
-        if (via === "voice" && speakRef.current) {
+        // Spoken replies for voice requests (when switched on), or when explicitly asked (Hear today's briefing).
+        if (opts.speak || (via === "voice" && speakRef.current)) {
           const last = [...r.body.messages].reverse().find((x) => x.role === "assistant");
           if (last) speakReply(last.id, spokenSummary(r.body.messages, trimmed));
         }

@@ -11,6 +11,7 @@ import type { Ctx } from "@/server/context";
 import { getActionView } from "./actions";
 import { claudeConfigured, claudeTurn } from "./claude";
 import { rulesTurn, type BobState, type Reply } from "./rules";
+import { BRIEFING_REQUEST } from "./briefing";
 
 interface StoredPayload {
   text: string;
@@ -93,7 +94,8 @@ export async function handleTurn(ctx: Ctx, input: { conversationId?: string; tex
 
   const userMsg = appendMessage(bobCtx, conv.id, "user", { text: input.text, via: input.via });
 
-  let engine = activeEngine();
+  // The briefing is built only from records, so it's the same whichever engine is on.
+  let engine = BRIEFING_REQUEST.test(input.text) ? "rules" : activeEngine();
   let out: { replies: Reply[]; state: BobState; changed: boolean };
   try {
     out = engine === "claude" ? await claudeTurn(bobCtx, input.text, history, state, conv.id) : await rulesTurn(bobCtx, input.text, state, conv.id);

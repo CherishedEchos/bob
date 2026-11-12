@@ -122,7 +122,13 @@ function playBrowser(id: string, text: string, my: number) {
   set({ speakingId: id, loadingId: null });
   // Safari can drop an utterance queued in the same tick as cancel().
   setTimeout(() => {
-    if (my === token) synth.speak(u);
+    if (my !== token) return;
+    try {
+      synth.speak(u);
+    } catch {
+      // No voice available: the reply stays on screen with its Read aloud button.
+      set({ speakingId: null, loadingId: null, fallbackReason: "This device couldn't play the voice" });
+    }
   }, 60);
 }
 
@@ -286,5 +292,8 @@ export function spokenSummary(replies: BobMessage[], request?: string): string {
     if (action.status === "executed" && action.resultMessage) return shorten(action.resultMessage);
     if (action.error) return shorten(action.error);
   }
-  return shorten(assistant.map((m) => m.text).filter(Boolean).join(" "));
+  const text = assistant.map((m) => m.text).filter(Boolean).join(" ");
+  // The briefing is meant to be heard in full (it's already kept under the voice limit).
+  if (request && /\bbriefing\b|\bread me my day\b|\bbrief me\b/i.test(request)) return shorten(text, 600);
+  return shorten(text);
 }

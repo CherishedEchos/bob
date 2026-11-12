@@ -1,6 +1,7 @@
 import "server-only";
 import type { Ctx } from "@/server/context";
 import * as Rep from "@/server/services/reports";
+import * as R from "@/server/services/records";
 import { firstName } from "@/lib/utils";
 import { greetingFor, listNames, plural } from "./compose";
 
@@ -11,6 +12,9 @@ export interface Briefing {
   /** The first thing to do, as a ready-made request for Bob. */
   suggestion?: { label: string; request: string };
 }
+
+/** Requests for the briefing (typed, spoken or from the "Hear today's briefing" button). */
+export const BRIEFING_REQUEST = /\b(morning |daily |today'?s )?briefing\b|\bread me my day\b|\bbrief me\b|\bhow'?s my day( looking)?\b/i;
 
 const amountOf = (detail: string) => detail.match(/£[\d,]+/)?.[0];
 const possessive = (name: string) => (/s$/i.test(name) ? `${name}'` : `${name}'s`);
@@ -62,7 +66,12 @@ export function morningBriefing(ctx: Ctx, now = new Date()): Briefing {
   let suggestion: Briefing["suggestion"];
   const first = replies[0];
   if (first) {
-    suggestion = { label: `Draft a reply to ${firstName(first.who)}`, request: `Draft a reply to ${first.who}` };
+    // Name the job too, so it's one tap even if they have more than one enquiry.
+    const enquiry = first.kind === "reply" ? R.getEnquiry(ctx, first.enquiryId) : undefined;
+    suggestion = {
+      label: `Draft ${possessive(firstName(first.who))} reply`,
+      request: `Draft a reply to ${first.who}${enquiry ? ` about the ${enquiry.title.toLowerCase()}` : ""}`,
+    };
     parts.push(`Want me to start with ${possessive(firstName(first.who))} reply?`);
   } else if (parts.length === 1) {
     parts.push("Nothing urgent — have a good one.");

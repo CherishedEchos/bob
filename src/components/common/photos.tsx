@@ -148,7 +148,7 @@ export function SnapPhotoButton({ className, label = false }: { className?: stri
 
   return (
     <>
-      <label className={cn("inline-flex cursor-pointer items-center justify-center gap-2", className)} aria-label="Snap a photo">
+      <label className={cn("inline-flex cursor-pointer items-center justify-center gap-2", className)} aria-label="Add photo" title="Add photo">
         <Camera className="size-[22px]" strokeWidth={1.7} />
         {label ? <span>Photo</span> : null}
         <input

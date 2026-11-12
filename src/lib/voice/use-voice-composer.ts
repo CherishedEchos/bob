@@ -31,7 +31,7 @@ export function useVoiceComposer(opts: { onSent?: (via: "voice" | "text") => voi
   optsRef.current = opts;
 
   const submitText = React.useCallback(
-    async (text: string, via: "voice" | "text"): Promise<SendResult> => {
+    async (text: string, via: "voice" | "text", opts: { speak?: boolean; keepDraft?: boolean } = {}): Promise<SendResult> => {
       const trimmed = text.trim();
       if (!trimmed) return "failed";
       if (sendingRef.current) return "busy";
@@ -39,13 +39,17 @@ export function useVoiceComposer(opts: { onSent?: (via: "voice" | "text") => voi
       setSending(true);
       setNotice(null);
       clearPendingReply();
-      const result = await send(trimmed, via);
+      const result = await send(trimmed, via, { speak: opts.speak });
       sendingRef.current = false;
       setSending(false);
       if (result === "ok") {
-        setDraftState("");
-        setFromVoice(false);
+        if (!opts.keepDraft) {
+          setDraftState("");
+          setFromVoice(false);
+        }
         optsRef.current.onSent?.(via);
+      } else if (opts.keepDraft) {
+        setNotice({ tone: "error", text: result === "busy" ? "Bob is still answering — try again in a moment." : "Couldn't get today's briefing. Try again." });
       } else {
         // Keep exactly what was sent so it can be retried.
         setDraftState(trimmed);
@@ -94,6 +98,14 @@ export function useVoiceComposer(opts: { onSent?: (via: "voice" | "text") => voi
     [draft, fromVoice, speech.phase, submitText],
   );
 
+  /** "Hear today's briefing": the normal Bob request, read aloud. Anything typed in the box is left alone. */
+  const hearBriefing = React.useCallback(() => {
+    if (sendingRef.current || speech.phase !== "idle") return;
+    prime(); // the tap unlocks audio on iOS
+    stopSpeaking();
+    void submitText("Hear today's briefing", "text", { speak: true, keepDraft: true });
+  }, [speech.phase, submitText]);
+
   /** Send a fixed prompt (example chips, priority actions). */
   const ask = React.useCallback((text: string) => void submitText(text, "text"), [submitText]);
 
@@ -113,5 +125,5 @@ export function useVoiceComposer(opts: { onSent?: (via: "voice" | "text") => voi
   }, [speech]);
 
   const phase: ComposerPhase = sending ? "sending" : speech.phase;
-  return { draft, setDraft, fromVoice, notice, setNotice, phase, sending, speech, submit, ask, discard, toggleMic };
+  return { draft, setDraft, fromVoice, notice, setNotice, phase, sending, speech, submit, ask, discard, toggleMic, hearBriefing };
 }
