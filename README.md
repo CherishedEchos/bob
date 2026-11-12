@@ -15,10 +15,17 @@ npm run dev      # → http://localhost:3000 (Node 22+)
 npm test         # engine + safety tests
 ```
 
-Sign in on `/login` with a demo account:
+On `/login`, tap **Try the demo**. It opens the Ninety3 workspace with fictional records, and nothing is ever sent. Other demo logins are tucked under "Other demo logins":
 
 - **Ninety3 workspace** (sample data, VAT/terms not configured, no integrations): Owner · Office · Site team
 - **Ridgeway Build & Joinery** (fictional demo business, VAT 20%, 14-day terms, demo inbox and demo accounting): Alex (owner) · Priya (office) · Sam (site team)
+
+## First demo: Today, Enquiries, Ask Bob
+
+1. **Today:** the three most important things, each with one action button. Reminders about the same issue are merged, and business stats sit below.
+2. **Enquiries:** *Needs your reply / Follow up / All*, with Filters behind one button. **Add enquiry**, then **Ask Bob who needs a reply**.
+3. Ask Bob *"Draft a reply to <name>"*, edit the draft in the card, then tap **Save draft**. Open the enquiry: the customer's message sits beside the draft. **Copy** leaves it open; **Mark as replied** clears it from Today and the count.
+4. **Ask Bob:** the input sits at the top. If several enquiries match, Bob asks which one. If the mic fails, typing keeps working.
 
 ## Things to try
 
