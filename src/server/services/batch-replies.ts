@@ -14,13 +14,16 @@ import "server-only";
  */
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import type { Enquiry, EnquiryMessage, EnquirySource } from "@/lib/types";
+import type { Enquiry, EnquirySource } from "@/lib/types";
 import { needsReply, sortEnquiries } from "@/lib/derive";
 import { uid } from "@/lib/utils";
 import { scoped, tx } from "@/server/db";
 import { denied, fail, ok, type Ctx, type Result } from "@/server/context";
 import { getEmailProvider } from "@/server/integrations/registry";
 import * as R from "./records";
+import { askedTiming, buildDraft, latestInbound, type DraftFlag } from "@/lib/reply-draft";
+
+export { askedTiming, buildDraft };
 
 /** "Reply to all outstanding enquiries" (and the ways people say it). */
 export const BATCH_REPLY_ALL =
@@ -31,11 +34,8 @@ export const BATCH_REPLY_THEM =
 export const isBatchReplyRequest = (text: string) => BATCH_REPLY_ALL.test(text) || BATCH_REPLY_THEM.test(text);
 
 export type BatchMode = "send" | "simulate" | "copy";
-export type FlagKind = "date" | "price" | "commitment";
-export interface BatchFlag {
-  kind: FlagKind;
-  text: string;
-}
+export type { FlagKind } from "@/lib/reply-draft";
+export type BatchFlag = DraftFlag;
 export interface BatchItem {
   enquiryId: string;
   customerName: string;
@@ -67,81 +67,6 @@ export interface Batch {
 }
 
 /* ------------------------------ Draft building ------------------------------ */
-
-const WEEKDAY = "monday|tuesday|wednesday|thursday|friday|saturday|sunday";
-const MONTH = "january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec";
-const SPECIFIC_DATE = new RegExp(
-  `\\b(?:(?:${WEEKDAY})\\s+)?\\d{1,2}(?:st|nd|rd|th)?(?:\\s+of)?\\s+(?:${MONTH})\\b|\\b(?:${WEEKDAY})\\b(?:\\s+(?:${MONTH})\\s+\\d{1,2}(?:st|nd|rd|th)?)?|\\b(?:${MONTH})\\s+\\d{1,2}(?:st|nd|rd|th)?\\b`,
-  "i",
-);
-const SEASON = /\b(?:before|by|for|in|after|over) (?:the )?(?:christmas|easter|new year|spring|summer|autumn|winter|end of (?:the )?(?:month|year)|half[- ]term|(?:next|this) (?:week|month))\b/i;
-const TIMING_ASK = /\b(start|begin|finish|finished|done|complete|completed|ready|fit(?:ted)?|install(?:ed)?)\b|\bwhen (can|could|would) you\b|\bhow soon\b|\bavailab/i;
-const PRICE_ASK = /\b(rough )?(price|cost|costs|how much|quote|ballpark|estimate|budget|ball park)\b/i;
-const DRAFT_PRICE = /£\s?\d|\bprice\b|\bcost\b|\bquote\b/i;
-const DRAFT_TIMING = /\b(start|finish|date|diary|timing|new year|christmas|spring|summer|week)\b/i;
-const COMMITMENT = /[^.!?\n]*\b(should work (?:well|fine)|will work (?:well|fine)|(?:can|could) definitely|no problem|guarantee\w*|we(?:'ll| will| can) (?:start|be there|have it (?:done|finished))|will be (?:done|finished|ready) by|fits? in (?:well|fine)|that'?s fine|easily (?:done|doable))\b[^.!?\n]*[.!?]?/i;
-
-function latestInbound(e: Enquiry): EnquiryMessage | undefined {
-  return [...e.messages].reverse().find((m) => m.direction === "inbound");
-}
-
-/** "Could you start on Monday 1st December?" → "Monday 1st December". */
-export function askedTiming(text: string): string | undefined {
-  if (!TIMING_ASK.test(text)) return undefined;
-  const date = text.match(SPECIFIC_DATE)?.[0];
-  if (date) return date.trim().replace(/\b\w/g, (c) => c.toUpperCase()).replace(/\b(\d+)(St|Nd|Rd|Th)\b/, (_, n: string, s: string) => n + s.toLowerCase());
-  const season = text.match(SEASON)?.[0];
-  return season?.trim().toLowerCase();
-}
-
-/** Add lines just before the sign-off (the last paragraph), after the thanks. */
-function insertBeforeSignOff(body: string, extra: string[]): string {
-  if (!extra.length) return body;
-  const paras = body.split(/\n\n/);
-  if (paras.length < 2) return [body, ...extra].join("\n\n");
-  return [...paras.slice(0, -1), ...extra, paras[paras.length - 1]].join("\n\n");
-}
-
-export function buildDraft(e: Enquiry): { draft: string; flags: BatchFlag[]; savedDraft: boolean } {
-  const inbound = latestInbound(e)?.body ?? e.description;
-  const savedDraft = !!e.draftReply?.trim();
-  let draft = (savedDraft ? e.draftReply! : e.suggestedReply).trim();
-  const flags: BatchFlag[] = [];
-  const extra: string[] = [];
-
-  const commitment = draft.match(COMMITMENT)?.[0]?.trim();
-  if (commitment) {
-    flags.push({ kind: "commitment", text: `The draft says “${commitment.replace(/^(and|but|so)\s+/i, "")}” — check you can commit to that before sending.` });
-  }
-
-  const timing = askedTiming(inbound);
-  if (timing && !commitment) {
-    const specific = /\d|day\b/i.test(timing);
-    flags.push({
-      kind: "date",
-      text: specific
-        ? `Asks to start ${timing}. Your diary isn't confirmed, so the draft doesn't promise it — decide before sending.`
-        : `Wants it done ${timing}. The draft doesn't promise a date — decide before sending.`,
-    });
-    if (!savedDraft && !DRAFT_TIMING.test(draft)) {
-      extra.push(
-        specific
-          ? `On timing — we'll need to check the diary before we can confirm ${timing}. We'll come back to you with a firm start date as soon as we've had a look at the job.`
-          : `On timing — we'll confirm what's possible once we've had a look at the job and checked the diary, rather than promise a date now.`,
-      );
-    }
-  }
-
-  if (PRICE_ASK.test(inbound)) {
-    flags.push({ kind: "price", text: "Asks for a price. The draft doesn't give one — add a ballpark if you're happy to." });
-    if (!savedDraft && !DRAFT_PRICE.test(draft)) {
-      extra.push("We'll put a proper price together once we've seen the space — every job is a bit different, so we'd rather not guess.");
-    }
-  }
-
-  if (!savedDraft) draft = insertBeforeSignOff(draft, extra);
-  return { draft, flags, savedDraft };
-}
 
 function channelOf(e: Enquiry): BatchItem["channel"] {
   if (e.email) return "email";

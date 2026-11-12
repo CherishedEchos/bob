@@ -60,11 +60,22 @@ function EnquiriesInner() {
   // Desktop shows the selected enquiry beside the list (the first one by default).
   const current = desktop ? (list.find((e) => e.id === selected) ?? list[0]) : undefined;
 
+  // Phones: the enquiry opens full screen over the inbox (which stays put
+  // underneath, so the tab and scroll position are kept). It's a real history
+  // entry, so the phone's back gesture returns to the inbox too.
+  const mobileId = !desktop ? params.get("open") : null;
+  const pushed = React.useRef(false);
   const open = (e: Enquiry, focus?: "reply") => {
-    if (desktop) {
-      ui.setEnquiryFocus(focus ?? null);
-      setSelected(e.id);
-    } else ui.openEnquiry(e.id, focus ? { focus } : undefined);
+    ui.setEnquiryFocus(focus ?? null);
+    if (desktop) return setSelected(e.id);
+    pushed.current = true;
+    window.history.pushState(null, "", `/enquiries?tab=${tab}&open=${e.id}`);
+  };
+  const closeMobile = () => {
+    if (pushed.current) {
+      pushed.current = false;
+      window.history.back();
+    } else window.history.replaceState(null, "", `/enquiries?tab=${tab}`);
   };
 
   return (
@@ -102,7 +113,7 @@ function EnquiriesInner() {
         </div>
       </div>
 
-      <div className="lg:grid lg:grid-cols-[minmax(340px,420px)_minmax(0,1fr)] lg:items-start lg:gap-5">
+      <div className="lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
         <div className="min-w-0">
           <div className="mb-3 flex items-center gap-2">
             <div role="tablist" aria-label="Enquiry lists" className="flex min-w-0 flex-1 gap-1 rounded-xl bg-card p-1 ring-1 ring-line">
@@ -190,7 +201,7 @@ function EnquiriesInner() {
           {list.length ? (
             <ul className="panel divide-y divide-line overflow-hidden">
               {list.map((e) => (
-                <InboxRow key={e.id} e={e} selected={current?.id === e.id} onOpen={(focus) => open(e, focus)} canReply={can("enquiries.write")} />
+                <InboxRow key={e.id} e={e} selected={current?.id === e.id} onOpen={(focus) => open(e, focus)} />
               ))}
             </ul>
           ) : (
@@ -199,7 +210,7 @@ function EnquiriesInner() {
         </div>
 
         {desktop ? (
-          <aside aria-label="Selected enquiry" className="panel sticky top-0 hidden h-[calc(100dvh-8.5rem)] min-h-[480px] flex-col overflow-hidden lg:flex">
+          <aside aria-label="Selected enquiry" className="panel sticky top-0 hidden h-[calc(100dvh-9.5rem)] min-h-[520px] flex-col overflow-hidden lg:flex">
             {current ? (
               <EnquiryDetail key={current.id} id={current.id} inline />
             ) : (
@@ -208,24 +219,25 @@ function EnquiriesInner() {
           </aside>
         ) : null}
       </div>
+
+      {mobileId && data.enquiries.some((x) => x.id === mobileId) ? (
+        <div role="dialog" aria-modal="true" aria-label="Enquiry" className="absolute inset-0 z-40 flex flex-col bg-card lg:hidden">
+          <EnquiryDetail id={mobileId} onBack={closeMobile} backLabel="Back to inbox" />
+        </div>
+      ) : null}
     </>
   );
 }
 
-/** On phones the row itself opens straight at the reply for anyone waiting. */
-const desktopRow = () => typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches;
-
-/** Who's waiting, what it's about, and the next step. Everything else lives in the enquiry. */
-function InboxRow({ e, selected, onOpen, canReply }: { e: Enquiry; selected: boolean; onOpen: (focus?: "reply") => void; canReply: boolean }) {
+/** Who's waiting, what it's about, and their state. Tap to open (straight at the reply if they're waiting). */
+function InboxRow({ e, selected, onOpen }: { e: Enquiry; selected: boolean; onOpen: (focus?: "reply") => void }) {
   const preview = e.messages.filter((m) => m.direction === "inbound").at(-1)?.body ?? e.description;
   const waiting = needsReply(e);
-  const due = !waiting && followUpDue(e);
-  const state = enquiryState(e, due);
-  const action = waiting ? (e.draftReply ? "Review" : "Draft reply") : due ? "Follow up" : null;
+  const state = enquiryState(e, !waiting && followUpDue(e));
   return (
-    <li className={cn("group relative flex items-start gap-3 px-4 py-3.5 transition-colors", selected ? "bg-raised" : "hover:bg-surface-2")}>
+    <li className={cn("relative transition-colors", selected ? "bg-raised" : "hover:bg-surface-2")}>
       {selected ? <span aria-hidden className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-copper-500" /> : null}
-      <button type="button" onClick={() => onOpen(waiting && !desktopRow() ? "reply" : undefined)} aria-current={selected || undefined} className="flex min-w-0 flex-1 items-start gap-3 text-left">
+      <button type="button" onClick={() => onOpen(waiting ? "reply" : undefined)} aria-current={selected || undefined} className="flex w-full items-start gap-3 px-4 py-3.5 text-left">
         <SourceIcon source={e.source} provider={e.provider} className="mt-0.5" />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline justify-between gap-3">
@@ -243,19 +255,6 @@ function InboxRow({ e, selected, onOpen, canReply }: { e: Enquiry; selected: boo
           </span>
         </span>
       </button>
-      {action && canReply ? (
-        <button
-          type="button"
-          onClick={() => onOpen("reply")}
-          aria-label={`${action}: ${e.customerName}`}
-          className={cn(
-            "mt-0.5 hidden h-10 shrink-0 items-center self-center whitespace-nowrap rounded-lg px-3 text-[14.5px] font-semibold transition sm:inline-flex",
-            selected ? "text-accent-fg" : "text-muted-foreground group-hover:text-accent-fg hover:bg-surface-3",
-          )}
-        >
-          {action}
-        </button>
-      ) : null}
     </li>
   );
 }

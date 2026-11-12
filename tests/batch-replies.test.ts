@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Chat, ctxFor, freshDb, N93_OWNER, N93_STAFF, RDG_OWNER } from "./helpers";
 import * as R from "@/server/services/records";
 import { needsReply } from "@/lib/derive";
-import { askedTiming, outstandingIds, prepareBatch, sendBatchItem } from "@/server/services/batch-replies";
+import { askedTiming, buildDraft, outstandingIds, prepareBatch, sendBatchItem } from "@/server/services/batch-replies";
 import { overrideProvidersForTests } from "@/server/integrations/registry";
 import type { EmailProvider } from "@/server/integrations/types";
 import type { Ctx } from "@/server/context";
@@ -72,14 +72,33 @@ describe("Batch replies — drafting", () => {
     expect(tom.channel).toBe("instagram");
     expect(tom.sendable).toBe(false);
     const hannah = byName(b, "Hannah");
-    expect(hannah.flags[0]).toMatchObject({ kind: "commitment" });
-    expect(hannah.flags[0].text).toMatch(/new-year start should work well/);
+    // A new-year start isn't confirmed: the draft doesn't promise it, asks for the next detail, and is flagged.
+    expect(hannah.flags.map((f) => f.kind)).toEqual(["date"]);
+    expect(hannah.draft).toMatch(/we'll confirm dates once we've seen the job and checked the diary/);
+    expect(hannah.draft).toMatch(/Roughly when in the new year were you hoping to start\?/);
+    expect(hannah.draft).not.toMatch(/should work well|we can start|no problem/i);
     const laura = byName(b, "Laura");
     expect(laura.flags.map((f) => f.kind).sort()).toEqual(["date", "price"]);
     const emma = byName(b, "Emma");
     expect(emma.flags).toEqual([]);
     const dave = byName(b, "Dave");
     expect(dave.channel).toBe("phone");
+  });
+
+  it("takes promises out of Bob's suggestions, but only flags them in your own saved draft", () => {
+    const ctx = ctxFor(N93_OWNER);
+    const hannah = waiting(ctx).find((e) => e.customerName.startsWith("Hannah"))!;
+    const promising = `Hi Hannah,\n\nThanks for getting in touch. A shaker kitchen sounds great, and a new-year start should work well.\n\nThanks,\nNinety3`;
+    // Bob's own suggestion promising a start: the promise is removed.
+    const fromBob = buildDraft({ ...hannah, draftReply: undefined, suggestedReply: promising });
+    expect(fromBob.draft).not.toMatch(/should work well/);
+    expect(fromBob.draft).toMatch(/A shaker kitchen sounds great\./);
+    expect(fromBob.flags.map((f) => f.kind)).toEqual(["date"]);
+    // The user's own saved words are never rewritten — just flagged.
+    const mine = buildDraft({ ...hannah, draftReply: promising });
+    expect(mine.draft).toBe(promising);
+    expect(mine.flags[0]).toMatchObject({ kind: "commitment" });
+    expect(mine.flags[0].text).toMatch(/new-year start should work well/);
   });
 
   it("reads the date out of everyday wording", () => {

@@ -78,7 +78,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
         {pathname !== "/today" && !assistant ? <DemoBanner /> : null}
         {!assistant ? <MobileHeader /> : null}
         <main className={cn("min-h-0 flex-1 overscroll-contain", assistant ? "overflow-hidden" : pathname.startsWith("/enquiries") ? "overflow-y-auto bg-inbox" : "overflow-y-auto bg-app")}>
-          {assistant ? children : <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-4 lg:px-10 lg:pb-10 lg:pt-8">{children}</div>}
+          {assistant ? children : <div className={cn("mx-auto w-full px-4 pb-10 pt-4 lg:pb-10 lg:pt-8", pathname.startsWith("/enquiries") ? "max-w-[1560px] lg:px-8" : "max-w-6xl lg:px-10")}>{children}</div>}
         </main>
         {/* Ask Bob has its own back button and bottom controls. */}
         {!assistant ? <BottomNav /> : null}

@@ -17,3 +17,24 @@ export function useMediaQuery(query: string): boolean {
 
 /** Desktop layout (Tailwind's lg breakpoint). */
 export const useIsDesktop = () => useMediaQuery("(min-width: 1024px)");
+
+/**
+ * The visible part of the screen on phones (shrinks when the keyboard opens).
+ * Undefined on desktop or before mount, so callers fall back to CSS.
+ */
+export function useVisualViewport(): { height: number; offsetTop: number } | undefined {
+  const [vv, setVv] = React.useState<{ height: number; offsetTop: number }>();
+  React.useEffect(() => {
+    const v = window.visualViewport;
+    if (!v || window.matchMedia("(min-width: 640px)").matches) return;
+    const sync = () => setVv({ height: v.height, offsetTop: v.offsetTop });
+    sync();
+    v.addEventListener("resize", sync);
+    v.addEventListener("scroll", sync);
+    return () => {
+      v.removeEventListener("resize", sync);
+      v.removeEventListener("scroll", sync);
+    };
+  }, []);
+  return vv;
+}

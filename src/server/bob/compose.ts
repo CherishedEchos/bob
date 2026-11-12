@@ -1,4 +1,5 @@
 import "server-only";
+import { buildDraft } from "@/lib/reply-draft";
 /** Wording helpers for Bob's replies and customer email drafts (filled from records). */
 import type { Customer, Enquiry, Invoice, Job, OrgConfig, Quote } from "@/lib/types";
 import { firstName, formatDateInline, gbp } from "@/lib/utils";
@@ -37,7 +38,8 @@ export function replyDraft(org: OrgConfig, e: Enquiry): Draft {
   return {
     to: e.email ?? "",
     subject: `Re: ${e.title}`,
-    body: e.draftReply ?? e.suggestedReply,
+    // Same rules as the enquiry screen: no unconfirmed dates, prices or promises.
+    body: buildDraft(e).draft,
     purpose: "reply",
   };
 }

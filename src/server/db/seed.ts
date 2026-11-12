@@ -259,7 +259,7 @@ function buildScenario(c: Cast) {
     at: hoursAgo(3), status: "new", priority: "high", customer: false,
     description:
       "Looking to rip out our 1990s kitchen and replace it with a modern shaker-style kitchen. Roughly 4m x 3.5m, would like an island if space allows. Hoping to start in the new year.",
-    reply: `Hi ${P.hannah.first},\n\nThanks for getting in touch about your kitchen. A shaker-style kitchen with an island sounds great, and a new-year start should work well.\n\nCould you send a few photos of the current space and rough measurements? Then we can arrange a time to come and take a proper look.\n\n${sign}`,
+    reply: `Hi ${P.hannah.first},\n\nThanks for getting in touch about your kitchen. A shaker-style kitchen with an island sounds great.\n\nCould you send a few photos of the current space and rough measurements? Then we can arrange a time to come and take a proper look.\n\n${sign}`,
   });
   addEnquiry({
     key: "decking_email", person: "laura", source: "email", title: "Composite decking", location: "Crawley Down",

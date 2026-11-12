@@ -9,10 +9,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertTriangle, ArrowLeft, CalendarClock, Check, CheckCheck, Copy, FlaskConical, Handshake, Loader2, PoundSterling, RotateCcw, SendHorizontal, Undo2, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, CalendarClock, Check, CheckCheck, Copy, FlaskConical, Handshake, Loader2, PoundSterling, RotateCcw, SendHorizontal, Undo2, X } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import { needsReply } from "@/lib/derive";
-import { cn, copyToClipboard, timeAgo } from "@/lib/utils";
+import { cn, copyToClipboard, firstName, timeAgo } from "@/lib/utils";
 import { SourceIcon } from "@/components/common/status";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toaster";
@@ -51,6 +51,8 @@ function ReviewReplies() {
   const [error, setError] = React.useState<string | null>(null);
   const [rows, setRows] = React.useState<Row[]>([]);
   const [running, setRunning] = React.useState(false);
+  const [index, setIndex] = React.useState(0);
+  const [confirmLive, setConfirmLive] = React.useState(false);
 
   React.useEffect(() => {
     let live = true;
@@ -122,97 +124,220 @@ function ReviewReplies() {
   }
   if (!batch) return <Loading />;
 
-  const flagged = rows.filter((r) => r.flags.length && !r.result).length;
-  const finished = rows.length > 0 && rows.every((r) => r.decision === "skipped" || (r.result && DONE.has(r.result.status)));
+  const n = rows.length;
+  const inSummary = index >= n;
+  const row = rows[Math.min(index, n - 1)];
+  const isDone = (r: Row) => !!r.result && DONE.has(r.result.status);
+  // Finished when Bob has nothing left to send: the rest are skipped, or are Instagram/phone replies you send yourself.
+  const finished = n > 0 && rows.some(isDone) && rows.every((r) => isDone(r) || r.decision === "skipped" || !r.sendable || mode === "copy");
+  const leftToCopy = rows.filter((r) => !isDone(r) && r.decision !== "skipped" && (!r.sendable || mode === "copy"));
+  const go = (i: number) => {
+    setConfirmLive(false);
+    setIndex(Math.max(0, Math.min(n, i)));
+    window.scrollTo?.({ top: 0 });
+    document.querySelector("main")?.scrollTo({ top: 0 });
+  };
+  const sendable = (r: Row) => r.sendable && mode !== "copy" && !(r.result && DONE.has(r.result.status));
+  const modeNote =
+    mode === "simulate"
+      ? "Demo workspace — no inbox is connected. Approve the replies you're happy with; on the last step Simulate records each one in Bob and updates the count. Nothing is sent to anyone."
+      : mode === "copy"
+        ? "No inbox is connected, so Bob can't send these. Copy each reply, send it yourself, then mark it as replied."
+        : `Live sending from ${batch.providerLabel}. Nothing is sent until you approve replies and confirm on the last step.`;
 
   return (
-    <div className="pb-4">
-      <div className="mb-5">
-        <Link href="/today" className="-ml-1 inline-flex h-10 items-center gap-1.5 px-1 text-[14.5px] text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> Today
-        </Link>
-        <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="t-page">Review replies</h1>
-            <p className="t-meta mt-1 text-[15px]">
-              {rows.length ? (
-                <>
-                  {rows.length} {rows.length === 1 ? "draft" : "drafts"}
-                  {flagged ? ` · ${flagged} ${flagged === 1 ? "needs" : "need"} a decision` : ""} · Nothing is sent until you approve it and tap Send.
-                </>
-              ) : (
-                "Nothing to draft."
-              )}
-            </p>
-          </div>
-          <div className="raised flex items-center gap-2 rounded-xl px-3 py-2" aria-live="polite">
+    <div className="mx-auto max-w-3xl pb-4">
+      <div className="mb-4">
+        <div className="flex items-center justify-between gap-3">
+          <Link href="/enquiries" className="-ml-1 inline-flex h-10 items-center gap-1.5 px-1 text-[14.5px] text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="size-4" /> Enquiries
+          </Link>
+          <div className="flex items-center gap-2" aria-live="polite">
             <span className="text-[13.5px] text-muted-foreground">Awaiting reply</span>
-            <span className={cn("tabular text-[22px] font-semibold leading-none", outstanding ? "text-amber-300" : "text-good-fg")} data-testid="outstanding-count">
+            <span className={cn("tabular text-[20px] font-semibold leading-none", outstanding ? "text-warn-fg" : "text-good-fg")} data-testid="outstanding-count">
               {outstanding}
             </span>
           </div>
         </div>
+        <h1 className="t-page mt-1" aria-live="polite" data-testid="queue-position">
+          {n === 0 ? "Nothing to draft" : inSummary ? "Ready to send" : `Draft ${index + 1} of ${n}`}
+        </h1>
+        {n ? (
+          <ol className="mt-3 flex gap-1.5" aria-label="Drafts">
+            {rows.map((r, i) => {
+              const done = r.result && DONE.has(r.result.status);
+              return (
+                <li key={r.enquiryId} className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => go(i)}
+                    aria-label={`Draft ${i + 1}: ${r.customerName}${r.decision === "approved" ? ", approved" : r.decision === "skipped" ? ", skipped" : ""}`}
+                    aria-current={i === index || undefined}
+                    className="group block w-full py-2"
+                  >
+                    <span
+                      className={cn(
+                        "block h-1.5 rounded-full transition",
+                        done ? "bg-emerald-400/80" : r.result?.status === "failed" ? "bg-red-400" : r.decision === "approved" ? "bg-copper-400" : r.decision === "skipped" ? "bg-white/15" : "bg-white/25",
+                        i === index && !inSummary && "ring-2 ring-white/70 ring-offset-2 ring-offset-background",
+                      )}
+                    />
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        ) : null}
+        <p className="mt-2 flex items-start gap-2 text-[14px] text-muted-foreground">
+          <FlaskConical className="mt-0.5 size-4 shrink-0 text-subtle" /> {modeNote}
+        </p>
+        {batch.alreadyReplied.length ? <p className="mt-1 text-[14px] text-muted-foreground">Left out — already replied: {batch.alreadyReplied.map((a) => a.customerName).join(", ")}.</p> : null}
       </div>
 
-      {mode !== "send" ? (
-        <div className={cn("mb-4 flex items-start gap-3 rounded-xl px-4 py-3 text-[14.5px] ring-1", mode === "simulate" ? "bg-violet-500/10 text-violet-100 ring-violet-400/25" : "bg-surface-2 text-muted-foreground ring-line")}>
-          <FlaskConical className="mt-0.5 size-4 shrink-0" />
-          <p>
-            {mode === "simulate"
-              ? "No inbox is connected. In this sample workspace you can simulate sending — Bob records the reply and updates the count, but nothing leaves Bob. Or copy any draft to send it yourself."
-              : "No inbox is connected, so Bob can't send these. Copy each draft, send it yourself, then mark it as replied."}
-          </p>
-        </div>
-      ) : (
-        <p className="mb-4 text-[14px] text-muted-foreground">Sending from {batch.providerLabel}.</p>
-      )}
-
-      {batch.alreadyReplied.length ? (
-        <p className="mb-4 text-[14px] text-muted-foreground">Left out — already replied: {batch.alreadyReplied.map((a) => a.customerName).join(", ")}.</p>
-      ) : null}
-
-      <ul className="space-y-4">
-        {rows.map((row) => (
+      {n && !inSummary ? (
+        <ul>
           <ReplyCard
             key={row.enquiryId}
             row={row}
             mode={mode}
             busy={running}
             onChange={(body) => patch(row.enquiryId, { body })}
-            onDecide={(decision) => patch(row.enquiryId, { decision })}
             onRetry={() => void retry(row)}
             onMarkReplied={() => void markReplied(row)}
           />
-        ))}
-      </ul>
+        </ul>
+      ) : null}
 
-      <div className="sticky bottom-0 z-20 -mx-4 mt-5 border-t border-line bg-background/92 px-4 pb-3 pt-3 backdrop-blur lg:mx-0 lg:rounded-2xl lg:border lg:px-5">
-        {finished ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="flex items-center gap-2 text-[15px]">
-              <CheckCheck className="size-5 text-good-fg" />
-              {outstanding ? `Done. ${outstanding} still waiting for a reply.` : "All caught up — nobody's waiting for a reply."}
-            </p>
-            <Button asChild>
-              <Link href="/today">Back to Today</Link>
-            </Button>
-          </div>
-        ) : mode === "copy" || !rows.some((r) => r.sendable && r.decision !== "skipped" && !(r.result && DONE.has(r.result.status))) ? (
-          <p className="text-[14.5px] text-muted-foreground">Copy each draft, send it yourself, then tap Mark as replied.</p>
-        ) : (
-          <>
-            <Button className="w-full" size="lg" disabled={!approvedCount || running} onClick={() => void sendApproved()}>
-              {running ? <Loader2 className="animate-spin" /> : mode === "simulate" ? <FlaskConical /> : <SendHorizontal />}
-              {running
-                ? "Sending…"
-                : approvedCount
-                  ? `${mode === "simulate" ? "Simulate sending" : "Send"} ${approvedCount} approved ${approvedCount === 1 ? "reply" : "replies"}`
-                  : "Approve a reply to send it"}
-            </Button>
-            {mode === "simulate" ? <p className="mt-1.5 text-center text-[12.5px] text-muted-foreground">Demo — nothing is sent. Instagram and phone replies are copied and marked by you.</p> : null}
-          </>
-        )}
-      </div>
+      {n && inSummary ? (
+        <ul className="panel divide-y divide-line overflow-hidden">
+          {rows.map((r, i) => (
+            <li key={r.enquiryId} className="flex items-center gap-3 px-4 py-3 lg:px-5">
+              <SourceIcon source={r.source} />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2">
+                  <span className="t-name truncate">{r.customerName}</span>
+                  <StatusPill row={r} />
+                </div>
+                <div className="truncate text-[14px] text-muted-foreground">
+                  {r.result?.status === "failed" ? `Couldn't send: ${r.result.message}. Draft kept.` : sendable(r) ? CHANNEL_LABEL[r.channel] + (r.to ? ` · ${r.to}` : "") : r.result ? r.result.message : `${CHANNEL_LABEL[r.channel]} — copy and send yourself`}
+                </div>
+              </div>
+              {r.result?.status === "failed" ? (
+                <Button size="sm" variant="secondary" onClick={() => void retry(r)} disabled={r.sending || running}>
+                  {r.sending ? <Loader2 className="animate-spin" /> : <RotateCcw />} Retry
+                </Button>
+              ) : !(r.result && DONE.has(r.result.status)) ? (
+                <button type="button" onClick={() => go(i)} className="h-10 px-2 text-[14.5px] font-semibold text-muted-foreground hover:text-accent-fg">
+                  Open
+                </button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {n ? (
+        <div className="sticky bottom-0 z-20 -mx-4 mt-4 border-t border-line bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:mx-0 lg:rounded-2xl lg:border lg:px-5">
+          {!inSummary ? (
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+              <Button variant="ghost" className="sm:mr-auto" disabled={index === 0} onClick={() => go(index - 1)}>
+                <ArrowLeft /> Previous
+              </Button>
+              {sendable(row) ? (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    patch(row.enquiryId, { decision: row.decision === "skipped" ? "review" : "skipped" });
+                    if (row.decision !== "skipped") go(index + 1);
+                  }}
+                >
+                  {row.decision === "skipped" ? <Undo2 /> : <X />} {row.decision === "skipped" ? "Undo skip" : "Skip"}
+                </Button>
+              ) : (
+                <span className="hidden sm:block" />
+              )}
+              {sendable(row) ? (
+                <>
+                  <Button variant="secondary" onClick={() => go(index + 1)}>
+                    {index === n - 1 ? "Review & send" : "Next draft"} <ArrowRight />
+                  </Button>
+                  <Button
+                    disabled={!row.body.trim() || row.sending}
+                    onClick={() => {
+                      patch(row.enquiryId, { decision: "approved" });
+                      go(index + 1);
+                    }}
+                  >
+                    <Check /> {row.decision === "approved" ? "Approved — next" : index === n - 1 ? "Approve & review" : "Approve & next"}
+                  </Button>
+                </>
+              ) : (
+                <Button className="col-span-2 sm:col-span-1" onClick={() => go(index + 1)}>
+                  {index === n - 1 ? "Review & send" : "Next draft"} <ArrowRight />
+                </Button>
+              )}
+            </div>
+          ) : finished ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="flex items-center gap-2 text-[15px]">
+                  <CheckCheck className="size-5 text-good-fg" />
+                  {outstanding ? `Done. ${outstanding} still waiting for a reply.` : "All caught up — nobody's waiting for a reply."}
+                </p>
+                {leftToCopy.length ? (
+                  <p className="mt-1 text-[14px] text-muted-foreground">
+                    {leftToCopy.map((r) => firstName(r.customerName)).join(", ")}: copy the reply into {leftToCopy.length === 1 ? CHANNEL_LABEL[leftToCopy[0].channel] : "their app"}, then mark it replied.
+                  </p>
+                ) : null}
+              </div>
+              <Button asChild>
+                <Link href="/enquiries">Back to Enquiries</Link>
+              </Button>
+            </div>
+          ) : confirmLive ? (
+            <div>
+              <p className="text-[15.5px] font-semibold">
+                Send {approvedCount} {approvedCount === 1 ? "email" : "emails"} from {batch.providerLabel}?
+              </p>
+              <p className="mt-1 text-[14px] text-muted-foreground">These go to real customers: {queue.map((r) => `${r.customerName} (${r.to})`).join(", ")}.</p>
+              <div className="mt-3 flex gap-2">
+                <Button variant="secondary" onClick={() => setConfirmLive(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    setConfirmLive(false);
+                    void sendApproved();
+                  }}
+                >
+                  <SendHorizontal /> Yes, send {approvedCount} {approvedCount === 1 ? "email" : "emails"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="ghost" onClick={() => go(n - 1)}>
+                <ArrowLeft /> Back to drafts
+              </Button>
+              {mode === "copy" || !rows.some(sendable) ? (
+                <p className="text-[14.5px] text-muted-foreground">Copy each reply, send it yourself, then tap Mark as replied in the draft.</p>
+              ) : (
+                <Button className="flex-1" size="lg" disabled={!approvedCount || running} onClick={() => (mode === "send" ? setConfirmLive(true) : void sendApproved())}>
+                  {running ? <Loader2 className="animate-spin" /> : mode === "simulate" ? <FlaskConical /> : <SendHorizontal />}
+                  {running
+                    ? "Sending…"
+                    : !approvedCount
+                      ? "Approve a reply to send it"
+                      : mode === "simulate"
+                        ? `Simulate ${approvedCount} approved ${approvedCount === 1 ? "reply" : "replies"} (demo)`
+                        : `Send ${approvedCount} approved ${approvedCount === 1 ? "email" : "emails"}…`}
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -222,7 +347,6 @@ function ReplyCard({
   mode,
   busy,
   onChange,
-  onDecide,
   onRetry,
   onMarkReplied,
 }: {
@@ -230,7 +354,6 @@ function ReplyCard({
   mode: Batch["mode"];
   busy: boolean;
   onChange: (body: string) => void;
-  onDecide: (d: Decision) => void;
   onRetry: () => void;
   onMarkReplied: () => void;
 }) {
@@ -245,7 +368,7 @@ function ReplyCard({
     const el = area.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight + 2, 420)}px`;
+    el.style.height = `${Math.max(el.scrollHeight + 2, 168)}px`;
   }, [row.body, row.decision]);
 
   const copy = async () => {
@@ -285,11 +408,11 @@ function ReplyCard({
       </div>
 
       <div className="space-y-3 px-4 pb-4 lg:px-5">
-        <figure className="rounded-xl bg-surface-2 px-3.5 py-3 ring-1 ring-line">
-          <figcaption className="t-eyebrow mb-1">
-            Their message{row.history.length ? ` · ${row.history.length} earlier` : ""}
+        <figure className="rounded-2xl border-l-2 border-white/15 bg-white/[0.03] px-4 py-3.5">
+          <figcaption className="mb-1 text-[14px] font-semibold text-muted-foreground">
+            Customer message{row.history.length ? ` · ${row.history.length} earlier` : ""}
           </figcaption>
-          <blockquote className="whitespace-pre-line text-[14.5px] leading-relaxed text-foreground/90">{row.original.body}</blockquote>
+          <blockquote className="whitespace-pre-line text-[16px] leading-relaxed text-foreground/90">{row.original.body}</blockquote>
         </figure>
 
         {row.flags.length && !done ? (
@@ -297,10 +420,10 @@ function ReplyCard({
             {row.flags.map((f, i) => {
               const Icon = FLAG_ICON[f.kind];
               return (
-                <li key={i} className="flex items-start gap-2.5 rounded-xl bg-amber-500/10 px-3.5 py-2.5 text-[14px] text-amber-100 ring-1 ring-amber-400/30">
-                  <Icon className="mt-0.5 size-4 shrink-0 text-amber-300" />
+                <li key={i} className="flex items-start gap-2.5 text-[14.5px] text-warn-fg">
+                  <Icon className="mt-0.5 size-4 shrink-0" />
                   <span>
-                    <span className="font-semibold text-amber-200">Decide: {FLAG_LABEL[f.kind]}. </span>
+                    <span className="font-semibold">Decide: {FLAG_LABEL[f.kind]}. </span>
                     {f.text}
                   </span>
                 </li>
@@ -312,7 +435,7 @@ function ReplyCard({
         <div>
           <label htmlFor={`draft-${row.enquiryId}`} className="mb-1.5 flex items-center justify-between text-[13.5px] font-medium text-foreground/85">
             <span>
-              {done ? "What was sent" : "Your reply"}
+              {done ? "What was sent" : "Suggested reply"}
               {edited && !done ? <span className="ml-2 font-normal text-accent-fg">Edited</span> : null}
             </span>
             {row.savedDraft ? <span className="font-normal text-muted-foreground">Your saved draft</span> : null}
@@ -323,7 +446,7 @@ function ReplyCard({
             value={row.body}
             readOnly={done || row.sending}
             onChange={(e) => onChange(e.target.value)}
-            className="block w-full resize-none rounded-xl bg-[#0f0f11] px-3.5 py-3 text-[15.5px] leading-relaxed text-foreground outline-none ring-1 ring-line-strong focus:ring-2 focus:ring-copper-400/80 read-only:text-muted-foreground"
+            className="block w-full resize-none overflow-hidden rounded-2xl bg-[#0f0f11] px-4 py-3.5 text-[16px] leading-relaxed text-foreground outline-none ring-1 ring-white/[0.12] focus:ring-2 focus:ring-copper-400 focus:ring-offset-2 focus:ring-offset-card read-only:text-muted-foreground"
           />
         </div>
 
@@ -342,43 +465,15 @@ function ReplyCard({
               <Button size="sm" onClick={onRetry} disabled={row.sending || busy}>
                 {row.sending ? <Loader2 className="animate-spin" /> : <RotateCcw />} Retry this reply
               </Button>
-            ) : manual || mode === "copy" ? (
-              <>
-                <Button size="sm" variant="secondary" onClick={() => void copy()}>
-                  <Copy /> Copy draft
-                </Button>
-                <Button size="sm" variant="outline" onClick={onMarkReplied} disabled={row.sending || !row.body.trim()}>
-                  {row.sending ? <Loader2 className="animate-spin" /> : <Check />} Mark as replied
-                </Button>
-              </>
-            ) : row.decision === "approved" ? (
-              <Button size="sm" variant="success" onClick={() => onDecide("review")} disabled={row.sending || busy} aria-pressed>
-                {row.sending ? <Loader2 className="animate-spin" /> : <Check />} Approved
-              </Button>
-            ) : (
-              <Button size="sm" variant="outline" onClick={() => onDecide("approved")} disabled={row.decision === "skipped" || !row.body.trim()}>
-                <Check /> Approve
-              </Button>
-            )}
-            {!failed && !manual && mode !== "copy" ? (
-              <Button size="sm" variant="ghost" onClick={() => area.current?.focus()} disabled={row.decision === "skipped"}>
-                Edit
+            ) : null}
+            <Button size="sm" variant="secondary" onClick={() => void copy()}>
+              <Copy /> Copy reply
+            </Button>
+            {manual || mode === "copy" ? (
+              <Button size="sm" variant="secondary" onClick={onMarkReplied} disabled={row.sending || !row.body.trim()}>
+                {row.sending ? <Loader2 className="animate-spin" /> : <Check />} I&apos;ve sent it — mark as replied
               </Button>
             ) : null}
-            {!failed && !manual && mode !== "copy" ? (
-              <Button size="sm" variant="ghost" onClick={() => void copy()}>
-                <Copy /> Copy
-              </Button>
-            ) : null}
-            {row.decision === "skipped" ? (
-              <Button size="sm" variant="ghost" onClick={() => onDecide("review")}>
-                <Undo2 /> Undo skip
-              </Button>
-            ) : (
-              <Button size="sm" variant="ghost" onClick={() => onDecide("skipped")} disabled={row.sending || busy}>
-                <X /> Skip
-              </Button>
-            )}
           </div>
         ) : null}
       </div>
