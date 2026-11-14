@@ -69,11 +69,11 @@ const SOURCE_STYLE: Record<EnquirySource, { bg: string; fg: string; chip: string
   instagram: {
     bg: "radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%)",
     fg: "#fff",
-    chip: "bg-pink-500/12 text-pink-200 ring-pink-400/30",
+    chip: "bg-pink-500/10 text-pink-700 ring-pink-500/25",
   },
-  email: { bg: "linear-gradient(160deg, #4f8ff7, #1f5fd6)", fg: "#fff", chip: "bg-sky-500/12 text-sky-200 ring-sky-400/30" },
-  phone: { bg: "linear-gradient(160deg, #3fd37e, #17944c)", fg: "#fff", chip: "bg-emerald-500/12 text-emerald-200 ring-emerald-400/30" },
-  website: { bg: "linear-gradient(160deg, #9b7bff, #5b3fd6)", fg: "#fff", chip: "bg-violet-500/12 text-violet-200 ring-violet-400/30" },
+  email: { bg: "linear-gradient(160deg, #4f8ff7, #1f5fd6)", fg: "#fff", chip: "bg-sky-500/10 text-sky-700 ring-sky-500/25" },
+  phone: { bg: "linear-gradient(160deg, #3fd37e, #17944c)", fg: "#fff", chip: "bg-emerald-500/10 text-emerald-700 ring-emerald-500/25" },
+  website: { bg: "linear-gradient(160deg, #9b7bff, #5b3fd6)", fg: "#fff", chip: "bg-violet-500/10 text-violet-700 ring-violet-500/25" },
   manual: { bg: "linear-gradient(160deg, #4a4540, #2f2b28)", fg: "#e9e4de", chip: "bg-surface-3 text-muted-foreground ring-line-strong" },
 };
 
@@ -89,18 +89,15 @@ function GmailMark({ className }: { className?: string }) {
   );
 }
 
-/**
- * Channel mark: a white glyph on the channel's colour at about half strength,
- * so Instagram, email and phone are recognisable without shouting.
- */
+/** Channel mark: a white glyph on the channel's colour, recognisable at a glance. */
 export function SourceIcon({ source, provider, className }: { source: EnquirySource; provider?: string; className?: string }) {
   const gmail = source === "email" && provider === "gmail";
   const Icon = SOURCE_ICON[source];
   const label = gmail ? "Gmail" : SOURCE_LABEL[source];
   return (
-    <span title={`Came in by ${label}`} className={cn("relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-raised", className)}>
-      <span aria-hidden className="absolute inset-0 opacity-[0.42]" style={{ background: SOURCE_STYLE[source].bg }} />
-      {gmail ? <GmailMark className="relative size-[55%] opacity-90" /> : <Icon className="relative size-[50%] text-white/90" aria-hidden />}
+    <span title={`Came in by ${label}`} className={cn("relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-ink-700", className)}>
+      <span aria-hidden className="absolute inset-0 opacity-[0.9]" style={{ background: SOURCE_STYLE[source].bg }} />
+      {gmail ? <GmailMark className="relative size-[55%] rounded-sm bg-white p-[1px]" /> : <Icon className="relative size-[50%] text-white/90" aria-hidden />}
       <span className="sr-only">{label}</span>
     </span>
   );
@@ -137,8 +134,8 @@ export function enquiryState(e: { status: EnquiryStatus; draftReply?: string; pr
 /** "High priority": a small flag and the word. Red is kept for overdue money. */
 export function HighPriority({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-1 whitespace-nowrap text-[13.5px] font-medium text-foreground/80", className)}>
-      <Flag className="size-3.5 fill-current text-[#d9d9de]" aria-hidden /> High priority
+    <span className={cn("inline-flex items-center gap-1 whitespace-nowrap text-[13.5px] font-medium text-foreground", className)}>
+      <Flag className="size-3.5 fill-current text-accent-icon" aria-hidden /> High priority
     </span>
   );
 }

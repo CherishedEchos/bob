@@ -6,7 +6,8 @@ import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import type { Task } from "@/lib/types";
 import { addDaysKey, cn, daysFromToday, formatDateKey } from "@/lib/utils";
-import { EmptyState, ListPanel } from "@/components/common/bits";
+import { tasksDue } from "@/lib/derive";
+import { EmptyState, ListPanel, pageSecondaryClass } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
 
 /** What needs doing and when, grouped by urgency. Details and controls live inside each task. */
@@ -22,20 +23,26 @@ export default function TasksPage() {
     ["Later", open.filter((t) => daysFromToday(t.dueDate) > 7)],
   ];
   const [showDone, setShowDone] = React.useState(false);
+  const due = tasksDue(data.tasks).length;
 
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="t-page">Tasks</h1>
-          <p className="t-meta mt-0.5 lg:text-[15px]">{open.length ? `${open.length} to do · say “Bob, remind me to…”` : "Nothing to do — say “Bob, remind me to…” to add one"}</p>
+          <p className="t-meta mt-0.5 lg:text-[15px]">
+            {open.length ? `${open.length} open · ${due} due today or overdue` : "Nothing to do — say “Bob, remind me to…” to add one"}
+          </p>
         </div>
         {can("tasks.write") ? (
-          <button type="button" onClick={() => ui.openForm({ form: "reminder", dueDate: addDaysKey(1) })} className="flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-raised px-4 text-[15px] font-semibold ring-1 ring-line-strong transition hover:bg-raised-hover">
-            <Plus className="size-[18px]" /> Add
+          <button type="button" onClick={() => ui.openForm({ form: "reminder", dueDate: addDaysKey(1) })} className={pageSecondaryClass}>
+            <Plus className="size-[18px]" aria-hidden /> Add reminder
           </button>
         ) : null}
       </div>
+      {open.length && due !== open.length ? (
+        <p className="-mt-2 mb-3 text-[13.5px] text-muted-foreground">The number beside Tasks in the menu counts only the {due} due today or overdue.</p>
+      ) : null}
       {open.length === 0 ? <EmptyState icon={AlarmClock} title="Nothing to remind you about" body="You're all caught up." /> : null}
       <div className="space-y-4">
         {groups
@@ -51,7 +58,7 @@ export default function TasksPage() {
           ))}
         {done.length ? (
           <section className="panel overflow-hidden">
-            <button type="button" aria-expanded={showDone} onClick={() => setShowDone((v) => !v)} className="flex min-h-14 w-full items-center justify-between px-4 text-left lg:px-5">
+            <button type="button" aria-expanded={showDone} onClick={() => setShowDone((v) => !v)} className="flex min-h-14 w-full items-center justify-between px-4 text-left transition hover:bg-surface-2 lg:px-5">
               <span className="t-section">
                 Recently done <span className="ml-1 text-[14px] font-normal text-subtle">{done.length}</span>
               </span>
@@ -85,34 +92,52 @@ function TaskRow({ task: t }: { task: Task }) {
   const { data, actions } = useStore();
   const ui = useUI();
   const [open, setOpen] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
   const customer = data.customers.find((c) => c.id === t.customerId);
   const assignee = data.members.find((m) => m.id === t.assignedUserId);
   const overdue = !t.done && daysFromToday(t.dueDate) < 0;
   return (
     <li>
-      <div className="flex items-center gap-3 px-4 py-3 lg:px-5">
+      <div className="row-open flex items-center gap-3 px-4 py-2.5 lg:px-5">
+        {/* Completing is its own control, separate from opening the task. */}
         <button
-          aria-label={t.done ? `Reopen ${t.title}` : `Mark ${t.title} done`}
+          type="button"
+          aria-label={t.done ? `Reopen: ${t.title}` : `Complete: ${t.title}`}
           aria-pressed={t.done}
+          disabled={busy}
           onClick={async () => {
+            setBusy(true);
             const r = await actions.setTaskDone(t.id, !t.done);
-            if (!r.ok) toast("Couldn't update", "error");
+            setBusy(false);
+            if (!r.ok) return toast("Couldn't update the task", "error");
+            if (t.done) return toast("Task back on the list", "info");
+            toast(`Done: ${t.title}`, "success", {
+              action: {
+                label: "Undo",
+                run: () => void actions.setTaskDone(t.id, false).then((u) => toast(u.ok ? "Task back on the list" : "Couldn't undo", u.ok ? "info" : "error")),
+              },
+            });
           }}
-          className="-m-2 grid size-11 shrink-0 place-items-center rounded-full"
+          className="row-secondary group -m-1.5 grid size-11 shrink-0 place-items-center rounded-full disabled:opacity-60"
         >
-          <span className={cn("grid size-7 place-items-center rounded-full ring-1 transition", t.done ? "bg-emerald-500/80 text-ink-950 ring-emerald-400" : "ring-line-strong hover:ring-copper-400")}>
-            {t.done ? <Check className="size-4" /> : null}
+          <span
+            className={cn(
+              "grid size-7 place-items-center rounded-full ring-2 transition",
+              t.done ? "bg-emerald-600 text-white ring-emerald-600" : "bg-card text-transparent ring-[rgb(16_24_40/0.25)] group-hover:text-subtle group-hover:ring-emerald-600",
+            )}
+          >
+            <Check className="size-4" strokeWidth={3} aria-hidden />
           </span>
         </button>
-        <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+        <button type="button" aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} details: ${t.title}`} onClick={() => setOpen((o) => !o)} className="row-target flex min-w-0 flex-1 items-center gap-3 py-0.5 text-left after:absolute after:inset-0 after:content-['']">
           <span className="min-w-0 flex-1">
-            <span className={cn("block text-[15.5px] leading-snug", t.done && "text-muted-foreground line-through")}>{t.title}</span>
+            <span className={cn("block text-[15.5px] font-medium leading-snug", t.done && "font-normal text-muted-foreground line-through")}>{t.title}</span>
             <span className={cn("mt-0.5 block text-[13.5px]", overdue ? "font-medium text-danger-fg" : "text-muted-foreground")}>
               {when(t)}
               {customer ? ` · ${customer.name}` : ""}
             </span>
           </span>
-          <ChevronRight className={cn("size-4 shrink-0 text-subtle transition", open && "rotate-90")} />
+          <ChevronRight aria-hidden className={cn("row-chevron size-[18px] shrink-0", open && "rotate-90")} />
         </button>
       </div>
       {open ? (

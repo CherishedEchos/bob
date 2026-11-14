@@ -27,10 +27,10 @@ export function SheetContent({
 }) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/55 backdrop-blur-[2px]" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[rgb(16_24_40/0.42)] backdrop-blur-[2px]" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed z-50 flex flex-col bg-raised shadow-[0_24px_64px_-16px_rgb(0_0_0/0.8)] outline-none ring-1 ring-line-strong",
+          "fixed z-50 flex flex-col bg-card shadow-[0_24px_64px_-16px_rgb(16_24_40/0.35)] outline-none ring-1 ring-line-strong",
           side === "right" &&
             "inset-y-0 right-0 w-full sm:w-[540px] sm:rounded-l-3xl",
           side === "bottom" && "inset-x-0 bottom-0 max-h-[92dvh] rounded-t-3xl sm:left-1/2 sm:bottom-6 sm:w-[520px] sm:-translate-x-1/2 sm:rounded-3xl",
@@ -66,10 +66,10 @@ export function DialogContent({
 }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { title: string; description?: string }) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/55 backdrop-blur-[2px]" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-[rgb(16_24_40/0.42)] backdrop-blur-[2px]" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed inset-x-0 bottom-0 z-[60] max-h-[92dvh] overflow-y-auto rounded-t-3xl bg-raised p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_24px_64px_-16px_rgb(0_0_0/0.8)] outline-none ring-1 ring-line-strong sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-[min(480px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:p-6",
+          "fixed inset-x-0 bottom-0 z-[60] max-h-[92dvh] overflow-y-auto rounded-t-3xl bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_24px_64px_-16px_rgb(16_24_40/0.35)] outline-none ring-1 ring-line-strong sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-[min(480px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:p-6",
           className,
         )}
         {...props}

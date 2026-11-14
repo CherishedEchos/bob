@@ -4,11 +4,12 @@ import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight, Inbox, Plus, RefreshCw, Search, SlidersHorizontal, Sparkles } from "lucide-react";
+import { pageSecondaryClass } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { useIsDesktop } from "@/lib/use-media";
-import { ENQUIRY_SOURCES, ENQUIRY_STATUSES, ENQUIRY_STATUS_LABEL, SOURCE_LABEL, followUpDue, isOpenEnquiry, needsReply, sortEnquiries } from "@/lib/derive";
+import { ENQUIRY_SOURCES, ENQUIRY_STATUSES, ENQUIRY_STATUS_LABEL, SOURCE_LABEL, followUpDue, isOpenEnquiry, needsReply, needsWrittenReply, sortEnquiries, wantsCallback } from "@/lib/derive";
 import type { Enquiry, EnquirySource, EnquiryStatus } from "@/lib/types";
 import { cn, timeAgo } from "@/lib/utils";
 import { EmptyState, StatusText } from "@/components/common/bits";
@@ -23,7 +24,7 @@ const needsFollowUp = (e: Enquiry) =>
   !needsReply(e) && isOpenEnquiry(e) && (followUpDue(e) || e.status === "quote_required" || e.status === "quoted" || !!e.followUpDate);
 
 const TABS: { value: Tab; label: string; short: string; test: (e: Enquiry) => boolean }[] = [
-  { value: "reply", label: "Needs your reply", short: "Reply", test: needsReply },
+  { value: "reply", label: "Needs reply", short: "Needs reply", test: needsReply },
   { value: "follow", label: "Follow up", short: "Follow up", test: needsFollowUp },
   { value: "all", label: "All", short: "All", test: () => true },
 ];
@@ -56,6 +57,7 @@ function EnquiriesInner() {
     ),
   );
   const waiting = data.enquiries.filter(needsReply).length;
+  const toDraft = data.enquiries.filter(needsWrittenReply).length;
   const caughtUp = tab === "reply" && !activeFilters;
   // Desktop shows the selected enquiry beside the list (the first one by default).
   const current = desktop ? (list.find((e) => e.id === selected) ?? list[0]) : undefined;
@@ -106,17 +108,18 @@ function EnquiriesInner() {
             </button>
           ) : null}
           {can("enquiries.write") ? (
-            <button type="button" aria-label="Add enquiry" onClick={() => ui.openForm({ form: "enquiry" })} className="flex h-11 items-center gap-1.5 rounded-xl bg-raised px-4 text-[15px] font-semibold ring-1 ring-line-strong transition hover:bg-raised-hover">
-              <Plus className="size-[18px]" /> Add
+            <button type="button" onClick={() => ui.openForm({ form: "enquiry" })} className={pageSecondaryClass}>
+              <Plus className="size-[18px]" aria-hidden /> <span className="hidden sm:inline">Add enquiry</span>
+              <span className="sm:hidden">Add</span>
             </button>
           ) : null}
         </div>
       </div>
 
-      <div className="lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="lg:grid lg:grid-cols-[350px_minmax(0,1fr)] lg:items-start lg:gap-5 xl:grid-cols-[390px_minmax(0,1fr)]">
         <div className="min-w-0">
           <div className="mb-3 flex items-center gap-2">
-            <div role="tablist" aria-label="Enquiry lists" className="flex min-w-0 flex-1 gap-1 rounded-xl bg-card p-1 ring-1 ring-line">
+            <div role="tablist" aria-label="Enquiry lists" className="flex min-w-0 flex-1 gap-1 rounded-xl bg-surface-3 p-1">
               {TABS.map((t) => {
                 const count = data.enquiries.filter(t.test).length;
                 const active = tab === t.value;
@@ -128,7 +131,7 @@ function EnquiriesInner() {
                     onClick={() => setTab(t.value)}
                     className={cn(
                       "flex h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 text-[14.5px] font-semibold transition active:bg-surface-2",
-                      active ? "bg-raised text-[#faf9f6]" : "text-muted-foreground hover:text-foreground",
+                      active ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {t.short}
@@ -142,10 +145,10 @@ function EnquiriesInner() {
               aria-label={`Filters${activeFilters ? ` (${activeFilters} on)` : ""}`}
               aria-expanded={filtersOpen}
               onClick={() => setFiltersOpen((o) => !o)}
-              className={cn("flex h-12 shrink-0 items-center gap-1.5 rounded-xl px-3 text-[14.5px] font-semibold ring-1 transition", filtersOpen || activeFilters ? "bg-raised text-foreground ring-line-strong" : "bg-card text-muted-foreground ring-line hover:text-foreground")}
+              className={cn("flex h-12 shrink-0 items-center gap-1.5 rounded-xl px-3 text-[14.5px] font-semibold ring-1 transition", filtersOpen || activeFilters ? "bg-selected text-accent-fg ring-copper-500/40" : "bg-card text-muted-foreground ring-line-strong hover:text-foreground")}
             >
               <SlidersHorizontal className="size-[18px]" />
-              <span className="hidden sm:inline lg:hidden xl:inline">Filters</span>
+              <span className="hidden sm:inline lg:hidden 2xl:inline">Filters</span>
               {activeFilters ? <span className="tabular text-[12.5px] text-accent-fg">{activeFilters}</span> : null}
             </button>
           </div>
@@ -189,19 +192,19 @@ function EnquiriesInner() {
             </div>
           ) : null}
 
-          {tab === "reply" && waiting > 1 && can("enquiries.write") ? (
-            <Link href="/replies" className="mb-3 flex min-h-[52px] items-center justify-between gap-3 rounded-xl bg-[#f28c3c] px-4 text-[16px] font-semibold text-[#1b1007] shadow-[0_6px_20px_-10px_rgb(242_140_60/0.7)] transition hover:bg-[#f69a50] active:bg-[#e47d2e]">
+          {tab === "reply" && toDraft > 0 && can("enquiries.write") ? (
+            <Link href="/replies" className="mb-3 flex min-h-[52px] items-center justify-between gap-3 rounded-xl bg-primary px-4 text-[16px] font-semibold text-white shadow-[0_1px_2px_rgb(16_24_40/0.12)] transition hover:bg-copper-600 active:bg-copper-700">
               <span className="flex items-center gap-2">
-                <Sparkles className="size-4" /> Draft all {waiting} replies
+                <Sparkles className="size-4" aria-hidden /> Draft {toDraft} {toDraft === 1 ? "reply" : "replies"}
               </span>
-              <ChevronRight className="size-4" />
+              <ChevronRight className="size-4" aria-hidden />
             </Link>
           ) : null}
 
           {list.length ? (
             <ul className="panel divide-y divide-line overflow-hidden">
               {list.map((e) => (
-                <InboxRow key={e.id} e={e} selected={current?.id === e.id} onOpen={(focus) => open(e, focus)} />
+                <InboxRow key={e.id} e={e} tab={tab} selected={current?.id === e.id} onOpen={(focus) => open(e, focus)} />
               ))}
             </ul>
           ) : (
@@ -210,7 +213,7 @@ function EnquiriesInner() {
         </div>
 
         {desktop ? (
-          <aside aria-label="Selected enquiry" className="panel sticky top-0 hidden h-[calc(100dvh-9.5rem)] min-h-[520px] flex-col overflow-hidden lg:flex">
+          <aside aria-label="Selected enquiry" className="panel sticky top-4 hidden h-[calc(100dvh-11rem)] min-h-[520px] flex-col overflow-hidden lg:flex">
             {current ? (
               <EnquiryDetail key={current.id} id={current.id} inline />
             ) : (
@@ -229,32 +232,44 @@ function EnquiriesInner() {
   );
 }
 
-/** Who's waiting, what it's about, and their state. Tap to open (straight at the reply if they're waiting). */
-function InboxRow({ e, selected, onOpen }: { e: Enquiry; selected: boolean; onOpen: (focus?: "reply") => void }) {
+/**
+ * Name first, then the job and town, then only the status that helps decide
+ * what to do. In Needs reply every row is waiting, so that line is left out —
+ * only High priority, Draft saved and Call back show there.
+ */
+function InboxRow({ e, tab, selected, onOpen }: { e: Enquiry; tab: Tab; selected: boolean; onOpen: (focus?: "reply") => void }) {
   const preview = e.messages.filter((m) => m.direction === "inbound").at(-1)?.body ?? e.description;
   const waiting = needsReply(e);
+  const callback = wantsCallback(e);
   const state = enquiryState(e, !waiting && followUpDue(e));
+  const drafted = waiting && !!e.draftReply;
+  const showState = tab !== "reply" || drafted;
   return (
-    <li className={cn("relative transition-colors", selected ? "bg-raised" : "hover:bg-surface-2")}>
-      {selected ? <span aria-hidden className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-copper-500" /> : null}
-      <button type="button" onClick={() => onOpen(waiting ? "reply" : undefined)} aria-current={selected || undefined} className="flex w-full items-start gap-3 px-4 py-3.5 text-left">
-        <SourceIcon source={e.source} provider={e.provider} className="mt-0.5" />
-        <span className="min-w-0 flex-1">
-          <span className="flex items-baseline justify-between gap-3">
-            <span className="t-name truncate">{e.customerName}</span>
-            <span className="shrink-0 text-[13px] tabular text-subtle">{timeAgo(e.receivedAt)}</span>
-          </span>
-          <span className="mt-0.5 block truncate text-[14.5px]">
-            <span className="text-foreground/85">{e.title}</span>
-            <span className="text-muted-foreground"> · {e.location}</span>
-          </span>
-          <span className="mt-0.5 line-clamp-1 text-[14px] text-subtle">{preview}</span>
+    <li className="row-open flex items-start gap-3 px-4 py-3.5" data-selected={selected || undefined}>
+      <SourceIcon source={e.source} provider={e.provider} className="mt-0.5" />
+      <button
+        type="button"
+        onClick={() => onOpen(waiting ? "reply" : undefined)}
+        aria-current={selected || undefined}
+        className="row-target min-w-0 flex-1 text-left after:absolute after:inset-0 after:content-['']"
+      >
+        <span className="flex items-baseline justify-between gap-3">
+          <span className="t-name truncate">{e.customerName}</span>
+          <span className="shrink-0 text-[13px] tabular text-muted-foreground">{timeAgo(e.receivedAt)}</span>
+        </span>
+        <span className="mt-0.5 block truncate text-[14.5px]">
+          <span className="text-foreground">{e.title}</span>
+          <span className="text-muted-foreground"> · {e.location}</span>
+        </span>
+        <span className="mt-0.5 line-clamp-1 text-[14px] text-muted-foreground">{preview}</span>
+        {showState || state.high || callback ? (
           <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <StatusText tone={state.main.tone}>{state.main.label}</StatusText>
+            {callback ? <StatusText tone="amber">Call back requested</StatusText> : showState ? <StatusText tone={state.main.tone}>{state.main.label}</StatusText> : null}
             {state.high ? <HighPriority /> : null}
           </span>
-        </span>
+        ) : null}
       </button>
+      <ChevronRight aria-hidden className="row-chevron mt-2.5 size-[18px] shrink-0" />
     </li>
   );
 }

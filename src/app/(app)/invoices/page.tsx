@@ -2,14 +2,14 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { Plus, ReceiptText, Send, Trash2, CheckCheck, Ban, PoundSterling } from "lucide-react";
+import { ChevronDown, Plus, ReceiptText, Send, Trash2, CheckCheck, Ban, PoundSterling } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import type { ActionView } from "@/lib/bob/types";
 import type { Invoice } from "@/lib/types";
 import { invoiceBalance, invoiceStatusLabel, isInvoiceOutstanding, isInvoiceOverdue, jobsAwaitingDeposit } from "@/lib/derive";
 import { cn, formatDateInline, gbp, timeAgo } from "@/lib/utils";
-import { EmptyState, ListPanel, ListRow, StatusText, Tabs } from "@/components/common/bits";
+import { DemoNote, EmptyState, ListPanel, ListRow, StatusText, Tabs, pageActionClass } from "@/components/common/bits";
 import { Button } from "@/components/ui/button";
 import { MoneyRow } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
@@ -18,7 +18,7 @@ import { ActionCard } from "@/components/assistant/assistant-cards";
 type Filter = "outstanding" | "overdue" | "draft" | "paid" | "all";
 
 function InvoicesInner() {
-  const { data, can } = useStore();
+  const { data, can, org } = useStore();
   const ui = useUI();
   const params = useSearchParams();
   const initialFilter = params.get("filter") as Filter | null;
@@ -51,27 +51,35 @@ function InvoicesInner() {
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="t-page">Money</h1>
-          <p className="t-meta mt-0.5 lg:text-[15px]">{accounting ? `Invoices sync with ${accounting.accountLabel ?? accounting.provider}` : "Invoices stay as drafts in Bob until Xero or QuickBooks is connected"}</p>
+          <p className={cn("t-meta mt-0.5 lg:text-[15px]", org.dataMode === "sample" && "hidden sm:block")}>{accounting ? `Invoices sync with ${accounting.accountLabel ?? accounting.provider}` : "Invoices stay as drafts in Bob until Xero or QuickBooks is connected"}</p>
         </div>
         {can("invoices.draft") ? (
-          <button type="button" onClick={() => ui.openForm({ form: "invoice" })} className="flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-raised px-4 text-[15px] font-semibold ring-1 ring-line-strong transition hover:bg-raised-hover">
-            <Plus className="size-[18px]" /> Invoice
+          <button type="button" onClick={() => ui.openForm({ form: "invoice" })} className={pageActionClass}>
+            <Plus className="size-[18px]" aria-hidden /> <span className="hidden sm:inline">Create invoice draft</span>
+            <span className="sm:hidden">Invoice draft</span>
           </button>
         ) : null}
       </div>
 
-      <div className="panel mb-4 grid grid-cols-3 divide-x divide-line">
+      <dl className="panel mb-2 grid grid-cols-3 divide-x divide-line">
         {[
-          { label: "Owed", value: gbp(owed), tone: "" },
-          { label: "Overdue", value: gbp(overdue), tone: overdue ? "text-danger-fg" : "text-subtle" },
+          { label: "Outstanding invoices", value: gbp(owed), tone: "text-heading" },
+          { label: "Of which overdue", value: gbp(overdue), tone: overdue ? "text-danger-fg" : "text-subtle" },
           { label: "Deposits due", value: gbp(depositTotal), tone: depositTotal ? "text-warn-fg" : "text-subtle" },
         ].map((x) => (
-          <div key={x.label} className="px-4 py-3 lg:px-5">
-            <div className={cn("tabular text-[19px] font-semibold sm:text-[22px]", x.tone)}>{x.value}</div>
-            <div className="text-[13.5px] text-muted-foreground">{x.label}</div>
+          <div key={x.label} className="flex flex-col-reverse justify-end px-3 py-3 sm:px-4 lg:px-5">
+            <dt className="text-[13px] leading-tight text-muted-foreground sm:text-[13.5px]">{x.label}</dt>
+            <dd className={cn("tabular text-[18px] font-semibold sm:text-[22px]", x.tone)}>{x.value}</dd>
           </div>
         ))}
-      </div>
+      </dl>
+      {org.dataMode === "sample" ? (
+        <DemoNote className="mb-4">
+          The sent invoices here are sample records. An invoice you create is saved as a draft in Bob — it isn&apos;t sent to anyone{accounting ? " until you approve sending it" : ", and stays a draft until you mark it as sent yourself or connect Xero or QuickBooks"}.
+        </DemoNote>
+      ) : (
+        <div className="mb-4" />
+      )}
 
       <Tabs
         label="Invoices"
@@ -79,7 +87,7 @@ function InvoicesInner() {
         value={filter}
         onChange={setFilter}
         options={[
-          { value: "outstanding", label: "Owed", count: data.invoices.filter(isInvoiceOutstanding).length },
+          { value: "outstanding", label: "Outstanding", count: data.invoices.filter(isInvoiceOutstanding).length },
           { value: "overdue", label: "Overdue", count: data.invoices.filter(isInvoiceOverdue).length, highlight: true },
           { value: "draft", label: "Drafts", count: data.invoices.filter((i) => i.status === "draft").length },
           { value: "all", label: "All" },
@@ -93,7 +101,7 @@ function InvoicesInner() {
           ))}
         </ul>
       ) : (
-        <EmptyState icon={ReceiptText} title="Nothing here" body={filter === "draft" ? "Ask Bob to “invoice Sophie £7,500 for the Copthorne job”." : "Nothing in this list."} />
+        <EmptyState icon={ReceiptText} title="Nothing here" body={filter === "draft" ? "Tap Create invoice draft, or ask Bob to “invoice Sophie £7,500 for the Copthorne job”." : "Nothing in this list."} />
       )}
 
       {deposits.length ? (
@@ -103,6 +111,7 @@ function InvoicesInner() {
               <ListRow
                 key={job.id}
                 onOpen={() => ui.openJob(job.id)}
+                openLabel={`Open ${job.title} for ${job.customerName}`}
                 title={`${job.customerName} · ${job.title}`}
                 aside={<span className="text-[15px] font-semibold text-foreground">{gbp(finance.depositOutstanding)}</span>}
                 meta={
@@ -120,7 +129,7 @@ function InvoicesInner() {
 }
 
 function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expanded: boolean; onToggle: () => void }) {
-  const { data, actions, can, propose, decide } = useStore();
+  const { data, actions, can, propose, decide, org } = useStore();
   const ui = useUI();
   const [pending, setPending] = React.useState<ActionView | null>(null);
   const customer = data.customers.find((c) => c.id === i.customerId);
@@ -130,10 +139,10 @@ function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expa
   const result = (ok: boolean, msg: string, err?: Record<string, string>) => toast(ok ? msg : Object.values(err ?? {})[0] ?? "Couldn't do that", ok ? "success" : "error");
 
   return (
-    <li className={cn(expanded && "bg-surface-2/50")}>
-      <button onClick={onToggle} aria-expanded={expanded} className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2 lg:px-5">
+    <li className={cn(expanded && "bg-surface-2")}>
+      <button onClick={onToggle} aria-expanded={expanded} className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2 active:bg-surface-3 lg:px-5">
         <div className="min-w-0 flex-1">
-          <div className="t-name truncate">{customer?.name ?? "Customer"}</div>
+          <div className="t-name line-clamp-2 break-words">{customer?.name ?? "Customer"}</div>
           <div className="truncate text-[14px] text-muted-foreground">
             {i.number ? `${i.number} · ` : ""}
             {i.draftRef} · {i.lines[0]?.description}
@@ -146,6 +155,7 @@ function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expa
             {i.dueDate && i.status === "sent" ? ` · due ${formatDateInline(i.dueDate)}` : ""}
           </StatusText>
         </div>
+        <ChevronDown aria-hidden className={cn("size-[18px] shrink-0 text-subtle transition-transform", expanded && "rotate-180")} />
       </button>
       {expanded ? (
         <div className="border-t border-line px-4 pb-4 pt-2 lg:px-5">
@@ -166,7 +176,7 @@ function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expa
                 </div>
               ) : null}
               <div>Created by {i.createdBy} · {timeAgo(i.createdAt)}</div>
-              {i.sentAt ? <div>Sent {timeAgo(i.sentAt)}{i.provider ? ` via ${i.provider === "demo_accounting" ? "demo accounting (simulated)" : i.provider}` : " (outside Bob)"}</div> : null}
+              {i.sentAt ? <div>Sent {timeAgo(i.sentAt)}{i.provider ? ` via ${i.provider === "demo_accounting" ? "demo accounting (simulated)" : i.provider}` : org.dataMode === "sample" ? " · sample record" : " (outside Bob)"}</div> : null}
               {i.status === "draft" ? <div className="text-info-fg">Draft — not sent. Bob ref {i.draftRef} is not an invoice number.</div> : null}
             </dl>
           </div>

@@ -13,8 +13,12 @@ import { toast } from "@/components/ui/toaster";
 const ICON = { reply: Reply, followup: MessageSquareReply, quote: MessageSquareReply, deposit: PoundSterling, invoice: ReceiptText, task: AlarmClock };
 
 /**
- * The single next step for a priority. "Chase" steps ask Bob to draft a
- * message (which then needs approval) — nothing is sent from here.
+ * The single next step for a priority, labelled for what it actually does:
+ *  - Review draft: opens the enquiry at Bob's draft reply.
+ *  - Call <name>: a phone link (they asked for a call back).
+ *  - Draft follow-up / Draft deposit reminder: asks Bob to prepare a message
+ *    for you to review — nothing is sent from here.
+ *  - View invoice / Mark done (with Undo).
  */
 export function usePriorityAction(item: PriorityItem, onAskBob: (text: string) => void, onNavigate?: () => void) {
   const ui = useUI();
@@ -35,26 +39,36 @@ export function usePriorityAction(item: PriorityItem, onAskBob: (text: string) =
     }
   };
 
-  const action: { label: string; run: () => void | Promise<void> } =
-    item.kind === "reply"
-      ? { label: "Draft reply", run: open }
-      : item.kind === "followup"
-        ? { label: "Follow up", run: open }
-        : item.kind === "quote"
-          ? { label: "Chase quote", run: () => onAskBob(`Draft a follow-up to ${item.customerName}`) }
-          : item.kind === "deposit"
-            ? { label: "Chase deposit", run: () => onAskBob(`Draft a follow-up to ${item.customerName}`) }
-            : item.kind === "invoice"
-              ? { label: "View invoice", run: open }
-              : {
-                  label: "Mark done",
-                  run: async () => {
-                    setBusy(true);
-                    const r = await actions.setTaskDone(item.taskId, true);
-                    setBusy(false);
-                    toast(r.ok ? "Done — reminder cleared" : "Couldn't update", r.ok ? "success" : "error");
-                  },
-                };
+  const action: { label: string; short: string; run: () => void | Promise<void>; href?: string } =
+    item.kind === "reply" && item.callback
+      ? { label: `Call ${item.callback.firstName}`, short: "Call", href: `tel:${item.callback.phone.replace(/\s/g, "")}`, run: () => undefined }
+      : item.kind === "reply"
+        ? { label: "Review draft", short: "Review", run: open }
+        : item.kind === "followup"
+          ? { label: "Draft follow-up", short: "Follow up", run: () => onAskBob(`Draft a follow-up to ${item.who}`) }
+          : item.kind === "quote"
+            ? { label: "Draft follow-up", short: "Follow up", run: () => onAskBob(`Draft a follow-up to ${item.customerName}`) }
+            : item.kind === "deposit"
+              ? { label: "Draft deposit reminder", short: "Reminder", run: () => onAskBob(`Draft a follow-up to ${item.customerName}`) }
+              : item.kind === "invoice"
+                ? { label: "View invoice", short: "View", run: open }
+                : {
+                    label: "Mark done",
+                    short: "Done",
+                    run: async () => {
+                      setBusy(true);
+                      const r = await actions.setTaskDone(item.taskId, true);
+                      setBusy(false);
+                      if (!r.ok) return toast("Couldn't update the reminder", "error");
+                      toast("Reminder done", "success", {
+                        action: {
+                          label: "Undo",
+                          run: () =>
+                            void actions.setTaskDone(item.taskId, false).then((u) => toast(u.ok ? "Reminder back on the list" : "Couldn't undo", u.ok ? "info" : "error")),
+                        },
+                      });
+                    },
+                  };
   return { open, action, busy, Icon: ICON[item.kind] };
 }
 
@@ -79,7 +93,7 @@ export function PriorityRow({ item, onAskBob, onNavigate }: { item: PriorityItem
       >
         {item.kind === "task" ? <Check className="size-4" /> : null}
         <span className="hidden sm:inline">{action.label}</span>
-        <span className="sm:hidden">{action.label.split(" ")[0]}</span>
+        <span className="sm:hidden">{action.short}</span>
         {item.kind !== "task" ? <ChevronRight className="size-4" /> : null}
       </button>
     </div>
@@ -100,10 +114,16 @@ export function PriorityCard({ item, onAskBob, onNavigate }: { item: PriorityIte
           <span className="mt-0.5 block text-[15px] leading-snug text-muted-foreground">{item.detail}</span>
         </span>
       </button>
-      <Button onClick={() => void action.run()} disabled={busy} className={cn("w-full sm:w-auto")} variant={item.kind === "task" ? "secondary" : "default"}>
-        {item.kind === "task" ? <Check /> : null}
-        {action.label}
-      </Button>
+      {action.href ? (
+        <Button asChild className="w-full sm:w-auto">
+          <a href={action.href}>{action.label}</a>
+        </Button>
+      ) : (
+        <Button onClick={() => void action.run()} disabled={busy} className={cn("w-full sm:w-auto")} variant={item.kind === "task" ? "secondary" : "default"}>
+          {item.kind === "task" ? <Check /> : null}
+          {action.label}
+        </Button>
+      )}
     </div>
   );
 }

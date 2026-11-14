@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function PageHeader({
@@ -42,7 +42,7 @@ export function SectionHeader({
     <div className={cn("mb-3 flex items-center justify-between", className)}>
       <h2 className="t-section">{title}</h2>
       {href ? (
-        <Link href={href} className="flex h-9 items-center gap-0.5 rounded-md px-1 text-[14.5px] font-medium text-accent-fg hover:text-copper-200">
+        <Link href={href} className="flex h-9 items-center gap-0.5 rounded-md px-1 text-[14.5px] font-medium text-accent-fg hover:text-copper-700">
           {linkLabel} <ChevronRight className="size-4" />
         </Link>
       ) : null}
@@ -67,7 +67,7 @@ export function EmptyState({
 }) {
   return (
     <div className="card-surface flex flex-col items-center px-6 py-10 text-center">
-      <div className="mb-3 grid size-12 place-items-center rounded-xl bg-raised text-accent-icon ring-1 ring-line-strong">
+      <div className="mb-3 grid size-12 place-items-center rounded-xl bg-selected text-accent-icon ring-1 ring-copper-500/20">
         <Icon className="size-5" />
       </div>
       <p className="t-name">{title}</p>
@@ -102,8 +102,8 @@ export function FilterChips<T extends string>({
             className={cn(
               "flex h-10 shrink-0 items-center gap-1.5 rounded-lg px-3.5 text-[14px] font-semibold ring-1 transition active:bg-surface-3",
               active
-                ? "bg-raised text-[#faf9f6] ring-line-strong"
-                : "bg-card text-muted-foreground ring-line hover:bg-surface-3 hover:text-foreground",
+                ? "bg-selected text-accent-fg ring-copper-500/40"
+                : "bg-card text-muted-foreground ring-line hover:bg-surface-2 hover:text-foreground",
             )}
           >
             {o.label}
@@ -168,12 +168,13 @@ export function ListPanel({
 }) {
   return (
     <section aria-labelledby={id} className={cn("panel overflow-hidden", className)}>
-      <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2 lg:px-5">
+      {/* On narrow screens the action drops to its own line, right under the heading. */}
+      <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 sm:flex-nowrap sm:py-2 lg:px-5">
         <h2 id={id} className="t-section">
           {title}
           {typeof count === "number" && count > 0 ? <span className="ml-2 text-[14px] font-normal text-subtle tabular">{count}</span> : null}
         </h2>
-        {action}
+        {action ? <div className="basis-full sm:basis-auto">{action}</div> : null}
       </div>
       <div className="border-t border-line">{children}</div>
       {footer ? <div className="flex min-h-12 items-center justify-between gap-3 border-t border-line px-4 lg:px-5">{footer}</div> : null}
@@ -187,9 +188,14 @@ export const rowActionClass =
 
 /** Text link-button for panel headers/footers ("Show all 12", "View all"). */
 export const textActionClass =
-  "inline-flex h-10 items-center gap-1 rounded-md px-1 text-[14.5px] font-semibold text-accent-fg transition hover:text-copper-200";
+  "inline-flex h-10 items-center gap-1 rounded-md px-1 text-[14.5px] font-semibold text-accent-fg transition hover:text-copper-700";
 
-/** One record in a list: leading mark, name, a short reason that may wrap, and one action. */
+/**
+ * One record in a list: leading mark, name, a short detail that may wrap, an
+ * optional secondary action, and — when the row opens something — a chevron.
+ * The whole row is the target (a stretched button), so it's easy to hit on a
+ * phone; the secondary action sits above it and does only what its label says.
+ */
 export function ListRow({
   leading,
   title,
@@ -216,25 +222,64 @@ export function ListRow({
       {leading}
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-3">
-          <span className="t-name min-w-0 truncate">{title}</span>
-          {aside ? <span className="shrink-0 text-[13px] tabular text-subtle">{aside}</span> : null}
+          <span className="t-name line-clamp-2 min-w-0 break-words">{title}</span>
+          {aside ? <span className="shrink-0 text-[13.5px] tabular text-muted-foreground">{aside}</span> : null}
         </span>
         {meta ? <span className="mt-0.5 block text-[14.5px] leading-snug text-muted-foreground">{meta}</span> : null}
       </span>
     </>
   );
   return (
-    <li className={cn("relative flex items-center gap-3 px-4 py-3 lg:px-5", selected && "bg-raised", className)}>
-      {selected ? <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-copper-500" /> : null}
+    <li className={cn("flex items-center gap-3 px-4 py-3 lg:px-5", onOpen && "row-open", className)} data-selected={selected || undefined}>
       {onOpen ? (
-        <button type="button" onClick={onOpen} aria-label={openLabel} aria-current={selected || undefined} className="-my-1 flex min-w-0 flex-1 items-center gap-3 rounded-lg py-1 text-left">
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={openLabel}
+          aria-current={selected || undefined}
+          className="row-target flex min-w-0 flex-1 items-center gap-3 text-left after:absolute after:inset-0 after:content-['']"
+        >
           {body}
         </button>
       ) : (
         <span className="flex min-w-0 flex-1 items-center gap-3">{body}</span>
       )}
-      {action}
+      {action ? <span className="row-secondary shrink-0">{action}</span> : null}
+      {onOpen ? <ChevronRight aria-hidden className="row-chevron -mr-1 size-[18px] shrink-0" /> : null}
     </li>
+  );
+}
+
+/** Primary page action ("Add new…", "Create invoice draft"): orange, compact. */
+export const pageActionClass =
+  "flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 text-[15px] font-semibold text-white shadow-[0_1px_2px_rgb(16_24_40/0.12)] transition hover:bg-copper-600 active:bg-copper-700";
+
+/** Secondary page action: white, bordered. */
+export const pageSecondaryClass =
+  "flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-card px-4 text-[15px] font-semibold text-foreground ring-1 ring-line-strong transition hover:bg-raised-hover active:bg-surface-3";
+
+/**
+ * "Demo · sample data" — one compact label used across the workspace. Pass
+ * `detail` to explain what a particular action does in the demo.
+ */
+export function DemoTag({ detail, className }: { detail?: string; className?: string }) {
+  return (
+    <span
+      title={detail ?? "Fictional sample data. Nothing is sent to real customers."}
+      className={cn("inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-md bg-surface-3 px-2 text-[12.5px] font-medium text-muted-foreground", className)}
+    >
+      <FlaskConical aria-hidden className="size-3" /> Demo · sample data
+    </span>
+  );
+}
+
+/** A specific explanation of a simulated action ("Simulated — nothing is sent"). */
+export function DemoNote({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <p className={cn("flex items-start gap-2 text-[13.5px] leading-snug text-muted-foreground", className)}>
+      <FlaskConical aria-hidden className="mt-0.5 size-3.5 shrink-0 text-subtle" />
+      <span>{children}</span>
+    </p>
   );
 }
 
@@ -264,7 +309,7 @@ export function Disclosure({
           aria-controls={`${id}-body`}
           id={id}
           onClick={() => setOpen((o) => !o)}
-          className="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left transition hover:bg-surface-2 lg:px-5"
+          className="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left transition hover:bg-surface-2 active:bg-surface-3 lg:px-5"
         >
           <span className="min-w-0 flex-1">
             <span className="t-section block">{title}</span>
@@ -284,8 +329,8 @@ export function Disclosure({
 
 /** Plain-text status with a small coloured dot — readable without the colour. */
 export function StatusText({ tone, children, className }: { tone: "neutral" | "amber" | "green" | "red" | "blue" | "violet"; children: React.ReactNode; className?: string }) {
-  const dot = { neutral: "bg-subtle", amber: "bg-amber-400", green: "bg-emerald-400", red: "bg-red-400", blue: "bg-sky-400", violet: "bg-violet-400" }[tone];
-  const text = { neutral: "text-muted-foreground", amber: "text-warn-fg", green: "text-good-fg", red: "text-danger-fg", blue: "text-info-fg", violet: "text-violet-200" }[tone];
+  const dot = { neutral: "bg-subtle", amber: "bg-amber-500", green: "bg-emerald-500", red: "bg-red-500", blue: "bg-sky-500", violet: "bg-violet-500" }[tone];
+  const text = { neutral: "text-muted-foreground", amber: "text-warn-fg", green: "text-good-fg", red: "text-danger-fg", blue: "text-info-fg", violet: "text-violet-fg" }[tone];
   return (
     <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap text-[13.5px] font-medium", text, className)}>
       <span aria-hidden className={cn("size-1.5 rounded-full", dot)} />
@@ -297,7 +342,7 @@ export function StatusText({ tone, children, className }: { tone: "neutral" | "a
 /** Simple segmented tabs for a page's main lists (2–4 options). */
 export function Tabs<T extends string>({ label, value, onChange, options, className }: { label: string; value: T; onChange: (v: T) => void; options: { value: T; label: string; count?: number; highlight?: boolean }[]; className?: string }) {
   return (
-    <div role="tablist" aria-label={label} className={cn("flex min-w-0 flex-1 gap-1 rounded-xl bg-card p-1 ring-1 ring-line", className)}>
+    <div role="tablist" aria-label={label} className={cn("flex min-w-0 flex-1 gap-1 rounded-xl bg-surface-3 p-1", className)}>
       {options.map((o) => {
         const active = value === o.value;
         return (
@@ -309,7 +354,7 @@ export function Tabs<T extends string>({ label, value, onChange, options, classN
             onClick={() => onChange(o.value)}
             className={cn(
               "flex h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 text-[14.5px] font-semibold transition active:bg-surface-2",
-              active ? "bg-raised text-[#faf9f6]" : "text-muted-foreground hover:text-foreground",
+              active ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {o.label}

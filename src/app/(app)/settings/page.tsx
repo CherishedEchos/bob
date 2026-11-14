@@ -41,7 +41,7 @@ function WebsiteFormSection({ slug }: { slug: string }) {
         <div>
           <div className="mb-1.5 text-[14px] font-medium text-foreground/90">Form link</div>
           <div className="flex gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-xl bg-[#0f0f11] px-3.5 py-3 text-[14px] ring-1 ring-line-strong">{link}</code>
+            <code className="min-w-0 flex-1 truncate rounded-xl bg-message px-3.5 py-3 text-[14px] ring-1 ring-line-strong">{link}</code>
             <Button variant="secondary" onClick={() => void copy(link, "Link")}>
               <Copy /> Copy
             </Button>
@@ -49,7 +49,7 @@ function WebsiteFormSection({ slug }: { slug: string }) {
         </div>
         <div>
           <div className="mb-1.5 text-[14px] font-medium text-foreground/90">Add it to your website</div>
-          <code className="block break-all rounded-xl bg-[#0f0f11] px-3.5 py-3 text-[13px] leading-relaxed text-muted-foreground ring-1 ring-line-strong">{embed}</code>
+          <code className="block break-all rounded-xl bg-message px-3.5 py-3 text-[13px] leading-relaxed text-muted-foreground ring-1 ring-line-strong">{embed}</code>
           <div className="mt-2 flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => void copy(embed, "Embed code")}>
               <Copy /> Copy embed code
@@ -74,13 +74,16 @@ function Section({ icon: Icon, title, subtitle, children, defaultOpen = false }:
   return (
     <li>
       <h2 className="m-0">
-        <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)} className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-2 lg:px-5">
+        <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)} className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-2 active:bg-surface-3 lg:px-5">
           <Icon className="size-5 shrink-0 text-accent-icon" />
           <span className="min-w-0 flex-1">
             <span className="block text-[16px] font-semibold">{title}</span>
             {subtitle && !open ? <span className="mt-0.5 block truncate text-[14px] text-muted-foreground">{subtitle}</span> : null}
           </span>
-          <ChevronRight className={cn("size-5 shrink-0 text-subtle transition-transform", open && "rotate-90")} />
+          <span className="flex shrink-0 items-center gap-1 text-[13.5px] font-medium text-muted-foreground">
+            <span className="hidden sm:inline">{open ? "Hide" : "Show"}</span>
+            <ChevronRight aria-hidden className={cn("size-5 text-subtle transition-transform", open && "rotate-90")} />
+          </span>
         </button>
       </h2>
       {open ? (
@@ -103,6 +106,10 @@ function SettingsInner() {
     if (c) toast(`${PROVIDER_LABEL[c] ?? c} connected`);
   }, [params]);
 
+  const live = data.connections.filter((c) => c.status === "connected" || c.status === "demo");
+  const connectedSummary = live.length
+    ? `${live.map((c) => PROVIDER_LABEL[c.provider] ?? c.provider).join(", ")} connected`
+    : "Nothing connected — email and accounting are not connected";
   const save = async (patch: Record<string, unknown>) => {
     const r = await api<{ ok?: boolean; error?: string; snapshot?: Snapshot }>("/api/settings", { json: patch });
     if (r.body.snapshot) setSnapshot(r.body.snapshot);
@@ -116,22 +123,31 @@ function SettingsInner() {
         <p className="t-meta mt-0.5 lg:text-[15px]">{`${org.name}${owner ? "" : " · only the owner can change these"}`}</p>
       </div>
       <ul className="panel divide-y divide-line overflow-hidden">
+        <Section icon={Link2} title="Connected accounts" subtitle={connectedSummary} defaultOpen>
+          <p className="mb-3 text-[14.5px] text-muted-foreground">Bob uses each service&apos;s official sign-in page. He never asks for your passwords.</p>
+          <div className="space-y-2">
+            {data.connections.map((c) => (
+              <ConnectionRow key={c.provider} c={c} owner={can("integrations.manage")} />
+            ))}
+            <div className="rounded-xl bg-card px-3.5 py-3 ring-1 ring-line">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[15px] font-medium">
+                    Instagram <span className="text-[13px] font-normal text-subtle">· Messages</span>
+                  </div>
+                  <div className="text-[13.5px] text-muted-foreground">Not connected. In this demo, Instagram enquiries are logged manually and you paste Bob&apos;s reply into Instagram yourself.</div>
+                </div>
+                <StatusChip tone="neutral">Coming soon</StatusChip>
+              </div>
+            </div>
+          </div>
+        </Section>
         <Section icon={Smartphone} title="Install Bob on your phone" subtitle="Add Bob to your home screen so it opens like an app.">
           <InstallBob />
           <p className="text-[14px] text-muted-foreground">Already installed? Bob opens full-screen from your home screen icon.</p>
         </Section>
         <BusinessSection org={org} owner={owner} save={save} />
         <FinanceSection org={org} owner={owner} save={save} />
-        <Section icon={Link2} title="Connected accounts" subtitle="Bob uses official sign-in pages (OAuth). He never asks for your passwords.">
-          <div className="space-y-2">
-            {data.connections.map((c) => (
-              <ConnectionRow key={c.provider} c={c} owner={can("integrations.manage")} />
-            ))}
-          </div>
-          <p className="mt-3 text-[13.5px] text-subtle">
-            Instagram isn&apos;t connected yet — log those enquiries manually and Bob includes them in reports.
-          </p>
-        </Section>
         <WebsiteFormSection slug={org.slug} />
         <BobSection org={org} owner={owner} save={save} />
         <Section icon={Users} title="Team" subtitle="Who can use Bob for this business.">
@@ -314,28 +330,44 @@ function StatusLine({ ok, label, value }: { ok: boolean; label: string; value: s
   );
 }
 
+function StatusChip({ tone, children }: { tone: "good" | "info" | "bad" | "neutral"; children: React.ReactNode }) {
+  const cls = {
+    good: "bg-emerald-500/10 text-good-fg ring-emerald-500/25",
+    info: "bg-sky-500/10 text-info-fg ring-sky-500/25",
+    bad: "bg-red-500/10 text-danger-fg ring-red-500/25",
+    neutral: "bg-surface-2 text-muted-foreground ring-line-strong",
+  }[tone];
+  return <span className={cn("inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-md px-2 text-[12.5px] font-medium ring-1", cls)}>{children}</span>;
+}
+
 function ConnectionRow({ c, owner }: { c: Connection; owner: boolean }) {
   const { setSnapshot } = useStore();
   const [missing, setMissing] = React.useState<string[] | null>(null);
   const live = c.status === "connected" || c.status === "demo";
+  const chip: { tone: "good" | "info" | "bad" | "neutral"; label: string } =
+    c.status === "connected" ? { tone: "good", label: "Connected" } :
+    c.status === "demo" ? { tone: "info", label: "Demo (simulated)" } :
+    c.status === "error" ? { tone: "bad", label: "Needs reconnecting" } : { tone: "neutral", label: "Not connected" };
   const statusText =
-    c.status === "connected" ? `Connected${c.accountLabel ? ` · ${c.accountLabel}` : ""}` :
-    c.status === "demo" ? "Demo — simulated, nothing real is sent" :
-    c.status === "error" ? `Problem: ${c.error ?? "needs reconnecting"}` :
-    c.status === "not_configured" ? "Not available yet — server credentials needed" : "Not connected";
+    c.status === "connected" ? (c.accountLabel ?? "Working") :
+    c.status === "demo" ? "Simulated — nothing real is sent" :
+    c.status === "error" ? (c.error ?? "Sign in again to reconnect") :
+    c.status === "not_configured" ? "Not set up on this server yet — Cresaro needs to add it before you can connect" :
+    c.kind === "email" ? "Connect to send approved replies from your own mailbox" : "Connect to send invoices from your accounts";
   return (
-    <div className="rounded-xl bg-surface-2 px-3.5 py-3 ring-1 ring-line">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[15px] font-medium">
+    <div className="rounded-xl bg-card px-3.5 py-3 ring-1 ring-line">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 text-[15px] font-medium">
             {PROVIDER_LABEL[c.provider] ?? c.provider} <span className="text-[13px] font-normal text-subtle">· {c.kind === "email" ? "Email" : "Accounting"}</span>
+            <StatusChip tone={chip.tone}>{chip.label}</StatusChip>
           </div>
-          <div className={cn("text-[13.5px]", c.status === "connected" ? "text-good-fg" : c.status === "demo" ? "text-info-fg" : c.status === "error" ? "text-danger-fg" : "text-muted-foreground")}>
+          <div className="mt-0.5 text-[13.5px] text-muted-foreground">
             {statusText}
             {c.lastSyncAt ? ` · synced ${timeAgo(c.lastSyncAt)}` : ""}
           </div>
         </div>
-        {owner && !c.provider.startsWith("demo_") ? (
+        {owner && !c.provider.startsWith("demo_") && c.status !== "not_configured" ? (
           live ? (
             <Button
               size="sm"

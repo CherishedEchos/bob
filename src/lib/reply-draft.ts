@@ -11,7 +11,15 @@ export type FlagKind = "date" | "price" | "commitment";
 export interface DraftFlag {
   kind: FlagKind;
   text: string;
+  /**
+   * The draft already holds back (says you'll confirm the date or price), so
+   * this is a neutral note for the business, not a warning.
+   */
+  deferred?: boolean;
 }
+
+/** Short, neutral labels for the notes shown above a draft. */
+export const FLAG_TITLE: Record<FlagKind, string> = { date: "Start date unconfirmed", price: "Price not given", commitment: "Check the promise" };
 
 const WEEKDAY = "monday|tuesday|wednesday|thursday|friday|saturday|sunday";
 const MONTH = "january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec";
@@ -80,9 +88,10 @@ export function buildDraft(e: Enquiry): { draft: string; flags: DraftFlag[]; sav
   if (timing && !commitment) {
     flags.push({
       kind: "date",
+      deferred: true,
       text: specific
-        ? `Asks to start ${timing}. Your diary isn't confirmed, so the draft doesn't promise it — decide before sending.`
-        : `Wants it ${/\b(finish|done|complete|ready)\b/i.test(inbound) && !/\bstart\b/i.test(inbound) ? "done" : "to start"} ${timing}. The draft says you'll confirm dates — decide before sending.`,
+        ? `Asks to start ${timing}. The draft doesn't promise it — it says you'll confirm once you've checked the diary.`
+        : `Wants it ${/\b(finish|done|complete|ready)\b/i.test(inbound) && !/\bstart\b/i.test(inbound) ? "done" : "to start"} ${timing}. The draft says you'll confirm dates.`,
     });
     if (!savedDraft) {
       extra.push(
@@ -94,7 +103,7 @@ export function buildDraft(e: Enquiry): { draft: string; flags: DraftFlag[]; sav
   }
 
   if (PRICE_ASK.test(inbound)) {
-    flags.push({ kind: "price", text: "Asks for a price. The draft doesn't give one — add a ballpark if you're happy to." });
+    flags.push({ kind: "price", deferred: true, text: "Asked for a price. The draft says you'll price it properly once you've seen the job — add a ballpark only if you're happy to." });
     if (!savedDraft && !DRAFT_PRICE.test(draft)) {
       extra.push("We'll put a proper price together once we've seen the space — every job is a bit different, so we'd rather not guess.");
     }

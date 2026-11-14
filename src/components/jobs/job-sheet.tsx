@@ -3,7 +3,7 @@
 import { PhotoGrid } from "@/components/common/photos";
 
 import * as React from "react";
-import { AlarmClock, Check, ChevronRight, Hammer, Inbox, MapPin, MoreHorizontal, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
+import { AlarmClock, Check, ChevronRight, Hammer, Inbox, MapPin, MoreHorizontal, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import {
@@ -77,27 +77,42 @@ function JobDetail({ id }: { id: string }) {
   const expenses = data.expenses.filter((e) => e.jobId === j.id);
   const invoices = data.invoices.filter((i) => i.jobId === j.id);
   const [nextAction, setNextAction] = React.useState(j.nextAction ?? "");
+  const [editingNext, setEditingNext] = React.useState(false);
 
   React.useEffect(() => setNextAction(j.nextAction ?? ""), [j.id, j.nextAction]);
+  const saveNext = async () => {
+    const res = await actions.updateJob(j.id, { nextAction: nextAction.trim() });
+    toast(res.ok ? "Next step updated" : Object.values(res.errors)[0] ?? "Couldn't save", res.ok ? "success" : "error");
+    if (res.ok) setEditingNext(false);
+  };
 
   const reminder = () =>
     ui.openForm({ form: "reminder", title: j.nextAction ?? `Check in on ${j.customerName}'s ${j.title.toLowerCase()}`, dueDate: addDaysKey(1), customerId: j.customerId, relatedType: "job", relatedId: j.id });
   const invoice = () => ui.openForm({ form: "invoice", customerId: j.customerId, jobId: j.id });
   const payment = () => ui.openForm({ form: "payment", jobId: j.id });
-  // The one action most likely needed next.
-  const primary =
+  // Money actions live with the payment status, not with the job's next step.
+  const moneyAction =
     money && can("payments.record") && f.depositOutstanding > 0 && j.status !== "quoted"
       ? { label: "Record deposit", icon: PoundSterling, run: payment }
       : money && can("invoices.draft") && f.balance > 0 && (j.status === "snagging" || j.status === "completed") && !invoices.some((i) => i.status !== "void")
-        ? { label: "Create invoice", icon: ReceiptText, run: invoice }
+        ? { label: "Create invoice draft", icon: ReceiptText, run: invoice }
         : money && can("payments.record") && f.balance > 0 && j.status !== "quoted"
           ? { label: "Record payment", icon: PoundSterling, run: payment }
-          : { label: "Set reminder", icon: AlarmClock, run: reminder };
+          : null;
+  const paymentStatus = !money
+    ? null
+    : j.depositRequired > 0 && f.depositOutstanding > 0 && j.status !== "quoted"
+      ? {
+          tone: f.depositOverdue ? ("red" as const) : ("amber" as const),
+          text: `${gbp(f.depositOutstanding)} deposit ${f.depositOverdue ? "overdue" : f.depositDaysUntilDue !== null ? (f.depositDaysUntilDue === 0 ? "due today" : `due in ${f.depositDaysUntilDue} day${f.depositDaysUntilDue === 1 ? "" : "s"}`) : "not yet paid"}`,
+        }
+      : f.balance === 0 && j.quotedValue > 0
+        ? { tone: "green" as const, text: "Paid in full" }
+        : { tone: "neutral" as const, text: j.depositRequired > 0 ? `Deposit paid · ${gbp(f.balance)} left to pay` : `${gbp(f.balance)} left to pay` };
   const more: MenuItem[] = [
-    ...(money && can("payments.record") && f.balance > 0 && primary.run !== payment ? [{ label: "Record payment", icon: PoundSterling, onSelect: payment }] : []),
-    ...(money && can("invoices.draft") && primary.run !== invoice ? [{ label: "Create invoice", icon: ReceiptText, onSelect: invoice }] : []),
+    ...(money && can("payments.record") && f.balance > 0 && moneyAction?.run !== payment ? [{ label: "Record payment", icon: PoundSterling, onSelect: payment }] : []),
+    ...(money && can("invoices.draft") && moneyAction?.run !== invoice ? [{ label: "Create invoice draft", icon: ReceiptText, onSelect: invoice }] : []),
     ...(can("expenses.write") ? [{ label: "Add a cost", icon: Hammer, onSelect: () => ui.openForm({ form: "expense", jobId: j.id }) }] : []),
-    ...(primary.run !== reminder ? [{ label: "Set reminder", icon: AlarmClock, onSelect: reminder }] : []),
     { label: "Customer details", icon: UserRound, onSelect: () => ui.openCustomer(j.customerId) },
     ...(j.enquiryId ? [{ label: "Original enquiry", icon: Inbox, onSelect: () => ui.openEnquiry(j.enquiryId!) }] : []),
   ];
@@ -117,18 +132,63 @@ function JobDetail({ id }: { id: string }) {
             </p>
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <JobStatusBadge status={j.status} />
-          {money && f.depositOverdue ? <Badge tone="red">Deposit overdue</Badge> : null}
-        </div>
+        <dl className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-[13.5px]">
+          <div className="flex items-center gap-1.5">
+            <dt className="text-muted-foreground">Job:</dt>
+            <dd>
+              <JobStatusBadge status={j.status} />
+            </dd>
+          </div>
+          {paymentStatus ? (
+            <div className="flex items-center gap-1.5">
+              <dt className="text-muted-foreground">Payment:</dt>
+              <dd>
+                <Badge tone={paymentStatus.tone}>{paymentStatus.text}</Badge>
+              </dd>
+            </div>
+          ) : null}
+        </dl>
 
-        {/* The next step and the one action most likely needed */}
-        <div className="mt-5 rounded-2xl bg-card px-4 py-3.5 ring-1 ring-line">
-          <div className="t-eyebrow">Next step</div>
-          <p className="mt-1 text-[16px] font-medium leading-snug">{jobNextStep(j, data, money)}</p>
+        {/* The next step: easy to spot, easy to change */}
+        <section aria-labelledby={`next-${j.id}`} className="mt-5 rounded-2xl bg-selected px-4 py-3.5 ring-1 ring-copper-500/25">
+          <h3 id={`next-${j.id}`} className="t-eyebrow text-accent-fg">
+            Next step
+          </h3>
+          {editingNext ? (
+            <form
+              className="mt-2 flex gap-2"
+              onSubmit={(ev) => {
+                ev.preventDefault();
+                void saveNext();
+              }}
+            >
+              <Input autoFocus value={nextAction} onChange={(ev) => setNextAction(ev.target.value)} placeholder="What's the next thing to do?" aria-label="Next step" />
+              <Button type="submit" disabled={(j.nextAction ?? "") === nextAction.trim()}>
+                <Check /> Save
+              </Button>
+            </form>
+          ) : (
+            <p className="mt-1 text-[17px] font-semibold leading-snug text-heading">{jobNextStep(j, data, money)}</p>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button size="sm" onClick={primary.run}>
-              <primary.icon /> {primary.label}
+            {can("jobs.write") && !editingNext ? (
+              <Button size="sm" variant="secondary" onClick={() => setEditingNext(true)}>
+                <Pencil /> Update next step
+              </Button>
+            ) : editingNext ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setNextAction(j.nextAction ?? "");
+                  setEditingNext(false);
+                }}
+              >
+                Cancel
+              </Button>
+            ) : null}
+            <Button size="sm" variant="secondary" onClick={reminder}>
+              <AlarmClock /> Add reminder
             </Button>
             {j.customerPhone ? (
               <Button asChild variant="secondary" size="sm">
@@ -144,20 +204,26 @@ function JobDetail({ id }: { id: string }) {
               triggerClassName="flex h-11 items-center gap-1.5 rounded-xl px-3.5 text-[15px] font-medium text-muted-foreground transition hover:bg-surface-3 hover:text-foreground"
               trigger={
                 <>
-                  <MoreHorizontal className="size-5" /> More
+                  <MoreHorizontal className="size-5" aria-hidden /> More
                 </>
               }
             />
           </div>
-        </div>
+        </section>
 
         {money ? (
-          <div className="mt-4">
-            <div className="grid grid-cols-3 gap-2 text-center">
+          <section aria-labelledby={`pay-${j.id}`} className="mt-3 rounded-2xl bg-card px-4 py-3.5 ring-1 ring-line">
+            <div className="flex items-center justify-between gap-3">
+              <h3 id={`pay-${j.id}`} className="t-eyebrow">
+                Payment
+              </h3>
+              {paymentStatus ? <Badge tone={paymentStatus.tone}>{paymentStatus.text}</Badge> : null}
+            </div>
+            <div className="mt-2 grid grid-cols-3 gap-2 text-center">
               {[
                 ["Price", gbp(j.quotedValue), ""],
                 ["Paid", gbp(f.totalPaid), "text-good-fg"],
-                ["Left", gbp(f.balance), f.balance > 0 ? "text-foreground" : "text-good-fg"],
+                ["Left to pay", gbp(f.balance), f.balance > 0 ? "text-foreground" : "text-good-fg"],
               ].map(([l, v, cls]) => (
                 <div key={l}>
                   <div className={cn("tabular text-[19px] font-semibold", cls)}>{v}</div>
@@ -169,7 +235,12 @@ function JobDetail({ id }: { id: string }) {
               <ProgressBar value={f.paidPercent} className="flex-1" />
               <span className="tabular text-[13px] text-muted-foreground">{f.paidPercent}% paid</span>
             </div>
-          </div>
+            {moneyAction ? (
+              <Button size="sm" className="mt-3" onClick={moneyAction.run}>
+                <moneyAction.icon /> {moneyAction.label}
+              </Button>
+            ) : null}
+          </section>
         ) : null}
       </div>
 
@@ -269,22 +340,9 @@ function JobDetail({ id }: { id: string }) {
         </Fold>
       ) : null}
 
-      <Fold title="Next action & status" summary={`${JOB_STATUS_LABEL[j.status]}${j.nextAction ? ` · ${j.nextAction}` : ""}`}>
-        <form
-          className="flex gap-2"
-          onSubmit={async (ev) => {
-            ev.preventDefault();
-            const res = await actions.updateJob(j.id, { nextAction: nextAction.trim() });
-            toast(res.ok ? "Next action saved" : Object.values(res.errors)[0] ?? "Couldn't save", res.ok ? "success" : "error");
-          }}
-        >
-          <Input value={nextAction} onChange={(ev) => setNextAction(ev.target.value)} placeholder="What's the next thing to do?" aria-label="Next action" disabled={!can("jobs.write")} />
-          <Button type="submit" variant="secondary" size="icon" aria-label="Save next action" disabled={(j.nextAction ?? "") === nextAction || !can("jobs.write")}>
-            <Check />
-          </Button>
-        </form>
+      <Fold title="Job status" summary={JOB_STATUS_LABEL[j.status]}>
         {can("jobs.write") ? (
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {JOB_STATUSES.map((s) => (
               <button
                 key={s}
@@ -296,7 +354,7 @@ function JobDetail({ id }: { id: string }) {
                 aria-pressed={j.status === s}
                 className={cn(
                   "h-10 rounded-xl text-[14px] font-medium transition",
-                  j.status === s ? "bg-copper-500/18 text-accent-fg" : "bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground",
+                  j.status === s ? "bg-selected text-accent-fg ring-1 ring-copper-500/40" : "bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground",
                 )}
               >
                 {JOB_STATUS_LABEL[s]}

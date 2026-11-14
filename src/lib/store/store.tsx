@@ -96,7 +96,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refresh = React.useCallback(async () => {
-    const r = await api<Snapshot & { error?: string }>("/api/data");
+    setError(null);
+    const r = await api<Snapshot & { error?: string }>("/api/data").catch(() => ({
+      status: 0,
+      body: { error: "Bob didn't respond. Check your connection, then try again." } as Snapshot & { error?: string },
+    }));
     if (r.status === 200) {
       // Announce enquiries that arrived on their own (website form, inbox) since the last load.
       const before = dataRef.current;
@@ -219,14 +223,20 @@ function SplashScreen({ error, onRetry }: { error: string | null; onRetry: () =>
         <div className="relative size-16 rounded-full bg-copper-500/20 ring-1 ring-copper-400/50" />
       </div>
       {error ? (
-        <div>
-          <p className="text-[15px] text-muted-foreground">{error}</p>
-          <button onClick={onRetry} className="mt-3 text-[14px] font-medium text-copper-300 underline">
+        <div role="alert" className="max-w-sm">
+          <p className="text-[16px] font-semibold text-heading">Couldn&apos;t open the workspace</p>
+          <p className="mt-1 text-[15px] text-muted-foreground">{error}</p>
+          <button onClick={onRetry} className="mt-4 h-11 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white">
             Try again
           </button>
+          <p className="mt-3 text-[13.5px] text-subtle">
+            Still stuck? <a href="/login" className="font-medium text-accent-fg underline">Go back to the start</a> and tap Try the demo.
+          </p>
         </div>
       ) : (
-        <span className="sr-only">Loading Bob</span>
+        <p className="text-[15px] font-medium text-muted-foreground" aria-live="polite">
+          Opening your workspace…
+        </p>
       )}
     </div>
   );

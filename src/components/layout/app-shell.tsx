@@ -74,8 +74,8 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
     <div ref={shellRef} className="fixed inset-x-0 top-0 flex h-dvh overflow-hidden bg-background">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Today and Ask Bob show demo mode in their own headers. */}
-        {pathname !== "/today" && !assistant ? <DemoBanner /> : null}
+        {/* Ask Bob shows demo mode in its own header; phones show it in the top bar. */}
+        {!assistant ? <DemoBanner /> : null}
         {!assistant ? <MobileHeader /> : null}
         <main className={cn("min-h-0 flex-1 overscroll-contain", assistant ? "overflow-hidden" : pathname.startsWith("/enquiries") ? "overflow-y-auto bg-inbox" : "overflow-y-auto bg-app")}>
           {assistant ? children : <div className={cn("mx-auto w-full px-4 pb-10 pt-4 lg:pb-10 lg:pt-8", pathname.startsWith("/enquiries") ? "max-w-[1560px] lg:px-8" : "max-w-6xl lg:px-10")}>{children}</div>}
@@ -88,17 +88,20 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Always visible when the workspace holds sample data. */
+/**
+ * "Demo · sample data": a slim strip above the content on desktop (it sits in
+ * the layout, so it never covers what scrolls underneath). Phones show the
+ * same label in the top bar instead.
+ */
 function DemoBanner() {
   const { org } = useStore();
   if (org.dataMode !== "sample") return null;
   return (
-    <div role="note" className="flex shrink-0 items-center justify-center gap-2 border-b border-line bg-card px-3 py-1.5 text-center text-[13px] text-muted-foreground">
-      <FlaskConical className="size-3.5 shrink-0 text-subtle" />
+    <div role="note" className="hidden h-8 shrink-0 items-center justify-center gap-2 border-b border-line bg-card px-3 text-[13px] text-muted-foreground lg:flex">
+      <FlaskConical aria-hidden className="size-3.5 shrink-0 text-subtle" />
       <span>
-        <strong className="font-medium text-foreground/85">Demo mode</strong>
-        <span className="hidden sm:inline"> — {org.isDemo ? "a fictional business" : "fictional sample data"}. Nothing is sent to real customers.</span>
-        <span className="sm:hidden"> · sample data, nothing is sent</span>
+        <strong className="font-semibold text-foreground">Demo · sample data</strong>
+        <span> — {org.isDemo ? "a fictional business" : "fictional customers"}. Nothing is sent to anyone.</span>
       </span>
     </div>
   );
@@ -122,7 +125,7 @@ function Sidebar() {
   const counts = useNavCounts();
   const { org, can } = useStore();
   return (
-    <aside className="hidden w-[256px] shrink-0 flex-col border-r border-line bg-card lg:flex">
+    <aside className="theme-dark hidden w-[256px] shrink-0 flex-col border-r border-line bg-card lg:flex">
       <div className="flex items-center gap-3 px-5 pb-5 pt-6">
         <OrgLogo org={org} size={40} />
         <div className="min-w-0 leading-tight">
@@ -143,7 +146,7 @@ function Sidebar() {
               aria-current={active ? "page" : undefined}
               className={cn(
                 "relative flex h-11 items-center gap-3 rounded-xl px-3.5 text-[15.5px] font-medium transition active:bg-surface-3",
-                active ? "bg-raised text-[#faf9f6] ring-1 ring-line-strong before:absolute before:inset-y-2.5 before:-left-3 before:w-[3px] before:rounded-r before:bg-copper-400" : "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
+                active ? "bg-raised text-heading ring-1 ring-line-strong before:absolute before:inset-y-2.5 before:-left-3 before:w-[3px] before:rounded-r before:bg-copper-400" : "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
               )}
             >
               <item.icon className={cn("size-[19px]", active && "text-accent-icon")} strokeWidth={1.8} />
@@ -220,13 +223,19 @@ function UserMenu() {
 
 function MobileHeader() {
   const { org } = useStore();
+  const sample = org.dataMode === "sample";
   const [moreOpen, setMoreOpen] = React.useState(false);
   return (
-    <header className="flex h-[calc(52px+env(safe-area-inset-top))] shrink-0 items-center justify-between border-b border-line bg-card/95 px-3 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
+    <header className="flex h-[calc(52px+env(safe-area-inset-top))] shrink-0 items-center justify-between border-b border-line bg-card px-3 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
       <Link href="/today" aria-label="Today">
-        <BobLogo height={24} />
+        <BobLogo height={24} tone="dark" />
       </Link>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
+        {sample ? (
+          <span role="note" title="Fictional sample data. Nothing is sent to anyone." className="inline-flex h-6 items-center gap-1 rounded-md bg-surface-3 px-2 text-[12px] font-medium text-muted-foreground">
+            <FlaskConical aria-hidden className="size-3" /> Demo · sample data
+          </span>
+        ) : null}
         <OrgLogo org={org} size={28} />
         <button onClick={() => setMoreOpen(true)} aria-label="More" className="grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-surface-3">
           <LayoutGrid className="size-[22px]" />
@@ -262,10 +271,10 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
         </div>
         <div className="space-y-1.5">
           {links.map((l) => (
-            <Link key={l.href} href={l.href} onClick={() => onOpenChange(false)} className="flex h-13 items-center gap-3 rounded-xl bg-card px-4 py-3.5 text-[16px] ring-1 ring-line active:bg-raised">
+            <Link key={l.href} href={l.href} onClick={() => onOpenChange(false)} className="flex h-13 items-center gap-3 rounded-xl bg-card px-4 py-3.5 text-[16px] ring-1 ring-line hover:bg-surface-2 active:bg-surface-3">
               <l.icon className="size-5 text-accent-icon" />
               <span className="flex-1">{l.label}</span>
-              {l.count ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-copper-500 px-1.5 text-[12px] font-semibold">{l.count}</span> : null}
+              {l.count ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-copper-500 px-1.5 text-[12px] font-semibold text-white">{l.count}</span> : null}
             </Link>
           ))}
         </div>
@@ -310,7 +319,7 @@ function BottomNav() {
     can("finance.read") ? { href: "/invoices", label: "Money", icon: ReceiptText, count: 0 } : { href: "/tasks", label: "Tasks", icon: CheckSquare, count: due },
   ];
   return (
-    <nav aria-label="Main" className="pb-safe shrink-0 border-t border-line bg-card/95 backdrop-blur lg:hidden">
+    <nav aria-label="Main" className="pb-safe shrink-0 border-t border-line bg-card lg:hidden">
       <div className="mx-auto grid h-[64px] max-w-lg grid-cols-5">
         {items.map((item) => {
           const active = pathname.startsWith(item.href);
@@ -345,7 +354,7 @@ function AssistantPanel() {
   const ui = useUI();
   return (
     <Sheet open={ui.assistantOpen} onOpenChange={ui.setAssistantOpen}>
-      <SheetContent title="Bob" className="bg-background sm:w-[480px] [&>button:last-child]:hidden">
+      <SheetContent title="Bob" className="theme-dark bg-background sm:w-[480px] [&>button:last-child]:hidden">
         <AssistantView variant="panel" onClose={() => ui.setAssistantOpen(false)} />
       </SheetContent>
     </Sheet>

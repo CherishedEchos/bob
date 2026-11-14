@@ -5,18 +5,23 @@ import { CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ToastTone = "success" | "error" | "info";
+interface ToastAction {
+  label: string;
+  run: () => void;
+}
 interface ToastItem {
   id: number;
   message: string;
   tone: ToastTone;
+  action?: ToastAction;
 }
 
 let counter = 0;
 const listeners = new Set<(t: ToastItem) => void>();
 
 /** Fire-and-forget toast. Only call AFTER a state change has been recorded. */
-export function toast(message: string, tone: ToastTone = "success") {
-  const item = { id: ++counter, message, tone };
+export function toast(message: string, tone: ToastTone = "success", opts: { action?: ToastAction } = {}) {
+  const item = { id: ++counter, message, tone, action: opts.action };
   listeners.forEach((l) => l(item));
 }
 
@@ -25,7 +30,8 @@ export function Toaster() {
   React.useEffect(() => {
     const onToast = (t: ToastItem) => {
       setItems((prev) => [...prev.slice(-2), t]);
-      window.setTimeout(() => setItems((prev) => prev.filter((p) => p.id !== t.id)), 3200);
+      // A toast with an action (e.g. Undo) stays a little longer so it can be tapped.
+      window.setTimeout(() => setItems((prev) => prev.filter((p) => p.id !== t.id)), t.action ? 6000 : 3200);
     };
     listeners.add(onToast);
     return () => {
@@ -54,6 +60,18 @@ export function Toaster() {
               )}
             />
             <span>{t.message}</span>
+            {t.action ? (
+              <button
+                type="button"
+                onClick={() => {
+                  t.action!.run();
+                  setItems((prev) => prev.filter((p) => p.id !== t.id));
+                }}
+                className="-my-1 ml-1 h-9 shrink-0 rounded-lg px-3 text-[15px] font-semibold text-accent-fg ring-1 ring-white/20 hover:bg-white/10"
+              >
+                {t.action.label}
+              </button>
+            ) : null}
           </div>
         );
       })}

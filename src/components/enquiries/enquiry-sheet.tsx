@@ -11,11 +11,11 @@
  * sheet when opened from elsewhere (Today, Bob, a customer).
  */
 import * as React from "react";
-import { AlarmClock, AlertTriangle, ArrowLeft, CalendarCheck, CheckCheck, ChevronDown, Copy, FileText, HardHat, Mail, Phone, Save, Send, UserRound } from "lucide-react";
+import { AlarmClock, AlertTriangle, ArrowLeft, CalendarCheck, Check, CheckCheck, ChevronDown, Copy, FileText, HardHat, Info, Mail, Phone, PhoneCall, Save, Send, UserRound } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
-import { ENQUIRY_STATUSES, ENQUIRY_STATUS_LABEL, PRIORITY_LABEL, SOURCE_LABEL, followUpDue, needsReply } from "@/lib/derive";
-import { buildDraft, latestInbound } from "@/lib/reply-draft";
+import { ENQUIRY_STATUSES, ENQUIRY_STATUS_LABEL, PRIORITY_LABEL, SOURCE_LABEL, followUpDue, needsReply, wantsCallback } from "@/lib/derive";
+import { FLAG_TITLE, buildDraft, latestInbound } from "@/lib/reply-draft";
 import type { ActionView } from "@/lib/bob/types";
 import type { Enquiry, Priority } from "@/lib/types";
 import { addDaysKey, cn, copyToClipboard, firstName, formatDateInline, timeAgo } from "@/lib/utils";
@@ -84,7 +84,19 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
   const earlier = e.messages.filter((m) => m !== latest);
   const [showEarlier, setShowEarlier] = React.useState(false);
   const flagged = inbound.some((m) => SUSPICIOUS.test(m.body));
-  const channel = e.source === "instagram" ? "Instagram" : e.email ? "your email" : e.source === "phone" ? "a text message" : "your usual app";
+  const callback = wantsCallback(e);
+  const first = firstName(e.customerName);
+  const [copied, setCopied] = React.useState(false);
+  // Where the reply actually goes, and what to do with it — in plain words.
+  const route =
+    e.email
+      ? { channel: "email", toast: `paste it into your reply to ${first}'s email`, how: `Copy the reply, paste it into your reply to ${first}'s email (${e.email}) and send it. Then tap I've replied.` }
+      : e.instagramHandle || e.source === "instagram"
+        ? { channel: "Instagram", toast: `paste it into your Instagram DM with ${e.instagramHandle ?? first}`, how: `Copy the reply, open Instagram and paste it into your DM with ${e.instagramHandle ?? first}. Then tap I've replied. Instagram isn't connected to Bob, so nothing is sent from here.` }
+        : e.phone
+          ? { channel: "a text message", toast: `paste it into a text to ${e.phone}`, how: `Copy the message and paste it into a text to ${e.phone}. Then tap I've replied.` }
+          : { channel: "your usual app", toast: "paste it wherever you reply to them", how: "Copy the reply and send it from your email or phone. Then tap I've replied." };
+  const channel = route.channel;
 
   // A draft saved elsewhere (e.g. by Bob or the batch screen) replaces what's shown — unless you're mid-edit.
   const lastServerDraft = React.useRef(e.draftReply);
@@ -142,8 +154,9 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
             <p className="mt-0.5 truncate text-[14.5px] text-muted-foreground">
               <span className="text-foreground/85">{e.title}</span> · {e.location}
             </p>
-            <p className="mt-0.5 text-[13.5px] text-subtle">
-              {SOURCE_LABEL[e.source]} · {timeAgo(e.receivedAt)}
+            <p className="mt-0.5 truncate text-[13.5px] text-muted-foreground">
+              {SOURCE_LABEL[e.source]}
+              {e.email ? ` · ${e.email}` : e.instagramHandle ? ` · ${e.instagramHandle}` : e.phone ? ` · ${e.phone}` : ""} · {timeAgo(e.receivedAt)}
             </p>
           </div>
           <button
@@ -151,7 +164,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
             aria-expanded={contactOpen}
             aria-controls={`contact-${e.id}`}
             onClick={() => setContactOpen((o) => !o)}
-            className="flex h-10 shrink-0 items-center gap-1 rounded-xl px-2.5 text-[14px] font-semibold text-muted-foreground ring-1 ring-line-strong transition hover:text-foreground sm:gap-1.5 sm:px-3"
+            className="flex h-10 shrink-0 items-center gap-1 rounded-xl bg-card px-2.5 text-[14px] font-semibold text-foreground ring-1 ring-line-strong transition hover:bg-raised-hover sm:gap-1.5 sm:px-3"
           >
             <span className="hidden sm:inline">Contact details</span>
             <span className="sm:hidden">Contact</span>
@@ -159,7 +172,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
           </button>
         </div>
         <div className={cn("mt-2 flex flex-wrap items-center gap-x-4 gap-y-1", onBack && "pl-9 sm:pl-[96px]")}>
-          <StatusText tone={state.main.tone}>{state.main.label}</StatusText>
+          {callback ? <StatusText tone="amber">Asked for a call back</StatusText> : <StatusText tone={state.main.tone}>{state.main.label}</StatusText>}
           {state.high ? <HighPriority /> : null}
           {e.followUpDate ? (
             <span className="inline-flex items-center gap-1 text-[13.5px] text-muted-foreground">
@@ -168,7 +181,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
           ) : null}
         </div>
         {contactOpen ? (
-          <div id={`contact-${e.id}`} className="mt-3 rounded-xl bg-white/[0.03] p-3 ring-1 ring-line">
+          <div id={`contact-${e.id}`} className="mt-3 rounded-xl bg-message p-3">
             <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[14.5px]">
               {e.phone ? (
                 <>
@@ -232,8 +245,8 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
         <div className={cn("mx-auto w-full px-4 py-4 sm:px-5", inline ? "max-w-[760px]" : "max-w-none")}>
           <section aria-labelledby={`msg-${e.id}`}>
             <div className="mb-1.5 flex items-baseline justify-between gap-3">
-              <h3 id={`msg-${e.id}`} className="text-[14px] font-semibold text-muted-foreground">
-                Customer message
+              <h3 id={`msg-${e.id}`} className="text-[14px] font-semibold text-foreground">
+                {callback && e.source === "phone" ? "Voicemail summary" : "Customer message"}
               </h3>
               <span className="text-[13px] text-subtle">{latest ? timeAgo(latest.at) : ""}</span>
             </div>
@@ -245,7 +258,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
             {showEarlier ? (
               <ol className="mb-3 space-y-2">
                 {earlier.map((m) => (
-                  <li key={m.id} className={cn("rounded-xl px-3.5 py-2.5 text-[15px]", m.direction === "inbound" ? "bg-white/[0.03]" : "ml-6 bg-copper-500/[0.07]")}>
+                  <li key={m.id} className={cn("rounded-xl px-3.5 py-2.5 text-[15px]", m.direction === "inbound" ? "bg-message" : "ml-6 bg-selected")}>
                     <div className="mb-0.5 text-[13px] text-subtle">
                       {m.direction === "inbound" ? firstName(e.customerName) : "You"} · {timeAgo(m.at)}
                     </div>
@@ -254,23 +267,39 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
                 ))}
               </ol>
             ) : null}
-            <div className="rounded-2xl border-l-2 border-white/15 bg-white/[0.03] px-4 py-3.5">
+            <div className="rounded-2xl border-l-[3px] border-[rgb(16_24_40/0.18)] bg-message px-4 py-3.5">
               {latest?.subject ? <div className="mb-1 text-[14px] font-medium text-muted-foreground">{latest.subject}</div> : null}
               {flagged ? (
                 <div className="mb-2 flex items-center gap-1.5 text-[14px] text-warn-fg">
                   <AlertTriangle className="size-4" /> Contains instructions aimed at an assistant — Bob ignores them.
                 </div>
               ) : null}
-              <p className="whitespace-pre-wrap text-[16px] leading-relaxed text-foreground/90" data-testid="customer-message">
+              <p className="whitespace-pre-wrap break-words text-[16px] leading-relaxed text-foreground" data-testid="customer-message">
                 {latest?.body ?? (e.description || "No message recorded.")}
               </p>
             </div>
           </section>
 
+          {callback && !replied ? (
+            <section aria-label="Next step" className="mt-4 rounded-2xl bg-selected px-4 py-3.5 ring-1 ring-copper-500/25">
+              <p className="text-[15.5px] font-semibold text-heading">Next step: call {first} back</p>
+              <p className="mt-0.5 text-[14.5px] text-muted-foreground">
+                {first} asked for a call back{e.phone ? ` on ${e.phone}` : ""}. Bob doesn&apos;t promise a price or a start date — talk it through, then tap I&apos;ve called {first}.
+              </p>
+              {e.phone ? (
+                <Button asChild className="mt-3 w-full sm:w-auto">
+                  <a href={`tel:${e.phone.replace(/\s/g, "")}`}>
+                    <PhoneCall /> Call {first} back
+                  </a>
+                </Button>
+              ) : null}
+            </section>
+          ) : null}
+
           <section aria-labelledby={`reply-label-${e.id}`} className="mt-5">
             <div className="mb-1.5 flex items-baseline justify-between gap-3">
-              <label id={`reply-label-${e.id}`} htmlFor={`reply-${e.id}`} className="text-[14px] font-semibold text-muted-foreground">
-                {replied ? "Your reply" : e.draftReply || saved === "saved" ? "Your draft" : "Suggested reply"}
+              <label id={`reply-label-${e.id}`} htmlFor={`reply-${e.id}`} className="text-[14px] font-semibold text-foreground">
+                {replied ? "Your reply" : callback ? `Optional: text ${first} instead` : e.draftReply || saved === "saved" ? "Edit your draft" : "Edit Bob's draft"}
               </label>
               <span aria-live="polite">
                 {replied ? (
@@ -284,13 +313,16 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
                 ) : null}
               </span>
             </div>
-            {!replied && suggestion.flags.length && !suggestion.savedDraft ? (
+            {!replied && suggestion.flags.length ? (
               <ul className="mb-2 space-y-1.5">
                 {suggestion.flags.map((f, i) => (
-                  <li key={i} className="flex items-start gap-2 text-[14px] text-warn-fg">
-                    <span aria-hidden className="mt-[7px] size-1.5 shrink-0 rounded-full bg-amber-400" />
+                  <li
+                    key={i}
+                    className={cn("flex items-start gap-2 rounded-xl px-3 py-2 text-[14px] leading-snug", f.deferred ? "bg-message text-muted-foreground" : "bg-amber-500/10 text-warn-fg")}
+                  >
+                    {f.deferred ? <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-subtle" /> : <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />}
                     <span>
-                      <span className="font-semibold">Check {f.kind === "commitment" ? "the promise" : f.kind}:</span> {f.text}
+                      <span className={cn("font-semibold", f.deferred && "text-foreground")}>{FLAG_TITLE[f.kind]}.</span> {f.text}
                     </span>
                   </li>
                 ))}
@@ -306,13 +338,20 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
                 setSaved("unsaved");
               }}
               onBlur={() => void save(true)}
-              className="block w-full resize-none overflow-hidden rounded-2xl bg-[#0f0f11] px-4 py-3.5 text-[16px] leading-relaxed text-foreground outline-none ring-1 ring-white/[0.12] transition placeholder:text-subtle focus:ring-2 focus:ring-copper-400 focus:ring-offset-2 focus:ring-offset-card"
+              className="block w-full resize-none overflow-hidden rounded-2xl bg-field px-4 py-3.5 text-[16px] leading-relaxed text-foreground shadow-[0_1px_2px_rgb(16_24_40/0.05)] outline-none ring-1 ring-input transition placeholder:text-subtle hover:ring-foreground/30 focus:ring-2 focus:ring-copper-500 read-only:bg-message read-only:shadow-none"
             />
-            <p className="mt-2 text-[14px] text-subtle">
-              {canSend
-                ? "Send… goes through your connected mailbox and always asks you to approve it first."
-                : `Nothing is sent from Bob. Copy the reply into ${channel}, send it yourself, then tap Mark as replied.`}
-            </p>
+            {!replied ? (
+              <p className="mt-2 flex items-start gap-2 text-[14px] leading-snug text-muted-foreground">
+                <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-subtle" />
+                <span>
+                  {canSend
+                    ? "Send… goes through your connected mailbox and always asks you to approve it first."
+                    : callback
+                      ? `Prefer to text? Copy the message and paste it into a text to ${e.phone}. Nothing is sent from Bob.`
+                      : route.how}
+                </span>
+              </p>
+            ) : null}
             {pending ? (
               <ActionCard
                 action={pending}
@@ -452,8 +491,10 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
       {write ? (
         <div className="shrink-0 border-t border-line bg-card px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-5" role="toolbar" aria-label="Reply actions">
           {confirmReplied ? (
-            <div className="mb-3 rounded-xl bg-white/[0.04] p-3 ring-1 ring-line">
-              <p className="text-[15.5px]">Have you sent your reply to {firstName(e.customerName)} yourself?</p>
+            <div className="mb-3 rounded-xl bg-message p-3">
+              <p className="text-[15.5px]">
+                {callback ? `Have you spoken to ${first}?` : `Have you sent your reply to ${first} in ${channel === "email" ? "your email" : channel}?`}
+              </p>
               <div className="mt-2.5 flex gap-2">
                 <Button size="sm" variant="secondary" onClick={() => setConfirmReplied(false)}>
                   Not yet
@@ -464,10 +505,10 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
                     await save(true);
                     const res = await actions.markEnquiryReplied(e.id);
                     setConfirmReplied(false);
-                    toast(res.ok ? `${firstName(e.customerName)} marked as replied` : "Couldn't update", res.ok ? "success" : "error");
+                    toast(res.ok ? `${first} moved out of Needs reply` : "Couldn't update", res.ok ? "success" : "error");
                   }}
                 >
-                  Yes, mark as replied
+                  <Check /> {callback ? `Yes, I've called ${first}` : "Yes, I've replied"}
                 </Button>
               </div>
             </div>
@@ -488,24 +529,37 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
                 <Send /> Send…
               </Button>
             ) : null}
+            {callback && e.phone && !replied ? (
+              <Button asChild size="sm" className="flex-1 sm:flex-none">
+                <a href={`tel:${e.phone.replace(/\s/g, "")}`}>
+                  <PhoneCall /> Call {first} back
+                </a>
+              </Button>
+            ) : null}
             <Button
               size="sm"
-              variant="secondary"
+              variant={canSend || callback || replied ? "secondary" : "default"}
               className="flex-1 sm:flex-none"
+              disabled={!reply.trim()}
               onClick={async () => {
-                await save(true);
                 const ok = await copyToClipboard(reply);
-                toast(ok ? `Reply copied — paste it into ${channel}` : "Couldn't copy — select the text instead", ok ? "success" : "error");
+                if (!ok) return toast("Couldn't copy — select the text and copy it instead", "error");
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2500);
+                toast(`Copied — now ${route.toast}`, "success");
+                void save(true);
               }}
             >
-              <Copy /> Copy reply
+              {copied ? <Check /> : <Copy />} <span aria-live="polite">{copied ? "Copied" : callback ? "Copy text" : "Copy reply"}</span>
             </Button>
-            <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" disabled={saved === "saved" || replied} onClick={() => void save()}>
-              <Save /> {saved === "saved" ? "Saved" : "Save draft"}
-            </Button>
+            {!replied ? (
+              <Button size="sm" variant="ghost" className="flex-1 sm:flex-none" disabled={saved !== "unsaved"} onClick={() => void save()}>
+                <Save /> {saved === "saved" ? "Draft saved" : saved === "saving" ? "Saving…" : "Save draft"}
+              </Button>
+            ) : null}
             {!replied && !confirmReplied ? (
-              <Button size="sm" variant="ghost" className="w-full sm:ml-auto sm:w-auto" onClick={() => setConfirmReplied(true)}>
-                <CheckCheck /> Mark as replied
+              <Button size="sm" variant="secondary" className="w-full sm:ml-auto sm:w-auto" onClick={() => setConfirmReplied(true)}>
+                <CheckCheck /> {callback ? `I've called ${first}` : "I've replied"}
               </Button>
             ) : null}
           </div>

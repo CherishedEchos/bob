@@ -9,11 +9,13 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  /* Charcoal workspace with amber accents. Text colours tuned for contrast on #0e0d0c. */
-  /* Three surfaces: page (near-black) → panel (warm charcoal) → raised (rows, drawers, menus). */
-  --color-background: #111113;
-  --color-foreground: #f7f4f0;
+  /* Light workspace: cool grey canvas, white panels, charcoal type, slate meta.
+     Dark tokens live in .theme-dark (sidebar, Ask Bob, toasts, landing page). */
+  --color-background: #f5f6f8;
+  --color-foreground: #16181d;
+  --color-heading: #111317;
 
+  /* Charcoal ramp (used by the dark scopes) */
   --color-ink-950: #0c0c0e;
   --color-ink-900: #111113;
   --color-ink-850: #161618;
@@ -22,12 +24,18 @@
   --color-ink-700: #2b2b30;
   --color-ink-600: #38383e;
 
-  --color-card: #19191c;
-  --color-raised: #222226;
-  --color-raised-hover: #2a2a2f;
-  --color-card-foreground: #f7f4f0;
-  --color-popover: #222226;
-  --color-popover-foreground: #f7f4f0;
+  --color-card: #ffffff;
+  --color-raised: #ffffff;
+  --color-raised-hover: #f1f3f6;
+  --color-card-foreground: #16181d;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #16181d;
+  /* Text fields: white and visibly editable. */
+  --color-field: #ffffff;
+  /* Quoted customer messages: light grey, clearly not editable. */
+  --color-message: #f1f3f5;
+  /* Selected rows: pale orange tint plus a slim orange accent. */
+  --color-selected: #fff4ec;
 
   --color-copper-200: #ffd2b0;
   --color-copper-300: #ffb47e;
@@ -37,34 +45,35 @@
   --color-copper-700: #a14b15;
   --color-copper-900: #3a1e0c;
 
-  --color-primary: #ec7a2e;
+  --color-primary: #d4621a;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #232327;
-  --color-secondary-foreground: #f7f4f0;
-  --color-muted: #1c1c1f;
-  --color-muted-foreground: #c4c4cb;
-  --color-subtle: #92929b;
-  --color-accent: #2b2b30;
-  --color-accent-foreground: #f7f4f0;
-  --color-destructive: #e5484d;
-  --color-success: #3fbf7f;
-  --color-warning: #f2b544;
-  --color-info: #6fa8ff;
+  --color-secondary: #f1f3f6;
+  --color-secondary-foreground: #16181d;
+  --color-muted: #f1f3f6;
+  --color-muted-foreground: #4a5160;
+  --color-subtle: #6a7180;
+  --color-accent: #f1f3f6;
+  --color-accent-foreground: #16181d;
+  --color-destructive: #d92d20;
+  --color-success: #12a150;
+  --color-warning: #dc8a06;
+  --color-info: #2e6fdb;
 
   /* Semantic helpers */
-  --color-line: rgb(255 255 255 / 0.07);
-  --color-line-strong: rgb(255 255 255 / 0.13);
-  --color-surface-2: rgb(255 255 255 / 0.035);
-  --color-surface-3: rgb(255 255 255 / 0.065);
-  --color-accent-fg: #ffc396;
-  --color-accent-icon: #f7944f;
-  --color-danger-fg: #ef9f9f;
-  --color-warn-fg: #f2b76c;
-  --color-good-fg: #8fcca6;
-  --color-info-fg: #b0ceff;
+  --color-line: rgb(16 24 40 / 0.08);
+  --color-line-strong: rgb(16 24 40 / 0.15);
+  --color-surface-2: rgb(16 24 40 / 0.035);
+  --color-surface-3: rgb(16 24 40 / 0.065);
+  --color-accent-fg: #b4520f;
+  --color-accent-icon: #d9661c;
+  --color-danger-fg: #b42318;
+  --color-warn-fg: #955405;
+  --color-good-fg: #067647;
+  --color-info-fg: #1d58b8;
+  --color-violet-fg: #5b3fc4;
 
-  --color-border: rgb(255 255 255 / 0.09);
-  --color-input: rgb(255 255 255 / 0.16);
+  --color-border: rgb(16 24 40 / 0.09);
+  --color-input: rgb(16 24 40 / 0.2);
   --color-ring: #ec7a2e;
 
   /* One radius scale: md 8 (chips) · lg 10 (tiles) · xl 14 (controls) · 2xl 16 (panels) · 3xl 20 (sheets) */
@@ -112,7 +121,7 @@
     border-color: var(--color-border);
   }
   html {
-    color-scheme: dark;
+    color-scheme: light;
     font-size: 17px;
     -webkit-tap-highlight-color: transparent;
   }
@@ -144,8 +153,10 @@
     background: rgb(236 122 46 / 0.3);
   }
   input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.85);
     cursor: pointer;
+  }
+  .theme-dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.85);
   }
 }
 
@@ -162,10 +173,13 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
-  /* Page background: near-black with a faint warm light from above and a barely
-     visible grain. Panels are opaque, so the grain never sits behind text. */
+  /* Page background: plain cool grey in the workspace. In the dark scopes it's
+     near-black with a faint warm light from above and a barely visible grain. */
   .bg-app {
     background-color: var(--color-background);
+  }
+  .theme-dark.bg-app,
+  .theme-dark .bg-app {
     background-image:
       url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 0.92  0 0 0 0 0.85  0 0 0 0.022 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
       radial-gradient(1100px 520px at 50% -12%, rgb(236 122 46 / 0.03), transparent 62%);
@@ -177,13 +191,17 @@
     background: var(--color-card);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-2xl);
+    box-shadow: 0 1px 2px rgb(16 24 40 / 0.04);
+  }
+  .theme-dark .panel,
+  .theme-dark .card-surface {
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03), 0 1px 2px rgb(0 0 0 / 0.3);
   }
   /* Raised: selected rows, drawers, menus, popovers. */
   .raised {
     background: var(--color-raised);
     border: 1px solid var(--color-line-strong);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.045), 0 12px 32px -12px rgb(0 0 0 / 0.6);
+    box-shadow: 0 12px 32px -12px rgb(16 24 40 / 0.18);
   }
   /* Type scale */
   .t-page {
@@ -191,7 +209,7 @@
     line-height: 1.15;
     font-weight: 650;
     letter-spacing: -0.02em;
-    color: #faf9f6;
+    color: var(--color-heading);
   }
   @media (min-width: 1024px) {
     .t-page {
@@ -203,7 +221,7 @@
     line-height: 1.3;
     font-weight: 600;
     letter-spacing: -0.005em;
-    color: #faf9f6;
+    color: var(--color-heading);
   }
   .t-name {
     font-size: 15.5px;
@@ -231,31 +249,43 @@
   /* Charcoal scope: sidebar, Bob's orb panels. Same components, dark tokens. */
   .theme-dark {
     color-scheme: dark;
-    --color-background: #141416;
+    --color-background: #111113;
     --color-foreground: #f6f3ef;
-    --color-card: #1c1c1f;
+    --color-heading: #faf9f6;
+    --color-card: #19191c;
     --color-card-foreground: #f6f3ef;
+    --color-raised: #222226;
+    --color-raised-hover: #2a2a2f;
     --color-popover: #242428;
     --color-popover-foreground: #f6f3ef;
+    --color-field: #0f0f11;
+    --color-message: rgb(255 255 255 / 0.03);
+    --color-selected: #222226;
+    --color-primary: #ec7a2e;
     --color-secondary: #2a2a2f;
     --color-secondary-foreground: #f6f3ef;
     --color-muted: #1c1c1f;
-    --color-muted-foreground: #b6b6be;
-    --color-subtle: #8e8e97;
+    --color-muted-foreground: #c4c4cb;
+    --color-subtle: #92929b;
     --color-accent: #2b2b30;
     --color-accent-foreground: #f6f3ef;
-    --color-line: rgb(255 255 255 / 0.1);
-    --color-line-strong: rgb(255 255 255 / 0.25);
-    --color-surface-2: rgb(255 255 255 / 0.05);
-    --color-surface-3: rgb(255 255 255 / 0.09);
+    --color-destructive: #e5484d;
+    --color-success: #3fbf7f;
+    --color-warning: #f2b544;
+    --color-info: #6fa8ff;
+    --color-line: rgb(255 255 255 / 0.08);
+    --color-line-strong: rgb(255 255 255 / 0.16);
+    --color-surface-2: rgb(255 255 255 / 0.04);
+    --color-surface-3: rgb(255 255 255 / 0.075);
     --color-accent-fg: #ffc396;
     --color-accent-icon: #f7944f;
     --color-danger-fg: #ff9b9b;
     --color-warn-fg: #f2b76c;
-    --color-good-fg: #7fe0ae;
-    --color-info-fg: #a9c9ff;
-    --color-border: rgb(255 255 255 / 0.08);
-    --color-input: rgb(255 255 255 / 0.14);
+    --color-good-fg: #8fcca6;
+    --color-info-fg: #b0ceff;
+    --color-violet-fg: #c4b0ff;
+    --color-border: rgb(255 255 255 / 0.09);
+    --color-input: rgb(255 255 255 / 0.16);
     color: var(--color-foreground);
   }
   .glow-copper {
@@ -276,4 +306,60 @@
 /* Behind the inbox: plain canvas, no texture. */
 .bg-inbox {
   background: var(--color-background);
+}
+
+/* ------------------------------------------------------------------------
+ * Shared interaction pattern for rows that open a record
+ * (Customers, Jobs, Enquiries, Today, Money). One look everywhere:
+ *  - the whole row is the target; a chevron always shows it opens;
+ *  - hover highlight on desktop, pressed state on touch;
+ *  - a visible focus ring for the keyboard;
+ *  - a selected row keeps a pale orange tint and a slim orange accent.
+ * ------------------------------------------------------------------------ */
+.row-open {
+  position: relative;
+  transition: background-color 120ms ease;
+}
+@media (hover: hover) {
+  .row-open:hover {
+    background-color: var(--color-surface-2);
+  }
+}
+.row-open:active {
+  background-color: var(--color-surface-3);
+}
+.row-open:has(> .row-target:focus-visible) {
+  outline: 2px solid var(--color-copper-500);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+.row-open > .row-target:focus-visible {
+  outline: none;
+}
+/* Secondary buttons inside a row sit above the row target, so they stay independently tappable. */
+.row-open .row-secondary {
+  position: relative;
+  z-index: 1;
+}
+.row-open[data-selected="true"],
+.row-open[aria-current="true"] {
+  background-color: var(--color-selected);
+}
+.row-open[data-selected="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 6px auto 6px 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-copper-500);
+}
+.row-chevron {
+  color: var(--color-subtle);
+  transition: transform 120ms ease, color 120ms ease;
+}
+@media (hover: hover) {
+  .row-open:hover .row-chevron {
+    color: var(--color-accent-icon);
+    transform: translateX(2px);
+  }
 }

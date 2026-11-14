@@ -37,12 +37,15 @@ function fakeInbox(failFor: string[] = []) {
 }
 
 describe("Batch replies — drafting", () => {
-  it("drafts one reply per unanswered enquiry: six sample enquiries, same list and order as the workspace", () => {
+  it("drafts one written reply per unanswered enquiry: five of the six sample enquiries, same order as the workspace", () => {
     const ctx = ctxFor(N93_OWNER);
     const b = itemsFor(ctx);
     expect(waiting(ctx)).toHaveLength(6);
     expect(b.items.map((i) => i.enquiryId)).toEqual(outstandingIds(ctx));
-    expect(b.items).toHaveLength(6);
+    expect(b.items).toHaveLength(5);
+    // Dave left a voicemail asking for a call back: that's a call, not a written reply.
+    expect(b.items.some((i) => i.customerName.startsWith("Dave"))).toBe(false);
+    expect(b.callbacks.map((c) => c.customerName)).toEqual(["Dave Collins"]);
     // Each draft stays attached to its own enquiry and customer.
     for (const i of b.items) {
       const e = R.getEnquiry(ctx, i.enquiryId)!;
@@ -81,8 +84,10 @@ describe("Batch replies — drafting", () => {
     expect(laura.flags.map((f) => f.kind).sort()).toEqual(["date", "price"]);
     const emma = byName(b, "Emma");
     expect(emma.flags).toEqual([]);
-    const dave = byName(b, "Dave");
-    expect(dave.channel).toBe("phone");
+    expect(emma.flags).toEqual([]);
+    // Flags where the draft already holds back are neutral notes, not warnings.
+    expect(hannah.flags[0].deferred).toBe(true);
+    expect(tom.flags[0].deferred).toBe(true);
   });
 
   it("takes promises out of Bob's suggestions, but only flags them in your own saved draft", () => {
@@ -218,12 +223,13 @@ describe("Batch replies — asking Bob", () => {
   it("'Bob, reply to all outstanding enquiries' drafts them and links to the review screen", async () => {
     const chat = new Chat(ctxFor(N93_OWNER));
     await chat.say("Bob, reply to all outstanding enquiries", "voice");
-    expect(chat.text).toMatch(/I've drafted 6 replies/);
+    expect(chat.text).toMatch(/I've drafted 5 replies/);
+    expect(chat.text).toMatch(/Dave asked for a call back/);
     expect(chat.text).toMatch(/Chris \(date\)/);
     expect(chat.text).toMatch(/Nothing is sent until you approve/);
     const chip = chat.last.flatMap((m) => m.chips ?? []).find((c) => c.kind === "link");
-    expect(chip).toMatchObject({ label: "Review 6 drafts" });
-    expect(chip && "href" in chip && chip.href.split("ids=")[1].split(",")).toHaveLength(6);
+    expect(chip).toMatchObject({ label: "Review 5 drafts" });
+    expect(chip && "href" in chip && chip.href.split("ids=")[1].split(",")).toHaveLength(5);
     // Drafting alone sends nothing.
     expect(waiting(chat.ctx)).toHaveLength(6);
   });
@@ -241,7 +247,7 @@ describe("Batch replies — asking Bob", () => {
     await chat.say("Reply to all of them");
     expect(chat.text).toMatch(/Which ones do you mean\?/);
     const chip = chat.last.flatMap((m) => m.chips ?? [])[0];
-    expect(chip).toMatchObject({ label: "The 6 waiting for a reply" });
+    expect(chip).toMatchObject({ label: "The 5 waiting for a written reply" });
     await chat.say("Follow up on enquiries");
     await chat.say("Reply to all of those");
     expect(chat.text).toMatch(/Just checking — do you mean the \d follow-ups?/);

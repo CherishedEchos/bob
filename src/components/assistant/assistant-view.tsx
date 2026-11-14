@@ -113,7 +113,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
   ];
 
   return (
-    <div className={cn("relative flex h-full min-h-0 flex-col", variant === "page" && "bg-app")}>
+    <div className={cn("theme-dark relative flex h-full min-h-0 flex-col bg-background text-foreground", variant === "page" && "bg-app")}>
       {/* ------------------------------ Header ------------------------------ */}
       {variant === "page" ? (
         <header className="relative z-10 grid h-[calc(4rem+env(safe-area-inset-top))] shrink-0 grid-cols-[92px_minmax(0,1fr)_92px] items-center px-2 pt-[env(safe-area-inset-top)] lg:px-6">
@@ -407,8 +407,8 @@ function WorkspaceLockup({ org }: { org: { name: string; shortName: string; logo
         <div className="mt-1 flex items-center gap-1 text-[13px] text-muted-foreground">
           with <BobLogo height={10} title="Bob" className="translate-y-[1px]" />
           {org.dataMode === "sample" ? (
-            <span title="Demo mode — sample data, nothing is sent to real customers" className="ml-1 rounded bg-sky-400/12 px-1 py-[1px] text-[10.5px] font-semibold uppercase tracking-wide text-info-fg">
-              Demo
+            <span title="Fictional sample data. Nothing is sent to anyone." className="ml-1 whitespace-nowrap rounded bg-white/10 px-1.5 py-[2px] text-[11px] font-medium text-white/75">
+              Demo · sample data
             </span>
           ) : null}
         </div>
@@ -490,7 +490,10 @@ function AskBobHome({
                 <p className="mt-1 text-[16px] leading-snug text-white/85">{speech.interim ? `“${speech.interim}”` : "Pause when you're done and I'll send it — or tap Stop to check it first."}</p>
               </>
             ) : phase === "starting" ? (
-              <p className="text-[22px] font-semibold tracking-tight">Starting the microphone…</p>
+              <>
+                <p className="text-[22px] font-semibold tracking-tight">Starting the microphone…</p>
+                <p className="mt-1 text-[16px] text-white/70">Allow microphone access if your phone asks.</p>
+              </>
             ) : phase === "stopping" ? (
               <p className="text-[20px] font-semibold tracking-tight">Getting the last of what you said…</p>
             ) : phase === "sending" || thinking ? (
@@ -567,15 +570,15 @@ function AskBobHome({
                   type="button"
                   onClick={openKeyboard}
                   disabled={busy}
-                  aria-label="Type instead"
-                  className="ml-2 grid size-12 place-items-center justify-self-start rounded-full text-white/85 hover:bg-surface-3 disabled:opacity-40"
+                  className="flex min-h-12 flex-col items-center justify-center gap-0.5 justify-self-start rounded-2xl px-2 text-white/85 hover:bg-surface-3 disabled:opacity-40 min-[380px]:flex-row min-[380px]:gap-2 min-[380px]:px-3"
                 >
-                  <Keyboard className="size-7" strokeWidth={1.6} />
+                  <Keyboard className="size-6 shrink-0" strokeWidth={1.6} aria-hidden />
+                  <span className="whitespace-nowrap text-[13.5px] font-medium min-[380px]:text-[15px]">Type instead</span>
                 </button>
                 <div className="flex flex-col items-center">
                   <BigMic phase={phase} disabled={!speech.supported || busy} onClick={c.toggleMic} />
                   <span className={cn("mt-1.5 text-[15px] font-medium", recording ? "text-red-200" : "text-accent-fg")}>
-                    {phase === "listening" ? "Tap to stop" : phase === "starting" ? "Starting…" : phase === "stopping" ? "Finishing…" : phase === "sending" ? "Sending to Bob…" : "Tap to talk"}
+                    {phase === "listening" ? "Stop & review" : phase === "starting" ? "Starting…" : phase === "stopping" ? "Finishing…" : phase === "sending" ? "Sending to Bob…" : "Tap to talk"}
                   </span>
                 </div>
                 <span aria-hidden />

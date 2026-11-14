@@ -186,7 +186,8 @@ export function AssistantCard({ card, onNavigate }: { card: Card; onNavigate?: (
             const Icon =
               p.kind === "reply" ? Reply : p.kind === "followup" || p.kind === "quote" ? MessageSquareReply : p.kind === "deposit" || p.kind === "invoice" ? PoundSterling : AlarmClock;
             const open = () => {
-              if (p.kind === "reply" || p.kind === "followup") ui.openEnquiry(p.enquiryId);
+              if (p.kind === "reply") ui.openEnquiry(p.enquiryId, { focus: "reply" });
+              else if (p.kind === "followup") ui.openEnquiry(p.enquiryId);
               else if (p.kind === "quote") {
                 if (p.enquiryId) ui.openEnquiry(p.enquiryId);
                 else go("/enquiries");

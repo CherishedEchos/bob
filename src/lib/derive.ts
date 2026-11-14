@@ -80,6 +80,22 @@ export function needsReply(e: Enquiry): boolean {
 
 export const isOpenEnquiry = (e: Enquiry) => e.status !== "won" && e.status !== "lost";
 
+const CALLBACK_ASK = /\b(call(ed|ing)? ?back|ring (me )?back|give (me|us) a (call|ring)|call me)\b/i;
+
+/**
+ * Waiting on you, and the customer asked to be called (e.g. a voicemail with
+ * only a phone number). The next step is a phone call, not a written reply,
+ * so these sit outside the written-reply batch and show "Call … back".
+ */
+export function wantsCallback(e: Enquiry): boolean {
+  if (!needsReply(e) || e.email || e.instagramHandle || !e.phone) return false;
+  const latest = [...e.messages].reverse().find((m) => m.direction === "inbound")?.body ?? e.description;
+  return e.source === "phone" || CALLBACK_ASK.test(latest);
+}
+
+/** Waiting on a written reply (email, Instagram, website…) — what the batch drafts. */
+export const needsWrittenReply = (e: Enquiry) => needsReply(e) && !wantsCallback(e);
+
 export function followUpDue(e: Enquiry): boolean {
   return !!e.followUpDate && daysFromToday(e.followUpDate) <= 0 && isOpenEnquiry(e);
 }
@@ -218,7 +234,7 @@ interface PriorityBase {
 }
 
 export type PriorityItem =
-  | (PriorityBase & { kind: "reply"; enquiryId: string; source: EnquirySource; provider?: string })
+  | (PriorityBase & { kind: "reply"; enquiryId: string; source: EnquirySource; provider?: string; callback?: { phone: string; firstName: string } })
   | (PriorityBase & { kind: "followup"; enquiryId: string; source: EnquirySource; provider?: string })
   | (PriorityBase & { kind: "quote"; quoteId: string; enquiryId?: string; customerName: string })
   | (PriorityBase & { kind: "deposit"; jobId: string; customerName: string })
@@ -242,13 +258,15 @@ export function todaysPriorities(
   for (const e of data.enquiries.filter(needsReply)) {
     const hrs = hoursSince(e.receivedAt);
     const waited = hrs < 24 ? `${Math.max(1, Math.round(hrs))}h` : `${Math.round(hrs / 24)}d`;
+    const callback = wantsCallback(e);
     items.push({
       kind: "reply",
       id: `reply_${e.id}`,
-      title: `Reply to ${e.customerName}`,
-      detail: `${e.title}, ${e.location} · waiting ${waited}`,
+      title: callback ? `Call ${e.customerName} back` : `Reply to ${e.customerName}`,
+      detail: `${e.title}, ${e.location} · ${callback ? "asked for a call back" : "waiting"} ${waited}`,
       who: e.customerName,
-      why: `Awaiting reply · ${waited} · ${e.title}`,
+      why: callback ? `Asked for a call back · ${waited} · ${e.title}` : `Awaiting reply · ${waited} · ${e.title}`,
+      ...(callback ? { callback: { phone: e.phone!, firstName: e.customerName.split(" ")[0] } } : {}),
       urgency: (e.priority === "high" ? 0 : 10) + (hrs > 24 ? 0 : 5),
       key: `enquiry:${e.id}`,
       enquiryId: e.id,

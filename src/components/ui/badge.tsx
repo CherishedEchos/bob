@@ -9,12 +9,12 @@ const badgeVariants = cva(
     variants: {
       tone: {
         neutral: "text-muted-foreground before:bg-subtle",
-        copper: "text-accent-fg before:bg-copper-400",
-        green: "text-good-fg before:bg-emerald-400",
-        amber: "text-warn-fg before:bg-amber-400",
-        red: "text-danger-fg before:bg-red-400",
-        blue: "text-info-fg before:bg-sky-400",
-        violet: "text-violet-300 before:bg-violet-400",
+        copper: "text-accent-fg before:bg-copper-500",
+        green: "text-good-fg before:bg-emerald-500",
+        amber: "text-warn-fg before:bg-amber-500",
+        red: "text-danger-fg before:bg-red-500",
+        blue: "text-info-fg before:bg-sky-500",
+        violet: "text-violet-fg before:bg-violet-500",
       },
     },
     defaultVariants: { tone: "neutral" },

@@ -15,7 +15,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { Enquiry, EnquirySource } from "@/lib/types";
-import { needsReply, sortEnquiries } from "@/lib/derive";
+import { needsReply, needsWrittenReply, sortEnquiries, wantsCallback } from "@/lib/derive";
 import { uid } from "@/lib/utils";
 import { scoped, tx } from "@/server/db";
 import { denied, fail, ok, type Ctx, type Result } from "@/server/context";
@@ -64,6 +64,8 @@ export interface Batch {
   items: BatchItem[];
   /** Asked for, but no longer waiting on a reply. */
   alreadyReplied: { enquiryId: string; customerName: string }[];
+  /** Waiting on you, but asked for a phone call — outside the written-reply batch. */
+  callbacks: { enquiryId: string; customerName: string; phone?: string }[];
 }
 
 /* ------------------------------ Draft building ------------------------------ */
@@ -81,9 +83,18 @@ export function batchMode(ctx: Ctx): { mode: BatchMode; providerLabel?: string }
   return { mode: ctx.org.dataMode === "sample" ? "simulate" : "copy" };
 }
 
-/** The enquiries still waiting on a reply, in the same order as Today and Enquiries. */
+/**
+ * The enquiries waiting on a written reply, in the same order as Today and
+ * Enquiries. Callback requests (voicemails) are left out: the next step there
+ * is a phone call, which Today and the enquiry show separately.
+ */
 export function outstandingIds(ctx: Ctx): string[] {
-  return sortEnquiries(R.listEnquiries(ctx).filter(needsReply)).map((e) => e.id);
+  return sortEnquiries(R.listEnquiries(ctx).filter(needsWrittenReply)).map((e) => e.id);
+}
+
+/** Waiting on you, but asked for a call back. */
+export function callbackIds(ctx: Ctx): string[] {
+  return sortEnquiries(R.listEnquiries(ctx).filter(wantsCallback)).map((e) => e.id);
 }
 
 export function prepareBatch(ctx: Ctx, ids?: string[]): Result<Batch> {
@@ -93,11 +104,16 @@ export function prepareBatch(ctx: Ctx, ids?: string[]): Result<Batch> {
   const { mode, providerLabel } = batchMode(ctx);
   const items: BatchItem[] = [];
   const alreadyReplied: Batch["alreadyReplied"] = [];
+  const callbacks: Batch["callbacks"] = [];
   for (const id of wanted) {
     const e = R.getEnquiry(ctx, id);
     if (!e) continue;
     if (!needsReply(e)) {
       alreadyReplied.push({ enquiryId: e.id, customerName: e.customerName });
+      continue;
+    }
+    if (wantsCallback(e)) {
+      callbacks.push({ enquiryId: e.id, customerName: e.customerName, phone: e.phone });
       continue;
     }
     const last = latestInbound(e);
@@ -124,7 +140,12 @@ export function prepareBatch(ctx: Ctx, ids?: string[]): Result<Batch> {
       flags,
     });
   }
-  return ok({ mode, providerLabel, items, alreadyReplied });
+  // Mention callbacks even when the caller only asked for the written queue.
+  if (!ids?.length) for (const id of callbackIds(ctx)) {
+    const e = R.getEnquiry(ctx, id)!;
+    callbacks.push({ enquiryId: e.id, customerName: e.customerName, phone: e.phone });
+  }
+  return ok({ mode, providerLabel, items, alreadyReplied, callbacks });
 }
 
 /* ---------------------------------- Sending ---------------------------------- */

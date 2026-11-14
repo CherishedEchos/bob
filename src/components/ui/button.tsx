@@ -9,12 +9,12 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-white hover:bg-copper-600 active:bg-copper-700",
-        secondary: "bg-raised text-foreground ring-1 ring-line-strong hover:bg-raised-hover active:bg-surface-3",
+          "bg-primary text-white shadow-[0_1px_2px_rgb(16_24_40/0.12)] hover:bg-copper-600 active:bg-copper-700",
+        secondary: "bg-card text-foreground ring-1 ring-line-strong hover:bg-raised-hover active:bg-surface-3",
         outline: "ring-1 ring-copper-500/55 text-accent-fg hover:bg-copper-500/10 active:bg-copper-500/18",
         ghost: "text-muted-foreground hover:bg-surface-3 hover:text-foreground active:bg-surface-2",
-        destructive: "bg-destructive/15 text-danger-fg ring-1 ring-destructive/40 hover:bg-destructive/25",
-        success: "bg-success/15 text-good-fg ring-1 ring-success/40 hover:bg-success/25",
+        destructive: "bg-destructive/10 text-danger-fg ring-1 ring-destructive/35 hover:bg-destructive/15",
+        success: "bg-success/10 text-good-fg ring-1 ring-success/35 hover:bg-success/15",
         link: "text-accent-icon underline-offset-4 hover:underline rounded-md",
       },
       size: {

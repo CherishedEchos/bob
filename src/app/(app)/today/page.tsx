@@ -2,18 +2,18 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AlarmClock, Camera, Check, ChevronDown, ChevronRight, FlaskConical, HardHat, Inbox, PartyPopper, Plus, PoundSterling, Sparkles } from "lucide-react";
+import { AlarmClock, Camera, Check, ChevronDown, ChevronRight, HardHat, Inbox, PartyPopper, Phone, Plus, PoundSterling, Sparkles } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { useBob } from "@/lib/bob/provider";
-import { isActiveJob, isInvoiceOverdue, jobNextStep, needsReply, quoteNeedsFollowUp, tasksDue, todaysPriorities, type PriorityItem } from "@/lib/derive";
+import { isActiveJob, isInvoiceOverdue, jobNextStep, needsReply, needsWrittenReply, quoteNeedsFollowUp, tasksDue, todaysPriorities, type PriorityItem } from "@/lib/derive";
 import type { Snapshot } from "@/lib/types";
 import { cn, gbp, timeAgo } from "@/lib/utils";
 import { usePriorityAction } from "@/components/common/priority-card";
 import { SnapPhotoButton } from "@/components/common/photos";
 import { JobTile } from "@/components/common/job-tile";
 import { JobStatusBadge, SourceIcon } from "@/components/common/status";
-import { Disclosure, ListPanel, ListRow, rowActionClass, textActionClass } from "@/components/common/bits";
+import { Disclosure, ListPanel, ListRow, pageSecondaryClass, rowActionClass, textActionClass } from "@/components/common/bits";
 import { Menu, type MenuItem } from "@/components/ui/menu";
 
 interface Reports {
@@ -26,7 +26,7 @@ interface Reports {
 const FIRST = 3;
 
 export default function TodayPage() {
-  const { data, can, org } = useStore();
+  const { data, can } = useStore();
   const ui = useUI();
   const { send } = useBob();
   const finance = can("finance.read");
@@ -34,7 +34,8 @@ export default function TodayPage() {
   const [showAll, setShowAll] = React.useState(false);
   const priorities = todaysPriorities(data, { includeFinance: finance });
   const shown = showAll ? priorities : priorities.slice(0, FIRST);
-  const awaiting = data.enquiries.filter(needsReply).length;
+  // The written-reply queue the batch drafts (callbacks are calls, shown on their own row).
+  const toDraft = data.enquiries.filter(needsWrittenReply).length;
   const date = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
   const askBob = (t: string, via: "voice" | "text" = "text") => {
     void send(t, via);
@@ -50,32 +51,25 @@ export default function TodayPage() {
     ...(can("jobs.write") ? [{ label: "Add a job", icon: HardHat, onSelect: () => ui.openForm({ form: "job" }) }] : []),
     ...(can("notes.write") ? [{ label: "Add a photo", icon: Camera, htmlFor: "today-photo", hint: "Bob suggests the job" }] : []),
     ...(can("payments.record") ? [{ label: "Record a payment", icon: PoundSterling, onSelect: () => ui.openForm({ form: "payment" }) }] : []),
-    ...(can("tasks.write") ? [{ label: "Add a reminder", icon: AlarmClock, onSelect: () => ui.openForm({ form: "reminder" }) }] : []),
+    ...(can("tasks.write") ? [{ label: "Add reminder", icon: AlarmClock, onSelect: () => ui.openForm({ form: "reminder" }) }] : []),
   ];
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 lg:gap-5">
-      {/* Header: date, a quiet demo label, + Add */}
+      {/* Header: date and Add new… (demo mode shows in the bar above / the phone's top bar) */}
       <header className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="t-page">Today</h1>
-          <p className="t-meta mt-0.5 flex flex-wrap items-center gap-x-2 lg:text-[15px]">
-            <span>{date}</span>
-            {org.dataMode === "sample" ? (
-              <span title={org.isDemo ? "A fictional business. Nothing is sent to real customers." : "Fictional sample data. Nothing is sent to real customers."} className="inline-flex items-center gap-1 text-subtle">
-                <span aria-hidden>·</span> <FlaskConical className="size-3" /> Demo
-              </span>
-            ) : null}
-          </p>
+          <p className="t-meta mt-0.5 lg:text-[15px]">{date}</p>
         </div>
         {addItems.length ? (
           <Menu
-            label="Add"
+            label="Add new…"
             items={addItems}
-            triggerClassName="flex h-11 items-center gap-1.5 rounded-xl bg-raised px-4 text-[15px] font-semibold text-foreground ring-1 ring-line-strong transition hover:bg-raised-hover active:bg-surface-3"
+            triggerClassName={pageSecondaryClass}
             trigger={
               <>
-                <Plus className="size-[18px]" /> Add
+                <Plus className="size-[18px]" aria-hidden /> Add new…
               </>
             }
           />
@@ -88,28 +82,27 @@ export default function TodayPage() {
         id="attn"
         title="Needs attention"
         count={priorities.length}
+        action={
+          toDraft > 0 && can("enquiries.write") ? (
+            <Link
+              href="/replies"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-[15px] font-semibold text-white shadow-[0_1px_2px_rgb(16_24_40/0.12)] transition hover:bg-copper-600 active:bg-copper-700 sm:w-auto"
+            >
+              <Sparkles className="size-4" aria-hidden /> Draft {toDraft} {toDraft === 1 ? "reply" : "replies"}
+            </Link>
+          ) : null
+        }
         footer={
-          priorities.length > FIRST || (awaiting > 1 && can("enquiries.write")) ? (
-            <>
-              {priorities.length > FIRST ? (
-                <button type="button" onClick={() => setShowAll((v) => !v)} aria-expanded={showAll} className={textActionClass}>
-                  {showAll ? "Show fewer" : `Show all ${priorities.length}`}
-                  <ChevronDown className={cn("size-4 transition", showAll && "rotate-180")} />
-                </button>
-              ) : (
-                <span />
-              )}
-              {awaiting > 1 && can("enquiries.write") ? (
-                <Link href="/replies" className={textActionClass}>
-                  <Sparkles className="size-4" /> Draft all {awaiting} replies
-                </Link>
-              ) : null}
-            </>
+          priorities.length > FIRST ? (
+            <button type="button" onClick={() => setShowAll((v) => !v)} aria-expanded={showAll} aria-controls="attn-list" className={textActionClass}>
+              {showAll ? "Show fewer" : `Show ${priorities.length - FIRST} more`}
+              <ChevronDown className={cn("size-4 transition", showAll && "rotate-180")} aria-hidden />
+            </button>
           ) : null
         }
       >
         {priorities.length ? (
-          <ul className="divide-y divide-line">
+          <ul id="attn-list" className="divide-y divide-line">
             {shown.map((p) => (
               <AttentionRow key={p.key} item={p} onAskBob={(t) => askBob(t)} />
             ))}
@@ -183,18 +176,19 @@ function ActiveJobs({ data, finance }: { data: Snapshot; finance: boolean }) {
 
 type Tone = "amber" | "sky" | "rose" | "violet";
 const TONE: Record<Tone, { num: string; bar: string }> = {
-  amber: { num: "text-[#ffb27a]", bar: "bg-[#f7944f]" },
-  sky: { num: "text-[#8fc3ff]", bar: "bg-[#5aa2ff]" },
-  rose: { num: "text-[#ff9a9a]", bar: "bg-[#f25f5f]" },
-  violet: { num: "text-[#c4b0ff]", bar: "bg-[#9b7bff]" },
+  amber: { num: "text-accent-fg", bar: "bg-copper-500" },
+  sky: { num: "text-info-fg", bar: "bg-sky-500" },
+  rose: { num: "text-danger-fg", bar: "bg-red-500" },
+  violet: { num: "text-violet-fg", bar: "bg-violet-500" },
 };
 
 function Summary({ data, finance }: { data: Snapshot; finance: boolean }) {
   const { can } = useStore();
   const awaiting = data.enquiries.filter(needsReply).length;
+  const toDraft = data.enquiries.filter(needsWrittenReply).length;
   const quotes = data.quotes.filter(quoteNeedsFollowUp).length;
   const figures: { value: number; label: string; href: string; tone: Tone; batch?: boolean }[] = [
-    { value: awaiting, label: "Awaiting reply", href: "/enquiries?tab=reply", tone: "amber", batch: awaiting > 0 && can("enquiries.write") },
+    { value: awaiting, label: "Awaiting reply", href: "/enquiries?tab=reply", tone: "amber", batch: toDraft > 0 && can("enquiries.write") },
     { value: quotes, label: "Quotes to chase", href: "/enquiries?tab=follow", tone: "sky" },
     finance
       ? { value: data.invoices.filter(isInvoiceOverdue).length, label: "Overdue invoices", href: "/invoices?filter=overdue", tone: "rose" }
@@ -214,7 +208,7 @@ function Summary({ data, finance }: { data: Snapshot; finance: boolean }) {
             </span>
             <span aria-hidden className="pointer-events-none text-[13.5px] leading-tight text-muted-foreground">{f.label}</span>
             {f.batch ? (
-              <Link href="/replies" className="relative z-10 mt-1 inline-flex h-9 w-fit items-center whitespace-nowrap text-[13.5px] font-semibold text-accent-fg hover:text-copper-200">
+              <Link href="/replies" className="relative z-10 mt-1 inline-flex h-9 w-fit items-center whitespace-nowrap text-[13.5px] font-semibold text-accent-fg hover:text-copper-700">
                 Draft replies <ChevronRight className="size-3.5" />
               </Link>
             ) : null}
@@ -227,21 +221,26 @@ function Summary({ data, finance }: { data: Snapshot; finance: boolean }) {
 
 /* ------------------------------ Needs attention ------------------------------ */
 
-/** Phone labels, so the reason keeps its room. "Draft reply" stays whole. */
-const SHORT: Partial<Record<PriorityItem["kind"], string>> = { quote: "Chase", deposit: "Chase", invoice: "View", task: "Done" };
-
 function AttentionRow({ item, onAskBob }: { item: PriorityItem; onAskBob: (t: string) => void }) {
   const { open, action, busy, Icon } = usePriorityAction(item, onAskBob);
   const urgent = item.kind === "invoice" || (item.kind === "deposit" && item.title.includes("overdue"));
+  const label = (
+    <>
+      {item.kind === "task" ? <Check className="size-4" aria-hidden /> : null}
+      {action.href ? <Phone className="size-4" aria-hidden /> : null}
+      <span className="sm:hidden">{action.short}</span>
+      <span className="hidden sm:inline">{action.label}</span>
+    </>
+  );
   return (
     <ListRow
       onOpen={open}
-      openLabel={`Open ${item.who}`}
+      openLabel={`Open ${item.who}: ${item.why}`}
       leading={
         "source" in item ? (
           <SourceIcon source={item.source} provider={item.provider} />
         ) : (
-          <span className={cn("grid size-9 shrink-0 place-items-center rounded-[10px]", urgent ? "bg-red-500/12 text-danger-fg" : "bg-copper-500/12 text-accent-icon")}>
+          <span className={cn("grid size-9 shrink-0 place-items-center rounded-[10px]", urgent ? "bg-red-500/10 text-danger-fg" : "bg-copper-500/10 text-accent-icon")}>
             <Icon className="size-[17px]" />
           </span>
         )
@@ -249,11 +248,15 @@ function AttentionRow({ item, onAskBob }: { item: PriorityItem; onAskBob: (t: st
       title={item.who}
       meta={item.why}
       action={
-        <button type="button" onClick={() => void action.run()} disabled={busy} aria-label={`${action.label}: ${item.who}`} className={rowActionClass}>
-          {item.kind === "task" ? <Check className="size-4" /> : null}
-          <span className="sm:hidden">{SHORT[item.kind] ?? action.label}</span>
-          <span className="hidden sm:inline">{action.label}</span>
-        </button>
+        action.href ? (
+          <a href={action.href} aria-label={`${action.label} on ${item.kind === "reply" ? (item.callback?.phone ?? "") : ""}`} className={rowActionClass}>
+            {label}
+          </a>
+        ) : (
+          <button type="button" onClick={() => void action.run()} disabled={busy} aria-label={`${action.label}: ${item.who}`} className={rowActionClass}>
+            {label}
+          </button>
+        )
       }
     />
   );
@@ -296,9 +299,9 @@ function Figures({ reports: r }: { reports: Reports }) {
         </Group>
         {r.money ? (
           <Group title="Money owed">
-            <Row label="Unpaid invoices" value={gbp(r.money.invoicedTotal)} />
-            <Row label="Overdue" value={`${gbp(r.money.overdueTotal)}${r.money.overdueCount ? ` (${r.money.overdueCount})` : ""}`} tone={r.money.overdueTotal ? "warn" : undefined} />
-            <Row label="Deposits awaited" value={gbp(r.money.depositsTotal)} />
+            <Row label="Outstanding invoices" value={gbp(r.money.invoicedTotal)} />
+            <Row label="Of which overdue" value={`${gbp(r.money.overdueTotal)}${r.money.overdueCount ? ` (${r.money.overdueCount})` : ""}`} tone={r.money.overdueTotal ? "warn" : undefined} />
+            <Row label="Deposits due" value={gbp(r.money.depositsTotal)} />
             <p className="mt-1 text-[12.5px] text-subtle">
               From {r.money.source}
               {r.money.lastUpdated ? ` · updated ${timeAgo(r.money.lastUpdated)}` : ""}.

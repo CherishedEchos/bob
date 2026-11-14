@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlarmClock, HardHat, Mail, MapPin, Phone, ReceiptText, ShieldAlert } from "lucide-react";
+import { AlarmClock, ChevronRight, HardHat, Mail, MapPin, Phone, ReceiptText, ShieldAlert } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { invoiceBalance, invoiceStatusLabel, jobFinance } from "@/lib/derive";
@@ -50,33 +50,36 @@ function CustomerDetail({ id }: { id: string }) {
           </p>
         ) : null}
         <p className="mt-1 text-[13.5px] text-subtle">Customer since {timeAgo(c.createdAt)}</p>
+        {/* Everyday actions first: get in touch. */}
         <div className="mt-4 grid grid-cols-2 gap-2">
           {c.phone ? (
-            <Button asChild variant="secondary" size="sm">
-              <a href={`tel:${c.phone.replace(/\s/g, "")}`}>
+            <Button asChild size="sm">
+              <a href={`tel:${c.phone.replace(/\s/g, "")}`} aria-label={`Call ${c.name} on ${c.phone}`}>
                 <Phone /> Call
               </a>
             </Button>
           ) : null}
           {c.email ? (
-            <Button asChild variant="secondary" size="sm">
-              <a href={`mailto:${c.email}`}>
+            <Button asChild variant={c.phone ? "secondary" : "default"} size="sm">
+              <a href={`mailto:${c.email}`} aria-label={`Email ${c.name} at ${c.email}`}>
                 <Mail /> Email
               </a>
             </Button>
           ) : null}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
           {can("jobs.write") ? (
-            <Button size="sm" onClick={() => ui.openForm({ form: "job", customerId: c.id, values: { location: c.town ?? "" } })}>
+            <Button size="sm" variant="secondary" onClick={() => ui.openForm({ form: "job", customerId: c.id, values: { location: c.town ?? "" } })}>
               <HardHat /> New job
             </Button>
           ) : null}
           {can("invoices.draft") ? (
             <Button size="sm" variant="secondary" onClick={() => ui.openForm({ form: "invoice", customerId: c.id })}>
-              <ReceiptText /> Invoice
+              <ReceiptText /> Invoice draft
             </Button>
           ) : null}
           <Button size="sm" variant="secondary" onClick={() => ui.openForm({ form: "reminder", title: `Call ${c.name}`, dueDate: addDaysKey(1), customerId: c.id })}>
-            <AlarmClock /> Reminder
+            <AlarmClock /> Add reminder
           </Button>
         </div>
         <dl className="mt-4 space-y-1 text-[14.5px] text-muted-foreground">
@@ -91,7 +94,7 @@ function CustomerDetail({ id }: { id: string }) {
           <ul className="divide-y divide-line">
             {jobs.map((j) => (
               <li key={j.id}>
-                <button onClick={() => ui.openJob(j.id)} className="flex w-full items-center justify-between gap-2 py-3 text-left transition hover:text-accent-fg">
+                <button onClick={() => ui.openJob(j.id)} className="group flex w-full items-center justify-between gap-2 rounded-lg py-3 text-left transition hover:bg-surface-2 active:bg-surface-3">
                   <div className="min-w-0">
                     <div className="truncate text-[15px] font-medium">{j.title}</div>
                     <div className="text-[13.5px] text-muted-foreground">
@@ -99,7 +102,10 @@ function CustomerDetail({ id }: { id: string }) {
                       {can("finance.read") ? ` · ${gbp(j.quotedValue)} · ${jobFinance(j, data.payments).paidPercent}% paid` : ""}
                     </div>
                   </div>
-                  <JobStatusBadge status={j.status} />
+                  <span className="flex shrink-0 items-center gap-2">
+                    <JobStatusBadge status={j.status} />
+                    <ChevronRight aria-hidden className="size-[18px] text-subtle group-hover:text-accent-icon" />
+                  </span>
                 </button>
               </li>
             ))}
@@ -114,12 +120,15 @@ function CustomerDetail({ id }: { id: string }) {
           <ul className="divide-y divide-line">
             {enquiries.map((e) => (
               <li key={e.id}>
-                <button onClick={() => ui.openEnquiry(e.id)} className="flex w-full items-center justify-between gap-2 py-3 text-left transition hover:text-accent-fg">
+                <button onClick={() => ui.openEnquiry(e.id)} className="group flex w-full items-center justify-between gap-2 rounded-lg py-3 text-left transition hover:bg-surface-2 active:bg-surface-3">
                   <div className="min-w-0">
                     <div className="truncate text-[15px] font-medium">{e.title}</div>
                     <div className="text-[13.5px] text-muted-foreground">{timeAgo(e.receivedAt)}</div>
                   </div>
-                  <EnquiryStatusBadge status={e.status} />
+                  <span className="flex shrink-0 items-center gap-2">
+                    <EnquiryStatusBadge status={e.status} />
+                    <ChevronRight aria-hidden className="size-[18px] text-subtle group-hover:text-accent-icon" />
+                  </span>
                 </button>
               </li>
             ))}
@@ -161,7 +170,7 @@ function CustomerDetail({ id }: { id: string }) {
               <ShieldAlert /> Erase {firstName(c.name)}&apos;s personal data
             </Button>
           ) : (
-            <div className="rounded-2xl bg-red-500/10 p-3.5 ring-1 ring-red-500/30">
+            <div className="rounded-2xl bg-red-500/[0.06] p-3.5 ring-1 ring-red-500/25">
               <p className="text-[14.5px]">
                 This removes {c.name}&apos;s contact details, notes, enquiries and reminders. Invoices and payments are kept but anonymised, because UK tax rules
                 require you to keep financial records. This can&apos;t be undone.
@@ -172,7 +181,7 @@ function CustomerDetail({ id }: { id: string }) {
                 </Button>
                 <Button
                   size="sm"
-                  className="bg-red-600 from-red-500 to-red-700"
+                  className="bg-red-600 hover:bg-red-700 active:bg-red-800"
                   onClick={async () => {
                     const r = await api<{ ok?: boolean; error?: string; snapshot?: Snapshot }>("/api/privacy/erase-customer", { json: { customerId: c.id } });
                     if (r.body.snapshot) setSnapshot(r.body.snapshot);

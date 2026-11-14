@@ -82,7 +82,7 @@ export function Menu({
           role="menu"
           aria-label={label}
           className={cn(
-            "absolute top-[calc(100%+6px)] z-40 w-64 overflow-hidden rounded-2xl bg-raised py-1.5 shadow-[0_18px_48px_-12px_rgb(0_0_0/0.85)] ring-1 ring-line-strong",
+            "absolute top-[calc(100%+6px)] z-40 w-64 overflow-hidden rounded-2xl bg-card py-1.5 shadow-[0_18px_48px_-12px_rgb(16_24_40/0.28)] ring-1 ring-line-strong",
             align === "end" ? "right-0" : "left-0",
           )}
         >

@@ -259,7 +259,7 @@ function buildScenario(c: Cast) {
     at: hoursAgo(3), status: "new", priority: "high", customer: false,
     description:
       "Looking to rip out our 1990s kitchen and replace it with a modern shaker-style kitchen. Roughly 4m x 3.5m, would like an island if space allows. Hoping to start in the new year.",
-    reply: `Hi ${P.hannah.first},\n\nThanks for getting in touch about your kitchen. A shaker-style kitchen with an island sounds great.\n\nCould you send a few photos of the current space and rough measurements? Then we can arrange a time to come and take a proper look.\n\n${sign}`,
+    reply: `Hi ${P.hannah.first},\n\nThanks for getting in touch about your kitchen. A shaker-style kitchen with an island sounds great, and thanks for the rough size — that's really helpful.\n\nCould you send a few photos of the current kitchen, including where the window, door and any radiators are? Then we can arrange a time to come and take a proper look and measure up.\n\n${sign}`,
   });
   addEnquiry({
     key: "decking_email", person: "laura", source: "email", title: "Composite decking", location: "Crawley Down",
@@ -277,6 +277,7 @@ function buildScenario(c: Cast) {
     key: "decking_phone", person: "dave", source: "phone", title: "Garden decking", location: "Haywards Heath",
     at: daysAgo(2), status: "awaiting_reply", priority: "medium", noEmail: true,
     description: "Left a voicemail. Wants raised decking, around 5m x 4m, with steps down to the lawn. Asked for a call back.",
+    reply: `Hi ${P.dave.first},\n\nThanks for your voicemail about the raised decking. Sorry we missed you — we'll give you a call back to talk it through. If there's a time of day that suits you best, just let us know.\n\n${sign}`,
   });
   addEnquiry({
     key: "stairs_bh", person: "emma", source: "instagram", instagram: true, title: "Staircase refurbishment",

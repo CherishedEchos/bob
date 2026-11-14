@@ -23,19 +23,38 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
     const body = creds ?? { email, password };
     setBusy(body.email);
     setError(null);
-    const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const demoEntry = !!creds;
+    let res: Response;
+    try {
+      res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    } catch {
+      setError(
+        demoEntry
+          ? "Couldn't open the demo — Bob didn't respond. Check your connection and tap Try the demo again. (The demo server can take up to a minute to wake up.)"
+          : "Couldn't reach Bob. Check your connection and try again.",
+      );
+      setBusy(null);
+      return;
+    }
     if (res.ok) {
+      // Keep the loading state until the workspace has loaded.
       window.location.href = "/today";
       return;
     }
     const json = (await res.json().catch(() => ({}))) as { error?: string };
-    setError(json.error ?? "Couldn't sign in");
+    setError(
+      demoEntry
+        ? res.status >= 500 || res.status === 0
+          ? "The demo workspace didn't open (the server had a problem). Wait a few seconds and tap Try the demo again."
+          : `${json.error ?? "Couldn't open the demo workspace"}. Tap Try the demo to try again.`
+        : json.error ?? "Couldn't sign in",
+    );
     setBusy(null);
   };
 
   const primary = demo[0]?.accounts[0];
   return (
-    <main className="bg-app relative min-h-dvh overflow-hidden">
+    <main className="theme-dark bg-app relative min-h-dvh overflow-hidden">
       {/* Warm workshop-light glow, like the brand hero */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -right-40 top-[-10%] size-[620px] rounded-full bg-[radial-gradient(circle,rgb(255_130_28/0.20),transparent_62%)] blur-2xl" />
@@ -83,8 +102,19 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
                   disabled={!!busy}
                   onClick={() => void signIn(undefined, { email: primary.email, password: demoPassword })}
                 >
-                  {busy === primary.email ? <Loader2 className="animate-spin" /> : <ArrowRight />} Try the demo
+                  {busy === primary.email ? (
+                    <>
+                      <Loader2 className="animate-spin" /> Opening the demo workspace…
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRight /> Try the demo
+                    </>
+                  )}
                 </Button>
+                <span className="sr-only" aria-live="polite">
+                  {busy === primary.email ? "Opening the demo workspace" : ""}
+                </span>
                 <p className="mt-3 flex items-start gap-1.5 text-[14px] leading-snug text-white/60">
                   <FlaskConical className="mt-0.5 size-4 shrink-0 text-sky-300/80" />
                   Opens a fictional Ninety3 workspace. Sample customers only — nothing is ever sent to anyone.
@@ -93,7 +123,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
             ) : null}
 
             {error ? (
-              <p role="alert" className="mt-4 text-[15px] text-danger-fg">
+              <p role="alert" className="mt-4 max-w-md rounded-xl bg-red-500/10 px-4 py-3 text-[15px] leading-snug text-danger-fg ring-1 ring-red-400/30">
                 {error}
               </p>
             ) : null}
