@@ -61,7 +61,8 @@ function EnquiriesInner() {
   const toDraft = data.enquiries.filter(needsWrittenReply).length;
   const caughtUp = tab === "reply" && !activeFilters;
   // Desktop shows the selected enquiry beside the list (the first one by default).
-  const current = desktop ? (list.find((e) => e.id === selected) ?? list[0]) : undefined;
+  // The open enquiry stays open even if a change (e.g. marked won) moves it out of this tab.
+  const current = desktop ? (list.find((e) => e.id === selected) ?? data.enquiries.find((e) => e.id === selected) ?? list[0]) : undefined;
 
   // Phones: the enquiry opens full screen over the inbox (which stays put
   // underneath, so the tab and scroll position are kept). It's a real history
@@ -117,7 +118,7 @@ function EnquiriesInner() {
         </div>
       </div>
 
-      <div className="lg:grid lg:grid-cols-[350px_minmax(0,1fr)] lg:items-start lg:gap-5 xl:grid-cols-[390px_minmax(0,1fr)]">
+      <div className="lg:grid lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start lg:gap-5 xl:grid-cols-[460px_minmax(0,1fr)]">
         <div className="min-w-0">
           <div className="mb-3 flex items-center gap-2">
             <div role="tablist" aria-label="Enquiry lists" className="scrollbar-none flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-xl bg-surface-3 p-1">
@@ -129,9 +130,12 @@ function EnquiriesInner() {
                     key={t.value}
                     role="tab"
                     aria-selected={active}
-                    onClick={() => setTab(t.value)}
+                    onClick={() => {
+                      setTab(t.value);
+                      setSelected(null);
+                    }}
                     className={cn(
-                      "flex h-10 shrink-0 grow items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[14.5px] font-semibold transition active:bg-surface-2",
+                      "flex h-10 shrink-0 grow items-center justify-center gap-1 whitespace-nowrap rounded-lg px-2 text-[14px] font-semibold transition active:bg-surface-2",
                       active ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground",
                     )}
                   >

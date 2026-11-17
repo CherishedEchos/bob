@@ -16,7 +16,7 @@ export async function GET(req: NextRequest, route: { params: Promise<{ token: st
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
       "Content-Disposition": `inline; filename="bob-diary.ics"`,
-      "Cache-Control": "private, max-age=300",
+      "Cache-Control": "no-cache, private",
       "X-Robots-Tag": "noindex",
     },
   });

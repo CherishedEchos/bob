@@ -107,7 +107,7 @@ export default function JobsPage() {
                     <span className="mt-0.5 block text-foreground">
                       {next ? (
                         <>
-                          <span className="font-semibold">Booked {relativeDayInline(next.date, today)}</span>, {formatTimeRange(next.startTime, next.endTime)}
+                          <span className="font-semibold">{next.date < today ? "On site today" : `Booked ${relativeDayInline(next.date, today)}`}</span>, {formatTimeRange(next.startTime, next.endTime)}
                           {who.length ? ` · ${who.map((p) => p.name.split(" ")[0]).join(", ")}` : " · needs someone"}
                         </>
                       ) : (

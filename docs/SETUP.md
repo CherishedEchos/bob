@@ -39,8 +39,10 @@ Each redirect URI is `$BOB_APP_URL/api/integrations/<provider>/callback`.
 - **Workers see only My work:** their bookings from a week ago onwards, the site address, directions, what3words, instructions, their tasks and the materials for those jobs. No prices, customers list, team or company schedule. Every API refuses them unless the route opts in (`authed(handler, { workers: true })` in `src/server/http.ts`).
 - **Changes reach workers on their next load or refresh.** No push notifications or texts are sent.
 - **Times** are wall-clock times in the workspace time zone (Settings → Business profile; default `Europe/London`), so bookings don't move when the clocks change.
-- **Calendar sync** (Google/Outlook) isn't built. The schedule works on its own. Building it needs a Google Cloud / Microsoft Entra app with calendar scopes, and a decision on one-way (Bob → calendar) vs two-way sync.
-- **QuickBooks:** the existing adapter covers invoices (written, not live-tested). Bills to pay are kept in Bob only; when QuickBooks is connected the Bills page shows an **Open QuickBooks** link. Pulling bills from QuickBooks needs the `com.intuit.quickbooks.accounting` scope (already requested) and a Bills sync (not built).
+- **Calendar (one-way subscription feeds):** Settings → Calendar creates a private `.ics` link — the company diary (owners/office/site team) or "My bookings" (the person linked to your login). Workers get their own link in My work. Links are hashed in the database, can be turned off, and are re-checked on every fetch: leaving the business, losing the role, removing access or archiving the Team record stops the feed. Feeds contain the job, town/site address, times and names — never customer phone/email, site access notes, entry codes, instructions or private notes. Each booking has a stable UID, so a moved booking updates the same event and a cancelled one disappears. **The receiving calendar decides how often it refreshes** (Google can take several hours). Tested: the feed parses with the Python `icalendar` library and in unit tests; **not yet tested in Google Calendar, Apple Calendar or Outlook** (needs a public HTTPS URL — try it on the deployed site). A two-way Google/Microsoft sync needs a Google Cloud or Microsoft Entra app with calendar scopes — not built.
+- **QuickBooks:** the existing adapter covers invoices (written, not live-tested). Bills to pay are kept in Bob only. **Open QuickBooks** in Money goes to the link set in Settings → Connected accounts → "Open QuickBooks shortcut" (the demo uses `https://qbo.intuit.com/app/bills`); Money shows the real QuickBooks connection status. Pulling bills from QuickBooks needs a Bills sync (not built).
+- **Merchants:** trade account references, the password-manager link and "login managed by" are owner/office only — the server removes them for everyone else. Bob refuses text that looks like a password in merchant, material and job fields.
+- **Site details:** each job has its own site address (separate from the customer's address, with "Copy customer address"), optional what3words (format checked only — no what3words API key configured, so the square isn't verified) and a site access note.
 
 ## Migrations
 
@@ -49,7 +51,9 @@ Each redirect URI is `$BOB_APP_URL/api/integrations/<provider>/callback`.
   ```
   supabase/migrations/0001_bob_multitenant.sql
   supabase/migrations/0002_team_schedule.sql
+  supabase/migrations/0003_merchants_feeds.sql
   ```
+  `0003` adds merchants, calendar feeds, material order fields, bill payment fields and `jobs.access_note` (all additive). Local SQLite is at schema version 3 and upgrades on start-up; older sample workspaces get demo merchants and access notes once.
   `0002` is additive. It also tightens `is_member()` so invited workers no longer count as members for existing tables; they read their work only through `public.my_work(org)`.
 
 ## Adding a company (no code change)

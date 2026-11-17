@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- plain Node script run outside the app */
 // Run against a local dev server: node scripts/e2e-team-flows.cjs (screenshots go to $OUT or /tmp).
 // End-to-end flows for the team/schedule brief. Fictional data, local dev server only.
 const { chromium } = require('playwright');

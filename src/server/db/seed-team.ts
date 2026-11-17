@@ -190,7 +190,7 @@ export function buildTeamScenario(orgId: string, timeZone = DEFAULT_TIME_ZONE) {
     { id: `${k}_task_beads`, title: "Check angle beads are on site before skimming", dueDate: day(3), done: false, relatedType: "job", relatedId: job("extension_copthorne"), assignedPersonId: pid("sam"), createdAt: now, createdBy: "Owner" },
   ];
 
-  const merchants = cast.merchants.map((x) => ({ id: `${k}_mer_${x.key}`, name: x.name, branch: x.branch, phone: x.phone, email: x.email, website: x.website, accountRef: x.accountRef, passwordManagerUrl: x.passwordManagerUrl, accessManagedBy: x.accessManagedBy, notes: x.notes, createdAt: now }));
+  const merchants = cast.merchants.map((x) => ({ id: `${k}_mer_${x.key}`, name: x.name, branch: x.branch, phone: x.phone, email: x.email, website: x.website, accountRef: x.accountRef?.replace(/^N93/, k.toUpperCase()), passwordManagerUrl: x.passwordManagerUrl, accessManagedBy: x.accessManagedBy, notes: x.notes, createdAt: now }));
   return { cast, people, bookings, materials, bills, tasks, merchants, sites: cast.sites, jobId: job, personId: pid };
 }
 
