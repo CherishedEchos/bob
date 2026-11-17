@@ -266,7 +266,8 @@ describe("Flow 9: existing databases migrate without losing data", () => {
     expect(job).toEqual({ title: "Porch", site_address: null });
     // Live workspaces never get demo records.
     expect((old.prepare("SELECT COUNT(*) AS n FROM people").get() as { n: number }).n).toBe(0);
-    expect((old.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(2);
+    expect((old.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(3);
+    expect((old.prepare("PRAGMA table_info(jobs)").all() as { name: string }[]).some((c) => c.name === "access_note")).toBe(true);
   });
 });
 

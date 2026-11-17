@@ -12,7 +12,7 @@ import "server-only";
  * (or without ever) being invited. Accepting an invite links the two.
  */
 import type { Bill, Booking, Job, Material, Person, PersonAccess, Task } from "@/lib/types";
-import { bookingInputSchema, billInputSchema, materialInputSchema, personInputSchema } from "@/lib/validation";
+import { bookingInputSchema, billInputSchema, billPaymentSchema, materialInputSchema, personInputSchema } from "@/lib/validation";
 import { addDays, formatDayShort, formatTimeRange, rangeKeys, timeToMinutes } from "@/lib/dates";
 import { can } from "@/lib/auth/permissions";
 import { todayKey, uid, gbp } from "@/lib/utils";
@@ -106,6 +106,7 @@ function revokeAccessInner(ctx: Ctx, p: Person) {
     // Only ever removes a worker login — never an owner/office account.
     db.prepare("DELETE FROM memberships WHERE org_id = ? AND user_id = ? AND role = 'worker'").run(ctx.orgId, p.userId);
     db.prepare("DELETE FROM sessions WHERE org_id = ? AND user_id = ?").run(ctx.orgId, p.userId);
+    db.prepare("UPDATE calendar_feeds SET revoked_at = ? WHERE org_id = ? AND user_id = ? AND revoked_at IS NULL").run(now(), ctx.orgId, p.userId);
     scoped(ctx).update<Person>("people", p.id, { userId: null as unknown as undefined });
   }
 }
@@ -400,9 +401,14 @@ export function saveMaterial(ctx: Ctx, input: unknown): Result<Material> {
   if (!job) return fail("not_found", "Job not found");
   const existing = v.id ? scoped(ctx).get<Material>("materials", v.id) : undefined;
   if (v.id && !existing) return fail("not_found", "That item no longer exists.");
+  if (v.merchantId && !scoped(ctx).get("merchants", v.merchantId)) return fail("not_found", "Merchant not found", { merchantId: "Choose a merchant from the list" });
   const row: Material = { id: existing?.id ?? uid("mat"), ...v, createdAt: existing?.createdAt ?? now(), updatedAt: now() };
+  const n = <T,>(x: T | undefined) => (x ?? (null as unknown as undefined));
   tx(() => {
-    if (existing) scoped(ctx).update<Material>("materials", row.id, { ...row, supplier: row.supplier ?? (null as unknown as undefined), neededBy: row.neededBy ?? (null as unknown as undefined) });
+    if (existing)
+      scoped(ctx).update<Material>("materials", row.id, {
+        ...row, supplier: n(row.supplier), neededBy: n(row.neededBy), unit: n(row.unit), merchantId: n(row.merchantId), orderRef: n(row.orderRef), expectedDelivery: n(row.expectedDelivery), notes: n(row.notes),
+      });
     else scoped(ctx).insert("materials", row);
     audit(ctx, existing ? "materials.updated" : "materials.added", `${existing ? "Updated" : "Added"} ${row.quantity} × ${row.item} for ${job.title} (${STATUS_WORD[row.status]})`, "job", job.id);
   });
@@ -450,6 +456,7 @@ export function createBill(ctx: Ctx, input: unknown): Result<Bill> {
   const parsed = billInputSchema.safeParse(input);
   if (!parsed.success) return fail("invalid", "Check the bill.", fieldErrors(parsed.error.issues));
   if (parsed.data.jobId && !getJob(ctx, parsed.data.jobId)) return fail("not_found", "Job not found");
+  if (parsed.data.merchantId && !scoped(ctx).get("merchants", parsed.data.merchantId)) return fail("not_found", "Merchant not found");
   const bill: Bill = { id: uid("bill"), ...parsed.data, status: "due", createdAt: now() };
   tx(() => {
     scoped(ctx).insert("bills", bill);
@@ -458,14 +465,25 @@ export function createBill(ctx: Ctx, input: unknown): Result<Bill> {
   return ok(bill);
 }
 
-/** Records that a bill was paid outside Bob (bank app, card). Bob never moves money. */
-export function setBillPaid(ctx: Ctx, id: string, paid: boolean): Result<Bill> {
+/**
+ * Record that a bill was paid elsewhere (bank app, card) on a given date.
+ * Bob never moves money. `paid: false` undoes it.
+ */
+export function setBillPaid(ctx: Ctx, id: string, paid: boolean, payment: unknown = {}): Result<Bill> {
   const no = denied(ctx, "payments.record");
   if (no) return no;
   const b = scoped(ctx).get<Bill>("bills", id);
   if (!b) return fail("not_found", "Bill not found");
+  const p = billPaymentSchema.safeParse({ paidOn: todayKey(), ...(payment as object) });
+  if (paid && !p.success) return fail("invalid", "Check the payment date.", fieldErrors(p.error.issues));
+  if (paid && b.status === "paid") return fail("conflict", "That bill is already recorded as paid.");
   const u = tx(() => {
-    const out = scoped(ctx).update<Bill>("bills", id, { status: paid ? "paid" : "due", paidAt: paid ? now() : (null as unknown as undefined) })!;
+    const out = scoped(ctx).update<Bill>("bills", id, {
+      status: paid ? "paid" : "due",
+      paidAt: paid ? now() : (null as unknown as undefined),
+      paidOn: paid && p.success ? p.data.paidOn : (null as unknown as undefined),
+      paymentMethod: paid && p.success ? p.data.paymentMethod : (null as unknown as undefined),
+    })!;
     audit(ctx, paid ? "bills.marked_paid" : "bills.reopened", `${b.supplier} ${gbp(b.amount)} ${paid ? "recorded as paid (outside Bob)" : "marked as not paid"}`, "bill", id);
     return out;
   });
@@ -491,6 +509,8 @@ export interface MyJob {
   siteAddress: string;
   what3words?: string;
   instructions?: string;
+  /** Side gate, parking, entrance. */
+  accessNote?: string;
   /** First name and phone of the customer on site — only for jobs they're booked on. */
   contactName?: string;
   contactPhone?: string;
@@ -526,6 +546,7 @@ function toMyJob(ctx: Ctx, j: Job): MyJob {
     siteAddress: j.siteAddress || j.location,
     what3words: j.what3words,
     instructions: j.sharedNotes,
+    accessNote: j.accessNote,
     contactName: c?.name,
     contactPhone: c?.phone,
   };

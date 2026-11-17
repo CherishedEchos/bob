@@ -35,7 +35,7 @@ export const TABLES = {
     customerId: "text", title: "text", description: "text", location: "text", kind: "text",
     quotedValue: "real", depositRequired: "real", status: "text", startDate: "text", depositDueDate: "text",
     nextAction: "text", notes: "json", enquiryId: "text", lastChasedAt: "text", createdAt: "text",
-    siteAddress: "text", what3words: "text", sharedNotes: "text",
+    siteAddress: "text", what3words: "text", sharedNotes: "text", accessNote: "text",
   },
   quotes: {
     customerId: "text", jobId: "text", enquiryId: "text", description: "text", amount: "real", status: "text",
@@ -73,11 +73,15 @@ export const TABLES = {
   },
   materials: {
     jobId: "text", item: "text", quantity: "text", supplier: "text", neededBy: "text", status: "text",
-    createdAt: "text", updatedAt: "text",
+    createdAt: "text", updatedAt: "text", unit: "text", merchantId: "text", orderRef: "text", expectedDelivery: "text", notes: "text",
   },
   bills: {
     supplier: "text", description: "text", amount: "real", dueDate: "text", status: "text", jobId: "text",
-    reference: "text", paidAt: "text", createdAt: "text",
+    reference: "text", paidAt: "text", createdAt: "text", merchantId: "text", paidOn: "text", paymentMethod: "text",
+  },
+  merchants: {
+    name: "text", branch: "text", phone: "text", email: "text", website: "text", notes: "text", accountRef: "text",
+    passwordManagerUrl: "text", accessManagedBy: "text", archivedAt: "text", createdAt: "text",
   },
   activity: {
     at: "text", actor: "text", via: "text", action: "text", summary: "text", entityType: "text", entityId: "text",
@@ -134,6 +138,18 @@ CREATE TABLE IF NOT EXISTS invites (
   revoked_at TEXT
 );
 CREATE INDEX IF NOT EXISTS invites_org_person_idx ON invites(org_id, person_id);
+CREATE TABLE IF NOT EXISTS calendar_feeds (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  scope TEXT NOT NULL CHECK (scope IN ('company','person')),
+  person_id TEXT,
+  token_hash TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL,
+  revoked_at TEXT,
+  last_fetched_at TEXT
+);
+CREATE INDEX IF NOT EXISTS calendar_feeds_org_user_idx ON calendar_feeds(org_id, user_id);
 CREATE TABLE IF NOT EXISTS sessions (
   token_hash TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -259,7 +275,7 @@ export function initDb(db: DatabaseSync) {
  * Schema migrations for existing databases. Additive only: nothing is dropped
  * and every existing row is kept. Recorded in PRAGMA user_version.
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 function migrate(db: DatabaseSync) {
   const version = (db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version;
   const hasMemberships = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='memberships'").get();

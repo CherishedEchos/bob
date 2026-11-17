@@ -26,5 +26,5 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   // Public: sign-in, invite acceptance, static assets, the website enquiry form (/f/…), its example site and its submit API.
-  matcher: ["/((?!_next/static|_next/image|brand/|icons/|manifest.webmanifest|favicon.ico|login|api/auth/login|invite/|api/invite/|f/|example-site/|api/public/).*)"],
+  matcher: ["/((?!_next/static|_next/image|brand/|icons/|manifest.webmanifest|favicon.ico|login|api/auth/login|invite/|api/invite/|api/calendar/|f/|example-site/|api/public/).*)"],
 };

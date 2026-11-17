@@ -6,6 +6,8 @@ import * as F from "@/server/services/finance";
 import { syncInbox } from "@/server/integrations/inbox";
 import { buildSnapshot } from "@/server/services/snapshot";
 import * as T from "@/server/services/team";
+import * as M from "@/server/services/merchants";
+import * as Cal from "@/server/services/calendar";
 
 export const runtime = "nodejs";
 
@@ -57,7 +59,11 @@ const OPS: Record<string, (ctx: Ctx, a: Record<string, any>) => Result<unknown> 
   setMaterialStatus: (c, a) => T.setMaterialStatus(c, s(a.id), a.status),
   deleteMaterial: (c, a) => T.deleteMaterial(c, s(a.id)),
   createBill: (c, a) => T.createBill(c, a.input),
-  setBillPaid: (c, a) => T.setBillPaid(c, s(a.id), a.paid !== false),
+  setBillPaid: (c, a) => T.setBillPaid(c, s(a.id), a.paid !== false, a.payment ?? {}),
+  saveMerchant: (c, a) => M.saveMerchant(c, typeof a.id === "string" ? a.id : undefined, a.input),
+  archiveMerchant: (c, a) => M.archiveMerchant(c, s(a.id), a.archived !== false),
+  createFeed: (c, a) => Cal.createFeed(c, a.scope === "company" ? "company" : "person"),
+  revokeFeed: (c, a) => Cal.revokeFeed(c, s(a.id)),
 };
 
 export const POST = authed(async (req, ctx) => {

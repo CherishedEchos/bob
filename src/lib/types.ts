@@ -44,6 +44,8 @@ export interface OrgConfig {
   retention: { closedEnquiryMonths: number; conversationDays: number };
   /** IANA time zone for "today", the schedule and booking times. UK workspaces: Europe/London. */
   timeZone?: string;
+  /** Where "Open QuickBooks" goes (e.g. the company's QuickBooks bills page). */
+  quickbooksUrl?: string;
 }
 
 export interface AppUser {
@@ -150,6 +152,8 @@ export interface Job {
   what3words?: string;
   /** Instructions shared with the people booked on this job (notes stay internal). */
   sharedNotes?: string;
+  /** Site access: side gate, where to park, which entrance. Shown to people booked; never in calendar feeds. */
+  accessNote?: string;
 }
 
 export type QuoteStatus = "draft" | "sent" | "accepted" | "declined";
@@ -311,11 +315,46 @@ export interface Material {
   jobId: ID;
   item: string;
   quantity: string;
+  /** e.g. "sheets", "m", "bags". Optional; older items keep the unit inside quantity. */
+  unit?: string;
+  /** Free-text supplier (older records, or a merchant not added yet). */
   supplier?: string;
+  merchantId?: ID;
   neededBy?: string; // YYYY-MM-DD
   status: MaterialStatus;
+  orderRef?: string;
+  expectedDelivery?: string; // YYYY-MM-DD
+  notes?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/** A supplier the business buys from. Account references and access fields are owner/office only. */
+export interface Merchant {
+  id: ID;
+  name: string;
+  branch?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  notes?: string;
+  /** Restricted: trade account number/reference. */
+  accountRef?: string;
+  /** Restricted: link to the company's password manager entry (never the password itself). */
+  passwordManagerUrl?: string;
+  /** Restricted: who manages the login, e.g. "Luke". */
+  accessManagedBy?: string;
+  archivedAt?: string;
+  createdAt: string;
+}
+
+/** A private calendar subscription link (owner feed or a person's own bookings). Token never sent to the client. */
+export interface CalendarFeed {
+  id: ID;
+  scope: "company" | "person";
+  personId?: ID;
+  createdAt: string;
+  lastFetchedAt?: string;
 }
 
 /** A bill the business needs to pay (supplier, subcontractor, hire). */
@@ -327,8 +366,12 @@ export interface Bill {
   dueDate: string; // YYYY-MM-DD
   status: "due" | "paid";
   jobId?: ID;
+  merchantId?: ID;
   reference?: string;
   paidAt?: string;
+  /** Date the payment was made elsewhere (bank, card). */
+  paidOn?: string; // YYYY-MM-DD
+  paymentMethod?: string;
   createdAt: string;
 }
 
@@ -394,6 +437,8 @@ export interface Snapshot {
   bookings: Booking[];
   materials: Material[];
   bills: Bill[];
+  merchants: Merchant[];
+  feeds: CalendarFeed[];
   activity: ActivityEntry[];
   connections: Connection[];
   mode: ModeInfo;

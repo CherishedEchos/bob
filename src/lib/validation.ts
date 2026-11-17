@@ -4,6 +4,22 @@
  */
 import { z } from "zod";
 
+/**
+ * what3words: three words separated by dots, with or without a leading ///.
+ * This checks the format only — it doesn't confirm the square exists
+ * (that needs the what3words API, not configured).
+ */
+export const W3W_HELP = "Use three words with dots between them, like ///filled.count.soap";
+export function normaliseW3w(input: string): string | null {
+  const v = input.trim().replace(/^\/{1,3}/, "").replace(/^https?:\/\/(www\.)?what3words\.com\//i, "").toLowerCase();
+  if (!v) return "";
+  return /^\p{L}+\.\p{L}+\.\p{L}+$/u.test(v) ? v : null;
+}
+
+/** Bob never stores passwords: refuse text that looks like one. */
+export const SECRET_PATTERN = /\b(password|passcode|pwd|login\s*pin)\s*(is|:|=)\s*\S+/i;
+export const noSecrets = <T extends z.ZodString>(s: T) => s.refine((v) => !SECRET_PATTERN.test(v), "Don't store passwords in Bob — keep them in your password manager and add its link instead.");
+
 export const dateKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a valid date");
 const optDate = dateKey.optional().or(z.literal("")).transform((v) => v || undefined);
 const optStr = (max: number) => z.string().trim().max(max).optional().or(z.literal("")).transform((v) => v || undefined);
@@ -75,8 +91,11 @@ export const jobInputSchema = z
     enquiryId: id.optional(),
     quoteId: id.optional(),
     siteAddress: optStr(240),
-    what3words: optStr(80),
+    what3words: optStr(80).superRefine((v, c) => {
+      if (v && normaliseW3w(v) === null) c.addIssue({ code: "custom", message: W3W_HELP });
+    }).transform((v) => (v ? normaliseW3w(v) || undefined : undefined)),
     sharedNotes: optStr(2000),
+    accessNote: optStr(500),
   })
   .refine((v) => v.depositRequired <= v.quotedValue, { message: "Deposit can't be more than the quote", path: ["depositRequired"] })
   .refine((v) => v.customerId || (v.customerName && v.customerName.length >= 2), {
@@ -95,8 +114,11 @@ export const jobPatchSchema = z.object({
   quotedValue: money.optional(),
   depositRequired: money.optional(),
   siteAddress: z.string().trim().max(240).optional(),
-  what3words: z.string().trim().max(80).optional(),
-  sharedNotes: z.string().trim().max(2000).optional(),
+  what3words: z.string().trim().max(80).optional().superRefine((v, c) => {
+    if (v && !normaliseW3w(v)) c.addIssue({ code: "custom", message: W3W_HELP });
+  }).transform((v) => (v === undefined ? undefined : normaliseW3w(v) ?? "")),
+  sharedNotes: noSecrets(z.string().trim().max(2000)).optional(),
+  accessNote: z.string().trim().max(500).optional(),
 });
 
 export const paymentInputSchema = z.object({
@@ -206,16 +228,40 @@ export const materialInputSchema = z.object({
   jobId: id,
   item: z.string().trim().min(2, "What's the item?").max(160),
   quantity: z.string().trim().min(1, "How many?").max(40),
+  unit: optStr(30),
   supplier: optStr(120),
+  merchantId: optStr(80),
   neededBy: optDate,
   status: z.enum(["to_order", "ordered", "on_site"]).default("to_order"),
+  orderRef: optStr(80),
+  expectedDelivery: optDate,
+  notes: z.string().trim().max(500).optional().or(z.literal("")).transform((v) => v || undefined).refine((v) => !v || !SECRET_PATTERN.test(v), "Don't store passwords in Bob."),
+});
+
+const optUrl = z.string().trim().max(300).optional().or(z.literal("")).transform((v) => v || undefined).refine((v) => !v || /^https?:\/\//i.test(v), "Use a full link starting with https://");
+export const merchantInputSchema = z.object({
+  name: z.string().trim().min(2, "Merchant name").max(120),
+  branch: optStr(120),
+  phone: optStr(30),
+  email: optEmail,
+  website: optUrl,
+  notes: z.string().trim().max(1000).optional().or(z.literal("")).transform((v) => v || undefined).refine((v) => !v || !SECRET_PATTERN.test(v), "Don't store passwords in Bob — keep them in your password manager and add its link instead."),
+  accountRef: optStr(80).refine((v) => !v || !SECRET_PATTERN.test(v), "That looks like a password — store the account number only."),
+  passwordManagerUrl: optUrl,
+  accessManagedBy: optStr(80),
 });
 
 export const billInputSchema = z.object({
+  merchantId: optStr(80),
   supplier: z.string().trim().min(2, "Who is the bill from?").max(120),
   description: z.string().trim().min(2, "What's it for?").max(200),
   amount: positiveMoney,
   dueDate: dateKey,
   jobId: optStr(80),
   reference: optStr(80),
+});
+
+export const billPaymentSchema = z.object({
+  paidOn: dateKey,
+  paymentMethod: z.enum(["bank_transfer", "card", "cash", "cheque", "other"]).default("bank_transfer"),
 });

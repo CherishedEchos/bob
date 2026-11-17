@@ -37,13 +37,15 @@ export type Permission =
   /** Job materials / order lists. */
   | "materials.write"
   /** Only their own assigned work (workers). */
-  | "mywork.read";
+  | "mywork.read"
+  /** Add/edit/archive merchants and see trade account references and access links. */
+  | "merchants.manage";
 
 const ALL: Permission[] = [
   "records.read", "finance.read", "enquiries.write", "customers.write", "jobs.write", "notes.write", "tasks.write",
   "expenses.write", "quotes.write", "invoices.draft", "invoices.send", "payments.record", "email.send",
   "activity.read", "settings.manage", "integrations.manage", "data.delete",
-  "schedule.manage", "schedule.read", "team.manage", "materials.write", "mywork.read",
+  "schedule.manage", "schedule.read", "team.manage", "materials.write", "mywork.read", "merchants.manage",
 ];
 
 const ROLE_PERMISSIONS: Record<Role, ReadonlySet<Permission>> = {

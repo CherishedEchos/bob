@@ -316,6 +316,7 @@ export function createJob(ctx: Ctx, input: unknown): Result<Job> {
       siteAddress: v.siteAddress,
       what3words: v.what3words,
       sharedNotes: v.sharedNotes,
+      accessNote: v.accessNote,
     };
     const { customerName: _n, customerPhone: _p, customerEmail: _e, ...row } = job;
     void _n; void _p; void _e;

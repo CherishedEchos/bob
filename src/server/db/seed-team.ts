@@ -22,8 +22,16 @@ interface TeamCast {
   workerLogin?: { personKey: string; email: string };
   /** Someone invited but not yet accepted. */
   pendingInvite?: { personKey: string };
-  sites: Record<string, { siteAddress: string; what3words?: string; sharedNotes?: string }>;
+  sites: Record<string, { siteAddress: string; what3words?: string; sharedNotes?: string; accessNote?: string }>;
+  merchants: { key: string; name: string; branch?: string; phone?: string; email?: string; website?: string; accountRef?: string; passwordManagerUrl?: string; accessManagedBy?: string; notes?: string }[];
 }
+
+/** Fictional merchants (reserved example domains, Ofcom drama phone range). */
+const MERCHANTS: TeamCast["merchants"] = [
+  { key: "timber", name: "Crawley Timber Supplies", branch: "Manor Royal", phone: "01632 960 210", email: "orders@crawley-timber.example", website: "https://crawley-timber.example/trade", accountRef: "N93-4471", passwordManagerUrl: "https://vault.example/items/crawley-timber", accessManagedBy: "Luke", notes: "Trade counter opens 7am. Free delivery over £300." },
+  { key: "sbm", name: "Sussex Builders Merchants", branch: "Three Bridges", phone: "01632 960 311", email: "trade@sussex-bm.example", website: "https://sussex-bm.example", accountRef: "SBM-20931", accessManagedBy: "Luke", notes: "Ask for Dean on the trade desk." },
+  { key: "stone", name: "Stone & Surface Ltd", phone: "01632 960 412", email: "hello@stone-surface.example", notes: "Templating visits book up two weeks ahead." },
+];
 
 export const TEAM_CASTS: Record<string, TeamCast> = {
   org_ninety3: {
@@ -39,13 +47,14 @@ export const TEAM_CASTS: Record<string, TeamCast> = {
     ],
     workerLogin: { personKey: "sam", email: "sam@so-plastering.example" },
     pendingInvite: { personKey: "mark" },
+    merchants: MERCHANTS,
     sites: {
-      kitchen_copthorne: { siteAddress: "12 Mill Lane, Copthorne, RH10 3HQ", what3words: "lifted.copper.marble", sharedNotes: "Park on the drive, not the lane. Side gate code 4471. Dust sheets down in the hallway every day." },
-      extension_copthorne: { siteAddress: "Orchard House, Brookside, Copthorne, RH10 3JN", what3words: "ladder.frost.silent", sharedNotes: "Skip is on the front drive. Toilet in the garage. No work before 8am — neighbours." },
-      kitchen_crawley: { siteAddress: "41 Ifield Avenue, Crawley, RH11 7AY", what3words: "rapid.pocket.sunset", sharedNotes: "Customer works from home in the front room — keep noise down 10–11am for calls." },
+      kitchen_copthorne: { siteAddress: "12 Mill Lane, Copthorne, RH10 3HQ", what3words: "lifted.copper.marble", sharedNotes: "Dust sheets down in the hallway every day.", accessNote: "Park on the drive, not the lane. Side gate on the left — code 4471." },
+      extension_copthorne: { siteAddress: "Orchard House, Brookside, Copthorne, RH10 3JN", what3words: "ladder.frost.silent", sharedNotes: "Toilet in the garage. No work before 8am — neighbours.", accessNote: "Skip is on the front drive — park on the road. Use the back garden entrance." },
+      kitchen_crawley: { siteAddress: "41 Ifield Avenue, Crawley, RH11 7AY", what3words: "rapid.pocket.sunset", sharedNotes: "Customer works from home in the front room — keep noise down 10–11am for calls.", accessNote: "Ring the bell at the side door, not the front." },
       loft_eg: { siteAddress: "4 Orchard Rise, East Grinstead, RH19 3PL" },
       wardrobes_horsham: { siteAddress: "9 Denne Road, Horsham, RH12 1JE", sharedNotes: "Paint finish: customer choosing colour — check before spraying." },
-      mediawall_reigate: { siteAddress: "18 Somers Road, Reigate, RH2 9DU", what3words: "velvet.anchor.timber", sharedNotes: "TV is 65 inch. Socket heights marked on the wall in pencil." },
+      mediawall_reigate: { siteAddress: "18 Somers Road, Reigate, RH2 9DU", what3words: "velvet.anchor.timber", sharedNotes: "TV is 65 inch. Socket heights marked on the wall in pencil.", accessNote: "Permit parking — visitor permit is on the hall table." },
       stairs_horley: { siteAddress: "27 Station Road, Horley, RH6 9HL", sharedNotes: "Squeaky third tread from the bottom." },
     },
   },
@@ -62,6 +71,7 @@ export const TEAM_CASTS: Record<string, TeamCast> = {
     ],
     workerLogin: { personKey: "sam", email: "dan@price-plastering.example" },
     pendingInvite: { personKey: "mark" },
+    merchants: MERCHANTS,
     sites: {
       kitchen_copthorne: { siteAddress: "3 Church Road, Copthorne, RH10 3RA", what3words: "orange.window.brick", sharedNotes: "Side gate is unlocked during working hours." },
       extension_copthorne: { siteAddress: "The Willows, Copthorne Bank, RH10 3QX", sharedNotes: "Skip on the drive." },
@@ -125,12 +135,17 @@ export function buildTeamScenario(orgId: string, timeZone = DEFAULT_TIME_ZONE) {
     b("nadia_wall", "mediawall_reigate", 7, 8, null, ["callum"], "Build the media wall frame and shelves."),
   ];
 
+  const merchantFor: Record<string, string> = { "Crawley Timber Supplies": "timber", "Sussex Builders Merchants": "sbm", "Stone & Surface Ltd": "stone" };
   const m = (key: string, jobKey: string, item: string, quantity: string, status: Material["status"], neededBy: number | null, supplier?: string): Material => ({
     id: `${k}_mat_${key}`,
     jobId: job(jobKey),
     item,
-    quantity,
-    supplier,
+    quantity: quantity.split(" ")[0],
+    unit: quantity.split(" ").slice(1).join(" ") || undefined,
+    supplier: supplier && !merchantFor[supplier] ? supplier : undefined,
+    merchantId: supplier && merchantFor[supplier] ? `${k}_mer_${merchantFor[supplier]}` : undefined,
+    orderRef: status === "ordered" ? `PO-${100 + key.length * 7}` : undefined,
+    expectedDelivery: status === "ordered" && neededBy !== null ? day(neededBy) : undefined,
     neededBy: neededBy === null ? undefined : day(neededBy),
     status,
     createdAt: now,
@@ -157,7 +172,10 @@ export function buildTeamScenario(orgId: string, timeZone = DEFAULT_TIME_ZONE) {
     status,
     jobId: jobKey ? job(jobKey) : undefined,
     reference,
+    merchantId: { "Crawley Timber Supplies": `${k}_mer_timber`, "Sussex Builders Merchants": `${k}_mer_sbm` }[supplier],
     paidAt: status === "paid" ? now : undefined,
+    paidOn: status === "paid" ? addDays(today, due) : undefined,
+    paymentMethod: status === "paid" ? "bank_transfer" : undefined,
     createdAt: now,
   });
   const bills: Bill[] = [
@@ -172,13 +190,15 @@ export function buildTeamScenario(orgId: string, timeZone = DEFAULT_TIME_ZONE) {
     { id: `${k}_task_beads`, title: "Check angle beads are on site before skimming", dueDate: day(3), done: false, relatedType: "job", relatedId: job("extension_copthorne"), assignedPersonId: pid("sam"), createdAt: now, createdBy: "Owner" },
   ];
 
-  return { cast, people, bookings, materials, bills, tasks, sites: cast.sites, jobId: job, personId: pid };
+  const merchants = cast.merchants.map((x) => ({ id: `${k}_mer_${x.key}`, name: x.name, branch: x.branch, phone: x.phone, email: x.email, website: x.website, accountRef: x.accountRef, passwordManagerUrl: x.passwordManagerUrl, accessManagedBy: x.accessManagedBy, notes: x.notes, createdAt: now }));
+  return { cast, people, bookings, materials, bills, tasks, merchants, sites: cast.sites, jobId: job, personId: pid };
 }
 
 /** Insert the team scenario for one org (fresh seed, reset, or upgrade of an older sample DB). */
 export function seedTeam(db: DatabaseSync, insert: InsertFn, orgId: string, timeZone?: string) {
   const s = buildTeamScenario(orgId, timeZone);
   if (!s) return;
+  for (const mer of s.merchants) insert(db, "merchants", orgId, mer);
   for (const p of s.people) insert(db, "people", orgId, p);
   for (const bk of s.bookings) insert(db, "bookings", orgId, bk);
   for (const m of s.materials) insert(db, "materials", orgId, m);
@@ -188,10 +208,11 @@ export function seedTeam(db: DatabaseSync, insert: InsertFn, orgId: string, time
     if (!exists) insert(db, "tasks", orgId, t);
   }
   for (const [jobKey, site] of Object.entries(s.sites)) {
-    db.prepare("UPDATE jobs SET site_address = ?, what3words = ?, shared_notes = ? WHERE org_id = ? AND id = ?").run(
+    db.prepare("UPDATE jobs SET site_address = ?, what3words = ?, shared_notes = ?, access_note = ? WHERE org_id = ? AND id = ?").run(
       site.siteAddress,
       site.what3words ?? null,
       site.sharedNotes ?? null,
+      site.accessNote ?? null,
       orgId,
       s.jobId(jobKey),
     );
@@ -224,7 +245,12 @@ export function upgradeSampleData(db: DatabaseSync, insert: InsertFn) {
     const config = JSON.parse(o.config) as { dataMode?: string; timeZone?: string };
     if (config.dataMode !== "sample" || !TEAM_CASTS[o.id]) continue;
     const has = db.prepare("SELECT COUNT(*) AS n FROM people WHERE org_id = ?").get(o.id) as { n: number };
-    if (has.n > 0) continue;
+    if (has.n > 0) {
+      // Team already seeded (earlier version): add merchants and access notes once.
+      const mer = db.prepare("SELECT COUNT(*) AS n FROM merchants WHERE org_id = ?").get(o.id) as { n: number };
+      if (mer.n === 0) upgradeMerchants(db, insert, o.id, config.timeZone);
+      continue;
+    }
     const jobs = db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE org_id = ?").get(o.id) as { n: number };
     if (jobs.n === 0) continue;
     db.exec("BEGIN");
@@ -239,3 +265,23 @@ export function upgradeSampleData(db: DatabaseSync, insert: InsertFn) {
 }
 
 export type { Job };
+
+function upgradeMerchants(db: DatabaseSync, insert: InsertFn, orgId: string, timeZone?: string) {
+  const s = buildTeamScenario(orgId, timeZone);
+  if (!s) return;
+  db.exec("BEGIN");
+  try {
+    for (const mer of s.merchants) insert(db, "merchants", orgId, mer);
+    for (const mer of s.merchants) {
+      db.prepare("UPDATE materials SET merchant_id = ? WHERE org_id = ? AND supplier = ? AND merchant_id IS NULL").run(mer.id, orgId, mer.name);
+      db.prepare("UPDATE bills SET merchant_id = ? WHERE org_id = ? AND supplier = ? AND merchant_id IS NULL").run(mer.id, orgId, mer.name);
+    }
+    for (const [jobKey, site] of Object.entries(s.sites)) {
+      if (site.accessNote) db.prepare("UPDATE jobs SET access_note = ? WHERE org_id = ? AND id = ? AND access_note IS NULL").run(site.accessNote, orgId, s.jobId(jobKey));
+    }
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+}

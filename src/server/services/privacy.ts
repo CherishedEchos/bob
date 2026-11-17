@@ -63,6 +63,7 @@ export function resetSampleData(ctx: Ctx): Result<true> {
     raw.prepare("DELETE FROM imported_messages WHERE org_id = ?").run(ctx.orgId);
     // Team access created while trying the demo goes too (invites and My-work logins).
     raw.prepare("DELETE FROM invites WHERE org_id = ?").run(ctx.orgId);
+    raw.prepare("DELETE FROM calendar_feeds WHERE org_id = ? AND user_id IN (SELECT user_id FROM memberships WHERE org_id = ? AND role = 'worker')").run(ctx.orgId, ctx.orgId);
     raw.prepare("DELETE FROM sessions WHERE org_id = ? AND user_id IN (SELECT user_id FROM memberships WHERE org_id = ? AND role = 'worker')").run(ctx.orgId, ctx.orgId);
     raw.prepare("DELETE FROM memberships WHERE org_id = ? AND role = 'worker'").run(ctx.orgId);
     seedOrgData(raw, insertRaw, ctx.orgId);
