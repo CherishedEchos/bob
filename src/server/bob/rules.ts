@@ -25,6 +25,7 @@ import { syncInbox } from "@/server/integrations/inbox";
 import { cancelAction } from "./actions";
 import { requestAction } from "./actions";
 import { runReadTool } from "./tools";
+import { NEEDS_ORDERING, WHO_IS_ON, needsOrdering, whoIsOn } from "./schedule-answers";
 import { mentionScore, resolveCustomers, resolveEnquiries, resolveJobs } from "./resolve";
 import {
   cleanUtterance, detectMethod, findAmounts, isAffirmative, parseDeposit, parseDueDate, parseDueTerms,
@@ -303,6 +304,15 @@ async function route(t: Turn, text: string, lower: string) {
     return say(t, b.text, b.suggestion ? { chips: [{ kind: "send", label: b.suggestion.label, text: b.suggestion.request }] } : undefined);
   }
   if (BATCH_REPLY_ALL.test(lower)) return batchReplies(t, [...outstandingIds(t.ctx), ...callbackIds(t.ctx)], "outstanding");
+  // Schedule and order lists (read-only, from Bob's own records).
+  if (NEEDS_ORDERING.test(lower)) {
+    const a = needsOrdering(t.ctx);
+    return say(t, a.text, a.chips ? { chips: a.chips } : undefined);
+  }
+  if (WHO_IS_ON.test(lower)) {
+    const a = whoIsOn(t.ctx, lower);
+    return say(t, a.text, a.chips ? { chips: a.chips } : undefined);
+  }
   if (BATCH_REPLY_THEM.test(lower)) return batchRepliesToList(t);
   if (!/\b(job|kitchen|extension|loft|wardrobes?|decking|staircase|stairs|bathroom|garden room|media wall)\b/.test(lower) && (/\b(what('?s| is| have i got| needs?)( got)? (on|sorting|doing|happening)( today)?|what needs (sorting|doing|my attention)|today'?s (priorities|summary|list)|my day|anything (urgent|i need to)|what should i (do|focus on)|priorities)\b/.test(lower) || /^(today|what'?s on)\??$/.test(lower)))
     return summary(t, false);

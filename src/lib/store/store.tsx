@@ -13,6 +13,7 @@ import { toast } from "@/components/ui/toaster";
 import type { AppUser, EnquiryStatus, JobStatus, Note, OrgConfig, Snapshot, Task } from "@/lib/types";
 import type { ActionView } from "@/lib/bob/types";
 import type { FieldErrors } from "@/lib/validation";
+import { setWorkspaceTimeZone } from "@/lib/utils";
 import { can as roleCan, type Permission } from "@/lib/auth/permissions";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; errors: FieldErrors; code?: string; clashes?: { personId: string; personName: string; jobTitle: string; when: string }[] };
@@ -93,6 +94,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const dataRef = React.useRef<Snapshot | null>(null);
 
   const apply = React.useCallback((s: Snapshot) => {
+    setWorkspaceTimeZone(s.org.timeZone);
     dataRef.current = s;
     setData(s);
   }, []);

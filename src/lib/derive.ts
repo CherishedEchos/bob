@@ -239,7 +239,9 @@ export type PriorityItem =
   | (PriorityBase & { kind: "quote"; quoteId: string; enquiryId?: string; customerName: string })
   | (PriorityBase & { kind: "deposit"; jobId: string; customerName: string })
   | (PriorityBase & { kind: "invoice"; invoiceId: string; customerName: string })
-  | (PriorityBase & { kind: "task"; taskId: string });
+  | (PriorityBase & { kind: "task"; taskId: string })
+  | (PriorityBase & { kind: "bill"; billId: string })
+  | (PriorityBase & { kind: "materials"; jobId: string; count: number });
 
 const gbp0 = (n: number) => `£${Math.round(n).toLocaleString("en-GB")}`;
 
@@ -249,7 +251,7 @@ const gbp0 = (n: number) => `£${Math.round(n).toLocaleString("en-GB")}`;
  * due, overdue deposits and invoices (by recorded due dates).
  */
 export function todaysPriorities(
-  data: Pick<Snapshot, "enquiries" | "jobs" | "payments" | "tasks" | "invoices" | "quotes" | "customers">,
+  data: Pick<Snapshot, "enquiries" | "jobs" | "payments" | "tasks" | "invoices" | "quotes" | "customers"> & Partial<Pick<Snapshot, "bills" | "materials">>,
   opts: { includeFinance: boolean } = { includeFinance: true },
 ): PriorityItem[] {
   const items: PriorityItem[] = [];
@@ -339,6 +341,41 @@ export function todaysPriorities(
         customerName: customerName(inv.customerId),
       });
     }
+  }
+
+  if (opts.includeFinance) {
+    for (const b of (data.bills ?? []).filter((x) => x.status === "due" && daysFromToday(x.dueDate) <= 3)) {
+      const d = daysFromToday(b.dueDate);
+      items.push({
+        kind: "bill",
+        id: `bill_${b.id}`,
+        title: `Pay ${b.supplier}`,
+        detail: `${gbp0(b.amount)} · ${d < 0 ? `overdue ${-d}d` : d === 0 ? "due today" : `due in ${d}d`}`,
+        who: b.supplier,
+        why: `Bill ${gbp0(b.amount)} ${d < 0 ? `overdue · ${-d}d` : d === 0 ? "due today" : `due in ${d}d`} · ${b.description}`,
+        urgency: d < 0 ? 5 : 16,
+        key: `bill:${b.id}`,
+        billId: b.id,
+      });
+    }
+  }
+  const toOrder = new Map<string, number>();
+  for (const m of (data.materials ?? []).filter((x) => x.status === "to_order" && x.neededBy && daysFromToday(x.neededBy) <= 3)) toOrder.set(m.jobId, (toOrder.get(m.jobId) ?? 0) + 1);
+  for (const [jobId, count] of toOrder) {
+    const job = data.jobs.find((j) => j.id === jobId);
+    if (!job) continue;
+    items.push({
+      kind: "materials",
+      id: `mat_${jobId}`,
+      title: `Order materials for ${job.title}`,
+      detail: `${count} ${count === 1 ? "item" : "items"} needed this week`,
+      who: `${job.title} · ${job.customerName}`,
+      why: `${count} ${count === 1 ? "item" : "items"} to order · needed within 3 days`,
+      urgency: 13,
+      key: `materials:${jobId}`,
+      jobId,
+      count,
+    });
   }
 
   // Reminders about something already on the list are folded into that item,

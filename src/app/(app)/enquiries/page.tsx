@@ -17,14 +17,15 @@ import { HighPriority, SourceIcon, enquiryState } from "@/components/common/stat
 import { EnquiryDetail } from "@/components/enquiries/enquiry-sheet";
 import { Input, NativeSelect } from "@/components/ui/input";
 
-type Tab = "reply" | "follow" | "all";
+type Tab = "reply" | "quote" | "sent" | "follow" | "all";
 
-/** Not waiting on you, but still needs chasing: follow-up date set, or a quote outstanding. */
-const needsFollowUp = (e: Enquiry) =>
-  !needsReply(e) && isOpenEnquiry(e) && (followUpDue(e) || e.status === "quote_required" || e.status === "quoted" || !!e.followUpDate);
+/** Replied, not quoting, but a follow-up date is set. */
+const needsFollowUp = (e: Enquiry) => !needsReply(e) && isOpenEnquiry(e) && e.status !== "quote_required" && e.status !== "quoted" && (followUpDue(e) || !!e.followUpDate);
 
 const TABS: { value: Tab; label: string; short: string; test: (e: Enquiry) => boolean }[] = [
   { value: "reply", label: "Needs reply", short: "Needs reply", test: needsReply },
+  { value: "quote", label: "To quote", short: "To quote", test: (e) => e.status === "quote_required" },
+  { value: "sent", label: "Quote sent", short: "Quote sent", test: (e) => e.status === "quoted" },
   { value: "follow", label: "Follow up", short: "Follow up", test: needsFollowUp },
   { value: "all", label: "All", short: "All", test: () => true },
 ];
@@ -119,7 +120,7 @@ function EnquiriesInner() {
       <div className="lg:grid lg:grid-cols-[350px_minmax(0,1fr)] lg:items-start lg:gap-5 xl:grid-cols-[390px_minmax(0,1fr)]">
         <div className="min-w-0">
           <div className="mb-3 flex items-center gap-2">
-            <div role="tablist" aria-label="Enquiry lists" className="flex min-w-0 flex-1 gap-1 rounded-xl bg-surface-3 p-1">
+            <div role="tablist" aria-label="Enquiry lists" className="scrollbar-none flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-xl bg-surface-3 p-1">
               {TABS.map((t) => {
                 const count = data.enquiries.filter(t.test).length;
                 const active = tab === t.value;
@@ -130,7 +131,7 @@ function EnquiriesInner() {
                     aria-selected={active}
                     onClick={() => setTab(t.value)}
                     className={cn(
-                      "flex h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 text-[14.5px] font-semibold transition active:bg-surface-2",
+                      "flex h-10 shrink-0 grow items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[14.5px] font-semibold transition active:bg-surface-2",
                       active ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground",
                     )}
                   >

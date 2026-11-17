@@ -169,7 +169,7 @@ function ReviewReplies() {
       <div className="panel p-6" role="alert">
         <p className="text-[15px]">{error}</p>
         <Button asChild variant="secondary" className="mt-4">
-          <Link href="/today">Back to Today</Link>
+          <Link href="/week">Back to This week</Link>
         </Button>
       </div>
     );

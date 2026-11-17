@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  AlarmClock, AudioLines, Building2, CheckSquare, FlaskConical, HardHat, History, House, Inbox, LayoutGrid, LogOut,
+  AlarmClock, AudioLines, Building2, CalendarDays, CheckSquare, FlaskConical, Package, UsersRound, HardHat, History, Inbox, LayoutGrid, LogOut,
   ReceiptText, Settings, Users,
 } from "lucide-react";
 import { StoreProvider, api, useStore } from "@/lib/store/store";
@@ -110,10 +110,11 @@ function DemoBanner() {
 /* ------------------------------ Desktop sidebar ------------------------------ */
 
 const SIDEBAR_NAV = [
-  { href: "/today", label: "Today", icon: House },
+  { href: "/week", label: "This week", icon: CalendarDays },
   { href: "/assistant", label: "Ask Bob", icon: AudioLines },
   { href: "/enquiries", label: "Enquiries", icon: Inbox, badge: "unanswered" as const },
   { href: "/jobs", label: "Jobs", icon: HardHat },
+  { href: "/team", label: "Team", icon: UsersRound, perm: "schedule.read" as const },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/invoices", label: "Money", icon: ReceiptText, perm: "finance.read" as const },
   { href: "/tasks", label: "Tasks", icon: CheckSquare, badge: "due" as const },
@@ -137,7 +138,7 @@ function Sidebar() {
       </div>
       <nav className="flex-1 space-y-1 px-3" aria-label="Main">
         {SIDEBAR_NAV.filter((i) => !i.perm || can(i.perm)).map((item) => {
-          const active = pathname === item.href;
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const count = item.badge ? counts[item.badge] : 0;
           return (
             <Link
@@ -227,7 +228,7 @@ function MobileHeader() {
   const [moreOpen, setMoreOpen] = React.useState(false);
   return (
     <header className="flex h-[calc(52px+env(safe-area-inset-top))] shrink-0 items-center justify-between border-b border-line bg-card px-3 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
-      <Link href="/today" aria-label="Today">
+      <Link href="/week" aria-label="This week">
         <BobLogo height={24} tone="dark" />
       </Link>
       <div className="flex items-center gap-1.5">
@@ -251,8 +252,10 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
   const counts = useNavCounts();
   const orgs = useWorkspaces();
   const links = [
-    { href: "/today", label: "Today", icon: House, count: 0 },
+    { href: "/week", label: "This week", icon: CalendarDays, count: 0 },
+    ...(can("schedule.read") ? [{ href: "/team", label: "Team", icon: UsersRound, count: 0 }] : []),
     { href: "/customers", label: "Customers", icon: Users, count: 0 },
+    { href: "/materials", label: "Materials to order", icon: Package, count: 0 },
     { href: "/tasks", label: "Tasks & reminders", icon: AlarmClock, count: counts.due },
     ...(can("activity.read") ? [{ href: "/activity", label: "Activity log", icon: History, count: 0 }] : []),
     { href: "/settings", label: "Settings", icon: Settings, count: 0 },
@@ -312,7 +315,7 @@ function BottomNav() {
   const { unanswered, due } = useNavCounts();
   const { can } = useStore();
   const items = [
-    { href: "/today", label: "Today", icon: House, count: 0 },
+    { href: "/week", label: "This week", icon: CalendarDays, count: 0 },
     { href: "/enquiries", label: "Enquiries", icon: Inbox, count: unanswered },
     { href: "/assistant", label: "Ask Bob", icon: AudioLines, count: 0 },
     { href: "/jobs", label: "Jobs", icon: HardHat, count: 0 },

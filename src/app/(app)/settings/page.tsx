@@ -133,6 +133,17 @@ function SettingsInner() {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-[15px] font-medium">
+                    Calendar sync <span className="text-[13px] font-normal text-subtle">· Google or Outlook calendar</span>
+                  </div>
+                  <div className="text-[13.5px] text-muted-foreground">Not available yet. Bob&apos;s schedule (This week, Team, My work) works on its own and doesn&apos;t need a calendar.</div>
+                </div>
+                <StatusChip tone="neutral">Not available</StatusChip>
+              </div>
+            </div>
+            <div className="rounded-xl bg-card px-3.5 py-3 ring-1 ring-line">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[15px] font-medium">
                     Instagram <span className="text-[13px] font-normal text-subtle">· Messages</span>
                   </div>
                   <div className="text-[13.5px] text-muted-foreground">Not connected. In this demo, Instagram enquiries are logged manually and you paste Bob&apos;s reply into Instagram yourself.</div>
@@ -172,6 +183,10 @@ function SettingsInner() {
 
 function BusinessSection({ org, owner, save }: { org: OrgConfig; owner: boolean; save: (p: Record<string, unknown>) => Promise<void> }) {
   const [v, setV] = React.useState({
+    name: org.name,
+    shortName: org.shortName,
+    logoUrl: org.logoUrl ?? "",
+    timeZone: org.timeZone ?? "Europe/London",
     tradeType: org.tradeType,
     services: org.services.join(", "),
     serviceArea: org.serviceArea.join(", "),
@@ -191,6 +206,10 @@ function BusinessSection({ org, owner, save }: { org: OrgConfig; owner: boolean;
         onSubmit={(e) => {
           e.preventDefault();
           void save({
+            name: v.name,
+            shortName: v.shortName,
+            logoUrl: v.logoUrl,
+            timeZone: v.timeZone,
             tradeType: v.tradeType,
             services: list(v.services),
             serviceArea: list(v.serviceArea),
@@ -200,6 +219,22 @@ function BusinessSection({ org, owner, save }: { org: OrgConfig; owner: boolean;
         }}
       >
         <fieldset disabled={!owner} className="space-y-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr]">
+            <Field label="Business name" htmlFor="s-name">
+              <Input id="s-name" value={v.name} onChange={set("name")} />
+            </Field>
+            <Field label="Short name" htmlFor="s-short" hint="Shown in the menu.">
+              <Input id="s-short" value={v.shortName} onChange={set("shortName")} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr]">
+            <Field label="Logo link (optional)" htmlFor="s-logo" hint="An https:// image link. Leave empty to show your initials.">
+              <Input id="s-logo" value={v.logoUrl} onChange={set("logoUrl")} placeholder="https://…" />
+            </Field>
+            <Field label="Time zone" htmlFor="s-tz" hint="Used for “today” and booking times.">
+              <Input id="s-tz" value={v.timeZone} onChange={set("timeZone")} />
+            </Field>
+          </div>
           <Field label="Trade" htmlFor="s-trade">
             <Input id="s-trade" value={v.tradeType} onChange={set("tradeType")} />
           </Field>

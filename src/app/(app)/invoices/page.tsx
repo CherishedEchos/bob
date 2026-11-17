@@ -1,15 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Plus, ReceiptText, Send, Trash2, CheckCheck, Ban, PoundSterling } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import type { ActionView } from "@/lib/bob/types";
 import type { Invoice } from "@/lib/types";
 import { invoiceBalance, invoiceStatusLabel, isInvoiceOutstanding, isInvoiceOverdue, jobsAwaitingDeposit } from "@/lib/derive";
-import { cn, formatDateInline, gbp, timeAgo } from "@/lib/utils";
-import { DemoNote, EmptyState, ListPanel, ListRow, StatusText, Tabs, pageActionClass } from "@/components/common/bits";
+import { cn, daysFromToday, formatDateInline, gbp, timeAgo } from "@/lib/utils";
+import { DemoNote, EmptyState, ListPanel, ListRow, StatusText, Tabs, pageActionClass, pageSecondaryClass } from "@/components/common/bits";
 import { Button } from "@/components/ui/button";
 import { MoneyRow } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
@@ -21,6 +21,7 @@ function InvoicesInner() {
   const { data, can, org } = useStore();
   const ui = useUI();
   const params = useSearchParams();
+  const router = useRouter();
   const initialFilter = params.get("filter") as Filter | null;
   const [filter, setFilter] = React.useState<Filter>(initialFilter && ["outstanding", "overdue", "draft", "paid", "all"].includes(initialFilter) ? initialFilter : "outstanding");
   const [open, setOpen] = React.useState<string | null>(params.get("open"));
@@ -46,11 +47,27 @@ function InvoicesInner() {
   const deposits = jobsAwaitingDeposit(data);
   const depositTotal = deposits.reduce((s, d) => s + d.finance.depositOutstanding, 0);
 
+  const view = params.get("view") === "bills" ? "bills" : "owed";
+  const setView = (v: string) => router.replace(v === "bills" ? "/invoices?view=bills" : "/invoices", { scroll: false });
+  const dueBills = data.bills.filter((b) => b.status === "due");
+
   return (
     <div className="mx-auto max-w-3xl">
+      <Tabs
+        label="Money"
+        className="mb-4"
+        value={view}
+        onChange={setView}
+        options={[
+          { value: "owed", label: "Owed to you" },
+          { value: "bills", label: "Bills to pay", count: dueBills.length, highlight: true },
+        ]}
+      />
+      {view === "bills" ? <BillsView /> : (
+      <>
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="t-page">Money</h1>
+          <h1 className="t-page">Money owed to you</h1>
           <p className={cn("t-meta mt-0.5 lg:text-[15px]", org.dataMode === "sample" && "hidden sm:block")}>{accounting ? `Invoices sync with ${accounting.accountLabel ?? accounting.provider}` : "Invoices stay as drafts in Bob until Xero or QuickBooks is connected"}</p>
         </div>
         {can("invoices.draft") ? (
@@ -124,7 +141,130 @@ function InvoicesInner() {
           </ul>
         </ListPanel>
       ) : null}
+      </>
+      )}
     </div>
+  );
+}
+
+/** Supplier and subcontractor bills the business needs to pay. Bob records payments; it never makes them. */
+function BillsView() {
+  const { data, actions, can } = useStore();
+  const ui = useUI();
+  const [confirm, setConfirm] = React.useState<string | null>(null);
+  const due = data.bills.filter((b) => b.status === "due").sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const paid = data.bills.filter((b) => b.status === "paid").slice(0, 10);
+  const overdue = due.filter((b) => daysFromToday(b.dueDate) < 0);
+  const week = due.filter((b) => daysFromToday(b.dueDate) >= 0 && daysFromToday(b.dueDate) <= 7);
+  const qb = data.connections.find((c) => c.provider === "quickbooks" && c.status === "connected");
+  const jobs = new Map(data.jobs.map((j) => [j.id, j]));
+  const total = (l: typeof due) => gbp(l.reduce((s, b) => s + b.amount, 0));
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="t-page">Bills to pay</h1>
+          <p className="t-meta mt-0.5 lg:text-[15px]">What the business owes suppliers and subcontractors.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {qb ? (
+            <a href="https://qbo.intuit.com/app/bills" target="_blank" rel="noreferrer" className={pageSecondaryClass}>
+              Open QuickBooks
+            </a>
+          ) : null}
+          {can("payments.record") ? (
+            <button type="button" onClick={() => ui.openForm({ form: "bill" })} className={pageActionClass}>
+              <Plus className="size-[18px]" aria-hidden /> Add bill
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <dl className="panel mb-2 grid grid-cols-3 divide-x divide-line">
+        {[
+          { label: "Due", value: total(due), tone: "text-heading" },
+          { label: "Overdue", value: total(overdue), tone: overdue.length ? "text-danger-fg" : "text-subtle" },
+          { label: "Due in 7 days", value: total(week), tone: week.length ? "text-warn-fg" : "text-subtle" },
+        ].map((x) => (
+          <div key={x.label} className="flex flex-col-reverse justify-end px-3 py-3 sm:px-4 lg:px-5">
+            <dt className="text-[13px] leading-tight text-muted-foreground sm:text-[13.5px]">{x.label}</dt>
+            <dd className={cn("tabular text-[18px] font-semibold sm:text-[22px]", x.tone)}>{x.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <DemoNote className="mb-4">Bob doesn&apos;t pay bills or move money. Pay them as you normally do (bank app, card), then tap Mark as paid to record it here.</DemoNote>
+      {due.length ? (
+        <ul className="panel divide-y divide-line overflow-hidden">
+          {due.map((b) => {
+            const d = daysFromToday(b.dueDate);
+            const j = b.jobId ? jobs.get(b.jobId) : undefined;
+            return (
+              <li key={b.id} className="px-4 py-3.5 lg:px-5">
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="t-name line-clamp-2 break-words">{b.supplier}</div>
+                    <div className="text-[14px] text-muted-foreground">
+                      {b.description}
+                      {b.reference ? ` · ${b.reference}` : ""}
+                      {j ? ` · ${j.title}` : ""}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="tabular text-[16px] font-semibold">{gbp(b.amount)}</div>
+                    <StatusText tone={d < 0 ? "red" : d <= 3 ? "amber" : "neutral"}>{d < 0 ? `Overdue ${-d}d` : d === 0 ? "Due today" : `Due ${formatDateInline(b.dueDate)}`}</StatusText>
+                  </div>
+                </div>
+                {can("payments.record") ? (
+                  confirm === b.id ? (
+                    <div className="mt-2 rounded-xl bg-message p-3">
+                      <p className="text-[14.5px]">Record that you&apos;ve paid {b.supplier} {gbp(b.amount)}? Only do this once the money has gone.</p>
+                      <div className="mt-2 flex gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => setConfirm(null)}>
+                          Not yet
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            const r = await actions.run("setBillPaid", { id: b.id, paid: true });
+                            setConfirm(null);
+                            toast(r.ok ? `${b.supplier} recorded as paid` : r.errors._ || "Couldn't update", r.ok ? "success" : "error", r.ok ? { action: { label: "Undo", run: () => void actions.run("setBillPaid", { id: b.id, paid: false }) } } : {});
+                          }}
+                        >
+                          <CheckCheck /> Yes, I&apos;ve paid it
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button size="sm" variant="secondary" className="mt-2" onClick={() => setConfirm(b.id)}>
+                      <CheckCheck /> Mark as paid
+                    </Button>
+                  )
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <EmptyState icon={ReceiptText} title="No bills due" body="Add supplier and subcontractor bills so you know what's going out." />
+      )}
+      {paid.length ? (
+        <ListPanel id="paid-bills" title="Recently paid" count={paid.length} className="mt-5">
+          <ul className="divide-y divide-line">
+            {paid.map((b) => (
+              <li key={b.id} className="flex items-center justify-between gap-3 px-4 py-3 lg:px-5">
+                <span className="min-w-0">
+                  <span className="block truncate text-[15px] font-medium">{b.supplier}</span>
+                  <span className="block text-[13.5px] text-muted-foreground">{b.description}</span>
+                </span>
+                <span className="text-right">
+                  <span className="tabular block text-[15px]">{gbp(b.amount)}</span>
+                  <StatusText tone="green">Paid</StatusText>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </ListPanel>
+      ) : null}
+    </>
   );
 }
 

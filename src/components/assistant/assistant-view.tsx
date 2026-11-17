@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AudioLines, CalendarDays, Play, ChevronLeft, FileText, Keyboard, Loader2, MessageCircle, Mic, MoreHorizontal, Pencil, Phone, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
+import { AudioLines, CalendarDays, Play, ChevronLeft, Keyboard, Package, Users, Loader2, MessageCircle, Mic, MoreHorizontal, Pencil, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
 import { flushSync } from "react-dom";
 import { useBob } from "@/lib/bob/provider";
 import type { BobMessage, Chip } from "@/lib/bob/types";
@@ -98,14 +98,16 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
         c.hearBriefing();
       },
     },
+    ...(can("schedule.read") ? [{ label: "Who's working tomorrow?", icon: Users, run: () => ask("Who's working tomorrow?") }] : []),
+    { label: "What still needs ordering this week?", icon: Package, run: () => ask("What still needs ordering this week?") },
     ...(can("jobs.write") ? [{ label: "Add a new job", icon: CalendarDays, run: () => ui.openForm({ form: "job" }) }] : []),
-    ...(can("payments.record") ? [{ label: "Record a payment", icon: FileText, run: () => ui.openForm({ form: "payment" }) }] : []),
-    { label: "Follow up on enquiries", icon: Phone, run: () => ask("Follow up on enquiries") },
   ];
 
   const suggestions = [
     "What needs sorting today?",
     "How many enquiries have I had in the last month?",
+    "Who's on the kitchen job tomorrow?",
+    "What still needs ordering this week?",
     "Remind me to call Dave tomorrow",
     ...(can("finance.read") ? ["Who's not paid me?"] : []),
     ...(can("jobs.write") ? ["Add a new kitchen job for Sarah in Crawley for £12,000"] : []),
@@ -117,7 +119,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
       {/* ------------------------------ Header ------------------------------ */}
       {variant === "page" ? (
         <header className="relative z-10 grid h-[calc(4rem+env(safe-area-inset-top))] shrink-0 grid-cols-[92px_minmax(0,1fr)_92px] items-center px-2 pt-[env(safe-area-inset-top)] lg:px-6">
-          <Link href="/today" aria-label="Back to Today" className="grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-surface-3">
+          <Link href="/week" aria-label="Back to This week" className="grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-surface-3">
             <ChevronLeft className="size-7" strokeWidth={1.8} />
           </Link>
           <WorkspaceLockup org={org} />

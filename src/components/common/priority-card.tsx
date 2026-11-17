@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlarmClock, Check, ChevronRight, MessageSquareReply, PoundSterling, ReceiptText, Reply } from "lucide-react";
+import { AlarmClock, Check, ChevronRight, Landmark, MessageSquareReply, Package, PoundSterling, ReceiptText, Reply } from "lucide-react";
 import type { PriorityItem } from "@/lib/derive";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toaster";
 
-const ICON = { reply: Reply, followup: MessageSquareReply, quote: MessageSquareReply, deposit: PoundSterling, invoice: ReceiptText, task: AlarmClock };
+const ICON = { reply: Reply, followup: MessageSquareReply, quote: MessageSquareReply, deposit: PoundSterling, invoice: ReceiptText, task: AlarmClock, bill: Landmark, materials: Package };
 
 /**
  * The single next step for a priority, labelled for what it actually does:
@@ -33,7 +33,11 @@ export function usePriorityAction(item: PriorityItem, onAskBob: (text: string) =
     else if (item.kind === "invoice") {
       router.push(`/invoices?open=${item.invoiceId}`);
       onNavigate?.();
-    } else {
+    } else if (item.kind === "bill") {
+      router.push("/invoices?view=bills");
+      onNavigate?.();
+    } else if (item.kind === "materials") ui.openJob(item.jobId, { tab: "materials" });
+    else {
       router.push("/tasks");
       onNavigate?.();
     }
@@ -52,6 +56,10 @@ export function usePriorityAction(item: PriorityItem, onAskBob: (text: string) =
               ? { label: "Draft deposit reminder", short: "Reminder", run: () => onAskBob(`Draft a follow-up to ${item.customerName}`) }
               : item.kind === "invoice"
                 ? { label: "View invoice", short: "View", run: open }
+                : item.kind === "bill"
+                  ? { label: "Review bill", short: "Review", run: open }
+                  : item.kind === "materials"
+                    ? { label: "Order materials", short: "Order", run: open }
                 : {
                     label: "Mark done",
                     short: "Done",

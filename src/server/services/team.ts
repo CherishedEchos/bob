@@ -493,6 +493,7 @@ export interface MyJob {
 export interface MyWork {
   person: Pick<Person, "id" | "name" | "kind" | "trade" | "company"> | null;
   businessName: string;
+  sample: boolean;
   today: string;
   bookings: MyBooking[];
   tasks: Pick<Task, "id" | "title" | "dueDate" | "done" | "relatedId">[];
@@ -530,7 +531,7 @@ export function myWork(ctx: Ctx): Result<MyWork> {
   const no = denied(ctx, "mywork.read");
   if (no) return no;
   const person = myPerson(ctx);
-  const base = { businessName: ctx.org.name, today: todayKey(), generatedAt: now() };
+  const base = { businessName: ctx.org.name, sample: ctx.org.dataMode === "sample", today: todayKey(), generatedAt: now() };
   if (!person) return ok({ ...base, person: null, bookings: [], tasks: [], materials: [] });
   const bookings = accessibleBookings(ctx, person);
   const jobIds = new Set(bookings.map((b) => b.jobId));

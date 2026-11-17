@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, NativeSelect, Textarea } from "@/components/ui/input";
 import { MoneyRow } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
+import { BillForm, BookingForm, MaterialForm, PersonForm } from "./team-forms";
 
 const TITLES: Record<FormPrefill["form"], [string, string]> = {
   job: ["New job", "Add the basics now — you can fill in the rest later."],
@@ -30,6 +31,10 @@ const TITLES: Record<FormPrefill["form"], [string, string]> = {
   invoice: ["Invoice draft", "Saved as a draft. Nothing is sent from here."],
   expense: ["Add a cost", "Record materials, labour or hire against a job."],
   quote: ["Record a quote", "Log a quote you've sent so Bob can chase it."],
+  booking: ["Schedule work", "Pick the job, the day and who's on it."],
+  person: ["Add person", "Add them now and book them straight away. Invite them to Bob whenever you're ready."],
+  material: ["Add to order list", "What the job needs, and where it's coming from."],
+  bill: ["Add a bill to pay", "A supplier or subcontractor bill. Bob never pays it — mark it paid once you have."],
 };
 
 export function FormHost() {
@@ -47,6 +52,10 @@ export function FormHost() {
           {form.form === "invoice" ? <InvoiceForm prefill={form} /> : null}
           {form.form === "expense" ? <ExpenseForm prefill={form} /> : null}
           {form.form === "quote" ? <QuoteForm prefill={form} /> : null}
+          {form.form === "booking" ? <BookingForm prefill={form} /> : null}
+          {form.form === "person" ? <PersonForm prefill={form} /> : null}
+          {form.form === "material" ? <MaterialForm prefill={form} /> : null}
+          {form.form === "bill" ? <BillForm prefill={form} /> : null}
         </DialogContent>
       ) : null}
     </Dialog>
@@ -103,6 +112,7 @@ function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }
     status: "quoted",
     startDate: "",
     depositDueDate: "",
+    siteAddress: v.siteAddress ?? "",
   });
   const { values, errors, set } = f;
   const quote = parseFloat(values.quotedValue || "0");
@@ -118,7 +128,7 @@ function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }
     });
     f.setBusy(false);
     if (!res.ok) return f.setErrors(res.errors);
-    toast(`Job added for ${res.value.customerName}`);
+    toast(`Job added for ${res.value.customerName} — schedule it from the job`);
     ui.closeForm();
     ui.openJob(res.value.id);
   };
@@ -154,8 +164,11 @@ function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }
         <Field label="Job" htmlFor="jf-title" error={errors.title}>
           <Input id="jf-title" value={values.title} onChange={set("title")} placeholder="e.g. Kitchen refit" aria-invalid={!!errors.title} />
         </Field>
-        <Field label="Location" htmlFor="jf-loc" error={errors.location}>
+        <Field label="Town" htmlFor="jf-loc" error={errors.location}>
           <Input id="jf-loc" value={values.location} onChange={set("location")} placeholder="e.g. Crawley" aria-invalid={!!errors.location} />
+        </Field>
+        <Field label="Site address (optional)" htmlFor="jf-site" error={errors.siteAddress} hint="Where the work is, if it's not the customer's home." className="sm:col-span-2">
+          <Input id="jf-site" value={values.siteAddress} onChange={set("siteAddress")} placeholder="e.g. 7 High Street, Lingfield, RH7 6AA" autoComplete="street-address" />
         </Field>
         <Field label="Price (£)" htmlFor="jf-quote" error={errors.quotedValue}>
           <Input id="jf-quote" inputMode="decimal" value={values.quotedValue} onChange={set("quotedValue")} placeholder="0" aria-invalid={!!errors.quotedValue} />
@@ -313,7 +326,7 @@ function PaymentForm({ prefill }: { prefill: Extract<FormPrefill, { form: "payme
 function ReminderForm({ prefill }: { prefill: Extract<FormPrefill, { form: "reminder" }> }) {
   const { actions, data } = useStore();
   const ui = useUI();
-  const f = useFormState({ title: prefill.title ?? "", dueDate: prefill.dueDate ?? addDaysKey(1), assignedUserId: "" });
+  const f = useFormState({ title: prefill.title ?? "", dueDate: prefill.dueDate ?? addDaysKey(1), assignedUserId: "", assignedPersonId: prefill.assignedPersonId ?? "" });
   const { values, errors, set } = f;
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -325,10 +338,12 @@ function ReminderForm({ prefill }: { prefill: Extract<FormPrefill, { form: "remi
       relatedType: prefill.relatedType,
       relatedId: prefill.relatedId,
       assignedUserId: values.assignedUserId || undefined,
+      assignedPersonId: values.assignedPersonId || undefined,
     });
     f.setBusy(false);
     if (!res.ok) return f.setErrors(res.errors);
-    toast(`Reminder set for ${formatDateInline(values.dueDate)}`);
+    const person = data.people.find((p) => p.id === values.assignedPersonId);
+    toast(`${person ? `Task for ${person.name}` : "Reminder set"} — due ${formatDateInline(values.dueDate)}`);
     ui.closeForm();
   };
   return (
@@ -351,8 +366,23 @@ function ReminderForm({ prefill }: { prefill: Extract<FormPrefill, { form: "remi
           ))}
         </div>
       </Field>
-      {data.members.length > 1 ? (
-        <Field label="For" htmlFor="rf-who">
+      {data.people.some((p) => !p.archivedAt) ? (
+        <Field label="Assign to (optional)" htmlFor="rf-person" hint={values.assignedPersonId ? "They'll see it in My work if they're booked on this job or it isn't linked to a job." : undefined}>
+          <NativeSelect id="rf-person" value={values.assignedPersonId} onChange={set("assignedPersonId")}>
+            <option value="">Nobody — it&apos;s for the office</option>
+            {data.people
+              .filter((p) => !p.archivedAt)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                  {p.trade ? ` · ${p.trade}` : ""}
+                </option>
+              ))}
+          </NativeSelect>
+        </Field>
+      ) : null}
+      {data.members.length > 1 && !values.assignedPersonId ? (
+        <Field label="Office reminder for" htmlFor="rf-who">
           <NativeSelect id="rf-who" value={values.assignedUserId} onChange={set("assignedUserId")}>
             <option value="">Me</option>
             {data.members.map((m) => (
@@ -363,7 +393,7 @@ function ReminderForm({ prefill }: { prefill: Extract<FormPrefill, { form: "remi
           </NativeSelect>
         </Field>
       ) : null}
-      <FormActions submitLabel="Set reminder" onCancel={ui.closeForm} busy={f.busy} />
+      <FormActions submitLabel={values.assignedPersonId ? "Assign task" : "Set reminder"} onCancel={ui.closeForm} busy={f.busy} />
     </form>
   );
 }

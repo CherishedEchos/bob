@@ -306,3 +306,28 @@ describe("Seeded demo week", () => {
     expect(kitchen.siteAddress).toMatch(/Mill Lane/);
   });
 });
+
+describe("Ask Bob: schedule and ordering questions", () => {
+  it("answers who's on a job and what needs ordering, with links", async () => {
+    const { Chat } = await import("./helpers");
+    const owner = ctxFor(N93_OWNER);
+    // Book Callum on the Patels' kitchen tomorrow so the question has an answer.
+    ok(T.saveBooking(owner, { jobId: "n93_job_kitchen_crawley", date: addDays(todayKey(), 1), startTime: "07:00", endTime: "07:30", personIds: ["n93_per_callum"], confirmOverlap: true }));
+    const c = new Chat(owner);
+    await c.say("Who's on the kitchen renovation job tomorrow?");
+    expect(c.text).toMatch(/Callum Price/);
+    expect(c.last.flatMap((m) => m.chips ?? []).some((ch) => ch.kind === "open" && ch.record === "job")).toBe(true);
+    await c.say("What still needs ordering this week?");
+    expect(c.text).toMatch(/to order this week/);
+    expect(c.text).toMatch(/Plasterboard/);
+    // Unrelated "who" questions still go where they did.
+    await c.say("Who haven't I replied to?");
+    expect(c.text).not.toMatch(/booked/);
+  });
+  it("site team can ask, workers can't reach Bob's data", async () => {
+    const { Chat } = await import("./helpers");
+    const staff = new Chat(ctxFor(N93_STAFF));
+    await staff.say("Who's working tomorrow?");
+    expect(staff.text).not.toMatch(/can't see/);
+  });
+});

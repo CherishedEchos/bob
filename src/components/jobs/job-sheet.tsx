@@ -3,13 +3,17 @@
 import { PhotoGrid } from "@/components/common/photos";
 
 import * as React from "react";
-import { AlarmClock, Check, ChevronRight, Hammer, Inbox, MapPin, MoreHorizontal, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
+import { AlarmClock, CalendarClock, CalendarPlus, Check, ChevronRight, Hammer, Inbox, MapPin, MoreHorizontal, Navigation, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
+import type { JobTab } from "@/lib/store/ui";
+import { formatTimeRange, relativeDay } from "@/lib/dates";
+import { nextBookingForJob } from "@/lib/schedule";
+import { JobMaterials, JobSchedule, JobTasks, SharedInstructions } from "./job-parts";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import {
   EXPENSE_CATEGORY_LABEL, JOB_STATUSES, JOB_STATUS_LABEL, PAYMENT_METHOD_LABEL, PAYMENT_TYPE_LABEL, invoiceStatusLabel, jobFinance, jobNextStep, paymentsForJob,
 } from "@/lib/derive";
-import { addDaysKey, cn, firstName, formatDateKey, gbp } from "@/lib/utils";
+import { addDaysKey, cn, firstName, formatDateKey, gbp, todayKey } from "@/lib/utils";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +82,17 @@ function JobDetail({ id }: { id: string }) {
   const invoices = data.invoices.filter((i) => i.jobId === j.id);
   const [nextAction, setNextAction] = React.useState(j.nextAction ?? "");
   const [editingNext, setEditingNext] = React.useState(false);
+  const [tab, setTab] = React.useState<JobTab>(ui.jobTab === "money" && !money ? "overview" : ui.jobTab);
+  React.useEffect(() => setTab(ui.jobTab), [ui.jobTab, id]);
+  const today = todayKey();
+  const nextBooking = nextBookingForJob(data.bookings, j.id, today);
+  const tabs: { value: JobTab; label: string; count?: number }[] = [
+    { value: "overview", label: "Overview" },
+    { value: "schedule", label: "Schedule", count: data.bookings.filter((b) => b.jobId === j.id && (b.endDate ?? b.date) >= today).length },
+    { value: "tasks", label: "Tasks", count: data.tasks.filter((t) => !t.done && t.relatedType === "job" && t.relatedId === j.id).length },
+    { value: "materials", label: "Materials", count: data.materials.filter((m) => m.jobId === j.id && m.status === "to_order").length },
+    ...(money ? [{ value: "money" as const, label: "Money" }] : []),
+  ];
 
   React.useEffect(() => setNextAction(j.nextAction ?? ""), [j.id, j.nextAction]);
   const saveNext = async () => {
@@ -149,6 +164,87 @@ function JobDetail({ id }: { id: string }) {
           ) : null}
         </dl>
 
+        {/* Site: where the work is, how to get there, who to call */}
+        <div className="mt-4 rounded-2xl bg-message px-4 py-3">
+          <div className="flex items-start gap-2">
+            <MapPin className="mt-0.5 size-4 shrink-0 text-accent-icon" aria-hidden />
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-medium">{j.siteAddress || j.location}</p>
+              {!j.siteAddress ? <p className="text-[13px] text-muted-foreground">No site address yet — add it under Site & instructions.</p> : null}
+              {j.what3words ? (
+                <a href={`https://what3words.com/${encodeURIComponent(j.what3words.replace(/^\/+/, ""))}`} target="_blank" rel="noreferrer" className="text-[14px] font-semibold text-accent-fg">
+                  {"///"}
+                  {j.what3words.replace(/^\/+/, "")}
+                </a>
+              ) : null}
+            </div>
+          </div>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="secondary">
+              <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(j.siteAddress || j.location)}`} target="_blank" rel="noreferrer">
+                <Navigation /> Directions
+              </a>
+            </Button>
+            {j.customerPhone ? (
+              <Button asChild variant="secondary" size="sm">
+                <a href={`tel:${j.customerPhone.replace(/\s/g, "")}`}>
+                  <Phone /> Call {firstName(j.customerName)}
+                </a>
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Schedule: the most likely next move */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {nextBooking ? (
+            <p className="min-w-0 flex-1 text-[15px]">
+              <span className="font-semibold">Booked {relativeDay(nextBooking.date, today).toLowerCase()}</span>
+              <span className="text-muted-foreground">
+                {" "}
+                · {formatTimeRange(nextBooking.startTime, nextBooking.endTime)} · {nextBooking.personIds.map((pid) => data.people.find((p) => p.id === pid)?.name.split(" ")[0]).filter(Boolean).join(", ") || "nobody assigned"}
+              </span>
+            </p>
+          ) : (
+            <p className="min-w-0 flex-1 text-[15px] text-muted-foreground">Not scheduled yet</p>
+          )}
+          {can("schedule.manage") ? (
+            nextBooking ? (
+              <Button size="sm" variant="secondary" onClick={() => ui.openForm({ form: "booking", bookingId: nextBooking.id })}>
+                <CalendarClock /> Edit booking
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => ui.openForm({ form: "booking", jobId: j.id })}>
+                <CalendarPlus /> Schedule work
+              </Button>
+            )
+          ) : null}
+        </div>
+      </div>
+
+      {/* Sections */}
+      <div role="tablist" aria-label="Job sections" className="sticky top-0 z-10 flex gap-1 overflow-x-auto border-y border-line bg-card px-3 scrollbar-none sm:px-4">
+        {tabs.map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.value}
+            onClick={() => setTab(t.value)}
+            className={cn(
+              "relative flex h-12 shrink-0 items-center gap-1.5 px-3 text-[15px] font-semibold transition",
+              tab === t.value ? "text-accent-fg after:absolute after:inset-x-2 after:bottom-0 after:h-[2px] after:rounded-t after:bg-copper-500" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {t.label}
+            {t.count ? <span className="tabular rounded-md bg-surface-3 px-1.5 text-[12px] text-muted-foreground">{t.count}</span> : null}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" ? (
+        <>
+          <div className="px-5 pb-1 sm:px-6">
         {/* The next step: easy to spot, easy to change */}
         <section aria-labelledby={`next-${j.id}`} className="mt-5 rounded-2xl bg-selected px-4 py-3.5 ring-1 ring-copper-500/25">
           <h3 id={`next-${j.id}`} className="t-eyebrow text-accent-fg">
@@ -188,15 +284,8 @@ function JobDetail({ id }: { id: string }) {
               </Button>
             ) : null}
             <Button size="sm" variant="secondary" onClick={reminder}>
-              <AlarmClock /> Add reminder
+              <AlarmClock /> Add task
             </Button>
-            {j.customerPhone ? (
-              <Button asChild variant="secondary" size="sm">
-                <a href={`tel:${j.customerPhone.replace(/\s/g, "")}`}>
-                  <Phone /> Call {firstName(j.customerName)}
-                </a>
-              </Button>
-            ) : null}
             <Menu
               label="More actions"
               align="start"
@@ -211,6 +300,76 @@ function JobDetail({ id }: { id: string }) {
           </div>
         </section>
 
+          </div>
+          <SharedInstructions job={j} />
+      <Section title="Photos">
+        <PhotoGrid relatedType="job" relatedId={j.id} />
+      </Section>
+
+      <Section title="Internal notes · office only">
+        <NotesPanel notes={j.notes} onAdd={(t) => actions.addJobNote(j.id, t)} />
+      </Section>
+
+      <Fold title="Job status" summary={JOB_STATUS_LABEL[j.status]}>
+        {can("jobs.write") ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {JOB_STATUSES.map((s) => (
+              <button
+                key={s}
+                onClick={async () => {
+                  if (s === j.status) return;
+                  const res = await actions.setJobStatus(j.id, s);
+                  toast(res.ok ? `Moved to ${JOB_STATUS_LABEL[s]}` : Object.values(res.errors)[0] ?? "Couldn't update", res.ok ? "success" : "error");
+                }}
+                aria-pressed={j.status === s}
+                className={cn(
+                  "h-10 rounded-xl text-[14px] font-medium transition",
+                  j.status === s ? "bg-selected text-accent-fg ring-1 ring-copper-500/40" : "bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground",
+                )}
+              >
+                {JOB_STATUS_LABEL[s]}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </Fold>
+
+      <Fold title="Details & contact" summary={[j.startDate ? `Starts ${formatDateKey(j.startDate)}` : null, j.customerPhone].filter(Boolean).join(" · ") || "Description and dates"} last>
+        <dl className="space-y-3 text-[15px]">
+          <div>
+            <dt className="text-muted-foreground">Description</dt>
+            <dd className="mt-0.5 whitespace-pre-wrap text-foreground/90">{j.description || "—"}</dd>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <dt className="text-muted-foreground">Start date</dt>
+              <dd className="mt-0.5">{j.startDate ? formatDateKey(j.startDate) : "Not set"}</dd>
+            </div>
+            {money ? (
+              <div>
+                <dt className="text-muted-foreground">Deposit due</dt>
+                <dd className="mt-0.5">{j.depositDueDate ? formatDateKey(j.depositDueDate) : "Not set"}</dd>
+              </div>
+            ) : null}
+          </div>
+          {j.customerPhone || j.customerEmail ? (
+            <div>
+              <dt className="text-muted-foreground">Contact</dt>
+              <dd className="mt-0.5">{[j.customerPhone, j.customerEmail].filter(Boolean).join(" · ")}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </Fold>
+        </>
+      ) : null}
+
+      {tab === "schedule" ? <JobSchedule job={j} /> : null}
+      {tab === "tasks" ? <JobTasks job={j} /> : null}
+      {tab === "materials" ? <JobMaterials job={j} /> : null}
+
+      {tab === "money" && money ? (
+        <>
+          <div className="px-5 pb-5 sm:px-6">
         {money ? (
           <section aria-labelledby={`pay-${j.id}`} className="mt-3 rounded-2xl bg-card px-4 py-3.5 ring-1 ring-line">
             <div className="flex items-center justify-between gap-3">
@@ -242,16 +401,7 @@ function JobDetail({ id }: { id: string }) {
             ) : null}
           </section>
         ) : null}
-      </div>
-
-      <Section title="Photos">
-        <PhotoGrid relatedType="job" relatedId={j.id} />
-      </Section>
-
-      <Section title="Notes">
-        <NotesPanel notes={j.notes} onAdd={(t) => actions.addJobNote(j.id, t)} />
-      </Section>
-
+          </div>
       {money ? (
         <Fold title="Payments" summary={payments.length ? `${payments.length} · ${gbp(f.totalPaid)} received` : "None yet"}>
           <MoneyRow label="Deposit required" value={gbp(j.depositRequired)} />
@@ -340,56 +490,8 @@ function JobDetail({ id }: { id: string }) {
         </Fold>
       ) : null}
 
-      <Fold title="Job status" summary={JOB_STATUS_LABEL[j.status]}>
-        {can("jobs.write") ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {JOB_STATUSES.map((s) => (
-              <button
-                key={s}
-                onClick={async () => {
-                  if (s === j.status) return;
-                  const res = await actions.setJobStatus(j.id, s);
-                  toast(res.ok ? `Moved to ${JOB_STATUS_LABEL[s]}` : Object.values(res.errors)[0] ?? "Couldn't update", res.ok ? "success" : "error");
-                }}
-                aria-pressed={j.status === s}
-                className={cn(
-                  "h-10 rounded-xl text-[14px] font-medium transition",
-                  j.status === s ? "bg-selected text-accent-fg ring-1 ring-copper-500/40" : "bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground",
-                )}
-              >
-                {JOB_STATUS_LABEL[s]}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </Fold>
-
-      <Fold title="Details & contact" summary={[j.startDate ? `Starts ${formatDateKey(j.startDate)}` : null, j.customerPhone].filter(Boolean).join(" · ") || "Description and dates"} last>
-        <dl className="space-y-3 text-[15px]">
-          <div>
-            <dt className="text-muted-foreground">Description</dt>
-            <dd className="mt-0.5 whitespace-pre-wrap text-foreground/90">{j.description || "—"}</dd>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <dt className="text-muted-foreground">Start date</dt>
-              <dd className="mt-0.5">{j.startDate ? formatDateKey(j.startDate) : "Not set"}</dd>
-            </div>
-            {money ? (
-              <div>
-                <dt className="text-muted-foreground">Deposit due</dt>
-                <dd className="mt-0.5">{j.depositDueDate ? formatDateKey(j.depositDueDate) : "Not set"}</dd>
-              </div>
-            ) : null}
-          </div>
-          {j.customerPhone || j.customerEmail ? (
-            <div>
-              <dt className="text-muted-foreground">Contact</dt>
-              <dd className="mt-0.5">{[j.customerPhone, j.customerEmail].filter(Boolean).join(" · ")}</dd>
-            </div>
-          ) : null}
-        </dl>
-      </Fold>
+        </>
+      ) : null}
     </div>
   );
 }

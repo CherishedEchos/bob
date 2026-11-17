@@ -390,38 +390,13 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
               <PhotoGrid relatedType="enquiry" relatedId={e.id} />
             </Fold>
             {write ? (
-              <Fold title="Quote & job" summary={e.jobId ? "Turned into a job" : data.quotes.some((q) => q.enquiryId === e.id) ? "Quote recorded" : "Record a quote or turn it into a job"}>
+              <Fold title="Quote & job" defaultOpen={e.status === "quoted" || e.status === "won" || e.status === "quote_required"} summary={e.jobId ? "Won — job created" : data.quotes.some((q) => q.enquiryId === e.id) ? "Quote recorded" : "Record a quote or mark it won"}>
                 {data.quotes.some((q) => q.enquiryId === e.id) ? (
                   <div className="mb-3">
                     <QuotesList quotes={data.quotes.filter((q) => q.enquiryId === e.id)} />
                   </div>
                 ) : null}
-                <div className="flex flex-wrap gap-2">
-                  {e.jobId ? (
-                    <Button variant="secondary" onClick={() => ui.openJob(e.jobId!)}>
-                      <HardHat /> View job
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        ui.openForm({
-                          form: "job",
-                          enquiryId: e.id,
-                          customerId: e.customerId,
-                          values: { customerName: e.customerName, customerPhone: e.phone ?? "", customerEmail: e.email ?? "", title: e.title, location: e.location, description: e.description },
-                        })
-                      }
-                    >
-                      <HardHat /> Turn into a job
-                    </Button>
-                  )}
-                  {can("quotes.write") && e.customerId && e.status !== "won" ? (
-                    <Button variant="secondary" onClick={() => ui.openForm({ form: "quote", customerId: e.customerId, enquiryId: e.id })}>
-                      <FileText /> Record a quote
-                    </Button>
-                  ) : null}
-                </div>
+                <WonToJob e={e} />
               </Fold>
             ) : null}
             {write ? (
@@ -565,6 +540,77 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The path from quote to job: record a quote, then mark the enquiry won. The
+ * job carries the customer, site and price across; doing it twice returns the
+ * same job. The success state offers Schedule work straight away.
+ */
+function WonToJob({ e }: { e: Enquiry }) {
+  const { data, actions, can } = useStore();
+  const ui = useUI();
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [justCreated, setJustCreated] = React.useState<string | null>(null);
+  const job = e.jobId ? data.jobs.find((j) => j.id === e.jobId) : undefined;
+  const quote = data.quotes.find((q) => q.enquiryId === e.id && q.status !== "declined");
+  const win = async () => {
+    setBusy(true);
+    setError(null);
+    const r = await actions.run<{ id: string; existed: boolean }>("convertToJob", { enquiryId: e.id });
+    setBusy(false);
+    if (!r.ok) return setError(r.errors._ || "Couldn't create the job. Nothing was changed.");
+    setJustCreated(r.value.id);
+    toast(r.value.existed ? "This enquiry already has a job — opened it" : `Won! Job created for ${e.customerName}`, "success");
+  };
+  if (job) {
+    return (
+      <div className={cn("rounded-2xl p-4 ring-1", justCreated ? "bg-emerald-500/[0.07] ring-emerald-500/25" : "bg-message ring-line")}>
+        <p className="text-[15.5px] font-semibold">{justCreated ? "Job created" : "Won — this is a job now"}</p>
+        <p className="mt-0.5 text-[14px] text-muted-foreground">
+          {job.title} for {job.customerName} · {job.siteAddress || job.location}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {can("schedule.manage") ? (
+            <Button size="sm" onClick={() => ui.openForm({ form: "booking", jobId: job.id })}>
+              <CalendarCheck /> Schedule work
+            </Button>
+          ) : null}
+          <Button size="sm" variant="secondary" onClick={() => ui.openJob(job.id)}>
+            <HardHat /> Open job
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {quote ? (
+        <p className="text-[14.5px] text-muted-foreground">
+          Quote {quote.status === "sent" ? "sent" : quote.status} · the job will use this price.
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="text-[14px] text-danger-fg">
+          {error}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        {can("jobs.write") ? (
+          <Button size="sm" disabled={busy} onClick={() => void win()}>
+            <HardHat /> {busy ? "Creating job…" : "Won — create job"}
+          </Button>
+        ) : null}
+        {can("quotes.write") && e.customerId && !quote ? (
+          <Button size="sm" variant="secondary" onClick={() => ui.openForm({ form: "quote", customerId: e.customerId, enquiryId: e.id })}>
+            <FileText /> Record a quote
+          </Button>
+        ) : null}
+      </div>
+      <p className="text-[13px] text-muted-foreground">Creating the job carries {e.customerName.split(" ")[0]}&apos;s details and the site ({e.location}) across. You can change them on the job.</p>
     </div>
   );
 }

@@ -12,6 +12,11 @@ export const runtime = "nodejs";
 
 const time = z.string().regex(/^\d{2}:\d{2}$/);
 const schema = z.object({
+  name: z.string().trim().min(2).max(120).optional(),
+  shortName: z.string().trim().min(1).max(40).optional(),
+  logoUrl: z.string().trim().max(500).refine((v) => v === "" || v.startsWith("/") || /^https:\/\//.test(v), "Logo must be an https:// link or a /brand/ path").optional(),
+  accent: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Accent must be a colour like #E4752F").optional(),
+  timeZone: z.string().max(60).refine((tz) => { try { new Intl.DateTimeFormat("en-GB", { timeZone: tz }); return true; } catch { return false; } }, "Unknown time zone").optional(),
   tradeType: z.string().trim().min(2).max(80).optional(),
   services: z.array(z.string().trim().min(1).max(60)).max(30).optional(),
   serviceArea: z.array(z.string().trim().min(1).max(60)).max(40).optional(),
@@ -37,6 +42,11 @@ export const POST = authed(async (req, ctx) => {
   const p = parsed.data;
   const next: OrgConfig = {
     ...ctx.org,
+    ...(p.name ? { name: p.name } : {}),
+    ...(p.shortName ? { shortName: p.shortName } : {}),
+    ...(p.logoUrl !== undefined ? { logoUrl: p.logoUrl || undefined } : {}),
+    ...(p.accent ? { accent: p.accent } : {}),
+    ...(p.timeZone ? { timeZone: p.timeZone } : {}),
     ...(p.tradeType ? { tradeType: p.tradeType } : {}),
     ...(p.services ? { services: p.services } : {}),
     ...(p.serviceArea ? { serviceArea: p.serviceArea } : {}),
