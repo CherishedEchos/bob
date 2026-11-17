@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  AlarmClock, AudioLines, Building2, CalendarDays, CheckSquare, FlaskConical, Package, UsersRound, HardHat, History, Inbox, LayoutGrid, LogOut,
+  AlarmClock, AudioLines, Building2, CalendarDays, CheckSquare, FlaskConical, Package, Store, UsersRound, HardHat, History, Inbox, LayoutGrid, LogOut,
   ReceiptText, Settings, Users,
 } from "lucide-react";
 import { StoreProvider, api, useStore } from "@/lib/store/store";
@@ -114,6 +114,8 @@ const SIDEBAR_NAV = [
   { href: "/assistant", label: "Ask Bob", icon: AudioLines },
   { href: "/enquiries", label: "Enquiries", icon: Inbox, badge: "unanswered" as const },
   { href: "/jobs", label: "Jobs", icon: HardHat },
+  { href: "/materials", label: "Materials", icon: Package },
+  { href: "/merchants", label: "Merchants", icon: Store },
   { href: "/team", label: "Team", icon: UsersRound, perm: "schedule.read" as const },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/invoices", label: "Money", icon: ReceiptText, perm: "finance.read" as const },
@@ -255,8 +257,9 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
     { href: "/week", label: "Diary", icon: CalendarDays, count: 0 },
     ...(can("schedule.read") ? [{ href: "/team", label: "Team", icon: UsersRound, count: 0 }] : []),
     { href: "/customers", label: "Customers", icon: Users, count: 0 },
-    { href: "/materials", label: "Materials to order", icon: Package, count: 0 },
-    { href: "/tasks", label: "Tasks & reminders", icon: AlarmClock, count: counts.due },
+    { href: "/materials", label: "Materials", icon: Package, count: 0 },
+    { href: "/merchants", label: "Merchants", icon: Store, count: 0 },
+    { href: "/tasks", label: "Tasks", icon: AlarmClock, count: counts.due },
     ...(can("activity.read") ? [{ href: "/activity", label: "Activity log", icon: History, count: 0 }] : []),
     { href: "/settings", label: "Settings", icon: Settings, count: 0 },
   ];

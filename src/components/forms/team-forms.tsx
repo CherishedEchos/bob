@@ -349,56 +349,106 @@ export function MaterialForm({ prefill }: { prefill: Extract<FormPrefill, { form
   const { data, actions } = useStore();
   const ui = useUI();
   const m = prefill.materialId ? data.materials.find((x) => x.id === prefill.materialId) : undefined;
-  const f = useForm({ jobId: m?.jobId ?? prefill.jobId ?? "", item: m?.item ?? "", quantity: m?.quantity ?? "", supplier: m?.supplier ?? "", neededBy: m?.neededBy ?? "", status: m?.status ?? "to_order" });
+  const f = useForm({
+    jobId: m?.jobId ?? prefill.jobId ?? "",
+    item: m?.item ?? "",
+    quantity: m?.quantity ?? "",
+    unit: m?.unit ?? "",
+    merchantId: m?.merchantId ?? "",
+    supplier: m?.supplier ?? "",
+    neededBy: m?.neededBy ?? "",
+    status: m?.status ?? "to_order",
+    orderRef: m?.orderRef ?? "",
+    expectedDelivery: m?.expectedDelivery ?? "",
+    notes: m?.notes ?? "",
+  });
+  const [more, setMore] = React.useState(!!(m?.orderRef || m?.expectedDelivery || m?.notes || (m && m.status !== "to_order")));
   const { values, errors, set } = f;
+  const merchants = data.merchants.filter((x) => !x.archivedAt || x.id === values.merchantId);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     f.setBusy(true);
-    const res = await actions.run("saveMaterial", { input: { ...values, id: m?.id } });
+    const res = await actions.run("saveMaterial", { input: { ...values, id: m?.id, supplier: values.merchantId ? "" : values.supplier } });
     f.setBusy(false);
     if (!res.ok) return f.setErrors(res.errors);
-    toast(m ? "Item updated" : `${values.item} added to the order list`);
+    toast(m ? "Item saved" : `${values.item} added to the order list`);
     ui.closeForm();
   };
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
       <FormError errors={errors} />
-      <Field label="Job" htmlFor="mf-job" error={errors.jobId}>
-        <NativeSelect id="mf-job" value={values.jobId} onChange={set("jobId")}>
-          <option value="">Choose a job…</option>
-          {data.jobs.filter((j) => isActiveJob(j) || j.id === values.jobId).map((j) => (
-            <option key={j.id} value={j.id}>
-              {j.title} · {j.customerName}
-            </option>
-          ))}
-        </NativeSelect>
-      </Field>
-      <div className="grid grid-cols-[1fr_7rem] gap-3">
-        <Field label="Item" htmlFor="mf-item" error={errors.item}>
-          <Input id="mf-item" value={values.item} onChange={set("item")} placeholder="e.g. Plasterboard 12.5mm" aria-invalid={!!errors.item} />
+      {!prefill.jobId || m ? (
+        <Field label="Job" htmlFor="mf-job" error={errors.jobId}>
+          <NativeSelect id="mf-job" value={values.jobId} onChange={set("jobId")}>
+            <option value="">Choose a job…</option>
+            {data.jobs.filter((j) => isActiveJob(j) || j.id === values.jobId).map((j) => (
+              <option key={j.id} value={j.id}>
+                {j.title} · {j.customerName}
+              </option>
+            ))}
+          </NativeSelect>
         </Field>
+      ) : null}
+      <Field label="Item" htmlFor="mf-item" error={errors.item}>
+        <Input id="mf-item" value={values.item} onChange={set("item")} placeholder="e.g. Plasterboard 12.5mm" aria-invalid={!!errors.item} autoFocus={!m} />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
         <Field label="Quantity" htmlFor="mf-qty" error={errors.quantity}>
-          <Input id="mf-qty" value={values.quantity} onChange={set("quantity")} placeholder="e.g. 40" aria-invalid={!!errors.quantity} />
+          <Input id="mf-qty" inputMode="decimal" value={values.quantity} onChange={set("quantity")} placeholder="e.g. 40" aria-invalid={!!errors.quantity} />
+        </Field>
+        <Field label="Unit (optional)" htmlFor="mf-unit" error={errors.unit}>
+          <Input id="mf-unit" value={values.unit} onChange={set("unit")} placeholder="sheets, m, bags" list="mf-units" />
+          <datalist id="mf-units">
+            {["sheets", "lengths", "m", "m²", "bags", "boxes", "pairs", "tubs", "rolls"].map((u) => (
+              <option key={u} value={u} />
+            ))}
+          </datalist>
         </Field>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Supplier (optional)" htmlFor="mf-sup">
-          <Input id="mf-sup" value={values.supplier} onChange={set("supplier")} />
-        </Field>
         <Field label="Needed by (optional)" htmlFor="mf-need" error={errors.neededBy}>
           <Input id="mf-need" type="date" value={values.neededBy} onChange={set("neededBy")} />
         </Field>
+        <Field label="Merchant (optional)" htmlFor="mf-mer" error={errors.merchantId} hint="You can choose this later.">
+          <NativeSelect id="mf-mer" value={values.merchantId} onChange={set("merchantId")}>
+            <option value="">Not chosen yet</option>
+            {merchants.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+                {x.branch ? ` · ${x.branch}` : ""}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
       </div>
+      {!values.merchantId && values.supplier ? <p className="-mt-2 text-[13.5px] text-muted-foreground">Supplier noted as “{values.supplier}”. Choose a merchant to link it.</p> : null}
       <Field label="Status" htmlFor="mf-status">
         <NativeSelect id="mf-status" value={values.status} onChange={set("status")}>
-          {(Object.keys(MATERIAL_STATUS_LABEL) as MaterialStatus[]).map((s) => (
-            <option key={s} value={s}>
-              {MATERIAL_STATUS_LABEL[s]}
+          {(Object.keys(MATERIAL_STATUS_LABEL) as MaterialStatus[]).map((st) => (
+            <option key={st} value={st}>
+              {MATERIAL_STATUS_LABEL[st]}
             </option>
           ))}
         </NativeSelect>
       </Field>
-      <Actions label={m ? "Save item" : "Add item"} busy={f.busy} onCancel={ui.closeForm} />
+      {more ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Order reference (optional)" htmlFor="mf-ref">
+            <Input id="mf-ref" value={values.orderRef} onChange={set("orderRef")} />
+          </Field>
+          <Field label="Expected delivery (optional)" htmlFor="mf-del" error={errors.expectedDelivery}>
+            <Input id="mf-del" type="date" value={values.expectedDelivery} onChange={set("expectedDelivery")} />
+          </Field>
+          <Field label="Notes (optional)" htmlFor="mf-notes" error={errors.notes} className="sm:col-span-2">
+            <Textarea id="mf-notes" value={values.notes} onChange={set("notes")} className="min-h-16" placeholder="Colour, size, collect or deliver…" />
+          </Field>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setMore(true)} className="h-10 text-[14.5px] font-semibold text-accent-fg">
+          + Order reference, delivery date and notes
+        </button>
+      )}
+      <Actions label={m ? "Save item" : "Add material"} busy={f.busy} onCancel={ui.closeForm} />
     </form>
   );
 }
@@ -408,7 +458,7 @@ export function MaterialForm({ prefill }: { prefill: Extract<FormPrefill, { form
 export function BillForm({ prefill }: { prefill: Extract<FormPrefill, { form: "bill" }> }) {
   const { data, actions } = useStore();
   const ui = useUI();
-  const f = useForm({ supplier: "", description: "", amount: "", dueDate: todayKey(), jobId: prefill.jobId ?? "", reference: "" });
+  const f = useForm({ merchantId: "", supplier: "", description: "", amount: "", dueDate: todayKey(), jobId: prefill.jobId ?? "", reference: "" });
   const { values, errors, set } = f;
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -423,10 +473,27 @@ export function BillForm({ prefill }: { prefill: Extract<FormPrefill, { form: "b
     <form onSubmit={submit} noValidate className="space-y-4">
       <FormError errors={errors} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="From" htmlFor="bf-sup" error={errors.supplier}>
+        <Field label="Merchant (optional)" htmlFor="bf-mer">
+          <NativeSelect
+            id="bf-mer"
+            value={values.merchantId}
+            onChange={(e) => {
+              const mer = data.merchants.find((x) => x.id === e.target.value);
+              f.setValues((v) => ({ ...v, merchantId: e.target.value, supplier: mer ? mer.name : v.supplier }));
+            }}
+          >
+            <option value="">Not a saved merchant</option>
+            {data.merchants.filter((x) => !x.archivedAt).map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
+        <Field label="Payee" htmlFor="bf-sup" error={errors.supplier}>
           <Input id="bf-sup" value={values.supplier} onChange={set("supplier")} placeholder="Supplier or subcontractor" aria-invalid={!!errors.supplier} />
         </Field>
-        <Field label="Amount (£)" htmlFor="bf-amt" error={errors.amount}>
+        <Field label="Amount (£, GBP)" htmlFor="bf-amt" error={errors.amount}>
           <Input id="bf-amt" inputMode="decimal" value={values.amount} onChange={set("amount")} aria-invalid={!!errors.amount} />
         </Field>
         <Field label="What for" htmlFor="bf-desc" error={errors.description} className="sm:col-span-2">
@@ -435,7 +502,7 @@ export function BillForm({ prefill }: { prefill: Extract<FormPrefill, { form: "b
         <Field label="Due" htmlFor="bf-due" error={errors.dueDate}>
           <Input id="bf-due" type="date" value={values.dueDate} onChange={set("dueDate")} />
         </Field>
-        <Field label="Their reference (optional)" htmlFor="bf-ref">
+        <Field label="Invoice reference (optional)" htmlFor="bf-ref">
           <Input id="bf-ref" value={values.reference} onChange={set("reference")} />
         </Field>
         <Field label="Job (optional)" htmlFor="bf-job" className="sm:col-span-2">
@@ -450,6 +517,68 @@ export function BillForm({ prefill }: { prefill: Extract<FormPrefill, { form: "b
         </Field>
       </div>
       <Actions label="Add bill" busy={f.busy} onCancel={ui.closeForm} />
+    </form>
+  );
+}
+
+/* -------------------------------- Merchant -------------------------------- */
+
+export function MerchantForm({ prefill }: { prefill: Extract<FormPrefill, { form: "merchant" }> }) {
+  const { data, actions } = useStore();
+  const ui = useUI();
+  const m = prefill.merchantId ? data.merchants.find((x) => x.id === prefill.merchantId) : undefined;
+  const f = useForm({
+    name: m?.name ?? "", branch: m?.branch ?? "", phone: m?.phone ?? "", email: m?.email ?? "", website: m?.website ?? "",
+    notes: m?.notes ?? "", accountRef: m?.accountRef ?? "", passwordManagerUrl: m?.passwordManagerUrl ?? "", accessManagedBy: m?.accessManagedBy ?? "",
+  });
+  const { values, errors, set } = f;
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    f.setBusy(true);
+    const res = await actions.run("saveMerchant", { id: m?.id, input: values });
+    f.setBusy(false);
+    if (!res.ok) return f.setErrors(res.errors);
+    toast(m ? "Merchant saved" : `${values.name} added`);
+    ui.closeForm();
+  };
+  return (
+    <form onSubmit={submit} noValidate className="space-y-4">
+      <FormError errors={errors} />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Name" htmlFor="mm-name" error={errors.name}>
+          <Input id="mm-name" value={values.name} onChange={set("name")} aria-invalid={!!errors.name} autoFocus />
+        </Field>
+        <Field label="Branch (optional)" htmlFor="mm-branch">
+          <Input id="mm-branch" value={values.branch} onChange={set("branch")} />
+        </Field>
+        <Field label="Phone (optional)" htmlFor="mm-phone" error={errors.phone}>
+          <Input id="mm-phone" type="tel" value={values.phone} onChange={set("phone")} />
+        </Field>
+        <Field label="Email (optional)" htmlFor="mm-email" error={errors.email}>
+          <Input id="mm-email" type="email" value={values.email} onChange={set("email")} aria-invalid={!!errors.email} />
+        </Field>
+        <Field label="Website or trade portal (optional)" htmlFor="mm-web" error={errors.website} className="sm:col-span-2">
+          <Input id="mm-web" value={values.website} onChange={set("website")} placeholder="https://" aria-invalid={!!errors.website} />
+        </Field>
+        <Field label="Notes (optional)" htmlFor="mm-notes" error={errors.notes} className="sm:col-span-2" hint="Opening times, who to ask for, delivery terms.">
+          <Textarea id="mm-notes" value={values.notes} onChange={set("notes")} className="min-h-16" aria-invalid={!!errors.notes} />
+        </Field>
+      </div>
+      <fieldset className="rounded-2xl p-4 ring-1 ring-line">
+        <legend className="px-1 text-[14px] font-semibold">Account & access · owner and office only</legend>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Trade account reference" htmlFor="mm-acc" error={errors.accountRef}>
+            <Input id="mm-acc" value={values.accountRef} onChange={set("accountRef")} aria-invalid={!!errors.accountRef} />
+          </Field>
+          <Field label="Login managed by" htmlFor="mm-who">
+            <Input id="mm-who" value={values.accessManagedBy} onChange={set("accessManagedBy")} placeholder="e.g. Luke" />
+          </Field>
+          <Field label="Password manager link" htmlFor="mm-pm" error={errors.passwordManagerUrl} className="sm:col-span-2" hint="A link to the entry in your password manager — never the password itself.">
+            <Input id="mm-pm" value={values.passwordManagerUrl} onChange={set("passwordManagerUrl")} placeholder="https://" aria-invalid={!!errors.passwordManagerUrl} />
+          </Field>
+        </div>
+      </fieldset>
+      <Actions label={m ? "Save merchant" : "Add merchant"} busy={f.busy} onCancel={ui.closeForm} />
     </form>
   );
 }

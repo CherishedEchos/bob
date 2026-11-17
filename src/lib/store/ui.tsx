@@ -18,7 +18,8 @@ export type FormPrefill =
   | { form: "booking"; bookingId?: string; jobId?: string; date?: string; personIds?: string[]; focus?: "people" }
   | { form: "person"; personId?: string }
   | { form: "material"; jobId?: string; materialId?: string }
-  | { form: "bill"; jobId?: string };
+  | { form: "bill"; jobId?: string }
+  | { form: "merchant"; merchantId?: string };
 
 export type JobTab = "overview" | "schedule" | "tasks" | "materials" | "money";
 

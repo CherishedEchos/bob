@@ -2,14 +2,15 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, Plus, ReceiptText, Send, Trash2, CheckCheck, Ban, PoundSterling } from "lucide-react";
+import { ChevronDown, ExternalLink, Plus, ReceiptText, Send, Trash2, CheckCheck, Ban, PoundSterling } from "lucide-react";
+import { Input, NativeSelect } from "@/components/ui/input";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import type { ActionView } from "@/lib/bob/types";
 import type { Invoice } from "@/lib/types";
 import { invoiceBalance, invoiceStatusLabel, isInvoiceOutstanding, isInvoiceOverdue, jobsAwaitingDeposit } from "@/lib/derive";
-import { cn, daysFromToday, formatDateInline, gbp, timeAgo } from "@/lib/utils";
-import { DemoNote, EmptyState, ListPanel, ListRow, StatusText, Tabs, pageActionClass, pageSecondaryClass } from "@/components/common/bits";
+import { cn, daysFromToday, formatDateInline, gbp, timeAgo, todayKey } from "@/lib/utils";
+import { DemoNote, EmptyState, ListPanel, ListRow, StatusText, Tabs, pageActionClass } from "@/components/common/bits";
 import { Button } from "@/components/ui/button";
 import { MoneyRow } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
@@ -51,8 +52,17 @@ function InvoicesInner() {
   const setView = (v: string) => router.replace(v === "bills" ? "/invoices?view=bills" : "/invoices", { scroll: false });
   const dueBills = data.bills.filter((b) => b.status === "due");
 
+  const qbLink = org.quickbooksUrl || (data.connections.some((c) => c.provider === "quickbooks" && c.status === "connected") ? "https://qbo.intuit.com/app/homepage" : undefined);
+
   return (
     <div className="mx-auto max-w-3xl">
+      {qbLink ? (
+        <div className="mb-2 flex justify-end">
+          <a href={qbLink} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-1.5 rounded-lg px-2 text-[14.5px] font-semibold text-accent-fg hover:bg-surface-2">
+            <ExternalLink className="size-4" aria-hidden /> Open QuickBooks
+          </a>
+        </div>
+      ) : null}
       <Tabs
         label="Money"
         className="mb-4"
@@ -151,12 +161,16 @@ function InvoicesInner() {
 function BillsView() {
   const { data, actions, can } = useStore();
   const ui = useUI();
+  const { org } = useStore();
   const [confirm, setConfirm] = React.useState<string | null>(null);
+  const [payment, setPayment] = React.useState({ paidOn: todayKey(), paymentMethod: "bank_transfer" });
+  const [payError, setPayError] = React.useState<string | null>(null);
   const due = data.bills.filter((b) => b.status === "due").sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const paid = data.bills.filter((b) => b.status === "paid").slice(0, 10);
   const overdue = due.filter((b) => daysFromToday(b.dueDate) < 0);
   const week = due.filter((b) => daysFromToday(b.dueDate) >= 0 && daysFromToday(b.dueDate) <= 7);
-  const qb = data.connections.find((c) => c.provider === "quickbooks" && c.status === "connected");
+  const qb = data.connections.find((c) => c.provider === "quickbooks");
+  const qbUrl = org.quickbooksUrl || (qb?.status === "connected" ? "https://qbo.intuit.com/app/bills" : undefined);
   const jobs = new Map(data.jobs.map((j) => [j.id, j]));
   const total = (l: typeof due) => gbp(l.reduce((s, b) => s + b.amount, 0));
   return (
@@ -167,11 +181,6 @@ function BillsView() {
           <p className="t-meta mt-0.5 lg:text-[15px]">What the business owes suppliers and subcontractors.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {qb ? (
-            <a href="https://qbo.intuit.com/app/bills" target="_blank" rel="noreferrer" className={pageSecondaryClass}>
-              Open QuickBooks
-            </a>
-          ) : null}
           {can("payments.record") ? (
             <button type="button" onClick={() => ui.openForm({ form: "bill" })} className={pageActionClass}>
               <Plus className="size-[18px]" aria-hidden /> Add bill
@@ -191,7 +200,16 @@ function BillsView() {
           </div>
         ))}
       </dl>
-      <DemoNote className="mb-4">Bob doesn&apos;t pay bills or move money. Pay them as you normally do (bank app, card), then tap Mark as paid to record it here.</DemoNote>
+      <DemoNote className="mb-1">Bob doesn&apos;t pay bills or move money. Pay as you normally do (bank app, card), then use Record payment to log it here.</DemoNote>
+      <p className="mb-4 pl-[22px] text-[13.5px] text-muted-foreground">
+        QuickBooks:{" "}
+        {qb?.status === "connected"
+          ? `connected${qb.accountLabel ? ` (${qb.accountLabel})` : ""}${qb.lastSyncAt ? ` · last synced ${timeAgo(qb.lastSyncAt)}` : ""}. Bills here aren't synced to QuickBooks yet.`
+          : qb?.status === "error"
+            ? `connection problem — ${qb.error ?? "reconnect in Settings"}.`
+            : "not connected — Bills to pay are kept in Bob only."}
+        {qbUrl ? "" : " Add your QuickBooks link in Settings to get an Open QuickBooks shortcut."}
+      </p>
       {due.length ? (
         <ul className="panel divide-y divide-line overflow-hidden">
           {due.map((b) => {
@@ -215,27 +233,51 @@ function BillsView() {
                 </div>
                 {can("payments.record") ? (
                   confirm === b.id ? (
-                    <div className="mt-2 rounded-xl bg-message p-3">
-                      <p className="text-[14.5px]">Record that you&apos;ve paid {b.supplier} {gbp(b.amount)}? Only do this once the money has gone.</p>
-                      <div className="mt-2 flex gap-2">
-                        <Button size="sm" variant="secondary" onClick={() => setConfirm(null)}>
-                          Not yet
+                    <form
+                      className="mt-2 rounded-xl bg-message p-3"
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        setPayError(null);
+                        const r = await actions.run("setBillPaid", { id: b.id, paid: true, payment });
+                        if (!r.ok) return setPayError(r.errors._ || r.errors.paidOn || "Couldn't record the payment — nothing changed.");
+                        setConfirm(null);
+                        toast(`${b.supplier} ${gbp(b.amount)} recorded as paid`, "success", { action: { label: "Undo", run: () => void actions.run("setBillPaid", { id: b.id, paid: false }) } });
+                      }}
+                    >
+                      <p className="text-[14.5px] font-semibold">Record a payment you&apos;ve already made</p>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <label className="text-[13.5px] font-medium">
+                          Paid on
+                          <Input type="date" value={payment.paidOn} max={todayKey()} onChange={(e) => setPayment({ ...payment, paidOn: e.target.value })} className="mt-1 h-11" />
+                        </label>
+                        <label className="text-[13.5px] font-medium">
+                          How
+                          <NativeSelect value={payment.paymentMethod} onChange={(e) => setPayment({ ...payment, paymentMethod: e.target.value })} className="mt-1 h-11">
+                            <option value="bank_transfer">Bank transfer</option>
+                            <option value="card">Card</option>
+                            <option value="cash">Cash</option>
+                            <option value="cheque">Cheque</option>
+                            <option value="other">Other</option>
+                          </NativeSelect>
+                        </label>
+                      </div>
+                      {payError ? (
+                        <p role="alert" className="mt-2 text-[14px] text-danger-fg">
+                          {payError}
+                        </p>
+                      ) : null}
+                      <div className="mt-3 flex gap-2">
+                        <Button type="button" size="sm" variant="secondary" onClick={() => setConfirm(null)}>
+                          Cancel
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={async () => {
-                            const r = await actions.run("setBillPaid", { id: b.id, paid: true });
-                            setConfirm(null);
-                            toast(r.ok ? `${b.supplier} recorded as paid` : r.errors._ || "Couldn't update", r.ok ? "success" : "error", r.ok ? { action: { label: "Undo", run: () => void actions.run("setBillPaid", { id: b.id, paid: false }) } } : {});
-                          }}
-                        >
-                          <CheckCheck /> Yes, I&apos;ve paid it
+                        <Button type="submit" size="sm">
+                          <CheckCheck /> Record payment of {gbp(b.amount)}
                         </Button>
                       </div>
-                    </div>
+                    </form>
                   ) : (
-                    <Button size="sm" variant="secondary" className="mt-2" onClick={() => setConfirm(b.id)}>
-                      <CheckCheck /> Mark as paid
+                    <Button size="sm" variant="secondary" className="mt-2" onClick={() => { setPayment({ paidOn: todayKey(), paymentMethod: "bank_transfer" }); setPayError(null); setConfirm(b.id); }}>
+                      <CheckCheck /> Record payment
                     </Button>
                   )
                 ) : null}
@@ -257,7 +299,7 @@ function BillsView() {
                 </span>
                 <span className="text-right">
                   <span className="tabular block text-[15px]">{gbp(b.amount)}</span>
-                  <StatusText tone="green">Paid</StatusText>
+                  <StatusText tone="green">Paid{b.paidOn ? ` ${formatDateInline(b.paidOn)}` : ""}</StatusText>
                 </span>
               </li>
             ))}

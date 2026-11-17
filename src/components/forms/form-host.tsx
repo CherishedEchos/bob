@@ -20,12 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, NativeSelect, Textarea } from "@/components/ui/input";
 import { MoneyRow } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
-import { BillForm, BookingForm, MaterialForm, PersonForm } from "./team-forms";
+import { BillForm, BookingForm, MaterialForm, MerchantForm, PersonForm } from "./team-forms";
 
 const TITLES: Record<FormPrefill["form"], [string, string]> = {
   job: ["New job", "Add the basics now — you can fill in the rest later."],
   payment: ["Record a payment", "Log money you've already received against a job."],
-  reminder: ["Set a reminder", "It shows on your overview and Bob mentions it when it's due."],
+  reminder: ["Add task", "A to-do for you or someone in the team. Link it to a job to see it there."],
   enquiry: ["Add an enquiry", "A call, message, email or form that came in. Use made-up details in the demo."],
   customer: ["New customer", "Only add details you actually have."],
   invoice: ["Invoice draft", "Saved as a draft. Nothing is sent from here."],
@@ -34,6 +34,7 @@ const TITLES: Record<FormPrefill["form"], [string, string]> = {
   booking: ["Schedule work", "Pick the job, the day and who's on it."],
   person: ["Add person", "Add them now and book them straight away. Invite them to Bob whenever you're ready."],
   material: ["Add to order list", "What the job needs, and where it's coming from."],
+  merchant: ["Merchant", "A supplier you order from. Never put passwords here — link your password manager instead."],
   bill: ["Add a bill to pay", "A supplier or subcontractor bill. Bob never pays it — mark it paid once you have."],
 };
 
@@ -56,6 +57,7 @@ export function FormHost() {
           {form.form === "person" ? <PersonForm prefill={form} /> : null}
           {form.form === "material" ? <MaterialForm prefill={form} /> : null}
           {form.form === "bill" ? <BillForm prefill={form} /> : null}
+          {form.form === "merchant" ? <MerchantForm prefill={form} /> : null}
         </DialogContent>
       ) : null}
     </Dialog>

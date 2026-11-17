@@ -303,7 +303,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
               </label>
               <span aria-live="polite">
                 {replied ? (
-                  <StatusText tone="green">Replied{e.lastContactAt ? ` ${timeAgo(e.lastContactAt)}` : ""}</StatusText>
+                  <StatusText tone="green">{replyStateLabel(e)}</StatusText>
                 ) : saved === "saving" ? (
                   <StatusText tone="neutral">Saving…</StatusText>
                 ) : saved === "saved" ? (
@@ -613,4 +613,14 @@ function WonToJob({ e }: { e: Enquiry }) {
       <p className="text-[13px] text-muted-foreground">Creating the job carries {e.customerName.split(" ")[0]}&apos;s details and the site ({e.location}) across. You can change them on the job.</p>
     </div>
   );
+}
+
+/** Which kind of reply was recorded: sent by Bob, simulated in the demo, or sent elsewhere and recorded by hand. */
+function replyStateLabel(e: Enquiry): string {
+  const last = [...e.messages].reverse().find((m) => m.direction === "outbound");
+  const when = e.lastContactAt ? ` ${timeAgo(e.lastContactAt)}` : "";
+  if (!last || last.channel === "manual") return `Reply recorded (sent outside Bob)${when}`;
+  if (last.channel === "simulated" || last.channel === "demo_inbox") return `Recorded as sent — demo, nothing left Bob${when}`;
+  if (last.channel === "gmail" || last.channel === "outlook") return `Sent from ${last.channel === "gmail" ? "Gmail" : "Outlook"}${when}`;
+  return `Replied${when}`;
 }

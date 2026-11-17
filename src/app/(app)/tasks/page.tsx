@@ -7,7 +7,7 @@ import { useUI } from "@/lib/store/ui";
 import type { Task } from "@/lib/types";
 import { addDaysKey, cn, daysFromToday, formatDateKey } from "@/lib/utils";
 import { tasksDue } from "@/lib/derive";
-import { EmptyState, ListPanel, pageSecondaryClass } from "@/components/common/bits";
+import { EmptyState, ListPanel, pageActionClass } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
 
 /** What needs doing and when, grouped by urgency. Details and controls live inside each task. */
@@ -35,15 +35,15 @@ export default function TasksPage() {
           </p>
         </div>
         {can("tasks.write") ? (
-          <button type="button" onClick={() => ui.openForm({ form: "reminder", dueDate: addDaysKey(1) })} className={pageSecondaryClass}>
-            <Plus className="size-[18px]" aria-hidden /> Add reminder
+          <button type="button" onClick={() => ui.openForm({ form: "reminder", dueDate: addDaysKey(1) })} className={pageActionClass}>
+            <Plus className="size-[18px]" aria-hidden /> Add task
           </button>
         ) : null}
       </div>
       {open.length && due !== open.length ? (
         <p className="-mt-2 mb-3 text-[13.5px] text-muted-foreground">The number beside Tasks in the menu counts only the {due} due today or overdue.</p>
       ) : null}
-      {open.length === 0 ? <EmptyState icon={AlarmClock} title="Nothing to remind you about" body="You're all caught up." /> : null}
+      {open.length === 0 ? <EmptyState icon={AlarmClock} title="No tasks to do" body="Add a task for yourself or someone in the team, or link it to a job." /> : null}
       <div className="space-y-4">
         {groups
           .filter(([, list]) => list.length)
@@ -94,6 +94,8 @@ function TaskRow({ task: t }: { task: Task }) {
   const [open, setOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const customer = data.customers.find((c) => c.id === t.customerId);
+  const person = t.assignedPersonId ? data.people.find((p) => p.id === t.assignedPersonId) : undefined;
+  const job = t.relatedType === "job" && t.relatedId ? data.jobs.find((j) => j.id === t.relatedId) : undefined;
   const assignee = data.members.find((m) => m.id === t.assignedUserId);
   const overdue = !t.done && daysFromToday(t.dueDate) < 0;
   return (
@@ -132,9 +134,10 @@ function TaskRow({ task: t }: { task: Task }) {
         <button type="button" aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} details: ${t.title}`} onClick={() => setOpen((o) => !o)} className="row-target flex min-w-0 flex-1 items-center gap-3 py-0.5 text-left after:absolute after:inset-0 after:content-['']">
           <span className="min-w-0 flex-1">
             <span className={cn("block text-[15.5px] font-medium leading-snug", t.done && "font-normal text-muted-foreground line-through")}>{t.title}</span>
-            <span className={cn("mt-0.5 block text-[13.5px]", overdue ? "font-medium text-danger-fg" : "text-muted-foreground")}>
-              {when(t)}
-              {customer ? ` · ${customer.name}` : ""}
+            <span className="mt-0.5 flex flex-wrap gap-x-3 text-[14px] text-muted-foreground">
+              <span className={cn(overdue && "font-semibold text-danger-fg", !t.done && daysFromToday(t.dueDate) === 0 && "font-semibold text-warn-fg")}>{when(t)}</span>
+              <span>{person ? `For ${person.name}` : "Office"}</span>
+              {job ? <span>{job.title} · {job.customerName}</span> : customer ? <span>{customer.name}</span> : null}
             </span>
           </span>
           <ChevronRight aria-hidden className={cn("row-chevron size-[18px] shrink-0", open && "rotate-90")} />

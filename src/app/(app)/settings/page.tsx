@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { Bot, Building2, ChevronRight, Copy, Smartphone, Download, ExternalLink, Globe, Link2, PoundSterling, RotateCcw, ShieldCheck, Unlink, Users } from "lucide-react";
+import { Bot, Building2, CalendarDays, ChevronRight, Copy, Smartphone, Download, ExternalLink, Globe, Link2, PoundSterling, RotateCcw, ShieldCheck, Unlink, Users } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import type { Connection, OrgConfig, Snapshot } from "@/lib/types";
 import { ROLE_LABEL } from "@/lib/auth/permissions";
 import { cn, timeAgo } from "@/lib/utils";
 import { InstallBob } from "@/components/common/install-bob";
+import { CalendarLink } from "@/components/settings/calendar-links";
 import { Button } from "@/components/ui/button";
 import { Field, Input, NativeSelect, Textarea } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
@@ -129,17 +130,7 @@ function SettingsInner() {
             {data.connections.map((c) => (
               <ConnectionRow key={c.provider} c={c} owner={can("integrations.manage")} />
             ))}
-            <div className="rounded-xl bg-card px-3.5 py-3 ring-1 ring-line">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-[15px] font-medium">
-                    Calendar sync <span className="text-[13px] font-normal text-subtle">· Google or Outlook calendar</span>
-                  </div>
-                  <div className="text-[13.5px] text-muted-foreground">Not available yet. Bob&apos;s schedule (This week, Team, My work) works on its own and doesn&apos;t need a calendar.</div>
-                </div>
-                <StatusChip tone="neutral">Not available</StatusChip>
-              </div>
-            </div>
+            <QuickBooksLink org={org} owner={owner} save={save} />
             <div className="rounded-xl bg-card px-3.5 py-3 ring-1 ring-line">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
@@ -152,6 +143,9 @@ function SettingsInner() {
               </div>
             </div>
           </div>
+        </Section>
+        <Section icon={CalendarDays} title="Calendar" subtitle="Show Bob's diary in Google, Apple or Outlook calendar (one way, read-only).">
+          <CalendarSettings />
         </Section>
         <Section icon={Smartphone} title="Install Bob on your phone" subtitle="Add Bob to your home screen so it opens like an app.">
           <InstallBob />
@@ -350,6 +344,62 @@ function BobSection({ org, owner, save }: { org: OrgConfig; owner: boolean; save
         {owner ? <Button type="submit">Save</Button> : null}
       </form>
     </Section>
+  );
+}
+
+function CalendarSettings() {
+  const { data, can, actions } = useStore();
+  const linked = data.people.some((p) => p.userId === data.user.id && !p.archivedAt);
+  const feed = (scope: "company" | "person") => data.feeds.find((f) => f.scope === scope);
+  const create = (scope: "company" | "person") => async () => {
+    const r = await actions.run<{ path: string }>("createFeed", { scope });
+    return r.ok ? { ok: true as const, path: r.value.path } : { ok: false as const, error: r.errors._ || "Couldn't create the link" };
+  };
+  const revoke = async (id: string) => (await actions.run("revokeFeed", { id })).ok;
+  return (
+    <div className="space-y-3">
+      <p className="text-[14.5px] text-muted-foreground">
+        Bob is where work is created and changed. These links let a calendar app show it. Feeds include the job, town or site address, times and who&apos;s on it — never customer phone numbers, emails, site access notes, entry codes or private notes. A moved booking updates the same event; a cancelled one disappears.
+      </p>
+      {can("schedule.read") ? (
+        <CalendarLink scope="company" title="Company diary" body="Every booking, for owners and the office." feed={feed("company")} create={create("company")} revoke={revoke} />
+      ) : null}
+      <CalendarLink
+        scope="person"
+        title="My bookings"
+        body={linked ? "Only the bookings you're on." : "Link your login to a Team record (Team → your name → invite) to get a personal feed."}
+        feed={feed("person")}
+        create={create("person")}
+        revoke={revoke}
+      />
+      <p className="text-[13px] text-muted-foreground">Team members get their own personal link in My work. Removing someone&apos;s access turns their links off.</p>
+    </div>
+  );
+}
+
+function QuickBooksLink({ org, owner, save }: { org: OrgConfig; owner: boolean; save: (p: Record<string, unknown>) => Promise<void> }) {
+  const [url, setUrl] = React.useState(org.quickbooksUrl ?? "");
+  return (
+    <form
+      className="rounded-xl bg-card px-3.5 py-3 ring-1 ring-line"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void save({ quickbooksUrl: url.trim() });
+      }}
+    >
+      <label htmlFor="qb-url" className="text-[15px] font-medium">
+        Open QuickBooks shortcut
+      </label>
+      <p className="text-[13.5px] text-muted-foreground">Where the Open QuickBooks button in Money goes, e.g. your QuickBooks bills page. This is just a link — it doesn&apos;t connect or sync anything.</p>
+      <div className="mt-2 flex gap-2">
+        <Input id="qb-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://qbo.intuit.com/app/bills" disabled={!owner} className="h-11" />
+        {owner ? (
+          <Button type="submit" size="sm" variant="secondary">
+            Save
+          </Button>
+        ) : null}
+      </div>
+    </form>
   );
 }
 

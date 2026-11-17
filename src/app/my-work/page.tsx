@@ -14,6 +14,7 @@ import { toast, Toaster } from "@/components/ui/toaster";
 import { formatDayLong, formatDayShort, formatTimeRange, relativeDay } from "@/lib/dates";
 import { cn, timeAgo } from "@/lib/utils";
 import { SiteActions } from "@/components/jobs/job-parts";
+import { CalendarLink, type FeedInfo } from "@/components/settings/calendar-links";
 import type { MyBooking, MyWork } from "@/server/services/team";
 
 const MAT_LABEL = { to_order: "To order", ordered: "Ordered", on_site: "On site" } as const;
@@ -202,6 +203,7 @@ export default function MyWorkPage() {
         ) : null}
       </main>
       {data ? <Materials data={data} /> : null}
+      {data?.person ? <MyCalendar /> : null}
       <Toaster />
     </div>
   );
@@ -291,6 +293,36 @@ function Materials({ data }: { data: MyWork }) {
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+function MyCalendar() {
+  const [feeds, setFeeds] = React.useState<FeedInfo[]>([]);
+  const load = React.useCallback(async () => {
+    const r = await fetch("/api/my-calendar", { cache: "no-store" });
+    if (r.ok) setFeeds(((await r.json()) as { feeds: FeedInfo[] }).feeds);
+  }, []);
+  React.useEffect(() => void load(), [load]);
+  return (
+    <section aria-label="Calendar" className="mt-6 px-4">
+      <CalendarLink
+        scope="person"
+        title="Add my bookings to my calendar"
+        body="Your bookings in your phone's calendar. Changes made in Bob show up when your calendar next checks."
+        feed={feeds.find((f) => f.scope === "person")}
+        create={async () => {
+          const r = await fetch("/api/my-calendar", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+          const body = (await r.json().catch(() => ({}))) as { value?: { path: string }; error?: string };
+          void load();
+          return r.ok && body.value ? { ok: true as const, path: body.value.path } : { ok: false as const, error: body.error ?? "Couldn't create the link" };
+        }}
+        revoke={async (id) => {
+          const r = await fetch("/api/my-calendar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "revoke", id }) });
+          void load();
+          return r.ok;
+        }}
+      />
     </section>
   );
 }

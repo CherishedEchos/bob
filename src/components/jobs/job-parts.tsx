@@ -294,7 +294,7 @@ export function JobMaterials({ job: j }: { job: Job }) {
     <section className="px-5 py-5 sm:px-6">
       {write ? (
         <Button variant="secondary" onClick={() => ui.openForm({ form: "material", jobId: j.id })} className="w-full sm:w-auto">
-          <Plus /> Add item
+          <Plus /> Add material
         </Button>
       ) : null}
       {items.length ? (
@@ -303,6 +303,7 @@ export function JobMaterials({ job: j }: { job: Job }) {
             <MaterialRow
               key={m.id}
               item={m}
+              merchantName={data.merchants.find((x) => x.id === m.merchantId)?.name}
               write={write}
               onStatus={async (status) => {
                 const r = await actions.run("setMaterialStatus", { id: m.id, status });
@@ -327,37 +328,42 @@ export function MaterialRow({
   onStatus,
   onEdit,
   jobLabel,
+  merchantName,
 }: {
-  item: { id: string; item: string; quantity: string; supplier?: string; neededBy?: string; status: MaterialStatus };
+  item: { id: string; item: string; quantity: string; unit?: string; supplier?: string; neededBy?: string; status: MaterialStatus; orderRef?: string; expectedDelivery?: string };
   write: boolean;
   onStatus: (s: MaterialStatus) => void;
   onEdit: () => void;
   jobLabel?: string;
+  merchantName?: string;
 }) {
+  const today = todayKey();
   const due = m.neededBy ? daysFromToday(m.neededBy) : null;
+  const late = m.status === "to_order" && due !== null && due <= 2;
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
-      <button type="button" onClick={onEdit} disabled={!write} className="min-w-0 flex-1 text-left disabled:cursor-default">
-        <span className="block text-[15px] font-medium">
-          {m.quantity} × {m.item}
+    <li className="row-open flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
+      <button type="button" onClick={onEdit} disabled={!write} aria-label={`Edit ${m.item}`} className="row-target min-w-0 flex-1 text-left after:absolute after:inset-0 after:content-[''] disabled:cursor-default">
+        <span className="block text-[15.5px] font-semibold text-heading">
+          {m.item}
+          <span className="ml-2 font-normal tabular text-foreground">
+            × {m.quantity}
+            {m.unit ? ` ${m.unit}` : ""}
+          </span>
         </span>
-        <span className="block text-[13.5px] text-muted-foreground">
-          {jobLabel ? `${jobLabel} · ` : ""}
-          {m.supplier ?? "Supplier not set"}
-          {m.neededBy ? (
-            <>
-              {" · "}
-              <span className={cn(m.status === "to_order" && due !== null && due <= 2 && "font-semibold text-warn-fg")}>needed {relativeDay(m.neededBy, todayKey()).toLowerCase()}</span>
-            </>
-          ) : null}
+        <span className="mt-0.5 flex flex-wrap gap-x-3 text-[14px] text-muted-foreground">
+          {jobLabel ? <span>{jobLabel}</span> : null}
+          <span>{merchantName ?? m.supplier ?? <span className="italic">No merchant yet</span>}</span>
+          {m.neededBy ? <span className={cn(late && "font-semibold text-danger-fg")}>Needed {relativeDay(m.neededBy, today).toLowerCase()}</span> : null}
+          {m.orderRef ? <span>Ref {m.orderRef}</span> : null}
+          {m.status === "ordered" && m.expectedDelivery ? <span>Delivery {relativeDay(m.expectedDelivery, today).toLowerCase()}</span> : null}
         </span>
       </button>
-      <label className="w-36 shrink-0">
+      <label className="row-secondary w-36 shrink-0">
         <span className="sr-only">Status for {m.item}</span>
-        <NativeSelect value={m.status} disabled={!write} onChange={(e) => onStatus(e.target.value as MaterialStatus)} className={cn("h-11 text-[14.5px] font-medium", m.status === "to_order" ? "text-warn-fg" : m.status === "ordered" ? "text-info-fg" : "text-good-fg")}>
-          {(Object.keys(MATERIAL_STATUS_LABEL) as MaterialStatus[]).map((s) => (
-            <option key={s} value={s}>
-              {MATERIAL_STATUS_LABEL[s]}
+        <NativeSelect value={m.status} disabled={!write} onChange={(e) => onStatus(e.target.value as MaterialStatus)} className={cn("h-11 text-[14.5px] font-semibold", m.status === "to_order" ? "text-warn-fg" : m.status === "ordered" ? "text-info-fg" : "text-good-fg")}>
+          {(Object.keys(MATERIAL_STATUS_LABEL) as MaterialStatus[]).map((st) => (
+            <option key={st} value={st}>
+              {MATERIAL_STATUS_LABEL[st]}
             </option>
           ))}
         </NativeSelect>
