@@ -2,6 +2,7 @@ import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { HttpError, type Ctx, type Result } from "@/server/context";
 import { requireContext } from "@/server/auth/session";
+import { can } from "@/lib/auth/permissions";
 
 const MAX_BODY = 64 * 1024;
 
@@ -36,12 +37,17 @@ export async function readJson(req: NextRequest): Promise<Record<string, unknown
 
 type Handler = (req: NextRequest, ctx: Ctx, params: Record<string, string>) => Promise<Response | unknown>;
 
-/** Authenticated API route: resolves the session context server-side, never from the body. */
-export function authed(handler: Handler) {
+/**
+ * Authenticated API route: resolves the session context server-side, never
+ * from the body. Invited workers (My work only) are refused by default — a
+ * route must opt in with { workers: true } (My work, switching business).
+ */
+export function authed(handler: Handler, opts: { workers?: boolean } = {}) {
   return async (req: NextRequest, route: { params: Promise<Record<string, string>> }) => {
     try {
       checkOrigin(req);
       const ctx = await requireContext();
+      if (!opts.workers && !can(ctx.role, "records.read")) throw new HttpError(403, "Your account only shows your own work. Open My work.");
       const out = await handler(req, ctx, (await route?.params) ?? {});
       if (out instanceof Response) return out;
       return NextResponse.json(out, { headers: { "Cache-Control": "no-store" } });

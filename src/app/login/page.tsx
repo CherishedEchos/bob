@@ -18,11 +18,13 @@ export default async function LoginPage() {
           { email: "owner@ninety3.example", label: "Owner" },
           { email: "office@ninety3.example", label: "Office" },
           { email: "site@ninety3.example", label: "Site team (no money access)" },
+          { email: "sam@so-plastering.example", label: "Sam Okoro · subcontractor (My work only)" },
         ] },
         { group: "Ridgeway Build & Joinery — fictional demo business", accounts: [
           { email: "alex@ridgeway.example", label: "Alex Morgan · Owner" },
           { email: "priya@ridgeway.example", label: "Priya Shah · Office" },
           { email: "sam@ridgeway.example", label: "Sam Carter · Site team" },
+          { email: "dan@price-plastering.example", label: "Dan Price · subcontractor (My work only)" },
         ] },
       ]
     : [];

@@ -194,15 +194,15 @@ function inviteByToken(token: string): InviteRow | undefined {
 }
 
 /** Public: what the invite page shows before sign-up. Reveals nothing for a bad link. */
-export function inviteInfo(token: string): { state: PersonAccess["state"] | "invalid"; businessName?: string; personName?: string; email?: string; hasAccount?: boolean } {
+export function inviteInfo(token: string): { state: PersonAccess["state"] | "invalid"; businessName?: string; personName?: string; email?: string; hasAccount?: boolean; owner?: boolean } {
   const r = inviteByToken(token);
   if (!r) return { state: "invalid" };
   const state = inviteState(r);
   if (state !== "pending") return { state };
   const org = getDb().prepare("SELECT config FROM orgs WHERE id = ?").get(r.org_id) as { config: string };
-  const person = getDb().prepare("SELECT name FROM people WHERE org_id = ? AND id = ?").get(r.org_id, r.person_id) as { name: string } | undefined;
+  const person = r.role === "owner" ? { name: "there" } : (getDb().prepare("SELECT name FROM people WHERE org_id = ? AND id = ?").get(r.org_id, r.person_id) as { name: string } | undefined);
   const hasAccount = !!getDb().prepare("SELECT 1 FROM users WHERE email = ?").get(r.email);
-  return { state, businessName: (JSON.parse(org.config) as { name: string }).name, personName: person?.name, email: r.email, hasAccount };
+  return { state, businessName: (JSON.parse(org.config) as { name: string }).name, personName: person?.name, email: r.email, hasAccount, owner: r.role === "owner" };
 }
 
 /**
@@ -220,7 +220,11 @@ export function acceptInvite(token: string, input: { password?: unknown; name?: 
   if (state === "expired") return fail("forbidden", "This invite has expired. Ask for a new one.");
   const password = typeof input.password === "string" ? input.password : "";
   const db = getDb();
-  const person = db.prepare("SELECT id, name, archived_at FROM people WHERE org_id = ? AND id = ?").get(r.org_id, r.person_id) as { id: string; name: string; archived_at: string | null } | undefined;
+  // Owner setup links (new workspaces) aren't tied to a team member.
+  const ownerSetup = r.role === "owner";
+  const person = ownerSetup
+    ? { id: "", name: r.email.split("@")[0], archived_at: null }
+    : (db.prepare("SELECT id, name, archived_at FROM people WHERE org_id = ? AND id = ?").get(r.org_id, r.person_id) as { id: string; name: string; archived_at: string | null } | undefined);
   if (!person || person.archived_at) return fail("forbidden", "This invite is no longer active. Ask for a new one.");
   const existing = db.prepare("SELECT id, password_hash FROM users WHERE email = ?").get(r.email) as { id: string; password_hash: string } | undefined;
   if (existing) {
@@ -238,9 +242,9 @@ export function acceptInvite(token: string, input: { password?: unknown; name?: 
       const name = typeof input.name === "string" && input.name.trim().length >= 2 ? input.name.trim().slice(0, 120) : person.name;
       db.prepare("INSERT INTO users (id, email, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?)").run(userId, r.email, name, hashPassword(password), now());
     }
-    db.prepare("INSERT OR IGNORE INTO memberships (org_id, user_id, role) VALUES (?, ?, 'worker')").run(r.org_id, userId);
+    db.prepare("INSERT OR IGNORE INTO memberships (org_id, user_id, role) VALUES (?, ?, ?)").run(r.org_id, userId, ownerSetup ? "owner" : "worker");
     db.prepare("UPDATE invites SET accepted_user_id = ? WHERE id = ?").run(userId, r.id);
-    db.prepare("UPDATE people SET user_id = ? WHERE org_id = ? AND id = ?").run(userId, r.org_id, r.person_id);
+    if (!ownerSetup) db.prepare("UPDATE people SET user_id = ? WHERE org_id = ? AND id = ?").run(userId, r.org_id, r.person_id);
     db.prepare("INSERT INTO activity (id, org_id, at, actor, via, action, summary, entity_type, entity_id) VALUES (?, ?, ?, ?, 'system', 'team.invite_accepted', ?, 'person', ?)").run(
       uid("act"), r.org_id, now(), person.name, `${person.name} accepted their invite and can now see their work in Bob`, r.person_id,
     );
@@ -251,6 +255,7 @@ export function acceptInvite(token: string, input: { password?: unknown; name?: 
     throw e;
   }
   const session = createSession(userId!, r.org_id);
+  void ownerSetup;
   if (!session.ok) return fail("unavailable", "Couldn't sign you in. Try signing in.");
   return ok({ token: session.token, expires: session.expires, orgId: r.org_id });
 }

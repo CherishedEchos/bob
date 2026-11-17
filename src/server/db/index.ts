@@ -14,6 +14,7 @@ import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
 import { seedAll, upgradeSampleData } from "./seed";
+import { provisionWorkspaces } from "./provision";
 
 type ColType = "text" | "real" | "bool" | "json";
 
@@ -251,6 +252,7 @@ export function initDb(db: DatabaseSync) {
     // schedule, materials, bills) once. Live workspaces are never touched.
     upgradeSampleData(db, insertRaw);
   }
+  provisionWorkspaces(db);
 }
 
 /**

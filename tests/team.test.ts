@@ -331,3 +331,28 @@ describe("Ask Bob: schedule and ordering questions", () => {
     expect(staff.text).not.toMatch(/can't see/);
   });
 });
+
+describe("A second company from configuration, without a code change", () => {
+  it("creates the workspace empty and live, with a one-time owner setup link", async () => {
+    const fs = await import("node:fs");
+    const os = await import("node:os");
+    const path = await import("node:path");
+    const { provisionWorkspaces } = await import("@/server/db/provision");
+    const file = path.join(os.tmpdir(), `bob-ws-${Date.now()}.json`);
+    fs.writeFileSync(file, JSON.stringify([{ slug: "harbour-joinery", name: "Harbour Joinery Ltd", shortName: "Harbour", ownerEmail: "owner@harbour.example", accent: "#3366AA" }]));
+    const { created } = provisionWorkspaces(getDb(), file);
+    expect(created).toHaveLength(1);
+    // Running again changes nothing.
+    expect(provisionWorkspaces(getDb(), file).created).toHaveLength(0);
+    const token = created[0].setupPath.split("/").pop()!;
+    expect(T.inviteInfo(token)).toMatchObject({ state: "pending", businessName: "Harbour Joinery Ltd", owner: true });
+    const session = ok(T.acceptInvite(token, { password: "harbour-2026!" }));
+    const owner = workerCtx(session.token);
+    expect(owner).toMatchObject({ role: "owner", org: { name: "Harbour Joinery Ltd", accent: "#3366AA", dataMode: "live", timeZone: "Europe/London" } });
+    const snap = buildSnapshot(owner);
+    expect(snap.jobs).toEqual([]);
+    expect(snap.people).toEqual([]);
+    expect(T.acceptInvite(token, { password: "harbour-2026!" })).toMatchObject({ ok: false });
+    fs.unlinkSync(file);
+  });
+});

@@ -16,9 +16,9 @@ export const POST = authed(async (req, ctx) => {
   const res = NextResponse.json({ ok: true });
   res.cookies.set(SESSION_COOKIE, r.token, cookieOptions(r.expires));
   return res;
-});
+}, { workers: true });
 
 export const GET = authed(async (_req, ctx) => ({
   current: ctx.orgId,
   orgs: membershipsFor(ctx.userId).map((m) => ({ id: m.orgId, name: m.org.name, role: m.role, isDemo: m.org.isDemo })),
-}));
+}), { workers: true });

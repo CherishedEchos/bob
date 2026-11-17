@@ -12,7 +12,7 @@ import { BobLogo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 
-type Info = { state: "pending" | "accepted" | "expired" | "revoked" | "invalid" | "not_invited"; businessName?: string; personName?: string; email?: string; hasAccount?: boolean };
+type Info = { state: "pending" | "accepted" | "expired" | "revoked" | "invalid" | "not_invited"; businessName?: string; personName?: string; email?: string; hasAccount?: boolean; owner?: boolean };
 
 const DEAD: Record<string, [string, string]> = {
   accepted: ["This invite has already been used", "If it was you, sign in with the email it was sent to."],
@@ -47,7 +47,7 @@ export default function InvitePage() {
         setBusy(false);
         return;
       }
-      window.location.href = "/my-work";
+      window.location.href = "/";
     } catch {
       setError("Couldn't reach Bob. Check your connection and try again.");
       setBusy(false);
@@ -77,7 +77,9 @@ export default function InvitePage() {
             <div>
               <h1 className="text-[22px] font-bold leading-tight tracking-tight">Hi {info.personName?.split(" ")[0]}</h1>
               <p className="t-meta mt-1">
-                {info.businessName} has invited you to see your jobs in Bob — when and where you&apos;re booked, directions and instructions.
+                {info.owner
+                  ? `Set up your login for ${info.businessName} in Bob. You'll be the owner.`
+                  : `${info.businessName} has invited you to see your jobs in Bob — when and where you're booked, directions and instructions.`}
               </p>
             </div>
             <Field label="Email" htmlFor="inv-email" hint="The invite only works for this email.">
@@ -92,7 +94,7 @@ export default function InvitePage() {
               </p>
             ) : null}
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? <Loader2 className="animate-spin" /> : <ArrowRight />} {busy ? "Setting up…" : "Accept and see my work"}
+              {busy ? <Loader2 className="animate-spin" /> : <ArrowRight />} {busy ? "Setting up…" : info.owner ? "Set up my login" : "Accept and see my work"}
             </Button>
           </form>
         ) : null}

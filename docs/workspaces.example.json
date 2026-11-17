@@ -1,0 +1,15 @@
+[
+  {
+    "slug": "harbour-joinery",
+    "name": "Harbour Joinery Ltd",
+    "shortName": "Harbour",
+    "ownerEmail": "owner@harbour-joinery.example",
+    "tradeType": "Joinery & fitted furniture",
+    "logoUrl": "https://example.com/harbour-logo.png",
+    "accent": "#E4752F",
+    "services": ["Fitted wardrobes", "Kitchens", "Staircases"],
+    "serviceArea": ["Brighton", "Hove", "Shoreham"],
+    "timeZone": "Europe/London",
+    "contact": { "phone": "01632 960 000", "email": "hello@harbour-joinery.example" }
+  }
+]

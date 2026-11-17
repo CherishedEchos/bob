@@ -4,7 +4,7 @@ import { completeMyTask, myWork } from "@/server/services/team";
 export const runtime = "nodejs";
 
 /** The signed-in person's own booked work only. */
-export const GET = authed(async (_req, ctx) => fromResult(myWork(ctx)));
+export const GET = authed(async (_req, ctx) => fromResult(myWork(ctx)), { workers: true });
 
 /** Tick off a task assigned to me. */
 export const POST = authed(async (req, ctx) => {
@@ -12,4 +12,4 @@ export const POST = authed(async (req, ctx) => {
   const r = completeMyTask(ctx, typeof body.taskId === "string" ? body.taskId : "", body.done !== false);
   if (!r.ok) return fromResult(r);
   return fromResult(myWork(ctx));
-});
+}, { workers: true });

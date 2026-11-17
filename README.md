@@ -15,9 +15,9 @@ npm run dev      # → http://localhost:3000 (Node 22+)
 npm test         # engine + safety tests
 ```
 
-On `/login`, tap **Try the demo**. It opens the Ninety3 workspace with fictional records, and nothing is ever sent. Other demo logins are tucked under "Other demo logins":
+On `/login`, tap **Try the demo**. It opens **This week** for the Ninety3 workspace — a fictional team, subcontractors, bookings, jobs, enquiries, materials and bills — and nothing is ever sent. To see the subcontractor's phone view, open "Other demo logins" → **Sam Okoro · subcontractor (My work only)**. Other demo logins are tucked under "Other demo logins":
 
-- **Ninety3 workspace** (sample data, VAT/terms not configured, no integrations): Owner · Office · Site team
+- **Ninety3 workspace** (sample data, VAT/terms not configured, no integrations): Owner · Office · Site team · Sam Okoro (subcontractor, My work only)
 - **Ridgeway Build & Joinery** (fictional demo business, VAT 20%, 14-day terms, demo inbox and demo accounting): Alex (owner) · Priya (office) · Sam (site team)
 
 ## First demo: Today, Enquiries, Ask Bob
