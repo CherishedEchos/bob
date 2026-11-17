@@ -13,7 +13,7 @@ import "server-only";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
-import { seedAll } from "./seed";
+import { seedAll, upgradeSampleData } from "./seed";
 
 type ColType = "text" | "real" | "bool" | "json";
 
@@ -34,6 +34,7 @@ export const TABLES = {
     customerId: "text", title: "text", description: "text", location: "text", kind: "text",
     quotedValue: "real", depositRequired: "real", status: "text", startDate: "text", depositDueDate: "text",
     nextAction: "text", notes: "json", enquiryId: "text", lastChasedAt: "text", createdAt: "text",
+    siteAddress: "text", what3words: "text", sharedNotes: "text",
   },
   quotes: {
     customerId: "text", jobId: "text", enquiryId: "text", description: "text", amount: "real", status: "text",
@@ -59,7 +60,23 @@ export const TABLES = {
   },
   tasks: {
     title: "text", dueDate: "text", done: "bool", customerId: "text", relatedType: "text", relatedId: "text",
-    assignedUserId: "text", createdAt: "text", createdBy: "text", completedAt: "text",
+    assignedUserId: "text", createdAt: "text", createdBy: "text", completedAt: "text", assignedPersonId: "text",
+  },
+  people: {
+    name: "text", kind: "text", company: "text", trade: "text", phone: "text", email: "text", userId: "text",
+    archivedAt: "text", createdAt: "text",
+  },
+  bookings: {
+    jobId: "text", date: "text", endDate: "text", startTime: "text", endTime: "text", personIds: "json", notes: "text",
+    createdAt: "text", updatedAt: "text", createdBy: "text",
+  },
+  materials: {
+    jobId: "text", item: "text", quantity: "text", supplier: "text", neededBy: "text", status: "text",
+    createdAt: "text", updatedAt: "text",
+  },
+  bills: {
+    supplier: "text", description: "text", amount: "real", dueDate: "text", status: "text", jobId: "text",
+    reference: "text", paidAt: "text", createdAt: "text",
   },
   activity: {
     at: "text", actor: "text", via: "text", action: "text", summary: "text", entityType: "text", entityId: "text",
@@ -98,9 +115,24 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS memberships (
   org_id TEXT NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL CHECK (role IN ('owner','office','staff')),
+  role TEXT NOT NULL CHECK (role IN ('owner','office','staff','worker')),
   PRIMARY KEY (org_id, user_id)
 );
+CREATE TABLE IF NOT EXISTS invites (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  person_id TEXT NOT NULL,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  created_by TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  accepted_at TEXT,
+  accepted_user_id TEXT,
+  revoked_at TEXT
+);
+CREATE INDEX IF NOT EXISTS invites_org_person_idx ON invites(org_id, person_id);
 CREATE TABLE IF NOT EXISTS sessions (
   token_hash TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -207,11 +239,59 @@ export function getDb(): DatabaseSync {
 
 export function initDb(db: DatabaseSync) {
   db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000;");
+  migrate(db);
   db.exec(SYSTEM_DDL);
   db.exec(businessDDL());
+  addMissingColumns(db);
   const row = db.prepare("SELECT COUNT(*) AS n FROM orgs").get() as { n: number };
   if (row.n === 0) {
     seedAll(db, insertRaw);
+  } else {
+    // Existing databases: give sample workspaces the new demo records (team,
+    // schedule, materials, bills) once. Live workspaces are never touched.
+    upgradeSampleData(db, insertRaw);
+  }
+}
+
+/**
+ * Schema migrations for existing databases. Additive only: nothing is dropped
+ * and every existing row is kept. Recorded in PRAGMA user_version.
+ */
+export const SCHEMA_VERSION = 2;
+function migrate(db: DatabaseSync) {
+  const version = (db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version;
+  const hasMemberships = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='memberships'").get();
+  if (version < 2 && hasMemberships) {
+    // v2: allow the 'worker' role. SQLite can't alter a CHECK constraint, so
+    // the memberships table is rebuilt with every row copied across.
+    const ddl = (db.prepare("SELECT sql FROM sqlite_master WHERE name='memberships'").get() as { sql: string }).sql;
+    if (!ddl.includes("'worker'")) {
+      db.exec("PRAGMA foreign_keys = OFF");
+      db.exec(`BEGIN;
+        CREATE TABLE memberships_v2 (
+          org_id TEXT NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          role TEXT NOT NULL CHECK (role IN ('owner','office','staff','worker')),
+          PRIMARY KEY (org_id, user_id)
+        );
+        INSERT INTO memberships_v2 (org_id, user_id, role) SELECT org_id, user_id, role FROM memberships;
+        DROP TABLE memberships;
+        ALTER TABLE memberships_v2 RENAME TO memberships;
+        COMMIT;`);
+      db.exec("PRAGMA foreign_keys = ON");
+    }
+  }
+  db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+}
+
+/** New columns on existing business tables (e.g. jobs.site_address). */
+function addMissingColumns(db: DatabaseSync) {
+  for (const t of Object.keys(TABLES) as TableName[]) {
+    const have = new Set((db.prepare(`PRAGMA table_info(${t})`).all() as { name: string }[]).map((c) => c.name));
+    for (const [k, type] of Object.entries(TABLES[t] as Record<string, ColType>)) {
+      const col = snake(k);
+      if (!have.has(col)) db.exec(`ALTER TABLE ${t} ADD COLUMN ${col} ${type === "real" ? "REAL" : type === "bool" ? "INTEGER" : "TEXT"}`);
+    }
   }
 }
 

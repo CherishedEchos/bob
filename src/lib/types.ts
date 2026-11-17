@@ -11,7 +11,12 @@ export type ID = string;
 
 /* ------------------------------ Organisation ------------------------------ */
 
-export type Role = "owner" | "office" | "staff";
+/**
+ * owner / office: run the business. staff: the site team (jobs, tasks, no money).
+ * worker: an invited employee or subcontractor — sees only their own assigned
+ * work (My work), never the wider schedule, customers list or financials.
+ */
+export type Role = "owner" | "office" | "staff" | "worker";
 
 export interface OrgConfig {
   id: ID;
@@ -37,6 +42,8 @@ export interface OrgConfig {
   /** True for the fictional prospect-demo organisation. */
   isDemo: boolean;
   retention: { closedEnquiryMonths: number; conversationDays: number };
+  /** IANA time zone for "today", the schedule and booking times. UK workspaces: Europe/London. */
+  timeZone?: string;
 }
 
 export interface AppUser {
@@ -137,6 +144,12 @@ export interface Job {
   enquiryId?: ID;
   lastChasedAt?: string;
   createdAt: string;
+  /** Where the work happens (can differ from the customer's address). */
+  siteAddress?: string;
+  /** Optional what3words address for the site, e.g. "filled.count.soap". */
+  what3words?: string;
+  /** Instructions shared with the people booked on this job (notes stay internal). */
+  sharedNotes?: string;
 }
 
 export type QuoteStatus = "draft" | "sent" | "accepted" | "declined";
@@ -230,9 +243,93 @@ export interface Task {
   relatedType?: "enquiry" | "job" | "invoice" | "customer";
   relatedId?: ID;
   assignedUserId?: ID;
+  /** A team member or subcontractor from Team (they may not have a login). */
+  assignedPersonId?: ID;
   createdAt: string;
   createdBy: string;
   completedAt?: string;
+}
+
+/* ------------------------------ Team & schedule ------------------------------ */
+
+export type PersonKind = "employee" | "subcontractor";
+
+/**
+ * Someone who can be scheduled. Separate from login access: a person can be
+ * booked before (or without ever) being invited. `userId` is set when they
+ * accept an invite.
+ */
+export interface Person {
+  id: ID;
+  name: string;
+  kind: PersonKind;
+  company?: string;
+  trade?: string;
+  phone?: string;
+  email?: string;
+  userId?: ID;
+  archivedAt?: string;
+  createdAt: string;
+}
+
+export type InviteState = "not_invited" | "pending" | "accepted" | "expired" | "revoked";
+
+/** What the client sees about a person's access (never the invite token). */
+export interface PersonAccess {
+  personId: ID;
+  state: InviteState;
+  email?: string;
+  sentAt?: string;
+  expiresAt?: string;
+  acceptedAt?: string;
+  inviteId?: ID;
+}
+
+/**
+ * A booked piece of work on a job. Dates are workspace-local date keys and
+ * times are workspace-local wall-clock "HH:MM" (so DST never shifts a booking).
+ * No times = all day. endDate makes it multi-day (same hours each day).
+ */
+export interface Booking {
+  id: ID;
+  jobId: ID;
+  date: string; // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD, inclusive
+  startTime?: string; // HH:MM
+  endTime?: string; // HH:MM
+  personIds: ID[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+}
+
+export type MaterialStatus = "to_order" | "ordered" | "on_site";
+
+export interface Material {
+  id: ID;
+  jobId: ID;
+  item: string;
+  quantity: string;
+  supplier?: string;
+  neededBy?: string; // YYYY-MM-DD
+  status: MaterialStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A bill the business needs to pay (supplier, subcontractor, hire). */
+export interface Bill {
+  id: ID;
+  supplier: string;
+  description: string;
+  amount: number;
+  dueDate: string; // YYYY-MM-DD
+  status: "due" | "paid";
+  jobId?: ID;
+  reference?: string;
+  paidAt?: string;
+  createdAt: string;
 }
 
 export interface ActivityEntry {
@@ -292,6 +389,11 @@ export interface Snapshot {
   expenses: Expense[];
   tasks: Task[];
   photos: Photo[];
+  people: Person[];
+  access: PersonAccess[];
+  bookings: Booking[];
+  materials: Material[];
+  bills: Bill[];
   activity: ActivityEntry[];
   connections: Connection[];
   mode: ModeInfo;

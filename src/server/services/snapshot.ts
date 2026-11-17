@@ -9,6 +9,8 @@ import { listConnections } from "@/server/integrations/registry";
 import { activeEngine } from "@/server/bob/conversation";
 import { listCustomers, listEnquiries, listExpenses, listJobs, listQuotes, listTasks } from "./records";
 import { listInvoices, listPayments } from "./finance";
+import { listAccess, listBills, listBookings, listMaterials, listPeople } from "./team";
+import { HttpError } from "@/server/context";
 
 /**
  * Everything the dashboard needs, for the signed-in user's organisation only.
@@ -16,6 +18,8 @@ import { listInvoices, listPayments } from "./finance";
  * without finance access.
  */
 export function buildSnapshot(ctx: Ctx): Snapshot {
+  // Invited workers never get the company snapshot — only My work (/api/my-work).
+  if (!can(ctx.role, "records.read")) throw new HttpError(403, "Your account only shows your own work. Open My work.");
   const finance = can(ctx.role, "finance.read");
   const jobs = listJobs(ctx).map((j) => (finance ? j : { ...j, quotedValue: 0, depositRequired: 0 }));
   return {
@@ -31,6 +35,11 @@ export function buildSnapshot(ctx: Ctx): Snapshot {
     expenses: finance ? listExpenses(ctx) : [],
     tasks: listTasks(ctx),
     photos: listPhotos(ctx),
+    people: listPeople(ctx),
+    access: listAccess(ctx),
+    bookings: listBookings(ctx),
+    materials: listMaterials(ctx),
+    bills: listBills(ctx),
     activity: can(ctx.role, "activity.read") ? scoped(ctx).list("activity", { order: "at DESC", limit: 150 }) : [],
     connections: listConnections(ctx),
     mode: { database: "local-sqlite", aiEngine: activeEngine() },

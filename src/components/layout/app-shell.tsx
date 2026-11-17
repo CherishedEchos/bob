@@ -173,7 +173,7 @@ function useWorkspaces() {
 
 async function switchOrg(orgId: string) {
   const r = await api("/api/auth/switch-org", { json: { orgId } });
-  if (r.status === 200) window.location.href = "/today";
+  if (r.status === 200) window.location.href = "/";
 }
 
 async function signOut() {

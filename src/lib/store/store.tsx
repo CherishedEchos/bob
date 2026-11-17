@@ -15,7 +15,7 @@ import type { ActionView } from "@/lib/bob/types";
 import type { FieldErrors } from "@/lib/validation";
 import { can as roleCan, type Permission } from "@/lib/auth/permissions";
 
-export type Result<T> = { ok: true; value: T } | { ok: false; errors: FieldErrors };
+export type Result<T> = { ok: true; value: T } | { ok: false; errors: FieldErrors; code?: string; clashes?: { personId: string; personName: string; jobTitle: string; when: string }[] };
 
 export interface StoreActions {
   createEnquiry(input: unknown): Promise<Result<{ id: string }>>;
@@ -23,6 +23,8 @@ export interface StoreActions {
   setEnquiryStatus(id: string, status: EnquiryStatus): Promise<Result<unknown>>;
   addEnquiryNote(id: string, text: string): Promise<Result<Note>>;
   saveDraftReply(id: string, text: string): Promise<Result<unknown>>;
+  /** Any /api/ops operation (team, schedule, materials, bills…). */
+  run<T = unknown>(name: string, args?: Record<string, unknown>): Promise<Result<T>>;
   markEnquiryReplied(id: string): Promise<Result<unknown>>;
   createCustomer(input: unknown): Promise<Result<{ id: string }>>;
   updateCustomer(id: string, input: unknown): Promise<Result<unknown>>;
@@ -131,15 +133,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const actions = React.useMemo<StoreActions>(() => {
     async function op<T>(name: string, args: Record<string, unknown> = {}): Promise<Result<T>> {
       try {
-        const r = await api<{ ok?: boolean; value?: T; error?: string; fieldErrors?: FieldErrors; snapshot?: Snapshot }>("/api/ops", { json: { op: name, args } });
+        const r = await api<{ ok?: boolean; value?: T; error?: string; fieldErrors?: FieldErrors; snapshot?: Snapshot; code?: string; clashes?: [] }>("/api/ops", { json: { op: name, args } });
         if (r.body.snapshot) apply(r.body.snapshot);
         if (r.status === 200 && r.body.ok) return { ok: true, value: r.body.value as T };
-        return { ok: false, errors: r.body.fieldErrors && Object.keys(r.body.fieldErrors).length ? { ...r.body.fieldErrors, _: r.body.error ?? "" } : { _: r.body.error ?? "Something went wrong" } };
+        const errors = r.body.fieldErrors && Object.keys(r.body.fieldErrors).length ? { ...r.body.fieldErrors, _: r.body.error ?? "" } : { _: r.body.error ?? "Something went wrong" };
+        return { ok: false, errors, code: r.body.code, clashes: r.body.clashes };
       } catch {
         return { ok: false, errors: { _: "Couldn't reach the server. Nothing was changed." } };
       }
     }
     return {
+      run: (name, args) => op(name, args),
       createEnquiry: (input) => op("createEnquiry", { input }),
       updateEnquiry: (id, patch) => op("updateEnquiry", { id, patch }),
       setEnquiryStatus: (id, status) => op("setEnquiryStatus", { id, status }),

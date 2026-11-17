@@ -5,6 +5,7 @@ import * as R from "@/server/services/records";
 import * as F from "@/server/services/finance";
 import { syncInbox } from "@/server/integrations/inbox";
 import { buildSnapshot } from "@/server/services/snapshot";
+import * as T from "@/server/services/team";
 
 export const runtime = "nodejs";
 
@@ -43,6 +44,20 @@ const OPS: Record<string, (ctx: Ctx, a: Record<string, any>) => Result<unknown> 
   voidInvoice: (c, a) => F.voidInvoice(c, s(a.id)),
   deleteInvoiceDraft: (c, a) => F.deleteInvoiceDraft(c, s(a.id)),
   syncInbox: (c) => syncInbox(c),
+  convertToJob: (c, a) => R.convertToJob(c, a),
+  createPerson: (c, a) => T.createPerson(c, a.input),
+  updatePerson: (c, a) => T.updatePerson(c, s(a.id), a.input),
+  archivePerson: (c, a) => T.archivePerson(c, s(a.id), a.archived !== false),
+  revokeAccess: (c, a) => T.revokeAccess(c, s(a.personId)),
+  createInvite: (c, a) => T.createInvite(c, s(a.personId), typeof a.email === "string" ? a.email : undefined),
+  revokeInvite: (c, a) => T.revokeInvite(c, s(a.inviteId)),
+  saveBooking: (c, a) => T.saveBooking(c, a.input),
+  deleteBooking: (c, a) => T.deleteBooking(c, s(a.id)),
+  saveMaterial: (c, a) => T.saveMaterial(c, a.input),
+  setMaterialStatus: (c, a) => T.setMaterialStatus(c, s(a.id), a.status),
+  deleteMaterial: (c, a) => T.deleteMaterial(c, s(a.id)),
+  createBill: (c, a) => T.createBill(c, a.input),
+  setBillPaid: (c, a) => T.setBillPaid(c, s(a.id), a.paid !== false),
 };
 
 export const POST = authed(async (req, ctx) => {
@@ -51,6 +66,14 @@ export const POST = authed(async (req, ctx) => {
   if (!op) return NextResponse.json({ error: "Unknown operation" }, { status: 400 });
   const result = await op(ctx, (body.args as Record<string, unknown>) ?? {});
   const res = fromResult(result);
-  if (res instanceof Response) return res;
+  if (res instanceof Response) {
+    // Booking clashes come back with the details so the planner can confirm.
+    const clashes = (result as { clashes?: unknown }).clashes;
+    if (clashes) {
+      const json = await res.json();
+      return NextResponse.json({ ...json, clashes }, { status: res.status });
+    }
+    return res;
+  }
   return { ...res, snapshot: buildSnapshot(ctx) };
 });

@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Bob — your trade admin assistant",
     short_name: "Bob",
     description: "You do the work. Bob does the admin.",
-    start_url: "/today",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

@@ -16,6 +16,9 @@ import type {
   Payment, Priority, Quote, Role, Task,
 } from "@/lib/types";
 import { hashPassword } from "@/server/auth/password";
+import { DEFAULT_TIME_ZONE, addDays, dateKeyIn } from "@/lib/dates";
+import { seedTeam } from "./seed-team";
+export { upgradeSampleData } from "./seed-team";
 import type { TableName } from "./index";
 
 type InsertFn = (db: DatabaseSync, table: TableName, orgId: string, obj: { id: string }) => void;
@@ -26,10 +29,9 @@ const H = 3_600_000;
 const iso = (msAgo: number) => new Date(Date.now() - msAgo).toISOString();
 const hoursAgo = (h: number) => iso(h * H);
 const daysAgo = (d: number) => iso(d * 24 * H);
+/** Workspace-local (Europe/London) date key, offset from today. */
 function dayKey(offset: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return addDays(dateKeyIn(DEFAULT_TIME_ZONE), offset);
 }
 
 interface Person {
@@ -70,6 +72,7 @@ const NINETY3: Cast = {
     dataMode: "sample",
     isDemo: false,
     retention: { closedEnquiryMonths: 24, conversationDays: 90 },
+    timeZone: "Europe/London",
   },
   users: [
     { id: "usr_n93_owner", name: "Owner", email: "owner@ninety3.example", role: "owner" },
@@ -119,6 +122,7 @@ const RIDGEWAY: Cast = {
     dataMode: "sample",
     isDemo: true,
     retention: { closedEnquiryMonths: 24, conversationDays: 90 },
+    timeZone: "Europe/London",
   },
   users: [
     { id: "usr_rdg_alex", name: "Alex Morgan", email: "alex@ridgeway.example", role: "owner" },
@@ -548,6 +552,7 @@ export function seedOrgData(db: DatabaseSync, insert: InsertFn, orgId: string) {
   for (const r of s.tasks) insert(db, "tasks", orgId, r);
   for (const r of s.activity) insert(db, "activity", orgId, r);
   db.prepare("INSERT INTO counters (org_id, name, value) VALUES (?, 'invoice_ref', 4) ON CONFLICT(org_id, name) DO UPDATE SET value = 4").run(orgId);
+  seedTeam(db, insert, orgId, cast.org.timeZone);
 }
 
 export const SEED_ORG_IDS = [NINETY3.org.id, RIDGEWAY.org.id];

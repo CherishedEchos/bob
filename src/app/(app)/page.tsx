@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Everyone lands on Today. Ask Bob lives at /assistant. */
+/** Everyone lands on This week. Ask Bob lives at /assistant. */
 export default function HomePage() {
-  redirect("/today");
+  redirect("/week");
 }

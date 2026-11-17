@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { DEFAULT_TIME_ZONE, addDays, dateKeyIn } from "./dates";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -38,14 +39,25 @@ export function toDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-export function todayKey(): string {
-  return toDateKey(new Date());
+/**
+ * "Today" is the workspace's calendar date (Europe/London unless the workspace
+ * says otherwise), not the server's — Render runs in UTC, so a late-evening
+ * request in summer would otherwise land on tomorrow.
+ */
+let workspaceTimeZone = DEFAULT_TIME_ZONE;
+export function setWorkspaceTimeZone(tz: string | undefined) {
+  workspaceTimeZone = tz || DEFAULT_TIME_ZONE;
+}
+export function getWorkspaceTimeZone() {
+  return workspaceTimeZone;
 }
 
-export function addDaysKey(days: number, from: Date = new Date()): string {
-  const d = new Date(from);
-  d.setDate(d.getDate() + days);
-  return toDateKey(d);
+export function todayKey(): string {
+  return dateKeyIn(workspaceTimeZone);
+}
+
+export function addDaysKey(days: number, from?: Date): string {
+  return addDays(from ? dateKeyIn(workspaceTimeZone, from) : todayKey(), days);
 }
 
 export function parseDateKey(key: string): Date {

@@ -38,7 +38,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
     }
     if (res.ok) {
       // Keep the loading state until the workspace has loaded.
-      window.location.href = "/today";
+      window.location.href = "/";
       return;
     }
     const json = (await res.json().catch(() => ({}))) as { error?: string };

@@ -276,7 +276,13 @@ export function createJob(ctx: Ctx, input: unknown): Result<Job> {
   if (!parsed.success) return fail("invalid", "Check the job details.", toFieldErrors(parsed.error));
   const v = parsed.data;
   if (v.customerId && !getCustomer(ctx, v.customerId)) return fail("not_found", "Customer not found");
-  if (v.enquiryId && !getEnquiry(ctx, v.enquiryId)) return fail("not_found", "Enquiry not found");
+  const fromEnquiry = v.enquiryId ? getEnquiry(ctx, v.enquiryId) : undefined;
+  if (v.enquiryId && !fromEnquiry) return fail("not_found", "Enquiry not found");
+  const fromQuote = v.quoteId ? scoped(ctx).get<Quote>("quotes", v.quoteId) : undefined;
+  if (v.quoteId && !fromQuote) return fail("not_found", "Quote not found");
+  // Retrying a conversion returns the job that was already made — never a duplicate.
+  const already = (fromEnquiry?.jobId && getJob(ctx, fromEnquiry.jobId)) || (fromQuote?.jobId && getJob(ctx, fromQuote.jobId));
+  if (already) return ok(already);
 
   return tx(() => {
     let customerId = v.customerId;
@@ -305,13 +311,18 @@ export function createJob(ctx: Ctx, input: unknown): Result<Job> {
       depositDueDate: v.depositDueDate,
       nextAction: v.nextAction,
       notes: [],
-      enquiryId: v.enquiryId,
+      enquiryId: v.enquiryId ?? fromQuote?.enquiryId,
       createdAt: now(),
+      siteAddress: v.siteAddress,
+      what3words: v.what3words,
+      sharedNotes: v.sharedNotes,
     };
     const { customerName: _n, customerPhone: _p, customerEmail: _e, ...row } = job;
     void _n; void _p; void _e;
     scoped(ctx).insert("jobs", row as Job);
-    if (v.enquiryId) scoped(ctx).update<Enquiry>("enquiries", v.enquiryId, { status: "won", jobId: job.id, customerId });
+    const enquiryId = v.enquiryId ?? fromQuote?.enquiryId;
+    if (enquiryId) scoped(ctx).update<Enquiry>("enquiries", enquiryId, { status: "won", jobId: job.id, customerId });
+    if (fromQuote) scoped(ctx).update<Quote>("quotes", fromQuote.id, { status: "accepted", jobId: job.id, respondedAt: fromQuote.respondedAt ?? now() });
     const full = getJob(ctx, job.id)!;
     audit(ctx, "job.created", `Job added: ${full.title} for ${full.customerName}, ${full.location} (${gbp(full.quotedValue)})`, "job", job.id);
     return ok(full);
@@ -533,4 +544,47 @@ export function setQuoteStatus(ctx: Ctx, id: string, status: Quote["status"]): R
     return u;
   });
   return ok(updated);
+}
+
+/**
+ * Mark an enquiry (or its quote) as won and turn it into a job, carrying the
+ * customer, site and price across. Safe to retry: a second call returns the
+ * same job instead of creating another.
+ */
+export function convertToJob(ctx: Ctx, args: { enquiryId?: unknown; quoteId?: unknown; siteAddress?: unknown; startDate?: unknown }): Result<Job & { existed: boolean }> {
+  const no = denied(ctx, "jobs.write");
+  if (no) return no;
+  const quote = typeof args.quoteId === "string" ? scoped(ctx).get<Quote>("quotes", args.quoteId) : undefined;
+  if (args.quoteId && !quote) return fail("not_found", "Quote not found");
+  const enquiryId = (typeof args.enquiryId === "string" ? args.enquiryId : undefined) ?? quote?.enquiryId;
+  const e = enquiryId ? getEnquiry(ctx, enquiryId) : undefined;
+  if (enquiryId && !e) return fail("not_found", "Enquiry not found");
+  if (!e && !quote) return fail("invalid", "Choose an enquiry or quote to turn into a job.");
+  const existingId = e?.jobId ?? quote?.jobId;
+  const existing = existingId ? getJob(ctx, existingId) : undefined;
+  if (existing) return ok({ ...existing, existed: true });
+  let customerId = quote?.customerId;
+  if (!customerId && e) {
+    const c = ensureCustomerForEnquiry(ctx, e.id);
+    if (!c.ok) return c;
+    customerId = c.value.customerId;
+  }
+  const customer = customerId ? getCustomer(ctx, customerId) : undefined;
+  const acceptedQuote = quote ?? (e ? listQuotes(ctx).find((q) => q.enquiryId === e.id && q.status !== "declined") : undefined);
+  const site = typeof args.siteAddress === "string" && args.siteAddress.trim() ? args.siteAddress.trim() : customer?.address ?? e?.location ?? customer?.town;
+  const created = createJob(ctx, {
+    customerId,
+    title: e?.title ?? acceptedQuote?.description ?? "New job",
+    description: e?.description ?? acceptedQuote?.description ?? "",
+    location: e?.location ?? customer?.town ?? "Not set",
+    quotedValue: acceptedQuote?.amount ?? 0,
+    status: "quoted",
+    enquiryId: e?.id,
+    quoteId: acceptedQuote?.id,
+    siteAddress: site,
+    startDate: typeof args.startDate === "string" ? args.startDate : undefined,
+    nextAction: "Schedule the work",
+  });
+  if (!created.ok) return created;
+  return ok({ ...created.value, existed: false });
 }

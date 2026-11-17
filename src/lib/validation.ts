@@ -73,6 +73,10 @@ export const jobInputSchema = z
     depositDueDate: optDate,
     nextAction: optStr(240),
     enquiryId: id.optional(),
+    quoteId: id.optional(),
+    siteAddress: optStr(240),
+    what3words: optStr(80),
+    sharedNotes: optStr(2000),
   })
   .refine((v) => v.depositRequired <= v.quotedValue, { message: "Deposit can't be more than the quote", path: ["depositRequired"] })
   .refine((v) => v.customerId || (v.customerName && v.customerName.length >= 2), {
@@ -90,6 +94,9 @@ export const jobPatchSchema = z.object({
   depositDueDate: z.union([dateKey, z.null()]).optional(),
   quotedValue: money.optional(),
   depositRequired: money.optional(),
+  siteAddress: z.string().trim().max(240).optional(),
+  what3words: z.string().trim().max(80).optional(),
+  sharedNotes: z.string().trim().max(2000).optional(),
 });
 
 export const paymentInputSchema = z.object({
@@ -110,6 +117,7 @@ export const taskInputSchema = z.object({
   relatedId: id.optional(),
   customerId: id.optional(),
   assignedUserId: id.optional(),
+  assignedPersonId: optStr(80),
 });
 export type TaskInput = z.input<typeof taskInputSchema>;
 
@@ -161,3 +169,53 @@ export function toFieldErrors(error: z.ZodError): FieldErrors {
   }
   return out;
 }
+
+/* ------------------------------ Team & schedule ------------------------------ */
+
+const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use a time like 08:00");
+
+export const personInputSchema = z.object({
+  name: z.string().trim().min(2, "Enter their name").max(120),
+  kind: z.enum(["employee", "subcontractor"]),
+  company: optStr(120),
+  trade: optStr(80),
+  phone: optStr(30),
+  email: optEmail,
+});
+
+export const bookingInputSchema = z
+  .object({
+    id: id.optional(),
+    jobId: id,
+    date: dateKey,
+    endDate: optDate,
+    allDay: z.boolean().default(false),
+    startTime: time.optional().or(z.literal("")).transform((v) => v || undefined),
+    endTime: time.optional().or(z.literal("")).transform((v) => v || undefined),
+    personIds: z.array(id).max(30).default([]),
+    notes: optStr(1000),
+    /** The planner saw the clash warning and chose to book anyway. */
+    confirmOverlap: z.boolean().default(false),
+  })
+  .refine((v) => !v.endDate || v.endDate >= v.date, { message: "The end date can't be before the start date", path: ["endDate"] })
+  .refine((v) => v.allDay || (v.startTime && v.endTime), { message: "Add a start and end time, or choose All day", path: ["startTime"] })
+  .refine((v) => v.allDay || !v.startTime || !v.endTime || v.endTime > v.startTime, { message: "The end time must be after the start time", path: ["endTime"] });
+
+export const materialInputSchema = z.object({
+  id: id.optional(),
+  jobId: id,
+  item: z.string().trim().min(2, "What's the item?").max(160),
+  quantity: z.string().trim().min(1, "How many?").max(40),
+  supplier: optStr(120),
+  neededBy: optDate,
+  status: z.enum(["to_order", "ordered", "on_site"]).default("to_order"),
+});
+
+export const billInputSchema = z.object({
+  supplier: z.string().trim().min(2, "Who is the bill from?").max(120),
+  description: z.string().trim().min(2, "What's it for?").max(200),
+  amount: positiveMoney,
+  dueDate: dateKey,
+  jobId: optStr(80),
+  reference: optStr(80),
+});

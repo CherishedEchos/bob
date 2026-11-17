@@ -7,10 +7,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   const hasSession = Boolean(request.cookies.get("bob_session")?.value);
-  // Land on Today, decided on the server so nothing else renders first.
+  // Land on This week, decided on the server so nothing else renders first.
   if (request.nextUrl.pathname === "/") {
     const url = request.nextUrl.clone();
-    url.pathname = hasSession ? "/today" : "/login";
+    url.pathname = hasSession ? "/week" : "/login";
     url.search = "";
     return NextResponse.redirect(url);
   }
@@ -25,6 +25,6 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Public: sign-in, static assets, the website enquiry form (/f/…), its example site and its submit API.
-  matcher: ["/((?!_next/static|_next/image|brand/|icons/|manifest.webmanifest|favicon.ico|login|api/auth/login|f/|example-site/|api/public/).*)"],
+  // Public: sign-in, invite acceptance, static assets, the website enquiry form (/f/…), its example site and its submit API.
+  matcher: ["/((?!_next/static|_next/image|brand/|icons/|manifest.webmanifest|favicon.ico|login|api/auth/login|invite/|api/invite/|f/|example-site/|api/public/).*)"],
 };
