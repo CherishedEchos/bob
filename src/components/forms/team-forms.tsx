@@ -75,6 +75,16 @@ export function BookingForm({ prefill }: { prefill: Extract<FormPrefill, { form:
   const [clashes, setClashes] = React.useState<Clash[] | null>(null);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const { values, errors, set } = f;
+  const peopleRef = React.useRef<HTMLFieldSetElement>(null);
+  // Opened from an Unassigned booking: go straight to who's on it.
+  React.useEffect(() => {
+    if (prefill.focus !== "people") return;
+    const t = setTimeout(() => {
+      peopleRef.current?.scrollIntoView({ block: "center" });
+      peopleRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    }, 150);
+    return () => clearTimeout(t);
+  }, [prefill.focus]);
 
   const save = async (confirmOverlap: boolean) => {
     f.setBusy(true);
@@ -109,7 +119,7 @@ export function BookingForm({ prefill }: { prefill: Extract<FormPrefill, { form:
     const res = await actions.run("deleteBooking", { id: existing.id });
     f.setBusy(false);
     if (!res.ok) return f.setErrors(res.errors);
-    toast("Booking removed");
+    toast("Booking cancelled");
     ui.closeForm();
   };
 
@@ -180,8 +190,10 @@ export function BookingForm({ prefill }: { prefill: Extract<FormPrefill, { form:
           </p>
         ) : null}
       </fieldset>
-      <fieldset>
-        <legend className="mb-1.5 text-[14px] font-medium text-foreground/90">Who&apos;s on it</legend>
+      <fieldset ref={peopleRef} className={cn("rounded-xl", prefill.focus === "people" && !who.length && "-m-2 bg-amber-500/[0.07] p-2 ring-1 ring-amber-500/30")}>
+        <legend className="mb-1.5 text-[14px] font-medium text-foreground/90">
+          Who&apos;s on it{prefill.focus === "people" && !who.length ? <span className="ml-2 font-semibold text-warn-fg">Unassigned — choose someone</span> : null}
+        </legend>
         {people.length ? (
           <div className="flex flex-wrap gap-2">
             {people.map((p) => {
@@ -247,13 +259,13 @@ export function BookingForm({ prefill }: { prefill: Extract<FormPrefill, { form:
       <p className="text-[13px] text-muted-foreground">Nobody is notified automatically. People with access see the change next time they open My work.</p>
       {existing && confirmDelete ? (
         <div className="rounded-xl bg-red-500/[0.06] p-3 ring-1 ring-red-500/25">
-          <p className="text-[14.5px]">Remove this booking? The job stays; only this slot goes.</p>
+          <p className="text-[14.5px]">Cancel this booking? The job stays; only this slot goes, and it disappears from people&apos;s My work and calendar feeds.</p>
           <div className="mt-2 flex gap-2">
             <Button type="button" size="sm" variant="secondary" onClick={() => setConfirmDelete(false)}>
-              Keep it
+              Keep booking
             </Button>
             <Button type="button" size="sm" variant="destructive" onClick={() => void remove()}>
-              Remove booking
+              Cancel booking
             </Button>
           </div>
         </div>
@@ -265,7 +277,7 @@ export function BookingForm({ prefill }: { prefill: Extract<FormPrefill, { form:
         extra={
           existing && !confirmDelete ? (
             <Button type="button" variant="ghost" className="w-full sm:w-auto" onClick={() => setConfirmDelete(true)}>
-              <Trash2 /> Remove
+              <Trash2 /> Cancel booking
             </Button>
           ) : null
         }

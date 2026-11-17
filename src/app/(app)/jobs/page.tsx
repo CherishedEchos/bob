@@ -79,7 +79,7 @@ export default function JobsPage() {
             value={filter}
             onChange={setFilter}
             options={[
-              { value: "ready", label: "To schedule", count: count("ready"), highlight: true },
+              { value: "ready", label: "Unscheduled", count: count("ready"), highlight: true },
               { value: "booked", label: "Booked", count: count("booked") },
               { value: "on_site", label: "On site", count: count("on_site") },
               { value: "complete", label: "Complete", count: count("complete") },
@@ -144,7 +144,7 @@ export default function JobsPage() {
       ) : (
         <EmptyState
           icon={HardHat}
-          title={q ? "No matches" : filter === "ready" ? "Nothing waiting to be scheduled" : "No jobs here"}
+          title={q ? "No matches" : filter === "ready" ? "No unscheduled jobs" : "No jobs here"}
           body={q ? "Try a different search." : data.jobs.length ? "Try another list." : "Add your first job, or turn a won enquiry into one."}
           action={!data.jobs.length && can("jobs.write") ? <button type="button" onClick={() => ui.openForm({ form: "job" })} className={pageActionClass}><Plus className="size-[18px]" /> Add job</button> : undefined}
         />

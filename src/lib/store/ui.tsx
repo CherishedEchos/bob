@@ -15,7 +15,7 @@ export type FormPrefill =
   | { form: "invoice"; customerId?: string; jobId?: string; amount?: number }
   | { form: "expense"; jobId?: string }
   | { form: "quote"; customerId?: string; enquiryId?: string; jobId?: string }
-  | { form: "booking"; bookingId?: string; jobId?: string; date?: string; personIds?: string[] }
+  | { form: "booking"; bookingId?: string; jobId?: string; date?: string; personIds?: string[]; focus?: "people" }
   | { form: "person"; personId?: string }
   | { form: "material"; jobId?: string; materialId?: string }
   | { form: "bill"; jobId?: string };

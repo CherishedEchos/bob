@@ -78,7 +78,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
         {!assistant ? <DemoBanner /> : null}
         {!assistant ? <MobileHeader /> : null}
         <main className={cn("min-h-0 flex-1 overscroll-contain", assistant ? "overflow-hidden" : pathname.startsWith("/enquiries") ? "overflow-y-auto bg-inbox" : "overflow-y-auto bg-app")}>
-          {assistant ? children : <div className={cn("mx-auto w-full px-4 pb-10 pt-4 lg:pb-10 lg:pt-8", pathname.startsWith("/enquiries") ? "max-w-[1560px] lg:px-8" : "max-w-6xl lg:px-10")}>{children}</div>}
+          {assistant ? children : <div className={cn("mx-auto w-full px-4 pb-10 pt-4 lg:pb-10 lg:pt-8", pathname.startsWith("/enquiries") ? "max-w-[1560px] lg:px-8" : pathname.startsWith("/week") ? "max-w-[1800px] lg:px-8" : "max-w-6xl lg:px-10")}>{children}</div>}
         </main>
         {/* Ask Bob has its own back button and bottom controls. */}
         {!assistant ? <BottomNav /> : null}
@@ -110,7 +110,7 @@ function DemoBanner() {
 /* ------------------------------ Desktop sidebar ------------------------------ */
 
 const SIDEBAR_NAV = [
-  { href: "/week", label: "This week", icon: CalendarDays },
+  { href: "/week", label: "Diary", icon: CalendarDays },
   { href: "/assistant", label: "Ask Bob", icon: AudioLines },
   { href: "/enquiries", label: "Enquiries", icon: Inbox, badge: "unanswered" as const },
   { href: "/jobs", label: "Jobs", icon: HardHat },
@@ -228,7 +228,7 @@ function MobileHeader() {
   const [moreOpen, setMoreOpen] = React.useState(false);
   return (
     <header className="flex h-[calc(52px+env(safe-area-inset-top))] shrink-0 items-center justify-between border-b border-line bg-card px-3 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
-      <Link href="/week" aria-label="This week">
+      <Link href="/week" aria-label="Diary">
         <BobLogo height={24} tone="dark" />
       </Link>
       <div className="flex items-center gap-1.5">
@@ -252,7 +252,7 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
   const counts = useNavCounts();
   const orgs = useWorkspaces();
   const links = [
-    { href: "/week", label: "This week", icon: CalendarDays, count: 0 },
+    { href: "/week", label: "Diary", icon: CalendarDays, count: 0 },
     ...(can("schedule.read") ? [{ href: "/team", label: "Team", icon: UsersRound, count: 0 }] : []),
     { href: "/customers", label: "Customers", icon: Users, count: 0 },
     { href: "/materials", label: "Materials to order", icon: Package, count: 0 },
@@ -315,7 +315,7 @@ function BottomNav() {
   const { unanswered, due } = useNavCounts();
   const { can } = useStore();
   const items = [
-    { href: "/week", label: "This week", icon: CalendarDays, count: 0 },
+    { href: "/week", label: "Diary", icon: CalendarDays, count: 0 },
     { href: "/enquiries", label: "Enquiries", icon: Inbox, count: unanswered },
     { href: "/assistant", label: "Ask Bob", icon: AudioLines, count: 0 },
     { href: "/jobs", label: "Jobs", icon: HardHat, count: 0 },

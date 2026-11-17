@@ -36,7 +36,7 @@ export function peopleOnJob(bookings: Booking[], people: Person[], jobId: string
 /** Where a job is, in planner terms. Keeps the job's own status where it says more. */
 export type JobStage = "ready" | "booked" | "in_progress" | "snagging" | "awaiting_deposit" | "complete" | "lost";
 export const JOB_STAGE_LABEL: Record<JobStage, string> = {
-  ready: "Ready to schedule",
+  ready: "Unscheduled",
   booked: "Booked",
   in_progress: "In progress",
   snagging: "Snagging",

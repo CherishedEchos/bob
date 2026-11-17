@@ -119,7 +119,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
       {/* ------------------------------ Header ------------------------------ */}
       {variant === "page" ? (
         <header className="relative z-10 grid h-[calc(4rem+env(safe-area-inset-top))] shrink-0 grid-cols-[92px_minmax(0,1fr)_92px] items-center px-2 pt-[env(safe-area-inset-top)] lg:px-6">
-          <Link href="/week" aria-label="Back to This week" className="grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-surface-3">
+          <Link href="/week" aria-label="Back to Diary" className="grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-surface-3">
             <ChevronLeft className="size-7" strokeWidth={1.8} />
           </Link>
           <WorkspaceLockup org={org} />

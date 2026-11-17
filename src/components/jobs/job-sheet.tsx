@@ -3,11 +3,11 @@
 import { PhotoGrid } from "@/components/common/photos";
 
 import * as React from "react";
-import { AlarmClock, CalendarClock, CalendarPlus, Check, ChevronRight, Hammer, Inbox, MapPin, MoreHorizontal, Navigation, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
+import { AlarmClock, CalendarClock, CalendarPlus, Check, ChevronRight, Hammer, Inbox, MapPin, MoreHorizontal, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
 import type { JobTab } from "@/lib/store/ui";
 import { formatTimeRange, relativeDay } from "@/lib/dates";
 import { nextBookingForJob } from "@/lib/schedule";
-import { JobMaterials, JobSchedule, JobTasks, SharedInstructions } from "./job-parts";
+import { JobCrew, JobMaterials, JobSchedule, JobTasks, SharedInstructions } from "./job-parts";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import {
@@ -164,36 +164,15 @@ function JobDetail({ id }: { id: string }) {
           ) : null}
         </dl>
 
-        {/* Site: where the work is, how to get there, who to call */}
-        <div className="mt-4 rounded-2xl bg-message px-4 py-3">
-          <div className="flex items-start gap-2">
-            <MapPin className="mt-0.5 size-4 shrink-0 text-accent-icon" aria-hidden />
-            <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-medium">{j.siteAddress || j.location}</p>
-              {!j.siteAddress ? <p className="text-[13px] text-muted-foreground">No site address yet — add it under Site & instructions.</p> : null}
-              {j.what3words ? (
-                <a href={`https://what3words.com/${encodeURIComponent(j.what3words.replace(/^\/+/, ""))}`} target="_blank" rel="noreferrer" className="text-[14px] font-semibold text-accent-fg">
-                  {"///"}
-                  {j.what3words.replace(/^\/+/, "")}
-                </a>
-              ) : null}
-            </div>
-          </div>
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            <Button asChild size="sm" variant="secondary">
-              <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(j.siteAddress || j.location)}`} target="_blank" rel="noreferrer">
-                <Navigation /> Directions
+        {j.customerPhone ? (
+          <div className="mt-3">
+            <Button asChild variant="secondary" size="sm">
+              <a href={`tel:${j.customerPhone.replace(/\s/g, "")}`}>
+                <Phone /> Call {firstName(j.customerName)}
               </a>
             </Button>
-            {j.customerPhone ? (
-              <Button asChild variant="secondary" size="sm">
-                <a href={`tel:${j.customerPhone.replace(/\s/g, "")}`}>
-                  <Phone /> Call {firstName(j.customerName)}
-                </a>
-              </Button>
-            ) : null}
           </div>
-        </div>
+        ) : null}
 
         {/* Schedule: the most likely next move */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -244,7 +223,9 @@ function JobDetail({ id }: { id: string }) {
 
       {tab === "overview" ? (
         <>
-          <div className="px-5 pb-1 sm:px-6">
+          <SharedInstructions job={j} />
+          <JobCrew job={j} />
+          <div className="border-t border-line px-5 pb-1 sm:px-6">
         {/* The next step: easy to spot, easy to change */}
         <section aria-labelledby={`next-${j.id}`} className="mt-5 rounded-2xl bg-selected px-4 py-3.5 ring-1 ring-copper-500/25">
           <h3 id={`next-${j.id}`} className="t-eyebrow text-accent-fg">
@@ -301,7 +282,7 @@ function JobDetail({ id }: { id: string }) {
         </section>
 
           </div>
-          <SharedInstructions job={j} />
+
       <Section title="Photos">
         <PhotoGrid relatedType="job" relatedId={j.id} />
       </Section>

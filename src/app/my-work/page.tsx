@@ -13,11 +13,11 @@ import { Button } from "@/components/ui/button";
 import { toast, Toaster } from "@/components/ui/toaster";
 import { formatDayLong, formatDayShort, formatTimeRange, relativeDay } from "@/lib/dates";
 import { cn, timeAgo } from "@/lib/utils";
+import { SiteActions } from "@/components/jobs/job-parts";
 import type { MyBooking, MyWork } from "@/server/services/team";
 
 const MAT_LABEL = { to_order: "To order", ordered: "Ordered", on_site: "On site" } as const;
 const directions = (address: string) => `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
-const w3w = (words: string) => `https://what3words.com/${encodeURIComponent(words.replace(/^\/+/, ""))}`;
 
 export default function MyWorkPage() {
   const [data, setData] = React.useState<MyWork | null>(null);
@@ -228,7 +228,8 @@ function BookingCard({ b, today, expanded = false, changed }: { b: MyBooking; to
       </button>
       {open ? (
         <div className="space-y-3 border-t border-line px-4 pb-4 pt-3">
-          <div className="grid grid-cols-2 gap-2">
+          <SiteActions job={{ siteAddress: b.job.siteAddress, location: b.job.siteAddress, what3words: b.job.what3words, accessNote: b.job.accessNote }} />
+          <div className="flex flex-wrap gap-2">
             <Button asChild size="sm">
               <a href={directions(b.job.siteAddress)} target="_blank" rel="noreferrer">
                 <Navigation /> Directions
@@ -242,14 +243,6 @@ function BookingCard({ b, today, expanded = false, changed }: { b: MyBooking; to
               </Button>
             ) : null}
           </div>
-          {b.job.what3words ? (
-            <a href={w3w(b.job.what3words)} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-1.5 text-[15px] font-semibold text-accent-fg">
-              <span className="text-[#e11f26]" aria-hidden>
-                {"///"}
-              </span>
-              {b.job.what3words.replace(/^\/+/, "")}
-            </a>
-          ) : null}
           {b.notes || b.job.instructions ? (
             <div className="rounded-xl bg-message px-3.5 py-3">
               <h4 className="text-[13.5px] font-semibold">Instructions</h4>
