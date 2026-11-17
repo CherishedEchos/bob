@@ -226,10 +226,15 @@ function BillsView() {
                       {j ? ` · ${j.title}` : ""}
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="w-28 shrink-0 text-right">
                     <div className="tabular text-[16px] font-semibold">{gbp(b.amount)}</div>
                     <StatusText tone={d < 0 ? "red" : d <= 3 ? "amber" : "neutral"}>{d < 0 ? `Overdue ${-d}d` : d === 0 ? "Due today" : `Due ${formatDateInline(b.dueDate)}`}</StatusText>
                   </div>
+                  {can("payments.record") && confirm !== b.id ? (
+                    <Button size="sm" variant="secondary" className="hidden shrink-0 sm:inline-flex" onClick={() => { setPayment({ paidOn: todayKey(), paymentMethod: "bank_transfer" }); setPayError(null); setConfirm(b.id); }}>
+                      <CheckCheck /> Record payment
+                    </Button>
+                  ) : null}
                 </div>
                 {can("payments.record") ? (
                   confirm === b.id ? (
@@ -276,7 +281,7 @@ function BillsView() {
                       </div>
                     </form>
                   ) : (
-                    <Button size="sm" variant="secondary" className="mt-2" onClick={() => { setPayment({ paidOn: todayKey(), paymentMethod: "bank_transfer" }); setPayError(null); setConfirm(b.id); }}>
+                    <Button size="sm" variant="secondary" className="mt-2 sm:hidden" onClick={() => { setPayment({ paidOn: todayKey(), paymentMethod: "bank_transfer" }); setPayError(null); setConfirm(b.id); }}>
                       <CheckCheck /> Record payment
                     </Button>
                   )

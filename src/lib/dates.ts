@@ -99,3 +99,9 @@ export function relativeDay(key: string, today: string): string {
   if (d === -1) return "Yesterday";
   return formatDayShort(key);
 }
+
+/** Mid-sentence form: "today", "tomorrow", "yesterday" or "Thu 19 Nov" (month keeps its capital). */
+export function relativeDayInline(key: string, today: string): string {
+  const r = relativeDay(key, today);
+  return /^(Today|Tomorrow|Yesterday)$/.test(r) ? r.toLowerCase() : r;
+}

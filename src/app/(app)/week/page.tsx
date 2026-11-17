@@ -105,7 +105,7 @@ function Diary() {
         <p className="px-1 text-[16px] font-semibold tabular text-heading" aria-live="polite">
           {formatWeekRange(start)}
         </p>
-        <label className="flex min-w-[200px] flex-1 items-center gap-2 sm:max-w-[280px]">
+        <label className="flex min-w-[200px] flex-1 items-center gap-2 sm:max-w-[260px]">
           <Users className="size-4 shrink-0 text-subtle" aria-hidden />
           <span className="sr-only">Show work for</span>
           <NativeSelect value={personFilter} onChange={(e) => setParam("person", e.target.value || null)} className="h-11">
@@ -141,7 +141,7 @@ function Diary() {
 
       {/* Desktop planner */}
       <section aria-label={`Diary ${formatWeekRange(start)}`} className="panel hidden overflow-hidden lg:block">
-        <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_minmax(0,0.7fr)_minmax(0,0.7fr)] divide-x divide-line">
+        <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_minmax(0,0.55fr)_minmax(0,0.55fr)] divide-x divide-line">
           {days.map((d) => {
             const isToday = d === today;
             const list = bookingsOnDay(thisWeek, d);
@@ -161,12 +161,12 @@ function Diary() {
                     : undefined
                 }
               >
-                <div className={cn("flex items-baseline gap-2 border-b px-3 py-2.5", isToday ? "border-b-2 border-b-copper-500" : "border-line")}>
-                  <span className={cn("text-[14.5px] font-semibold", isToday ? "text-accent-fg" : "text-foreground")}>{formatDayShort(d).split(" ")[0]}</span>
-                  <span className={cn("tabular text-[14.5px]", isToday ? "font-semibold text-accent-fg" : "text-muted-foreground")}>{formatDayShort(d).split(" ").slice(1).join(" ")}</span>
+                <h2 title={formatDayLong(d)} className={cn("flex items-baseline gap-1.5 whitespace-nowrap border-b px-2.5 py-2.5 text-[14.5px]", isToday ? "border-b-2 border-b-copper-500" : "border-line")}>
+                  <span className={cn("font-semibold", isToday ? "text-accent-fg" : "text-foreground")}>{formatDayShort(d).split(" ")[0]}</span>
+                  <span className={cn("tabular", isToday ? "font-semibold text-accent-fg" : "text-muted-foreground")}>{formatDayShort(d).split(" ")[1]}</span>
                   {isToday ? <span className="sr-only">(today)</span> : null}
-                </div>
-                <ul className="flex flex-1 flex-col gap-2 p-2">
+                </h2>
+                <ul className="flex flex-1 flex-col gap-1.5 p-1.5 xl:gap-2 xl:p-2">
                   {list.map((b) => (
                     <li key={`${b.id}-${d}`}>
                       <BookingCard booking={b} day={d} job={jobs.get(b.jobId)} people={people} onOpen={() => openBooking(b)} draggable={manage} />
@@ -246,17 +246,19 @@ function BookingCard({ booking: b, day, job, people, onOpen, draggable, large }:
       }}
       aria-label={`Edit booking: ${job?.title ?? "job"}, ${job?.location ?? ""}, ${formatTimeRange(b.startTime, b.endTime)}, ${who.length ? who.map((p) => p.name).join(", ") : "unassigned"}`}
       className={cn(
-        "group relative block w-full rounded-xl bg-card px-3 py-2.5 text-left shadow-[0_1px_2px_rgb(16_24_40/0.06)] ring-1 ring-line-strong transition hover:ring-copper-500/50 active:bg-surface-2",
+        "group relative block w-full rounded-xl bg-card px-2.5 py-2 text-left shadow-[0_1px_2px_rgb(16_24_40/0.06)] ring-1 ring-line-strong transition hover:ring-copper-500/50 active:bg-surface-2",
         "border-l-[3px]",
         who.length ? "border-l-copper-500" : "border-l-amber-400",
         draggable && "cursor-grab active:cursor-grabbing",
       )}
     >
       <Pencil aria-hidden className="absolute right-2 top-2.5 size-3.5 text-subtle opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100" />
-      <span className={cn("block pr-4 font-semibold leading-snug text-heading", large ? "text-[16.5px]" : "line-clamp-2 text-[15px]")}>{job?.title ?? "Job"}</span>
+      <span className={cn("block pr-3 font-semibold leading-snug text-heading [overflow-wrap:anywhere] [hyphens:auto]", large ? "text-[16.5px]" : "line-clamp-3 text-[14.5px] 2xl:text-[15.5px]")} lang="en-GB">
+        {job?.title ?? "Job"}
+      </span>
       <span className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-[13.5px] tabular text-foreground">
         <span className="whitespace-nowrap">{formatTimeRange(b.startTime, b.endTime)}</span>
-        {days.length > 1 ? <span className="whitespace-nowrap text-[12.5px] text-muted-foreground">· day {days.indexOf(day) + 1} of {days.length}</span> : null}
+        {days.length > 1 ? <span className="whitespace-nowrap text-[12.5px] text-muted-foreground" title={`Day ${days.indexOf(day) + 1} of ${days.length}`}>day {days.indexOf(day) + 1}/{days.length}</span> : null}
       </span>
       <span className="block truncate text-[13.5px] text-muted-foreground">{job?.location ?? ""}</span>
       <span className="mt-1.5 flex flex-wrap gap-1">

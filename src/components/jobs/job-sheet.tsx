@@ -5,7 +5,7 @@ import { PhotoGrid } from "@/components/common/photos";
 import * as React from "react";
 import { AlarmClock, CalendarClock, CalendarPlus, Check, ChevronRight, Hammer, Inbox, MapPin, MoreHorizontal, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
 import type { JobTab } from "@/lib/store/ui";
-import { formatTimeRange, relativeDay } from "@/lib/dates";
+import { formatTimeRange, relativeDayInline } from "@/lib/dates";
 import { nextBookingForJob } from "@/lib/schedule";
 import { JobCrew, JobMaterials, JobSchedule, JobTasks, SharedInstructions } from "./job-parts";
 import { useStore } from "@/lib/store/store";
@@ -178,7 +178,7 @@ function JobDetail({ id }: { id: string }) {
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {nextBooking ? (
             <p className="min-w-0 flex-1 text-[15px]">
-              <span className="font-semibold">Booked {relativeDay(nextBooking.date, today).toLowerCase()}</span>
+              <span className="font-semibold">Booked {relativeDayInline(nextBooking.date, today)}</span>
               <span className="text-muted-foreground">
                 {" "}
                 · {formatTimeRange(nextBooking.startTime, nextBooking.endTime)} · {nextBooking.personIds.map((pid) => data.people.find((p) => p.id === pid)?.name.split(" ")[0]).filter(Boolean).join(", ") || "nobody assigned"}

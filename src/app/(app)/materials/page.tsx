@@ -55,6 +55,7 @@ export default function MaterialsPage() {
         write={write}
         jobLabel={j ? `${j.title} · ${j.customerName}` : undefined}
         merchantName={m.merchantId ? merchants.get(m.merchantId)?.name : undefined}
+        hideMerchant={!!m.merchantId}
         onEdit={() => ui.openForm({ form: "material", materialId: m.id })}
         onStatus={async (st) => {
           const r = await actions.run("setMaterialStatus", { id: m.id, status: st });

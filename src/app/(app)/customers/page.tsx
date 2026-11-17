@@ -7,7 +7,7 @@ import { useUI } from "@/lib/store/ui";
 import { ENQUIRY_STATUS_LABEL, JOB_STATUS_LABEL, invoiceBalance, isActiveJob, needsReply, wantsCallback } from "@/lib/derive";
 import type { Snapshot } from "@/lib/types";
 import { gbp, timeAgo, todayKey } from "@/lib/utils";
-import { relativeDay } from "@/lib/dates";
+import { relativeDayInline } from "@/lib/dates";
 import { EmptyState, ListRow, StatusText, pageSecondaryClass } from "@/components/common/bits";
 import { Input } from "@/components/ui/input";
 
@@ -76,7 +76,7 @@ function latestActivity(id: string, data: Snapshot, finance: boolean): string {
   const today = todayKey();
   const jobIds = new Set(data.jobs.filter((j) => j.customerId === id).map((j) => j.id));
   const next = data.bookings.filter((b) => jobIds.has(b.jobId) && (b.endDate ?? b.date) >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
-  if (next) return `${data.jobs.find((j) => j.id === next.jobId)?.title ?? "Job"} · booked ${relativeDay(next.date, today).toLowerCase()}`;
+  if (next) return `${data.jobs.find((j) => j.id === next.jobId)?.title ?? "Job"} · booked ${relativeDayInline(next.date, today)}`;
   const active = data.jobs.find((j) => j.customerId === id && isActiveJob(j));
   if (active) return `${active.title} · ${JOB_STATUS_LABEL[active.status]}`;
   const quote = data.quotes.filter((q) => q.customerId === id && q.status === "sent").sort((a, b) => (b.sentAt ?? "").localeCompare(a.sentAt ?? ""))[0];

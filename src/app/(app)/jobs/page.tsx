@@ -1,15 +1,14 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { CalendarPlus, HardHat, Package, Plus, Search } from "lucide-react";
+import { CalendarPlus, HardHat, Plus, Search } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { jobFinance, jobNextStep } from "@/lib/derive";
-import { formatTimeRange, relativeDay } from "@/lib/dates";
+import { formatTimeRange, relativeDayInline } from "@/lib/dates";
 import { JOB_STAGE_LABEL, jobStage, nextBookingForJob, peopleOnJob, type JobStage } from "@/lib/schedule";
 import { gbp, todayKey } from "@/lib/utils";
-import { EmptyState, ListRow, StatusText, Tabs, pageActionClass, pageSecondaryClass } from "@/components/common/bits";
+import { EmptyState, ListRow, StatusText, Tabs, pageActionClass } from "@/components/common/bits";
 import { JobTile } from "@/components/common/job-tile";
 import { Input } from "@/components/ui/input";
 
@@ -57,9 +56,6 @@ export default function JobsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/materials" className={pageSecondaryClass}>
-            <Package className="size-[18px]" aria-hidden /> Materials
-          </Link>
           {can("jobs.write") ? (
             <button type="button" onClick={() => ui.openForm({ form: "job" })} className={pageActionClass}>
               <Plus className="size-[18px]" aria-hidden /> Add job
@@ -111,7 +107,7 @@ export default function JobsPage() {
                     <span className="mt-0.5 block text-foreground">
                       {next ? (
                         <>
-                          <span className="font-semibold">Booked {relativeDay(next.date, today).toLowerCase()}</span>, {formatTimeRange(next.startTime, next.endTime)}
+                          <span className="font-semibold">Booked {relativeDayInline(next.date, today)}</span>, {formatTimeRange(next.startTime, next.endTime)}
                           {who.length ? ` · ${who.map((p) => p.name.split(" ")[0]).join(", ")}` : " · needs someone"}
                         </>
                       ) : (

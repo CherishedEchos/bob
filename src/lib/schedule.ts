@@ -50,7 +50,7 @@ export function jobStage(job: Job, bookings: Booking[], today: string): JobStage
   if (job.status === "in_progress") return "in_progress";
   if (job.status === "snagging") return "snagging";
   if (nextBookingForJob(bookings, job.id, today)) return "booked";
-  if (job.status === "awaiting_deposit") return "awaiting_deposit";
+  // Not booked yet: Unscheduled (a deposit still owed shows on its own payment line).
   return "ready";
 }
 

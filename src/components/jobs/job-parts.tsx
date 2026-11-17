@@ -6,7 +6,7 @@ import { CalendarPlus, Check, ExternalLink, Eye, MapPin, Package, Pencil, Phone,
 import { W3W_HELP, normaliseW3w } from "@/lib/validation";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
-import { formatDayShort, formatTimeRange, relativeDay } from "@/lib/dates";
+import { formatDayShort, formatTimeRange, relativeDay, relativeDayInline } from "@/lib/dates";
 import { bookingEndDate } from "@/lib/schedule";
 import type { Job, MaterialStatus } from "@/lib/types";
 import { addDaysKey, cn, daysFromToday, todayKey } from "@/lib/utils";
@@ -104,21 +104,29 @@ const mapsUrl = (address: string) => `https://www.google.com/maps/search/?api=1&
 const w3wUrl = (words: string) => `https://what3words.com/${encodeURIComponent(words.replace(/^\/+/, ""))}`;
 
 /** Address, what3words and access note with Open in maps / Open in what3words. Same on the job profile and My work. */
-export function SiteActions({ job: j }: { job: Pick<Job, "siteAddress" | "location" | "what3words" | "accessNote"> }) {
+export function SiteActions({ job: j, compact = false }: { job: Pick<Job, "siteAddress" | "location" | "what3words" | "accessNote">; compact?: boolean }) {
   const address = j.siteAddress || j.location;
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <p className="min-w-0 text-[15.5px] font-medium">
-          {address}
-          {!j.siteAddress ? <span className="block text-[13px] font-normal text-muted-foreground">Town only — add the site address.</span> : null}
-        </p>
-        <Button asChild size="sm" variant="secondary">
+      {compact ? (
+        <Button asChild size="sm" className="w-full sm:w-auto">
           <a href={mapsUrl(address)} target="_blank" rel="noreferrer">
             <MapPin /> Open in maps
           </a>
         </Button>
-      </div>
+      ) : (
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <p className="min-w-0 text-[15.5px] font-medium">
+            {address}
+            {!j.siteAddress ? <span className="block text-[13px] font-normal text-muted-foreground">Town only — add the site address.</span> : null}
+          </p>
+          <Button asChild size="sm" variant="secondary">
+            <a href={mapsUrl(address)} target="_blank" rel="noreferrer">
+              <MapPin /> Open in maps
+            </a>
+          </Button>
+        </div>
+      )}
       {j.what3words ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[15px] font-semibold">
@@ -163,7 +171,7 @@ export function JobCrew({ job: j }: { job: Job }) {
                 <span className="min-w-0">
                   <span className="block text-[15px] font-medium">{p.name}</span>
                   <span className="block text-[13.5px] text-muted-foreground">
-                    {p.kind === "subcontractor" ? `Subcontractor${p.trade ? ` · ${p.trade}` : ""}` : p.trade ?? "Employee"} · next {relativeDay(next.date, today).toLowerCase()}
+                    {p.kind === "subcontractor" ? `Subcontractor${p.trade ? ` · ${p.trade}` : ""}` : p.trade ?? "Employee"} · next {relativeDayInline(next.date, today)}
                   </span>
                 </span>
                 {p.phone ? (
@@ -270,7 +278,7 @@ export function JobTasks({ job: j }: { job: Job }) {
                 <span className="min-w-0 flex-1">
                   <span className={cn("block text-[15px] font-medium leading-snug", t.done && "font-normal text-muted-foreground line-through")}>{t.title}</span>
                   <span className="mt-0.5 flex flex-wrap gap-x-3 text-[13.5px] text-muted-foreground">
-                    {t.done ? <span>Done</span> : d < 0 ? <StatusText tone="red">Overdue</StatusText> : d === 0 ? <StatusText tone="amber">Due today</StatusText> : <span>Due {relativeDay(t.dueDate, todayKey()).toLowerCase()}</span>}
+                    {t.done ? <span>Done</span> : d < 0 ? <StatusText tone="red">Overdue</StatusText> : d === 0 ? <StatusText tone="amber">Due today</StatusText> : <span>Due {relativeDayInline(t.dueDate, todayKey())}</span>}
                     {t.assignedPersonId ? <span>For {people.get(t.assignedPersonId)?.name ?? "someone"}</span> : <span>Office</span>}
                   </span>
                 </span>
@@ -329,6 +337,7 @@ export function MaterialRow({
   onEdit,
   jobLabel,
   merchantName,
+  hideMerchant,
 }: {
   item: { id: string; item: string; quantity: string; unit?: string; supplier?: string; neededBy?: string; status: MaterialStatus; orderRef?: string; expectedDelivery?: string };
   write: boolean;
@@ -336,6 +345,7 @@ export function MaterialRow({
   onEdit: () => void;
   jobLabel?: string;
   merchantName?: string;
+  hideMerchant?: boolean;
 }) {
   const today = todayKey();
   const due = m.neededBy ? daysFromToday(m.neededBy) : null;
@@ -352,10 +362,10 @@ export function MaterialRow({
         </span>
         <span className="mt-0.5 flex flex-wrap gap-x-3 text-[14px] text-muted-foreground">
           {jobLabel ? <span>{jobLabel}</span> : null}
-          <span>{merchantName ?? m.supplier ?? <span className="italic">No merchant yet</span>}</span>
-          {m.neededBy ? <span className={cn(late && "font-semibold text-danger-fg")}>Needed {relativeDay(m.neededBy, today).toLowerCase()}</span> : null}
+          {hideMerchant ? null : <span>{merchantName ?? m.supplier ?? <span className="italic">No merchant yet</span>}</span>}
+          {m.neededBy ? <span className={cn(late && "font-semibold text-danger-fg")}>Needed {relativeDayInline(m.neededBy, today)}</span> : null}
           {m.orderRef ? <span>Ref {m.orderRef}</span> : null}
-          {m.status === "ordered" && m.expectedDelivery ? <span>Delivery {relativeDay(m.expectedDelivery, today).toLowerCase()}</span> : null}
+          {m.status === "ordered" && m.expectedDelivery ? <span>Delivery {relativeDayInline(m.expectedDelivery, today)}</span> : null}
         </span>
       </button>
       <label className="row-secondary w-36 shrink-0">

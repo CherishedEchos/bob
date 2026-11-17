@@ -11,7 +11,7 @@ import { useSearchParams } from "next/navigation";
 import { Archive, ExternalLink, KeyRound, Mail, Pencil, Phone, Plus, Search, Store } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
-import { relativeDay } from "@/lib/dates";
+import { relativeDayInline } from "@/lib/dates";
 import { todayKey } from "@/lib/utils";
 import { EmptyState, ListRow, Tabs, pageActionClass } from "@/components/common/bits";
 import { Input } from "@/components/ui/input";
@@ -176,7 +176,7 @@ function MerchantSheet({ id, onClose }: { id: string | null; onClose: () => void
                           </span>
                           <span className="block text-[13.5px] text-muted-foreground">
                             {j ? `${j.title} · ${j.customerName}` : "Job"}
-                            {o.neededBy ? ` · needed ${relativeDay(o.neededBy, today).toLowerCase()}` : ""}
+                            {o.neededBy ? ` · needed ${relativeDayInline(o.neededBy, today)}` : ""}
                           </span>
                         </span>
                         <span className={o.status === "to_order" ? "text-[13.5px] font-semibold text-warn-fg" : "text-[13.5px] font-semibold text-info-fg"}>{MATERIAL_STATUS_LABEL[o.status]}</span>

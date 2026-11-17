@@ -73,6 +73,7 @@ const NINETY3: Cast = {
     isDemo: false,
     retention: { closedEnquiryMonths: 24, conversationDays: 90 },
     timeZone: "Europe/London",
+    quickbooksUrl: "https://qbo.intuit.com/app/bills",
   },
   users: [
     { id: "usr_n93_owner", name: "Owner", email: "owner@ninety3.example", role: "owner" },

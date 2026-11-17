@@ -7,18 +7,17 @@
  * Only their own bookings ever reach this screen.
  */
 import * as React from "react";
-import { AlertTriangle, Check, ChevronDown, ClipboardList, FlaskConical, Loader2, LogOut, MapPin, Navigation, Package, Phone, RefreshCw, Users } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, ClipboardList, FlaskConical, Loader2, LogOut, MapPin, Package, Phone, RefreshCw, Users } from "lucide-react";
 import { BobLogo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { toast, Toaster } from "@/components/ui/toaster";
-import { formatDayLong, formatDayShort, formatTimeRange, relativeDay } from "@/lib/dates";
+import { formatDayLong, formatDayShort, formatTimeRange, relativeDay, relativeDayInline } from "@/lib/dates";
 import { cn, timeAgo } from "@/lib/utils";
 import { SiteActions } from "@/components/jobs/job-parts";
 import { CalendarLink, type FeedInfo } from "@/components/settings/calendar-links";
 import type { MyBooking, MyWork } from "@/server/services/team";
 
 const MAT_LABEL = { to_order: "To order", ordered: "Ordered", on_site: "On site" } as const;
-const directions = (address: string) => `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
 
 export default function MyWorkPage() {
   const [data, setData] = React.useState<MyWork | null>(null);
@@ -188,7 +187,7 @@ export default function MyWorkPage() {
                       </button>
                       <span className="min-w-0">
                         <span className="block text-[15.5px] font-medium leading-snug">{t.title}</span>
-                        <span className="block text-[13.5px] text-muted-foreground">Due {relativeDay(t.dueDate, data.today).toLowerCase()}</span>
+                        <span className="block text-[13.5px] text-muted-foreground">Due {relativeDayInline(t.dueDate, data.today)}</span>
                       </span>
                     </li>
                   ))}
@@ -230,21 +229,14 @@ function BookingCard({ b, today, expanded = false, changed }: { b: MyBooking; to
       </button>
       {open ? (
         <div className="space-y-3 border-t border-line px-4 pb-4 pt-3">
-          <SiteActions job={{ siteAddress: b.job.siteAddress, location: b.job.siteAddress, what3words: b.job.what3words, accessNote: b.job.accessNote }} />
-          <div className="flex flex-wrap gap-2">
-            <Button asChild size="sm">
-              <a href={directions(b.job.siteAddress)} target="_blank" rel="noreferrer">
-                <Navigation /> Directions
+          <SiteActions compact job={{ siteAddress: b.job.siteAddress, location: b.job.siteAddress, what3words: b.job.what3words, accessNote: b.job.accessNote }} />
+          {b.job.contactPhone ? (
+            <Button asChild size="sm" variant="secondary">
+              <a href={`tel:${b.job.contactPhone.replace(/\s/g, "")}`}>
+                <Phone /> Call {b.job.contactName?.split(" ")[0] ?? "customer"}
               </a>
             </Button>
-            {b.job.contactPhone ? (
-              <Button asChild size="sm" variant="secondary">
-                <a href={`tel:${b.job.contactPhone.replace(/\s/g, "")}`}>
-                  <Phone /> Call {b.job.contactName?.split(" ")[0] ?? "customer"}
-                </a>
-              </Button>
-            ) : null}
-          </div>
+          ) : null}
           {b.notes || b.job.instructions ? (
             <div className="rounded-xl bg-message px-3.5 py-3">
               <h4 className="text-[13.5px] font-semibold">Instructions</h4>
