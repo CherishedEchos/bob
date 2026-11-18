@@ -18,6 +18,7 @@ import { addDaysKey, gbp, todayKey, formatDateInline } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field, Input, NativeSelect, Textarea } from "@/components/ui/input";
+import { W3W_HELP, normaliseW3w } from "@/lib/validation";
 import { MoneyRow } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
 import { BillForm, BookingForm, MaterialForm, MerchantForm, PersonForm } from "./team-forms";
@@ -115,6 +116,8 @@ function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }
     startDate: "",
     depositDueDate: "",
     siteAddress: v.siteAddress ?? "",
+    what3words: v.what3words ?? "",
+    accessNote: v.accessNote ?? "",
   });
   const { values, errors, set } = f;
   const quote = parseFloat(values.quotedValue || "0");
@@ -171,6 +174,17 @@ function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }
         </Field>
         <Field label="Site address (optional)" htmlFor="jf-site" error={errors.siteAddress} hint="Where the work is, if it's not the customer's home." className="sm:col-span-2">
           <Input id="jf-site" value={values.siteAddress} onChange={set("siteAddress")} placeholder="e.g. 7 High Street, Lingfield, RH7 6AA" autoComplete="street-address" />
+        </Field>
+        <Field
+          label="what3words (optional)"
+          htmlFor="jf-w3w"
+          error={errors.what3words ?? (values.what3words.trim() && normaliseW3w(values.what3words) === null ? W3W_HELP : undefined)}
+          hint="Three words with dots, with or without ///. Kept with the job for the record."
+        >
+          <Input id="jf-w3w" value={values.what3words} onChange={set("what3words")} placeholder="///filled.count.soap" autoCapitalize="none" autoCorrect="off" spellCheck={false} aria-invalid={!!errors.what3words} />
+        </Field>
+        <Field label="Site access note (optional)" htmlFor="jf-access" error={errors.accessNote} hint="Side gate, where to park, which entrance.">
+          <Input id="jf-access" value={values.accessNote} onChange={set("accessNote")} placeholder="e.g. Park on the road, use the side gate" />
         </Field>
         <Field label="Price (£)" htmlFor="jf-quote" error={errors.quotedValue}>
           <Input id="jf-quote" inputMode="decimal" value={values.quotedValue} onChange={set("quotedValue")} placeholder="0" aria-invalid={!!errors.quotedValue} />

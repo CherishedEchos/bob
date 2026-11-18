@@ -179,3 +179,12 @@ describe("Workers can't reach merchants or finance through ops", () => {
     expect(contextFromToken("nope")).toBeNull();
   });
 });
+
+describe("Adding what3words when the job is created", () => {
+  it("saves it with the job (normalised) alongside the access note; bad formats are refused", () => {
+    const owner = ctxFor(N93_OWNER);
+    const j = ok(R.createJob(owner, { customerName: "Grace Fielding", title: "Garden room base", location: "Lingfield", quotedValue: 4200, siteAddress: "7 High Street, Lingfield", what3words: "///Filled.Count.Soap", accessNote: "Side gate" }));
+    expect(R.getJob(owner, j.id)).toMatchObject({ what3words: "filled.count.soap", accessNote: "Side gate" });
+    expect(R.createJob(owner, { customerName: "Grace Fielding", title: "Shed", location: "Lingfield", quotedValue: 1, what3words: "filled count soap" })).toMatchObject({ ok: false, code: "invalid" });
+  });
+});
