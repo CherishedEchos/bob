@@ -8,12 +8,12 @@
  */
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { Archive, ExternalLink, KeyRound, Mail, Pencil, Phone, Plus, Search, Store } from "lucide-react";
+import { Archive, ChevronRight, ExternalLink, KeyRound, Mail, Pencil, Phone, Plus, Search, Store } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { relativeDayInline } from "@/lib/dates";
-import { todayKey } from "@/lib/utils";
-import { EmptyState, ListRow, Tabs, pageActionClass } from "@/components/common/bits";
+import { cn, todayKey } from "@/lib/utils";
+import { EmptyState, pageActionClass } from "@/components/common/bits";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -37,52 +37,138 @@ function Merchants() {
   const [open, setOpen] = React.useState<string | null>(params.get("open"));
   const manage = can("merchants.manage");
   const q = query.trim().toLowerCase();
-  const list = data.merchants.filter((m) => (view === "archived" ? !!m.archivedAt : !m.archivedAt) && (!q || [m.name, m.branch, m.notes].some((x) => x?.toLowerCase().includes(q))));
-  const openCount = (id: string) => data.materials.filter((x) => x.merchantId === id && x.status !== "on_site").length;
+  const list = data.merchants
+    .filter((m) => (view === "archived" ? !!m.archivedAt : !m.archivedAt) && (!q || [m.name, m.branch, m.phone, m.notes].some((x) => x?.toLowerCase().includes(q))))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  /** Plain count from the materials records: what's still to order and what's on its way. */
+  const orders = (id: string) => {
+    const mine = data.materials.filter((x) => x.merchantId === id);
+    const toOrder = mine.filter((x) => x.status === "to_order").length;
+    const ordered = mine.filter((x) => x.status === "ordered").length;
+    return { toOrder, ordered, label: toOrder || ordered ? [toOrder ? `${toOrder} to order` : "", ordered ? `${ordered} ordered` : ""].filter(Boolean).join(" · ") : "No open orders" };
+  };
+  const activeCount = data.merchants.filter((m) => !m.archivedAt).length;
+  const archivedCount = data.merchants.length - activeCount;
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="mx-auto max-w-6xl">
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="t-page">Merchants</h1>
-          <p className="t-meta mt-0.5">{data.merchants.filter((m) => !m.archivedAt).length} suppliers</p>
+          <p className="t-meta mt-0.5">
+            {activeCount} {activeCount === 1 ? "supplier" : "suppliers"}
+          </p>
         </div>
         {manage ? (
           <button type="button" className={pageActionClass} onClick={() => ui.openForm({ form: "merchant" })}>
             <Plus className="size-[18px]" aria-hidden /> Add merchant
           </button>
         ) : null}
-      </div>
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row">
-        <div className="relative flex-1">
-          <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-subtle" />
-          <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search merchants" aria-label="Search merchants" className="pl-10" />
-        </div>
-        <Tabs label="Merchant list" className="sm:max-w-xs" value={view} onChange={setView} options={[{ value: "active", label: "Active" }, { value: "archived", label: "Archived" }]} />
-      </div>
-      {list.length ? (
-        <ul className="panel divide-y divide-line overflow-hidden">
-          {list.map((m) => (
-            <ListRow
-              key={m.id}
-              onOpen={() => setOpen(m.id)}
-              openLabel={`Open ${m.name}`}
-              leading={
-                <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-lg bg-surface-3 text-muted-foreground">
-                  <Store className="size-5" />
-                </span>
-              }
-              title={m.name}
-              aside={openCount(m.id) ? <span className="font-semibold text-foreground">{openCount(m.id)} open</span> : undefined}
-              meta={[m.branch, m.phone].filter(Boolean).join(" · ") || "No contact details yet"}
-            />
+      </header>
+
+      <div role="toolbar" aria-label="Find merchants" className="mb-3 flex flex-wrap items-center gap-2">
+        <div role="tablist" aria-label="Merchant list" className="flex w-full shrink-0 gap-0.5 rounded-xl bg-surface-3 p-1 sm:w-auto">
+          {(
+            [
+              ["active", "Active", activeCount],
+              ["archived", "Archived", archivedCount],
+            ] as ["active" | "archived", string, number][]
+          ).map(([v, label, n]) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={view === v}
+              onClick={() => setView(v)}
+              className={cn("flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[14px] font-semibold transition sm:flex-none", view === v ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground")}
+            >
+              {label}
+              <span className={cn("tabular text-[12.5px]", view === v ? "text-accent-fg" : "text-subtle")}>{n}</span>
+            </button>
           ))}
-        </ul>
+        </div>
+        <div className="relative min-w-[220px] flex-1">
+          <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-subtle" />
+          <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, branch or phone" aria-label="Search merchants" className="h-11 pl-10 text-[14.5px]" />
+        </div>
+      </div>
+
+      {list.length ? (
+        <>
+          {/* Desktop: aligned columns; the whole row opens the supplier */}
+          <div className="panel hidden overflow-hidden md:block">
+            <table className="w-full table-fixed border-collapse text-left">
+              <caption className="sr-only">Merchants</caption>
+              <colgroup>
+                <col />
+                <col className="w-[22%]" />
+                <col className="w-[150px]" />
+                <col className="w-[190px]" />
+                <col className="w-[44px]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-line bg-surface-2 text-[13px] font-semibold text-muted-foreground">
+                  <th scope="col" className="px-4 py-2.5 lg:px-5">Supplier</th>
+                  <th scope="col" className="px-3 py-2.5">Branch</th>
+                  <th scope="col" className="px-3 py-2.5">Phone</th>
+                  <th scope="col" className="px-3 py-2.5">Materials orders</th>
+                  <th scope="col" className="py-2.5">
+                    <span className="sr-only">Open</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {list.map((m) => {
+                  const o = orders(m.id);
+                  return (
+                    <tr key={m.id} onClick={() => setOpen(m.id)} className="group cursor-pointer border-t border-line align-middle transition-colors first:border-t-0 hover:bg-surface-2">
+                      <td className="px-4 py-3.5 lg:px-5">
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(m.id); }} className="flex w-full min-w-0 items-center gap-3 rounded text-left">
+                          <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-3 text-muted-foreground">
+                            <Store className="size-[18px]" />
+                          </span>
+                          <span className="min-w-0 text-[15.5px] font-semibold leading-snug text-heading [overflow-wrap:anywhere]">{m.name}</span>
+                        </button>
+                      </td>
+                      <td className="truncate px-3 py-3.5 text-[14.5px] text-foreground" title={m.branch}>
+                        {m.branch ?? <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3.5 text-[14.5px] tabular text-foreground">{m.phone ?? <span className="text-muted-foreground">—</span>}</td>
+                      <td className="px-3 py-3.5 text-[14.5px]">
+                        <span className={cn(o.toOrder ? "font-semibold text-warn-fg" : o.ordered ? "text-info-fg" : "text-muted-foreground")}>{o.label}</span>
+                      </td>
+                      <td className="pr-4 text-right">
+                        <ChevronRight aria-hidden className="ml-auto size-[18px] text-subtle transition group-hover:translate-x-0.5 group-hover:text-accent-icon" />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Phone: stacked rows, same information */}
+          <ul className="panel divide-y divide-line overflow-hidden md:hidden">
+            {list.map((m) => {
+              const o = orders(m.id);
+              return (
+                <li key={m.id} className="row-open flex items-center gap-3 px-4 py-3">
+                  <button type="button" onClick={() => setOpen(m.id)} className="row-target min-w-0 flex-1 text-left after:absolute after:inset-0 after:content-['']" aria-label={`Open ${m.name}`}>
+                    <span className="block text-[15.5px] font-semibold leading-snug text-heading [overflow-wrap:anywhere]">{m.name}</span>
+                    <span className="mt-0.5 block text-[14px] text-muted-foreground">{[m.branch, m.phone].filter(Boolean).join(" · ") || "No contact details yet"}</span>
+                    <span className={cn("mt-0.5 block text-[14px]", o.toOrder ? "font-semibold text-warn-fg" : o.ordered ? "text-info-fg" : "text-muted-foreground")}>{o.label}</span>
+                  </button>
+                  <ChevronRight aria-hidden className="row-chevron size-[18px] shrink-0" />
+                </li>
+              );
+            })}
+          </ul>
+        </>
       ) : (
         <EmptyState
           icon={Store}
           title={q ? "No matches" : view === "archived" ? "No archived merchants" : "No merchants yet"}
-          body={q || view === "archived" ? undefined : "Add the suppliers you order from, then choose them on materials and bills."}
+          body={q ? "Try a different name, branch or phone number." : view === "archived" ? undefined : "Add the suppliers you order from, then choose them on materials and bills."}
           action={manage && !q && view === "active" ? <button type="button" className={pageActionClass} onClick={() => ui.openForm({ form: "merchant" })}><Plus className="size-[18px]" /> Add merchant</button> : undefined}
         />
       )}
