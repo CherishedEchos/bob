@@ -296,6 +296,7 @@ export function initDb(db: DatabaseSync) {
   }
   migrateJobPhotos(db);
   provisionWorkspaces(db);
+  addNinety3Wordmark(db);
 }
 
 /**
@@ -356,6 +357,20 @@ function migrateJobPhotos(db: DatabaseSync) {
   } catch (e) {
     db.exec("ROLLBACK");
     throw e;
+  }
+}
+
+/**
+ * Ninety3 workspaces created before the wordmark existed (the live one and the
+ * demo) get it once. Only sets a missing field; nothing else in the config changes.
+ */
+function addNinety3Wordmark(db: DatabaseSync) {
+  const rows = db.prepare("SELECT id, config FROM orgs").all() as { id: string; config: string }[];
+  for (const r of rows) {
+    const c = JSON.parse(r.config) as { logoUrl?: string; wordmark?: unknown };
+    if (c.logoUrl !== "/brand/ninety3-logo.png" || c.wordmark) continue;
+    const next = { ...c, wordmark: { onDark: "/brand/ninety3-wordmark-white.png", onLight: "/brand/ninety3-wordmark.png" } };
+    db.prepare("UPDATE orgs SET config = ? WHERE id = ?").run(JSON.stringify(next), r.id);
   }
 }
 

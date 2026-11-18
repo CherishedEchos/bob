@@ -5,6 +5,7 @@
     "shortName": "Ninety3",
     "tradeType": "Carpentry & building",
     "logoUrl": "/brand/ninety3-logo.png",
+    "wordmark": { "onDark": "/brand/ninety3-wordmark-white.png", "onLight": "/brand/ninety3-wordmark.png" },
     "accent": "#E4752F",
     "timeZone": "Europe/London",
     "contact": { "email": "hello@ninety3ltd.co.uk" },

@@ -15,7 +15,7 @@ import { useUI } from "@/lib/store/ui";
 import { todaysPriorities } from "@/lib/derive";
 import { cn, firstName } from "@/lib/utils";
 import { PriorityCard } from "@/components/common/priority-card";
-import { BobLogo, BobWordmark, OrgLogo } from "@/components/brand/logo";
+import { BobLogo, BobWordmark, OrgLogo, OrgWordmark } from "@/components/brand/logo";
 import { Orb, OrbAvatar, type OrbState } from "./orb";
 import { ActionCard, AssistantCard } from "./assistant-cards";
 
@@ -427,13 +427,13 @@ type Shortcut = { label: string; icon: React.ComponentType<{ className?: string;
 type QuickLink = { label: string; href: string; meta: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }> };
 
 /** The workspace's own logo and name, "with bob." — works for any trades business. */
-function WorkspaceLockup({ org }: { org: { name: string; shortName: string; logoUrl?: string; dataMode?: string } }) {
+function WorkspaceLockup({ org }: { org: { name: string; shortName: string; logoUrl?: string; dataMode?: string; wordmark?: { onDark?: string; onLight?: string } } }) {
   return (
     <div className="flex min-w-0 items-center justify-center gap-2.5">
-      <OrgLogo org={org} size={40} />
-      <div className="min-w-0 leading-none">
-        <div className="truncate text-[17px] font-bold uppercase tracking-[0.04em]">{org.shortName}</div>
-        <div className="mt-1 flex items-center gap-1 text-[13px] text-muted-foreground">
+      {org.wordmark?.onDark ? null : <OrgLogo org={org} size={40} />}
+      <div className="flex min-w-0 flex-col items-center leading-none">
+        {org.wordmark?.onDark ? <OrgWordmark org={org} height={26} /> : <div className="truncate text-[17px] font-bold uppercase tracking-[0.04em]">{org.shortName}</div>}
+        <div className="mt-1.5 flex items-center gap-1 text-[13px] text-muted-foreground">
           with <BobLogo height={10} title="Bob" className="translate-y-[1px]" />
           {org.dataMode === "sample" ? (
             <span title="Fictional sample data. Nothing is sent to anyone." className="ml-1 whitespace-nowrap rounded bg-white/10 px-1.5 py-[2px] text-[11px] font-medium text-white/75">

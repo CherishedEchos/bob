@@ -62,6 +62,7 @@ const NINETY3: Cast = {
     shortName: "Ninety3",
     tradeType: "Carpentry & building",
     logoUrl: "/brand/ninety3-logo.png",
+    wordmark: { onDark: "/brand/ninety3-wordmark-white.png", onLight: "/brand/ninety3-wordmark.png" },
     accent: "#E4752F",
     services: ["Carpentry", "Kitchens", "Extensions", "Loft conversions", "Fitted furniture"],
     serviceArea: [],

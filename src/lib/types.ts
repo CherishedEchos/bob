@@ -25,6 +25,8 @@ export interface OrgConfig {
   shortName: string;
   tradeType: string;
   logoUrl?: string;
+  /** Full wordmark: onDark (white, for the sidebar and Ask Bob) and onLight (for customer documents). */
+  wordmark?: { onDark?: string; onLight?: string };
   /** Brand accent (hex). Ninety3 uses the copper/orange from the brand kit. */
   accent: string;
   services: string[];

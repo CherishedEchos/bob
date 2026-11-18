@@ -13,7 +13,7 @@ import { BobProvider } from "@/lib/bob/provider";
 import { ROLE_LABEL } from "@/lib/auth/permissions";
 import { needsReply, tasksDue } from "@/lib/derive";
 import { cn } from "@/lib/utils";
-import { BobLogo, OrgLogo } from "@/components/brand/logo";
+import { BobLogo, OrgLogo, OrgWordmark } from "@/components/brand/logo";
 import { InstallBob } from "@/components/common/install-bob";
 import { Toaster } from "@/components/ui/toaster";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -134,13 +134,10 @@ function Sidebar() {
   const { org, can } = useStore();
   return (
     <aside className="theme-dark hidden w-[256px] shrink-0 flex-col border-r border-line bg-card lg:flex">
-      <div className="flex items-center gap-3 px-5 pb-5 pt-6">
-        <OrgLogo org={org} size={40} />
-        <div className="min-w-0 leading-tight">
-          <div className="truncate text-[16px] font-bold">{org.shortName}</div>
-          <div className="flex items-center gap-1.5 text-[13.5px] text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-copper-400" /> with Bob
-          </div>
+      <div className="px-5 pb-5 pt-6">
+        <OrgWordmark org={org} height={38} />
+        <div className="mt-2 flex items-center gap-1.5 text-[13.5px] text-muted-foreground">
+          <span className="size-1.5 rounded-full bg-copper-400" /> with Bob
         </div>
       </div>
       <nav className="flex-1 space-y-1 px-3" aria-label="Main">

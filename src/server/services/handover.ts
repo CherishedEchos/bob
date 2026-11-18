@@ -114,7 +114,7 @@ export function handoverIndexHtml(ctx: Pick<Ctx, "org">, h: Handover, logoFile?:
 body{font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#1d1d1f;background:#f6f5f3;margin:0}
 main{max-width:820px;margin:0 auto;padding:32px 20px 48px}
 header{display:flex;align-items:center;gap:16px;border-bottom:3px solid ${accent};padding-bottom:16px}
-header img{height:56px;width:auto}
+header img{height:56px;width:auto;max-width:220px;object-fit:contain}
 h1{font-size:26px;margin:0}
 .sub{color:#5c5c62;margin:2px 0 0}
 dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:20px 0}
@@ -177,7 +177,7 @@ export function buildHandoverZip(ctx: Ctx, id: string): Result<{ filename: strin
     else entries.push({ name: i.zipPath, data: row.data });
   }
   if (missing.length) return fail("unavailable", `Couldn't find ${missing.length === 1 ? `"${missing[0]}"` : `${missing.length} files`} in storage. Nothing was downloaded — contact support.`);
-  const logo = logoBytes(ctx.org.logoUrl);
+  const logo = logoBytes(ctx.org.wordmark?.onLight ?? ctx.org.logoUrl);
   if (logo) entries.unshift({ name: logo.name, data: logo.data });
   entries.unshift({ name: "Start here - index.html", data: Buffer.from(handoverIndexHtml(ctx, h, logo?.name), "utf8") });
   const data = buildZip(entries);

@@ -49,6 +49,7 @@ interface WorkspaceSpec {
   users?: WorkspaceUser[];
   tradeType?: string;
   logoUrl?: string;
+  wordmark?: { onDark?: string; onLight?: string };
   accent?: string;
   services?: string[];
   serviceArea?: string[];
@@ -108,6 +109,7 @@ export function provisionWorkspaces(db: DatabaseSync, file = process.env.BOB_WOR
           shortName: w.shortName ?? w.name.split(/\s+/)[0],
           tradeType: w.tradeType ?? "Building & carpentry",
           logoUrl: w.logoUrl,
+          wordmark: w.wordmark,
           accent: w.accent ?? "#E4752F",
           services: w.services ?? [],
           serviceArea: w.serviceArea ?? [],

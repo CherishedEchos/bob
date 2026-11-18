@@ -93,8 +93,20 @@ export default function MyWorkPage() {
     <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <header className="theme-dark sticky top-0 z-10 flex items-center justify-between gap-2 bg-card px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <div className="min-w-0">
-          <BobLogo height={20} />
-          <p className="mt-1 truncate text-[13px] text-muted-foreground">{data ? data.businessName : " "}</p>
+          {data?.wordmarkOnDark ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element -- fixed-height brand image */}
+              <img src={data.wordmarkOnDark} alt={data.businessName} className="block h-7 w-auto" />
+              <p className="mt-1 flex items-center gap-1 text-[12.5px] text-muted-foreground">
+                with <BobLogo height={10} />
+              </p>
+            </>
+          ) : (
+            <>
+              <BobLogo height={20} />
+              <p className="mt-1 truncate text-[13px] text-muted-foreground">{data ? data.businessName : " "}</p>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => void load()} disabled={loading} aria-label="Refresh" className="grid size-11 place-items-center rounded-full text-foreground hover:bg-surface-3">
