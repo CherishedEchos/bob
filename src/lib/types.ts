@@ -287,6 +287,8 @@ export interface PersonAccess {
   expiresAt?: string;
   acceptedAt?: string;
   inviteId?: ID;
+  /** Their login's role in this business (accepted), or the role a pending invite grants. */
+  role?: Role;
 }
 
 /**

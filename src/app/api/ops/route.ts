@@ -51,7 +51,7 @@ const OPS: Record<string, (ctx: Ctx, a: Record<string, any>) => Result<unknown> 
   updatePerson: (c, a) => T.updatePerson(c, s(a.id), a.input),
   archivePerson: (c, a) => T.archivePerson(c, s(a.id), a.archived !== false),
   revokeAccess: (c, a) => T.revokeAccess(c, s(a.personId)),
-  createInvite: (c, a) => T.createInvite(c, s(a.personId), typeof a.email === "string" ? a.email : undefined),
+  createInvite: (c, a) => T.createInvite(c, s(a.personId), typeof a.email === "string" ? a.email : undefined, a.role === "office" ? "office" : "worker"),
   revokeInvite: (c, a) => T.revokeInvite(c, s(a.inviteId)),
   saveBooking: (c, a) => T.saveBooking(c, a.input),
   deleteBooking: (c, a) => T.deleteBooking(c, s(a.id)),

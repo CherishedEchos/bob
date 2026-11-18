@@ -11,7 +11,7 @@ import "server-only";
  * A person record is separate from login access: people can be booked before
  * (or without ever) being invited. Accepting an invite links the two.
  */
-import type { Bill, Booking, Job, Material, Person, PersonAccess, Task } from "@/lib/types";
+import type { Bill, Booking, Job, Material, Person, PersonAccess, Role, Task } from "@/lib/types";
 import { bookingInputSchema, billInputSchema, billPaymentSchema, materialInputSchema, personInputSchema } from "@/lib/validation";
 import { addDays, formatDayShort, formatTimeRange, rangeKeys, timeToMinutes } from "@/lib/dates";
 import { can } from "@/lib/auth/permissions";
@@ -92,6 +92,9 @@ export function revokeAccess(ctx: Ctx, personId: string): Result<Person> {
   if (no) return no;
   const p = scoped(ctx).get<Person>("people", personId);
   if (!p) return fail("not_found", "Person not found");
+  const theirRole = p.userId ? memberRole(ctx.orgId, p.userId) : undefined;
+  if (theirRole === "owner") return fail("forbidden", "An owner's access can't be removed here.");
+  if (theirRole === "office" && ctx.role !== "owner") return fail("forbidden", "Only the owner can remove an admin's access.");
   tx(() => {
     revokeAccessInner(ctx, p);
     audit(ctx, "team.access_revoked", `${p.name}'s access to Bob removed`, "person", personId);
@@ -103,8 +106,10 @@ function revokeAccessInner(ctx: Ctx, p: Person) {
   const db = getDb();
   db.prepare("UPDATE invites SET revoked_at = ? WHERE org_id = ? AND person_id = ? AND accepted_at IS NULL AND revoked_at IS NULL").run(now(), ctx.orgId, p.id);
   if (p.userId) {
-    // Only ever removes a worker login — never an owner/office account.
-    db.prepare("DELETE FROM memberships WHERE org_id = ? AND user_id = ? AND role = 'worker'").run(ctx.orgId, p.userId);
+    const role = (db.prepare("SELECT role FROM memberships WHERE org_id = ? AND user_id = ?").get(ctx.orgId, p.userId) as { role: Role } | undefined)?.role;
+    // Never removes an owner. Only an owner can remove an admin (office) login.
+    if (role === "owner" || (role === "office" && ctx.role !== "owner")) return;
+    db.prepare("DELETE FROM memberships WHERE org_id = ? AND user_id = ? AND role IN ('worker','office')").run(ctx.orgId, p.userId);
     db.prepare("DELETE FROM sessions WHERE org_id = ? AND user_id = ?").run(ctx.orgId, p.userId);
     db.prepare("UPDATE calendar_feeds SET revoked_at = ? WHERE org_id = ? AND user_id = ? AND revoked_at IS NULL").run(now(), ctx.orgId, p.userId);
     scoped(ctx).update<Person>("people", p.id, { userId: null as unknown as undefined });
@@ -127,6 +132,13 @@ interface InviteRow {
   revoked_at: string | null;
 }
 
+function memberRole(orgId: string, userId: string): Role | undefined {
+  return (getDb().prepare("SELECT role FROM memberships WHERE org_id = ? AND user_id = ?").get(orgId, userId) as { role: Role } | undefined)?.role;
+}
+
+/** Roles an invite can grant. Owner invites only come from provisioning. */
+export type InviteRole = "worker" | "office";
+
 const inviteState = (r: InviteRow): PersonAccess["state"] =>
   r.accepted_at ? "accepted" : r.revoked_at ? "revoked" : new Date(r.expires_at).getTime() < Date.now() ? "expired" : "pending";
 
@@ -139,11 +151,12 @@ export function listAccess(ctx: Ctx): PersonAccess[] {
   const people = scoped(ctx).list<Person>("people");
   return people.map((p) => {
     const r = latest.get(p.id);
-    if (!r) return { personId: p.id, state: p.userId ? "accepted" : "not_invited" };
+    const role = p.userId ? memberRole(ctx.orgId, p.userId) : undefined;
+    if (!r) return { personId: p.id, state: p.userId ? "accepted" : "not_invited", role };
     const state = inviteState(r);
     // An accepted invite whose login was later removed reads as "revoked".
     const effective = state === "accepted" && !p.userId ? "revoked" : state;
-    return { personId: p.id, state: effective, email: r.email, sentAt: r.created_at, expiresAt: r.expires_at, acceptedAt: r.accepted_at ?? undefined, inviteId: r.id };
+    return { personId: p.id, state: effective, email: r.email, sentAt: r.created_at, expiresAt: r.expires_at, acceptedAt: r.accepted_at ?? undefined, inviteId: r.id, role: role ?? (effective === "pending" ? (r.role as Role) : undefined) };
   });
 }
 
@@ -151,9 +164,12 @@ export function listAccess(ctx: Ctx): PersonAccess[] {
  * Create a single-use invite link for a person. Any earlier pending link for
  * them stops working. Returns the link once — only its hash is stored.
  */
-export function createInvite(ctx: Ctx, personId: string, emailInput?: string): Result<{ inviteId: string; path: string; expiresAt: string; email: string; emailed: false }> {
+export function createInvite(ctx: Ctx, personId: string, emailInput?: string, roleInput: InviteRole = "worker"): Result<{ inviteId: string; path: string; expiresAt: string; email: string; emailed: false; role: InviteRole }> {
   const no = denied(ctx, "team.manage");
   if (no) return no;
+  if (roleInput !== "worker" && roleInput !== "office") return fail("invalid", "Choose My work only or Admin.");
+  // Admins can invite staff and subcontractors; only the owner can make someone an admin.
+  if (roleInput === "office" && ctx.role !== "owner") return fail("forbidden", "Only the owner can give someone admin access.");
   const p = scoped(ctx).get<Person>("people", personId);
   if (!p) return fail("not_found", "Person not found");
   if (p.archivedAt) return fail("invalid", "Restore this person before inviting them.");
@@ -168,14 +184,14 @@ export function createInvite(ctx: Ctx, personId: string, emailInput?: string): R
   tx(() => {
     const db = getDb();
     db.prepare("UPDATE invites SET revoked_at = ? WHERE org_id = ? AND person_id = ? AND accepted_at IS NULL AND revoked_at IS NULL").run(now(), ctx.orgId, personId);
-    db.prepare("INSERT INTO invites (id, org_id, person_id, email, role, token_hash, created_by, created_at, expires_at) VALUES (?, ?, ?, ?, 'worker', ?, ?, ?, ?)").run(
-      id, ctx.orgId, personId, email, sha256(token), ctx.userName, now(), expiresAt,
+    db.prepare("INSERT INTO invites (id, org_id, person_id, email, role, token_hash, created_by, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+      id, ctx.orgId, personId, email, roleInput, sha256(token), ctx.userName, now(), expiresAt,
     );
     if (!p.email) scoped(ctx).update<Person>("people", personId, { email });
-    audit(ctx, "team.invite_created", `Invite link created for ${p.name} (${email}), expires in ${INVITE_DAYS} days`, "person", personId);
+    audit(ctx, "team.invite_created", `${roleInput === "office" ? "Admin invite" : "Invite"} link created for ${p.name} (${email}), expires in ${INVITE_DAYS} days`, "person", personId);
   });
   // No email is sent from here: the owner shares the link (WhatsApp, text, email).
-  return ok({ inviteId: id, path: `/invite/${token}`, expiresAt, email, emailed: false });
+  return ok({ inviteId: id, path: `/invite/${token}`, expiresAt, email, emailed: false, role: roleInput });
 }
 
 export function revokeInvite(ctx: Ctx, inviteId: string): Result<true> {
@@ -189,21 +205,24 @@ export function revokeInvite(ctx: Ctx, inviteId: string): Result<true> {
   return ok(true);
 }
 
+/** The role an invite grants. Anything unexpected falls back to the least access. */
+const inviteRoleOf = (r: InviteRow): Role => (r.role === "owner" || r.role === "office" ? r.role : "worker");
+
 function inviteByToken(token: string): InviteRow | undefined {
   if (!token || token.length < 20 || token.length > 200) return undefined;
   return getDb().prepare("SELECT * FROM invites WHERE token_hash = ?").get(sha256(token)) as InviteRow | undefined;
 }
 
 /** Public: what the invite page shows before sign-up. Reveals nothing for a bad link. */
-export function inviteInfo(token: string): { state: PersonAccess["state"] | "invalid"; businessName?: string; personName?: string; email?: string; hasAccount?: boolean; owner?: boolean } {
+export function inviteInfo(token: string): { state: PersonAccess["state"] | "invalid"; businessName?: string; personName?: string; email?: string; hasAccount?: boolean; owner?: boolean; role?: Role } {
   const r = inviteByToken(token);
   if (!r) return { state: "invalid" };
   const state = inviteState(r);
   if (state !== "pending") return { state };
   const org = getDb().prepare("SELECT config FROM orgs WHERE id = ?").get(r.org_id) as { config: string };
-  const person = r.role === "owner" ? { name: "there" } : (getDb().prepare("SELECT name FROM people WHERE org_id = ? AND id = ?").get(r.org_id, r.person_id) as { name: string } | undefined);
+  const person = (r.person_id ? (getDb().prepare("SELECT name FROM people WHERE org_id = ? AND id = ?").get(r.org_id, r.person_id) as { name: string } | undefined) : undefined) ?? (r.role === "owner" ? { name: "there" } : undefined);
   const hasAccount = !!getDb().prepare("SELECT 1 FROM users WHERE email = ?").get(r.email);
-  return { state, businessName: (JSON.parse(org.config) as { name: string }).name, personName: person?.name, email: r.email, hasAccount, owner: r.role === "owner" };
+  return { state, businessName: (JSON.parse(org.config) as { name: string }).name, personName: person?.name, email: r.email, hasAccount, owner: r.role === "owner", role: inviteRoleOf(r) };
 }
 
 /**
@@ -221,11 +240,12 @@ export function acceptInvite(token: string, input: { password?: unknown; name?: 
   if (state === "expired") return fail("forbidden", "This invite has expired. Ask for a new one.");
   const password = typeof input.password === "string" ? input.password : "";
   const db = getDb();
-  // Owner setup links (new workspaces) aren't tied to a team member.
-  const ownerSetup = r.role === "owner";
-  const person = ownerSetup
-    ? { id: "", name: r.email.split("@")[0], archived_at: null }
-    : (db.prepare("SELECT id, name, archived_at FROM people WHERE org_id = ? AND id = ?").get(r.org_id, r.person_id) as { id: string; name: string; archived_at: string | null } | undefined);
+  const role = inviteRoleOf(r);
+  // Older owner setup links aren't tied to a Team record; newer owner/admin links are.
+  const linked = r.person_id
+    ? (db.prepare("SELECT id, name, archived_at FROM people WHERE org_id = ? AND id = ?").get(r.org_id, r.person_id) as { id: string; name: string; archived_at: string | null } | undefined)
+    : undefined;
+  const person = linked ?? (role === "owner" && !r.person_id ? { id: "", name: r.email.split("@")[0], archived_at: null } : undefined);
   if (!person || person.archived_at) return fail("forbidden", "This invite is no longer active. Ask for a new one.");
   const existing = db.prepare("SELECT id, password_hash FROM users WHERE email = ?").get(r.email) as { id: string; password_hash: string } | undefined;
   if (existing) {
@@ -243,11 +263,12 @@ export function acceptInvite(token: string, input: { password?: unknown; name?: 
       const name = typeof input.name === "string" && input.name.trim().length >= 2 ? input.name.trim().slice(0, 120) : person.name;
       db.prepare("INSERT INTO users (id, email, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?)").run(userId, r.email, name, hashPassword(password), now());
     }
-    db.prepare("INSERT OR IGNORE INTO memberships (org_id, user_id, role) VALUES (?, ?, ?)").run(r.org_id, userId, ownerSetup ? "owner" : "worker");
+    db.prepare("INSERT OR IGNORE INTO memberships (org_id, user_id, role) VALUES (?, ?, ?)").run(r.org_id, userId, role);
     db.prepare("UPDATE invites SET accepted_user_id = ? WHERE id = ?").run(userId, r.id);
-    if (!ownerSetup) db.prepare("UPDATE people SET user_id = ? WHERE org_id = ? AND id = ?").run(userId, r.org_id, r.person_id);
+    if (person.id) db.prepare("UPDATE people SET user_id = ? WHERE org_id = ? AND id = ?").run(userId, r.org_id, person.id);
+    const what = role === "worker" ? "can now see their work in Bob" : `signed in as ${role === "owner" ? "the owner" : "an admin"}`;
     db.prepare("INSERT INTO activity (id, org_id, at, actor, via, action, summary, entity_type, entity_id) VALUES (?, ?, ?, ?, 'system', 'team.invite_accepted', ?, 'person', ?)").run(
-      uid("act"), r.org_id, now(), person.name, `${person.name} accepted their invite and can now see their work in Bob`, r.person_id,
+      uid("act"), r.org_id, now(), person.name, `${person.name} accepted their invite and ${what}`, person.id || null,
     );
     db.exec("COMMIT");
   } catch (e) {
@@ -256,7 +277,6 @@ export function acceptInvite(token: string, input: { password?: unknown; name?: 
     throw e;
   }
   const session = createSession(userId!, r.org_id);
-  void ownerSetup;
   if (!session.ok) return fail("unavailable", "Couldn't sign you in. Try signing in.");
   return ok({ token: session.token, expires: session.expires, orgId: r.org_id });
 }

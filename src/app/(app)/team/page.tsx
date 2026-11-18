@@ -136,6 +136,8 @@ function Avatar({ person }: { person: Person }) {
   );
 }
 
+const a_role = (a?: PersonAccess) => (a?.state === "accepted" ? a.role : undefined);
+
 function PersonSheet({ personId, onClose }: { personId: string | null; onClose: () => void }) {
   const { data, can, actions } = useStore();
   const ui = useUI();
@@ -144,7 +146,9 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
   const [copied, setCopied] = React.useState(false);
   const [confirm, setConfirm] = React.useState<"revoke" | "archive" | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [inviteRole, setInviteRole] = React.useState<"worker" | "office">("worker");
   React.useEffect(() => {
+    setInviteRole("worker");
     setLink(null);
     setConfirm(null);
     setError(null);
@@ -153,6 +157,9 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
   const manage = can("team.manage");
   const today = todayKey();
   const a = data.access.find((x) => x.personId === p.id) ?? { personId: p.id, state: "not_invited" as const };
+  // Only the owner holds settings.manage, and only the owner can make or remove admins.
+  const isOwner = can("settings.manage");
+  const admin = a_role(a);
   const theirs = data.bookings.filter((b) => b.personIds.includes(p.id));
   const upcoming = theirs.filter((b) => bookingEndDate(b) >= today).sort((x, y) => x.date.localeCompare(y.date));
   const past = theirs.filter((b) => bookingEndDate(b) < today).sort((x, y) => y.date.localeCompare(x.date)).slice(0, 5);
@@ -160,7 +167,7 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
 
   const invite = async () => {
     setError(null);
-    const r = await actions.run<{ path: string; expiresAt: string }>("createInvite", { personId: p.id });
+    const r = await actions.run<{ path: string; expiresAt: string }>("createInvite", { personId: p.id, role: inviteRole });
     if (!r.ok) return setError(r.errors._ || "Couldn't create the invite");
     setLink({ url: `${window.location.origin}${r.value.path}`, expiresAt: r.value.expiresAt });
     toast(`Invite link ready for ${p.name}`);
@@ -254,10 +261,35 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
                 <StatusText tone={ACCESS_LABEL[a.state].tone}>{ACCESS_LABEL[a.state].label}</StatusText>
               </div>
               <p className="mt-1 text-[14px] text-muted-foreground">
-                {a.state === "accepted"
-                  ? "They sign in to My work: only the jobs they're booked on, the site details and their tasks. No prices, customers list or the wider schedule."
-                  : "Invite them to see their own bookings, site addresses and instructions on their phone. They can be booked without it."}
+                {a.state === "accepted" && admin === "owner"
+                  ? "Owner: full access, including Settings and connected accounts."
+                  : a.state === "accepted" && admin === "office"
+                    ? "Admin: Diary, Jobs, Team, Enquiries, Customers, Materials, Merchants, Tasks and Money. Can schedule work and invite staff. Can't change Settings or connected accounts."
+                    : a.state === "accepted"
+                      ? "They sign in to My work: only the jobs they're booked on, the site details and their tasks. No prices, customers list or the wider schedule."
+                      : a.state === "pending" && a.role === "office"
+                        ? "Admin invite sent. Once accepted they'll see the whole business, except Settings and connected accounts."
+                        : "Invite them to see their own bookings, site addresses and instructions on their phone. They can be booked without it."}
               </p>
+              {isOwner && !p.archivedAt && a.state !== "accepted" && !link ? (
+                <fieldset className="mt-3">
+                  <legend className="text-[13.5px] font-semibold">Access when they accept</legend>
+                  <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+                    {([
+                      ["worker", "My work only", "Their own bookings, site details and tasks"],
+                      ["office", "Admin", "The whole business, except Settings"],
+                    ] as const).map(([value, label, hint]) => (
+                      <label key={value} className={cn("flex cursor-pointer items-start gap-2.5 rounded-xl px-3 py-2.5 ring-1", inviteRole === value ? "bg-selected ring-accent/40" : "ring-line hover:bg-surface-2")}>
+                        <input type="radio" name="invite-role" value={value} checked={inviteRole === value} onChange={() => setInviteRole(value)} className="mt-1 accent-[var(--color-accent)]" />
+                        <span>
+                          <span className="block text-[14.5px] font-medium">{label}</span>
+                          <span className="block text-[13px] text-muted-foreground">{hint}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ) : null}
               {error ? (
                 <p role="alert" className="mt-2 text-[14px] text-danger-fg">
                   {error}
@@ -298,7 +330,7 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
                     Cancel invite
                   </Button>
                 ) : null}
-                {a.state === "accepted" && confirm !== "revoke" ? (
+                {a.state === "accepted" && confirm !== "revoke" && admin !== "owner" && (admin !== "office" || isOwner) ? (
                   <Button size="sm" variant="ghost" className="text-danger-fg" onClick={() => setConfirm("revoke")}>
                     <ShieldOff /> Remove access
                   </Button>

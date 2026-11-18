@@ -43,3 +43,7 @@ next-env.d.ts
 # local database
 .data/
 bob.zip
+
+# Real workspace files hold people's login emails: keep them on the server only.
+workspaces*.json
+!docs/workspaces*.example.json

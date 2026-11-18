@@ -59,4 +59,4 @@ export function can(role: Role, permission: Permission): boolean {
   return ROLE_PERMISSIONS[role]?.has(permission) ?? false;
 }
 
-export const ROLE_LABEL: Record<Role, string> = { owner: "Owner", office: "Office", staff: "Site team", worker: "Team member (My work only)" };
+export const ROLE_LABEL: Record<Role, string> = { owner: "Owner", office: "Admin", staff: "Site team", worker: "Team member (My work only)" };

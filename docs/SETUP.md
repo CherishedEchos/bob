@@ -35,7 +35,7 @@ Each redirect URI is `$BOB_APP_URL/api/integrations/<provider>/callback`.
 
 ## Team, schedule and invites
 
-- **People and logins are separate.** Add employees and subcontractors in **Team** and book them straight away. Invite them when you're ready: Bob makes a single-use link (7 days, only for their email). **Bob doesn't send the email** — copy the link and send it by text, WhatsApp or email. To send invites by email later, connect a mail provider and add an "Email invite" action that goes through the approval card (not built yet).
+- **People and logins are separate.** Add employees and subcontractors in **Team** and book them straight away. Invite them when you're ready, as **My work only** (default) or, for the owner only, **Admin** (the `office` role): Bob makes a single-use link (7 days, only for their email). **Bob doesn't send the email** — copy the link and send it by text, WhatsApp or email. To send invites by email later, connect a mail provider and add an "Email invite" action that goes through the approval card (not built yet).
 - **Workers see only My work:** their bookings from a week ago onwards, the site address, directions, what3words, instructions, their tasks and the materials for those jobs. No prices, customers list, team or company schedule. Every API refuses them unless the route opts in (`authed(handler, { workers: true })` in `src/server/http.ts`).
 - **Changes reach workers on their next load or refresh.** No push notifications or texts are sent.
 - **Times** are wall-clock times in the workspace time zone (Settings → Business profile; default `Europe/London`), so bookings don't move when the clocks change.
@@ -52,16 +52,21 @@ Each redirect URI is `$BOB_APP_URL/api/integrations/<provider>/callback`.
   supabase/migrations/0001_bob_multitenant.sql
   supabase/migrations/0002_team_schedule.sql
   supabase/migrations/0003_merchants_feeds.sql
+  supabase/migrations/0004_admin_invites.sql
   ```
+  `0004` lets invites grant the `office` (Admin) role.
   `0003` adds merchants, calendar feeds, material order fields, bill payment fields and `jobs.access_note` (all additive). Local SQLite is at schema version 3 and upgrades on start-up; older sample workspaces get demo merchants and access notes once.
   `0002` is additive. It also tightens `is_member()` so invited workers no longer count as members for existing tables; they read their work only through `public.my_work(org)`.
 
 ## Adding a company (no code change)
 
-1. Write a JSON file like `docs/workspaces.example.json` (slug, name, short name, owner email, logo link, colour, services, area, time zone).
-2. Set `BOB_WORKSPACES_FILE=/path/to/workspaces.json` (and `BOB_PUBLIC_URL`) and restart.
-3. The server log prints a one-time **owner setup link** for each new company. Send it to the owner; it works once, only for their email, for 7 days.
-4. The company starts empty and "live". Its branding can be changed later in Settings → Business profile. Running again never changes an existing company.
+Step-by-step for Ninety3: **[docs/NINETY3-GO-LIVE.md](NINETY3-GO-LIVE.md)**.
+
+1. Write a JSON file like `docs/workspaces.ninety3.example.json`: slug, name, logo, time zone, contact, and `users` (each with a name, a role of `owner` or `office` (Admin), and their login email). Keep it on the server only; `workspaces*.json` is git-ignored. On Render, use a Secret File, which is mounted at `/etc/secrets/<filename>`.
+2. Set `BOB_WORKSPACES_FILE` to that path, set `BOB_PUBLIC_URL`, then restart.
+3. A new company is created empty and "live". Each user gets a Team record. Each user with an email gets a one-time invite link in the server log: it works once, only for their email, for 7 days. Emails are partly hidden in the log.
+4. Users without an email are logged as "waiting for an email". Add the email and restart. Restarts never replace an unexpired link, unless that user has `"newLink": true`.
+5. Running again never changes an existing company's name, branding or settings. Edit those in Settings → Business profile. The older single `ownerEmail` form still works.
 
 ## Backups and restore
 

@@ -70,7 +70,8 @@ export function authenticate(email: string, password: string, orgId?: string): L
   }
   db.prepare("DELETE FROM login_attempts WHERE key = ?").run(key);
   const memberships = membershipsFor(user.id);
-  const chosen = orgId ? memberships.find((m) => m.orgId === orgId) : memberships[0];
+  // A real business comes before any sample workspace the same login can see.
+  const chosen = orgId ? memberships.find((m) => m.orgId === orgId) : (memberships.find((m) => !m.org.isDemo) ?? memberships[0]);
   if (!chosen) return { ok: false, error: "This account isn't a member of any business yet.", status: 403 };
   return createSession(user.id, chosen.orgId);
 }

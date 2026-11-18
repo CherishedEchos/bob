@@ -12,7 +12,7 @@ import { BobLogo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 
-type Info = { state: "pending" | "accepted" | "expired" | "revoked" | "invalid" | "not_invited"; businessName?: string; personName?: string; email?: string; hasAccount?: boolean; owner?: boolean };
+type Info = { state: "pending" | "accepted" | "expired" | "revoked" | "invalid" | "not_invited"; businessName?: string; personName?: string; email?: string; hasAccount?: boolean; owner?: boolean; role?: "owner" | "office" | "staff" | "worker" };
 
 const DEAD: Record<string, [string, string]> = {
   accepted: ["This invite has already been used", "If it was you, sign in with the email it was sent to."],
@@ -79,7 +79,9 @@ export default function InvitePage() {
               <p className="t-meta mt-1">
                 {info.owner
                   ? `Set up your login for ${info.businessName} in Bob. You'll be the owner.`
-                  : `${info.businessName} has invited you to see your jobs in Bob — when and where you're booked, directions and instructions.`}
+                  : info.role === "office"
+                    ? `Set up your login for ${info.businessName} in Bob. You'll be an admin: the diary, jobs, team, customers, materials and money.`
+                    : `${info.businessName} has invited you to see your jobs in Bob — when and where you're booked, directions and instructions.`}
               </p>
             </div>
             <Field label="Email" htmlFor="inv-email" hint="The invite only works for this email.">
@@ -94,7 +96,7 @@ export default function InvitePage() {
               </p>
             ) : null}
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? <Loader2 className="animate-spin" /> : <ArrowRight />} {busy ? "Setting up…" : info.owner ? "Set up my login" : "Accept and see my work"}
+              {busy ? <Loader2 className="animate-spin" /> : <ArrowRight />} {busy ? "Setting up…" : info.owner || info.role === "office" ? "Set up my login" : "Accept and see my work"}
             </Button>
           </form>
         ) : null}

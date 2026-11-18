@@ -1,0 +1,17 @@
+[
+  {
+    "slug": "ninety3ltd",
+    "name": "Ninety3 Carpentry and Build Ltd",
+    "shortName": "Ninety3",
+    "tradeType": "Carpentry & building",
+    "logoUrl": "/brand/ninety3-logo.png",
+    "accent": "#E4752F",
+    "timeZone": "Europe/London",
+    "contact": { "email": "hello@ninety3ltd.co.uk" },
+    "signOff": "Thanks,\nNinety3 Carpentry and Build",
+    "users": [
+      { "name": "Luke", "role": "owner", "email": "" },
+      { "name": "Ryan", "role": "office", "email": "" }
+    ]
+  }
+]

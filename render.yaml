@@ -20,6 +20,13 @@ services:
         value: "true"
       - key: BOB_ENCRYPTION_KEY
         generateValue: true
+      # Live workspaces (e.g. Ninety3): a Secret File named workspaces.json, so
+      # /etc/secrets/workspaces.json. See docs/NINETY3-GO-LIVE.md. Needs a
+      # persistent disk + BOB_DB_PATH first; the free plan's disk is wiped on deploy.
+      - key: BOB_WORKSPACES_FILE
+        sync: false
+      - key: BOB_PUBLIC_URL
+        sync: false
       # Optional: set in the Render dashboard to switch on the Claude engine.
       - key: ANTHROPIC_API_KEY
         sync: false
