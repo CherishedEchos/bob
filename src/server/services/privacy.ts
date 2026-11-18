@@ -1,5 +1,6 @@
 import "server-only";
 import { removePhotosFor } from "@/server/services/photos";
+import { eraseFilesFor } from "@/server/services/files";
 /**
  * UK GDPR controls: export, erasure (anonymisation), retention and sample-data
  * reset. Financial records are anonymised rather than deleted because HMRC
@@ -35,7 +36,9 @@ export function eraseCustomer(ctx: Ctx, customerId: string): Result<{ enquiriesD
   return tx(() => {
     const enquiries = db.list<Enquiry>("enquiries", { where: "customer_id = ?", params: [customerId] });
     // Photos can show people and homes: remove those on their enquiries and jobs.
-    removePhotosFor(ctx, [...enquiries.map((e) => e.id), ...db.list<{ id: string }>("jobs", { where: "customer_id = ?", params: [customerId] }).map((j) => j.id)]);
+    const related = [...enquiries.map((e) => e.id), ...db.list<{ id: string }>("jobs", { where: "customer_id = ?", params: [customerId] }).map((j) => j.id)];
+    removePhotosFor(ctx, related);
+    eraseFilesFor(ctx, related);
     for (const e of enquiries) db.remove("enquiries", e.id);
     for (const t of db.list<Task>("tasks", { where: "customer_id = ?", params: [customerId] })) db.remove("tasks", t.id);
     db.update<Customer>("customers", customerId, {
@@ -58,6 +61,7 @@ export function resetSampleData(ctx: Ctx): Result<true> {
   const raw = getDb();
   tx(() => {
     for (const t of Object.keys(TABLES) as TableName[]) raw.prepare(`DELETE FROM ${t} WHERE org_id = ?`).run(ctx.orgId);
+    raw.prepare("DELETE FROM file_blobs WHERE org_id = ?").run(ctx.orgId);
     raw.prepare("DELETE FROM bob_actions WHERE org_id = ?").run(ctx.orgId);
     raw.prepare("DELETE FROM conversations WHERE org_id = ?").run(ctx.orgId);
     raw.prepare("DELETE FROM imported_messages WHERE org_id = ?").run(ctx.orgId);

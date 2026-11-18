@@ -11,6 +11,7 @@ import type { Bill, Booking, Job, Material, Person, Task } from "@/lib/types";
 import { DEFAULT_TIME_ZONE, addDays, dateKeyIn, weekStart } from "@/lib/dates";
 import { hashPassword, randomToken, sha256 } from "@/server/auth/password";
 import type { TableName } from "./index";
+import { seedFilesAndLeave } from "./seed-files";
 
 type InsertFn = (db: DatabaseSync, table: TableName, orgId: string, obj: { id: string }) => void;
 
@@ -186,8 +187,8 @@ export function buildTeamScenario(orgId: string, timeZone = DEFAULT_TIME_ZONE) {
   ];
 
   const tasks: Task[] = [
-    { id: `${k}_task_paint`, title: "Get paint colour samples to the Horsham wardrobes customer", dueDate: day(2), done: false, relatedType: "job", relatedId: job("wardrobes_horsham"), assignedPersonId: pid("ellie"), createdAt: now, createdBy: "Owner" },
-    { id: `${k}_task_beads`, title: "Check angle beads are on site before skimming", dueDate: day(3), done: false, relatedType: "job", relatedId: job("extension_copthorne"), assignedPersonId: pid("sam"), createdAt: now, createdBy: "Owner" },
+    { id: `${k}_task_paint`, title: "Get paint colour samples to the Horsham wardrobes customer", dueDate: day(2), done: false, relatedType: "job", relatedId: job("wardrobes_horsham"), assignedPersonId: pid("ellie"), createdAt: now, createdBy: "Luke" },
+    { id: `${k}_task_beads`, title: "Check angle beads are on site before skimming", dueDate: day(3), done: false, relatedType: "job", relatedId: job("extension_copthorne"), assignedPersonId: pid("sam"), createdAt: now, createdBy: "Luke" },
   ];
 
   const merchants = cast.merchants.map((x) => ({ id: `${k}_mer_${x.key}`, name: x.name, branch: x.branch, phone: x.phone, email: x.email, website: x.website, accountRef: x.accountRef?.replace(/^N93/, k.toUpperCase()), passwordManagerUrl: x.passwordManagerUrl, accessManagedBy: x.accessManagedBy, notes: x.notes, createdAt: now }));
@@ -229,6 +230,7 @@ export function seedTeam(db: DatabaseSync, insert: InsertFn, orgId: string, time
       `${s.cast.key}_inv_accepted`, orgId, person.id, s.cast.workerLogin.email, sha256(randomToken()), now, new Date(Date.now() + 7 * 864e5).toISOString(), now, userId,
     );
   }
+  seedFilesAndLeave(db, insert, orgId, s.cast.key, timeZone);
   // An invite that's been sent but not accepted (its link is not known to anyone).
   if (s.cast.pendingInvite) {
     const person = s.people.find((p) => p.id === s.personId(s.cast.pendingInvite!.personKey))!;
@@ -249,6 +251,18 @@ export function upgradeSampleData(db: DatabaseSync, insert: InsertFn) {
       // Team already seeded (earlier version): add merchants and access notes once.
       const mer = db.prepare("SELECT COUNT(*) AS n FROM merchants WHERE org_id = ?").get(o.id) as { n: number };
       if (mer.n === 0) upgradeMerchants(db, insert, o.id, config.timeZone);
+      // Files, drawings, a handover and leave arrived later: add them once.
+      db.exec("BEGIN");
+      try {
+        seedFilesAndLeave(db, insert, o.id, TEAM_CASTS[o.id].key, config.timeZone);
+        // The pilot demo's main users are Luke (owner) and Ryan (admin).
+        db.prepare("UPDATE users SET name = 'Luke' WHERE id = 'usr_n93_owner' AND name = 'Owner'").run();
+        db.prepare("UPDATE users SET name = 'Ryan' WHERE id = 'usr_n93_office' AND name = 'Office'").run();
+        db.exec("COMMIT");
+      } catch (e) {
+        db.exec("ROLLBACK");
+        throw e;
+      }
       continue;
     }
     const jobs = db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE org_id = ?").get(o.id) as { n: number };

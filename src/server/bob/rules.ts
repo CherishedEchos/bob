@@ -828,7 +828,7 @@ const lowerFirst = (s: string) => (s ? s[0].toLowerCase() + s.slice(1) : s);
 
 /* -------------------------------- Quote (voice-to-quote) -------------------------------- */
 
-const OPEN_FOR_QUOTE = new Set(["new", "awaiting_reply", "replied", "quote_required"]);
+const OPEN_FOR_QUOTE = new Set(["new", "awaiting_reply", "replied", "site_visit", "quote_required"]);
 
 /**
  * "Quote for a kitchen, four metres, shaker style, island, about twelve grand"

@@ -46,7 +46,7 @@ export function whoIsOn(ctx: Ctx, lower: string): Answer {
     const booked = onDay.filter((b) => matches.some((j) => j.id === b.jobId));
     if (!booked.length) {
       const names = listNames(matches.map((j) => `${j.title} for ${j.customerName}`), 3);
-      return { text: `Nobody is booked on ${names} ${label}.`, chips: [...chipsFor(matches.map((j) => j.id)), { kind: "link", label: "Open This week", href: "/week" }] };
+      return { text: `Nobody is booked on ${names} ${label}.`, chips: [...chipsFor(matches.map((j) => j.id)), { kind: "link", label: "Open diary", href: "/week" }] };
     }
     const lines = booked.map((b) => {
       const j = jobs.find((x) => x.id === b.jobId)!;
@@ -55,7 +55,7 @@ export function whoIsOn(ctx: Ctx, lower: string): Answer {
     });
     return { text: `${label[0].toUpperCase()}${label.slice(1)}: ${lines.join(". ")}.`, chips: chipsFor([...new Set(booked.map((b) => b.jobId))]) };
   }
-  if (!onDay.length) return { text: `Nothing is booked ${label}.`, chips: [{ kind: "link", label: "Open This week", href: "/week" }] };
+  if (!onDay.length) return { text: `Nothing is booked ${label}.`, chips: [{ kind: "link", label: "Open diary", href: "/week" }] };
   const lines = onDay.map((b) => {
     const j = jobs.find((x) => x.id === b.jobId);
     const who = b.personIds.map((id) => people.get(id) ?? "someone");
@@ -64,7 +64,7 @@ export function whoIsOn(ctx: Ctx, lower: string): Answer {
   const unassigned = onDay.filter((b) => !b.personIds.length).length;
   return {
     text: `${label[0].toUpperCase()}${label.slice(1)} there ${onDay.length === 1 ? "is" : "are"} ${plural(onDay.length, "booking")}: ${lines.join("; ")}.${unassigned ? ` ${plural(unassigned, "booking")} still ${unassigned === 1 ? "needs" : "need"} someone.` : ""}`,
-    chips: [{ kind: "link", label: "Open This week", href: "/week" }],
+    chips: [{ kind: "link", label: "Open diary", href: "/week" }],
   };
 }
 

@@ -19,7 +19,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AssistantView } from "@/components/assistant/assistant-view";
 import { EnquirySheet } from "@/components/enquiries/enquiry-sheet";
-import { JobSheet } from "@/components/jobs/job-sheet";
 import { CustomerSheet } from "@/components/customers/customer-sheet";
 import { FormHost } from "@/components/forms/form-host";
 
@@ -30,7 +29,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <BobProvider>
           <ShellLayout>{children}</ShellLayout>
           <EnquirySheet />
-          <JobSheet />
           <CustomerSheet />
           <FormHost />
           <AssistantPanel />
@@ -47,6 +45,13 @@ function useNavCounts() {
 }
 
 const isAssistantRoute = (p: string) => p === "/" || p === "/assistant";
+
+/** Wide pages for schedules and lists; comfortable widths for settings and forms. Same gutters everywhere. */
+function pageWidth(p: string) {
+  if (p.startsWith("/week")) return "max-w-[1800px] lg:px-8";
+  if (["/enquiries", "/jobs", "/materials", "/merchants", "/team", "/tasks", "/invoices", "/customers"].some((x) => p.startsWith(x))) return "max-w-[1560px] lg:px-8";
+  return "max-w-5xl lg:px-8";
+}
 
 function ShellLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -78,7 +83,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
         {!assistant ? <DemoBanner /> : null}
         {!assistant ? <MobileHeader /> : null}
         <main className={cn("min-h-0 flex-1 overscroll-contain", assistant ? "overflow-hidden" : pathname.startsWith("/enquiries") ? "overflow-y-auto bg-inbox" : "overflow-y-auto bg-app")}>
-          {assistant ? children : <div className={cn("mx-auto w-full px-4 pb-10 pt-4 lg:pb-10 lg:pt-8", pathname.startsWith("/enquiries") ? "max-w-[1560px] lg:px-8" : pathname.startsWith("/week") ? "max-w-[1800px] lg:px-6" : "max-w-6xl lg:px-10")}>{children}</div>}
+          {assistant ? children : <div className={cn("mx-auto w-full px-4 pb-10 pt-4 lg:pb-10 lg:pt-8", pageWidth(pathname))}>{children}</div>}
         </main>
         {/* Ask Bob has its own back button and bottom controls. */}
         {!assistant ? <BottomNav /> : null}

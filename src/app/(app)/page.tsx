@@ -1,6 +1,8 @@
-import { redirect } from "next/navigation";
+"use client";
 
-/** Everyone lands on This week. Ask Bob lives at /assistant. */
+import { AssistantView } from "@/components/assistant/assistant-view";
+
+/** The opening screen: Ask Bob. Direct links (/week, /jobs/…) open their own screens. */
 export default function HomePage() {
-  redirect("/week");
+  return <AssistantView variant="page" />;
 }

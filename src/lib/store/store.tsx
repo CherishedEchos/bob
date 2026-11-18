@@ -16,7 +16,7 @@ import type { FieldErrors } from "@/lib/validation";
 import { setWorkspaceTimeZone } from "@/lib/utils";
 import { can as roleCan, type Permission } from "@/lib/auth/permissions";
 
-export type Result<T> = { ok: true; value: T } | { ok: false; errors: FieldErrors; code?: string; clashes?: { personId: string; personName: string; jobTitle: string; when: string }[] };
+export type Result<T> = { ok: true; value: T } | { ok: false; errors: FieldErrors; code?: string; clashes?: { kind?: "booking" | "absence"; personId: string; personName: string; jobTitle: string; when: string }[] };
 
 export interface StoreActions {
   createEnquiry(input: unknown): Promise<Result<{ id: string }>>;

@@ -14,7 +14,7 @@ import * as React from "react";
 import { AlarmClock, AlertTriangle, ArrowLeft, CalendarCheck, Check, CheckCheck, ChevronDown, Copy, FileText, HardHat, Info, Mail, Phone, PhoneCall, Save, Send, UserRound } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
-import { ENQUIRY_STATUSES, ENQUIRY_STATUS_LABEL, PRIORITY_LABEL, SOURCE_LABEL, followUpDue, needsReply, wantsCallback } from "@/lib/derive";
+import { ENQUIRY_STATUS_LABEL, PRIORITY_LABEL, SOURCE_LABEL, followUpDue, needsReply, wantsCallback } from "@/lib/derive";
 import { FLAG_TITLE, buildDraft, latestInbound } from "@/lib/reply-draft";
 import type { ActionView } from "@/lib/bob/types";
 import type { Enquiry, Priority } from "@/lib/types";
@@ -26,7 +26,7 @@ import { toast } from "@/components/ui/toaster";
 import { HighPriority, InstagramGlyph, SourceIcon, enquiryState } from "@/components/common/status";
 import { StatusText } from "@/components/common/bits";
 import { NotesPanel } from "@/components/common/notes";
-import { PhotoGrid } from "@/components/common/photos";
+import { FilesPanel } from "@/components/files/files-panel";
 import { QuotesList } from "@/components/common/quotes-list";
 import { ActionCard } from "@/components/assistant/assistant-cards";
 import { Fold } from "@/components/jobs/job-sheet";
@@ -34,6 +34,10 @@ import { useVisualViewport } from "@/lib/use-media";
 
 /** Same heuristic the server uses — shown as a warning only. */
 const SUSPICIOUS = /\b(ignore|disregard)\b.{0,40}\binstructions?\b|\byou are now\b|\badmin mode\b|\bsystem prompt\b|\bmark\b.{0,40}\bpaid\b/i;
+
+
+/** Stages in the order work moves through them (awaiting reply / replied are the reply states). */
+const STAGE_ORDER = ["new", "awaiting_reply", "replied", "site_visit", "quote_required", "quoted", "won", "lost"] as const;
 
 export function EnquirySheet() {
   const ui = useUI();
@@ -386,11 +390,11 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
             <Fold title="Notes" summary={e.notes.length ? `${e.notes.length} ${e.notes.length === 1 ? "note" : "notes"}` : "None yet"}>
               <NotesPanel notes={e.notes} onAdd={(t) => actions.addEnquiryNote(e.id, t)} />
             </Fold>
-            <Fold title="Photos" summary={`${data.photos.filter((p) => p.relatedType === "enquiry" && p.relatedId === e.id).length || "No"} photos`}>
-              <PhotoGrid relatedType="enquiry" relatedId={e.id} />
+            <Fold title="Photos & attachments" summary={`${data.files.filter((f) => f.enquiryId === e.id && !f.deletedAt).length || "No"} files`}>
+              <FilesPanel enquiryId={e.id} compact />
             </Fold>
             {write ? (
-              <Fold title="Quote & job" defaultOpen={e.status === "quoted" || e.status === "won" || e.status === "quote_required"} summary={e.jobId ? "Won — job created" : data.quotes.some((q) => q.enquiryId === e.id) ? "Quote recorded" : "Record a quote or mark it won"}>
+              <Fold title="Quote & job" defaultOpen={e.status === "quoted" || e.status === "won" || e.status === "quote_required" || e.status === "site_visit"} summary={e.jobId ? "Won — job created" : data.quotes.some((q) => q.enquiryId === e.id) ? "Quote recorded" : "Record a quote or mark it won"}>
                 {data.quotes.some((q) => q.enquiryId === e.id) ? (
                   <div className="mb-3">
                     <QuotesList quotes={data.quotes.filter((q) => q.enquiryId === e.id)} />
@@ -401,8 +405,9 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
             ) : null}
             {write ? (
               <Fold title="Status & priority" summary={`${ENQUIRY_STATUS_LABEL[e.status]} · ${PRIORITY_LABEL[e.priority]} priority`} last>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {ENQUIRY_STATUSES.map((s) => (
+                <div className="text-[14px] font-medium text-muted-foreground">Stage</div>
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {STAGE_ORDER.map((s) => (
                     <button
                       key={s}
                       onClick={async () => {

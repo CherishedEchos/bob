@@ -83,6 +83,20 @@ export const TABLES = {
     name: "text", branch: "text", phone: "text", email: "text", website: "text", notes: "text", accountRef: "text",
     passwordManagerUrl: "text", accessManagedBy: "text", archivedAt: "text", createdAt: "text",
   },
+  job_files: {
+    jobId: "text", enquiryId: "text", category: "text", title: "text", filename: "text", mimeType: "text", bytes: "real",
+    description: "text", revision: "text", groupId: "text", visibility: "text", previewable: "bool", hasThumb: "bool",
+    width: "real", height: "real", uploadedBy: "text", uploadedByUserId: "text", createdAt: "text", deletedAt: "text",
+    deletedBy: "text", checksum: "text", clientRef: "text",
+  },
+  handovers: {
+    jobId: "text", title: "text", jobTitle: "text", siteAddress: "text", completionDate: "text", message: "text",
+    items: "json", createdAt: "text", createdBy: "text", downloads: "real",
+  },
+  absences: {
+    personId: "text", kind: "text", startDate: "text", endDate: "text", part: "text", status: "text", reason: "text",
+    requestedBy: "text", requestedByUserId: "text", decidedBy: "text", decidedAt: "text", createdAt: "text", updatedAt: "text",
+  },
   activity: {
     at: "text", actor: "text", via: "text", action: "text", summary: "text", entityType: "text", entityId: "text",
   },
@@ -224,6 +238,14 @@ CREATE TABLE IF NOT EXISTS imported_messages (
   imported_at TEXT NOT NULL,
   PRIMARY KEY (org_id, provider, external_id)
 );
+CREATE TABLE IF NOT EXISTS file_blobs (
+  file_id TEXT NOT NULL,
+  org_id TEXT NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('original','thumb')),
+  data BLOB NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (org_id, file_id, kind)
+);
 CREATE TABLE IF NOT EXISTS counters (
   org_id TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -260,6 +282,10 @@ export function initDb(db: DatabaseSync) {
   db.exec(SYSTEM_DDL);
   db.exec(businessDDL());
   addMissingColumns(db);
+  // A retried upload (same client reference) never creates a second file.
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS job_files_client_ref_idx ON job_files(org_id, client_ref) WHERE client_ref IS NOT NULL");
+  db.exec("CREATE INDEX IF NOT EXISTS job_files_job_idx ON job_files(org_id, job_id)");
+  db.exec("CREATE INDEX IF NOT EXISTS absences_person_idx ON absences(org_id, person_id, start_date)");
   const row = db.prepare("SELECT COUNT(*) AS n FROM orgs").get() as { n: number };
   if (row.n === 0) {
     seedAll(db, insertRaw);
@@ -268,6 +294,7 @@ export function initDb(db: DatabaseSync) {
     // schedule, materials, bills) once. Live workspaces are never touched.
     upgradeSampleData(db, insertRaw);
   }
+  migrateJobPhotos(db);
   provisionWorkspaces(db);
 }
 
@@ -275,7 +302,7 @@ export function initDb(db: DatabaseSync) {
  * Schema migrations for existing databases. Additive only: nothing is dropped
  * and every existing row is kept. Recorded in PRAGMA user_version.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 function migrate(db: DatabaseSync) {
   const version = (db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version;
   const hasMemberships = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='memberships'").get();
@@ -300,6 +327,36 @@ function migrate(db: DatabaseSync) {
     }
   }
   db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+}
+
+/**
+ * v4: site photos filed against a job or enquiry become files (category
+ * "Progress photos"), so they show in Files & photos and can go into a
+ * handover. The photo rows are kept; this copy runs once per photo
+ * (client_ref "photo:<id>").
+ */
+function migrateJobPhotos(db: DatabaseSync) {
+  const rows = db
+    .prepare("SELECT p.* FROM photos p WHERE p.related_type IN ('job','enquiry') AND NOT EXISTS (SELECT 1 FROM job_files f WHERE f.org_id = p.org_id AND f.client_ref = 'photo:' || p.id)")
+    .all() as Record<string, string | number | null>[];
+  if (!rows.length) return;
+  db.exec("BEGIN");
+  try {
+    for (const p of rows) {
+      const id = `fil_${String(p.id).replace(/^pho_?/, "")}`;
+      const data = Buffer.from(String(p.data ?? ""), "base64");
+      insertRaw(db, "job_files", String(p.org_id), {
+        id, jobId: p.related_type === "job" ? p.related_id : undefined, enquiryId: p.related_type === "enquiry" ? p.related_id : undefined, category: "progress", title: p.caption ?? undefined, filename: `photo-${String(p.created_at).slice(0, 10)}.jpg`,
+        mimeType: String(p.mime_type), bytes: data.length, groupId: id, visibility: "team", previewable: true, hasThumb: false,
+        width: p.width ?? undefined, height: p.height ?? undefined, uploadedBy: p.created_by ?? "Someone", createdAt: p.created_at, clientRef: `photo:${p.id}`,
+      } as { id: string });
+      db.prepare("INSERT OR IGNORE INTO file_blobs (file_id, org_id, kind, data, created_at) VALUES (?, ?, 'original', ?, ?)").run(id, String(p.org_id), data, String(p.created_at));
+    }
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
 }
 
 /** New columns on existing business tables (e.g. jobs.site_address). */

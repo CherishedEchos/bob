@@ -15,8 +15,8 @@ export default async function LoginPage() {
   const demo = showDemo
     ? [
         { group: "Ninety3 Carpentry & Build — pilot workspace (sample data)", accounts: [
-          { email: "owner@ninety3.example", label: "Owner" },
-          { email: "office@ninety3.example", label: "Office" },
+          { email: "owner@ninety3.example", label: "Luke · Owner" },
+          { email: "office@ninety3.example", label: "Ryan · Admin" },
           { email: "site@ninety3.example", label: "Site team (no money access)" },
           { email: "sam@so-plastering.example", label: "Sam Okoro · subcontractor (My work only)" },
         ] },

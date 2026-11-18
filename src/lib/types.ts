@@ -46,6 +46,11 @@ export interface OrgConfig {
   timeZone?: string;
   /** Where "Open QuickBooks" goes (e.g. the company's QuickBooks bills page). */
   quickbooksUrl?: string;
+  /**
+   * Leave policy. Defaults (when unset): owners/admins may record their own
+   * leave as approved and approve crew requests.
+   */
+  leavePolicy?: { managersSelfApprove: boolean };
 }
 
 export interface AppUser {
@@ -78,7 +83,7 @@ export interface Customer {
 
 export type EnquirySource = "email" | "website" | "instagram" | "phone" | "manual";
 
-export type EnquiryStatus = "new" | "awaiting_reply" | "replied" | "quote_required" | "quoted" | "won" | "lost";
+export type EnquiryStatus = "new" | "awaiting_reply" | "replied" | "site_visit" | "quote_required" | "quoted" | "won" | "lost";
 
 export type Priority = "high" | "medium" | "low";
 
@@ -421,6 +426,98 @@ export interface Photo {
   createdBy: string;
 }
 
+/* ------------------------------ Files & handover ------------------------------ */
+
+export type FileCategory = "drawing" | "progress" | "completion" | "other";
+
+/**
+ * A file on a job (or on an enquiry, carried to the job when it's won).
+ * The bytes live in file_blobs; only metadata is sent to the browser.
+ * Revisions of a drawing share a groupId; the newest one not deleted is current.
+ */
+export interface JobFile {
+  id: ID;
+  jobId?: ID;
+  enquiryId?: ID;
+  category: FileCategory;
+  title?: string;
+  filename: string;
+  mimeType: string;
+  bytes: number;
+  description?: string;
+  /** Drawing revision label as entered, e.g. "Rev C". */
+  revision?: string;
+  groupId: ID;
+  /** "team": people booked on the job can see it. "office": owners, admins and site team only. */
+  visibility: "team" | "office";
+  /** Browser can show it inline (JPEG/PNG/WebP/GIF image or PDF, checked by content). */
+  previewable: boolean;
+  hasThumb: boolean;
+  width?: number;
+  height?: number;
+  uploadedBy: string;
+  uploadedByUserId?: ID;
+  createdAt: string;
+  deletedAt?: string;
+}
+
+export interface HandoverItem {
+  fileId: ID;
+  /** The name inside the ZIP (folder/name), unique within the handover. */
+  zipPath: string;
+  title: string;
+  filename: string;
+  category: FileCategory;
+  description?: string;
+  revision?: string;
+  bytes: number;
+  mimeType: string;
+}
+
+/** A generated customer handover. Its contents are frozen when it's created. */
+export interface Handover {
+  id: ID;
+  jobId: ID;
+  title: string;
+  jobTitle: string;
+  siteAddress?: string;
+  completionDate?: string;
+  message?: string;
+  items: HandoverItem[];
+  createdAt: string;
+  createdBy: string;
+  downloads: number;
+}
+
+/* ------------------------------ Leave & availability ------------------------------ */
+
+/** holiday: an employee's leave. unavailable: a subcontractor (or anyone) can't work. sick, other: recorded by a manager. */
+export type AbsenceKind = "holiday" | "unavailable" | "sick" | "other";
+export type AbsenceStatus = "pending" | "approved" | "declined" | "cancelled";
+
+/**
+ * Leave or unavailability for a Team person. Dates are plain date keys
+ * (YYYY-MM-DD, inclusive) — never converted through a time zone.
+ * part: a half day (only when startDate === endDate).
+ */
+export interface Absence {
+  id: ID;
+  personId: ID;
+  kind: AbsenceKind;
+  startDate: string;
+  endDate: string;
+  part?: "am" | "pm";
+  status: AbsenceStatus;
+  /** Private: only the requester and owners/admins see it. */
+  reason?: string;
+  requestedBy: string;
+  requestedByUserId?: ID;
+  decidedBy?: string;
+  decidedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Snapshot {
   org: OrgConfig;
   user: AppUser;
@@ -441,6 +538,9 @@ export interface Snapshot {
   bills: Bill[];
   merchants: Merchant[];
   feeds: CalendarFeed[];
+  files: JobFile[];
+  handovers: Handover[];
+  absences: Absence[];
   activity: ActivityEntry[];
   connections: Connection[];
   mode: ModeInfo;

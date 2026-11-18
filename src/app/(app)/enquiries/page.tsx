@@ -17,13 +17,14 @@ import { HighPriority, SourceIcon, enquiryState } from "@/components/common/stat
 import { EnquiryDetail } from "@/components/enquiries/enquiry-sheet";
 import { Input, NativeSelect } from "@/components/ui/input";
 
-type Tab = "reply" | "quote" | "sent" | "follow" | "all";
+type Tab = "reply" | "visit" | "quote" | "sent" | "follow" | "all";
 
 /** Replied, not quoting, but a follow-up date is set. */
-const needsFollowUp = (e: Enquiry) => !needsReply(e) && isOpenEnquiry(e) && e.status !== "quote_required" && e.status !== "quoted" && (followUpDue(e) || !!e.followUpDate);
+const needsFollowUp = (e: Enquiry) => !needsReply(e) && isOpenEnquiry(e) && e.status !== "site_visit" && e.status !== "quote_required" && e.status !== "quoted" && (followUpDue(e) || !!e.followUpDate);
 
 const TABS: { value: Tab; label: string; short: string; test: (e: Enquiry) => boolean }[] = [
   { value: "reply", label: "Needs reply", short: "Needs reply", test: needsReply },
+  { value: "visit", label: "Site visit", short: "Site visit", test: (e) => e.status === "site_visit" },
   { value: "quote", label: "To quote", short: "To quote", test: (e) => e.status === "quote_required" },
   { value: "sent", label: "Quote sent", short: "Quote sent", test: (e) => e.status === "quoted" },
   { value: "follow", label: "Follow up", short: "Follow up", test: needsFollowUp },

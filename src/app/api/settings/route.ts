@@ -32,6 +32,7 @@ const schema = z.object({
     })
     .partial()
     .optional(),
+  leavePolicy: z.object({ managersSelfApprove: z.boolean() }).optional(),
   retention: z.object({ closedEnquiryMonths: z.number().int().min(1).max(120), conversationDays: z.number().int().min(1).max(730) }).partial().optional(),
 });
 
@@ -57,6 +58,7 @@ export const POST = authed(async (req, ctx) => {
     assistant: { ...ctx.org.assistant, ...(p.assistant ?? {}) },
     finance: { ...ctx.org.finance, ...(p.finance ?? {}) },
     retention: { ...ctx.org.retention, ...(p.retention ?? {}) },
+    ...(p.leavePolicy ? { leavePolicy: p.leavePolicy } : {}),
   };
   if (next.finance.vatRegistered === false) next.finance.vatRate = null;
   getDb().prepare("UPDATE orgs SET config = ? WHERE id = ?").run(JSON.stringify(next), ctx.orgId);

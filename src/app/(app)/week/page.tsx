@@ -9,12 +9,14 @@
  */
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarPlus, ChevronLeft, ChevronRight, Pencil, Users } from "lucide-react";
+import Link from "next/link";
+import { CalendarOff, CalendarPlus, ChevronLeft, ChevronRight, Pencil, Users } from "lucide-react";
+import { ABSENCE_LABEL, PART_LABEL, absencesOnDay } from "@/lib/leave";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { addDays, daysBetween, formatDayLong, formatDayShort, formatTimeRange, formatWeekRange, isDateKey, rangeKeys, weekStart } from "@/lib/dates";
 import { bookingDays, bookingsOnDay, initials } from "@/lib/schedule";
-import type { Booking, Job, Person } from "@/lib/types";
+import type { Absence, Booking, Job, Person } from "@/lib/types";
 import { cn, todayKey } from "@/lib/utils";
 import { pageActionClass } from "@/components/common/bits";
 import { NativeSelect } from "@/components/ui/input";
@@ -45,6 +47,7 @@ function Diary() {
   const staff = activePeople.filter((p) => p.kind === "employee");
   const subs = activePeople.filter((p) => p.kind === "subcontractor");
   const visible = data.bookings.filter((b) => (personFilter === "unassigned" ? !b.personIds.length : !personFilter || b.personIds.includes(personFilter)));
+  const leave = data.absences.filter((a) => !personFilter || personFilter === "unassigned" || a.personId === personFilter);
   const thisWeek = visible.filter((b) => b.date <= days[6] && (b.endDate ?? b.date) >= days[0]);
   const isThisWeek = start === weekStart(today);
   const [showEarlier, setShowEarlier] = React.useState(false);
@@ -137,6 +140,12 @@ function Diary() {
             Show everyone
           </button>
         ) : null}
+        {can("schedule.read") ? (
+          <Link href="/team?view=holidays" className="ml-auto inline-flex h-11 items-center gap-1.5 rounded-xl px-3 text-[14.5px] font-semibold text-muted-foreground ring-1 ring-line-strong transition hover:bg-card hover:text-foreground">
+            <CalendarOff className="size-4" aria-hidden /> Holidays
+            {data.absences.some((a) => a.status === "pending") ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-amber-500/15 px-1.5 text-[12px] font-semibold text-warn-fg">{data.absences.filter((a) => a.status === "pending").length}</span> : null}
+          </Link>
+        ) : null}
       </div>
 
       {/* Desktop planner */}
@@ -166,6 +175,7 @@ function Diary() {
                   <span className={cn("tabular", isToday ? "font-semibold text-accent-fg" : "text-muted-foreground")}>{formatDayShort(d).split(" ")[1]}</span>
                   {isToday ? <span className="sr-only">(today)</span> : null}
                 </h2>
+                <LeaveChips list={absencesOnDay(leave, d)} people={people} />
                 <ul className="flex flex-1 flex-col gap-1.5 p-1.5 xl:gap-2 xl:p-2">
                   {list.map((b) => (
                     <li key={`${b.id}-${d}`}>
@@ -206,6 +216,7 @@ function Diary() {
                 {d === today ? <span className="rounded-md bg-primary px-1.5 py-0.5 text-[12px] font-semibold text-white">Today</span> : null}
                 {formatDayLong(d)}
               </h2>
+              <LeaveChips list={absencesOnDay(leave, d)} people={people} phone />
               {list.length ? (
                 <ul className="flex flex-col gap-2">
                   {list.map((b) => (
@@ -229,6 +240,36 @@ function Diary() {
         })}
       </section>
     </div>
+  );
+}
+
+/** Who's off that day. Approved: solid; pending requests: dashed and labelled. */
+function LeaveChips({ list, people, phone }: { list: Absence[]; people: Map<string, Person>; phone?: boolean }) {
+  if (!list.length) return null;
+  return (
+    <ul className={cn("flex flex-wrap gap-1", phone ? "mb-1.5 px-1" : "border-b border-line px-1.5 py-1.5 xl:px-2")} aria-label="Leave">
+      {list.map((a) => {
+        const name = people.get(a.personId)?.name.split(" ")[0] ?? "Someone";
+        const pending = a.status === "pending";
+        return (
+          <li
+            key={a.id}
+            title={`${people.get(a.personId)?.name ?? "Someone"}: ${ABSENCE_LABEL[a.kind]}${a.part ? ` (${PART_LABEL[a.part].toLowerCase()})` : ""}${pending ? " — waiting for approval" : ""}`}
+            className={cn(
+              "inline-flex h-6 max-w-full items-center gap-1 rounded-md px-1.5 text-[12.5px] font-medium",
+              pending ? "border border-dashed border-violet-400 text-violet-800" : "bg-violet-500/12 text-violet-900",
+            )}
+          >
+            <CalendarOff className="size-3 shrink-0" aria-hidden />
+            <span className="truncate">
+              {name} · {a.kind === "unavailable" ? "Unavailable" : ABSENCE_LABEL[a.kind]}
+              {a.part ? ` ${a.part.toUpperCase()}` : ""}
+              {pending ? " (pending)" : ""}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

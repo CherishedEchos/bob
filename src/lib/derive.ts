@@ -14,8 +14,9 @@ export const ENQUIRY_STATUS_LABEL: Record<EnquiryStatus, string> = {
   new: "New",
   awaiting_reply: "Awaiting reply",
   replied: "Replied",
-  quote_required: "Quote required",
-  quoted: "Quoted",
+  site_visit: "Site visit",
+  quote_required: "To quote",
+  quoted: "Quote sent",
   won: "Won",
   lost: "Lost",
 };

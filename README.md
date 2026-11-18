@@ -15,10 +15,19 @@ npm run dev      # → http://localhost:3000 (Node 22+)
 npm test         # engine + safety tests
 ```
 
-On `/login`, tap **Try the demo**. It opens **This week** for the Ninety3 workspace — a fictional team, subcontractors, bookings, jobs, enquiries, materials and bills — and nothing is ever sent. To see the subcontractor's phone view, open "Other demo logins" → **Sam Okoro · subcontractor (My work only)**. Other demo logins are tucked under "Other demo logins":
+On `/login`, tap **Try the demo**. It opens **Ask Bob** for the Ninety3 workspace (as Luke, the owner) — a fictional team, subcontractors, bookings, jobs, enquiries, materials and bills — and nothing is ever sent. To see the subcontractor's phone view, open "Other demo logins" → **Sam Okoro · subcontractor (My work only)**. Other demo logins are tucked under "Other demo logins":
 
-- **Ninety3 workspace** (sample data, VAT/terms not configured, no integrations): Owner · Office · Site team · Sam Okoro (subcontractor, My work only)
+- **Ninety3 workspace** (sample data, VAT/terms not configured, no integrations): Luke (owner) · Ryan (admin) · Site team · Sam Okoro (subcontractor, My work only)
 - **Ridgeway Build & Joinery** (fictional demo business, VAT 20%, 14-day terms, demo inbox and demo accounting): Alex (owner) · Priya (office) · Sam (site team)
+
+## Pilot demo (owner + worker, about 10 minutes)
+
+1. **Ask Bob** (`/`): "Good evening, Luke", with Open diary / View jobs / Jobs to quote / Materials to order. Tap the mic or **Type**.
+2. **Jobs to quote** → open the enquiry → **Quote & job → Won — create job** → **Schedule work** (book Ellie, tomorrow). Tapping Won again opens the same job.
+3. **Diary**: the new booking; drag it to another day; Mark's *Unavailable* chips; **Holidays** → approve Ellie's request.
+4. **Jobs → Kitchen renovation**: Overview (site, what3words, shared instructions vs internal notes, activity) → **Files & photos** (Kitchen layout *Rev B · Current*, "Show 1 earlier revision") → upload a photo.
+5. **Garden room → Handover**: the saved handover → **Download ZIP**, or **Create handover**, tick files, **Preview**, **Save & download ZIP**.
+6. **Worker:** on a phone, "Other demo logins" → **Sam Okoro**. My work: next job, **Open in maps**, tick the angle-beads task, **Add photo or file** → camera. Back as Luke, the photo is on the job.
 
 ## First demo: Today, Enquiries, Ask Bob
 

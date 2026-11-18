@@ -11,7 +11,7 @@ import "server-only";
  * A person record is separate from login access: people can be booked before
  * (or without ever) being invited. Accepting an invite links the two.
  */
-import type { Bill, Booking, Job, Material, Person, PersonAccess, Role, Task } from "@/lib/types";
+import type { Absence, Bill, Booking, Job, JobFile, Material, Person, PersonAccess, Role, Task } from "@/lib/types";
 import { bookingInputSchema, billInputSchema, billPaymentSchema, materialInputSchema, personInputSchema } from "@/lib/validation";
 import { addDays, formatDayShort, formatTimeRange, rangeKeys, timeToMinutes } from "@/lib/dates";
 import { can } from "@/lib/auth/permissions";
@@ -21,6 +21,7 @@ import { denied, fail, ok, type Ctx, type Result } from "@/server/context";
 import { hashPassword, randomToken, sha256, verifyPassword } from "@/server/auth/password";
 import { createSession } from "@/server/auth/session";
 import { audit, getCustomer, getJob, listJobs } from "./records";
+import { ABSENCE_LABEL, absenceClashes, absenceWhen } from "./absences";
 
 const now = () => new Date().toISOString();
 const INVITE_DAYS = 7;
@@ -298,6 +299,8 @@ export function bookingsOverlap(a: Pick<Booking, "date" | "endDate" | "startTime
 }
 
 export interface Clash {
+  /** "booking": already on another job. "absence": approved leave or unavailability. */
+  kind?: "booking" | "absence";
   personId: string;
   personName: string;
   bookingId: string;
@@ -316,6 +319,7 @@ export function findClashes(ctx: Ctx, draft: Pick<Booking, "date" | "endDate" | 
       const j = jobs.get(other.jobId);
       const days = rangeKeys(other.date, bookingEnd(other));
       out.push({
+        kind: "booking",
         personId: pid,
         personName: people.get(pid)?.name ?? "Someone",
         bookingId: other.id,
@@ -324,11 +328,14 @@ export function findClashes(ctx: Ctx, draft: Pick<Booking, "date" | "endDate" | 
       });
     }
   }
+  for (const { personId, absence } of absenceClashes(ctx, draft)) {
+    out.push({ kind: "absence", personId, personName: people.get(personId)?.name ?? "Someone", bookingId: absence.id, jobTitle: ABSENCE_LABEL[absence.kind].toLowerCase(), when: absenceWhen(absence) });
+  }
   return out;
 }
 
 export const clashMessage = (c: Clash[]) =>
-  c.map((x) => `${x.personName} is already booked on ${x.jobTitle} (${x.when}).`).join(" ");
+  c.map((x) => (x.kind === "absence" ? `${x.personName} is on approved ${x.jobTitle} (${x.when}).` : `${x.personName} is already booked on ${x.jobTitle} (${x.when}).`)).join(" ");
 
 /**
  * Create or update a booking. Clashes for the same person are refused unless
@@ -543,10 +550,23 @@ export interface MyWork {
   bookings: MyBooking[];
   tasks: Pick<Task, "id" | "title" | "dueDate" | "done" | "relatedId">[];
   materials: (Pick<Material, "id" | "item" | "quantity" | "status" | "neededBy"> & { jobId: string })[];
+  /** Files shared with the team on these jobs (added by the My work route). */
+  files?: JobFile[];
+  /** Their own leave / unavailability (added by the My work route). */
+  absences?: Absence[];
   generatedAt: string;
 }
 
-function myPerson(ctx: Ctx): Person | undefined {
+/**
+ * Jobs an invited worker may reach right now: booked on them, ending no more
+ * than a week ago. Removing them from the booking (or their access) removes it.
+ */
+export function workerJobIds(ctx: Ctx): Set<string> {
+  const person = myPerson(ctx);
+  return new Set(person ? accessibleBookings(ctx, person).map((b) => b.jobId) : []);
+}
+
+export function myPerson(ctx: Ctx): Person | undefined {
   return scoped(ctx).list<Person>("people", { where: "user_id = ? AND archived_at IS NULL", params: [ctx.userId] })[0];
 }
 

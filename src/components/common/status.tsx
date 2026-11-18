@@ -13,6 +13,7 @@ const ENQUIRY_TONE: Record<EnquiryStatus, BadgeTone> = {
   new: "copper",
   awaiting_reply: "amber",
   replied: "blue",
+  site_visit: "blue",
   quote_required: "violet",
   quoted: "neutral",
   won: "green",

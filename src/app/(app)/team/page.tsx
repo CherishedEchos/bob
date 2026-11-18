@@ -6,6 +6,8 @@
  */
 import * as React from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { HolidaysView, PersonLeave } from "@/components/team/leave";
 import { Archive, CalendarDays, CalendarPlus, Check, Copy, Link2, Mail, Pencil, Phone, Search, ShieldOff, UserPlus, Users } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
@@ -30,8 +32,20 @@ const ACCESS_LABEL: Record<PersonAccess["state"], { label: string; tone: "neutra
 };
 
 export default function TeamPage() {
+  return (
+    <React.Suspense>
+      <TeamInner />
+    </React.Suspense>
+  );
+}
+
+function TeamInner() {
   const { data, can } = useStore();
   const ui = useUI();
+  const router = useRouter();
+  const params = useSearchParams();
+  const view = params.get("view") === "holidays" ? "holidays" : "people";
+  const pendingLeave = data.absences.filter((a) => a.status === "pending").length;
   const [filter, setFilter] = React.useState<Filter>("all");
   const [query, setQuery] = React.useState("");
   const [open, setOpen] = React.useState<string | null>(null);
@@ -47,7 +61,7 @@ export default function TeamPage() {
   const jobs = new Map(data.jobs.map((j) => [j.id, j]));
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-5xl">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="t-page">Team</h1>
@@ -55,12 +69,28 @@ export default function TeamPage() {
             {data.people.filter((p) => !p.archivedAt && p.kind === "employee").length} employees · {data.people.filter((p) => !p.archivedAt && p.kind === "subcontractor").length} subcontractors
           </p>
         </div>
-        {manage ? (
+        {manage && view === "people" ? (
           <button type="button" className={pageActionClass} onClick={() => ui.openForm({ form: "person" })}>
             <UserPlus className="size-[18px]" aria-hidden /> Add person
           </button>
         ) : null}
       </div>
+      <nav aria-label="Team sections" className="mb-4 flex gap-1 border-b border-line">
+        {([["people", "People", 0], ["holidays", "Holidays", pendingLeave]] as const).map(([v, label, n]) => (
+          <button
+            key={v}
+            type="button"
+            aria-current={view === v ? "page" : undefined}
+            onClick={() => router.replace(v === "people" ? "/team" : "/team?view=holidays", { scroll: false })}
+            className={cn("relative flex h-11 items-center gap-1.5 px-3 text-[15px] font-semibold", view === v ? "text-accent-fg after:absolute after:inset-x-2 after:bottom-0 after:h-[2px] after:rounded-t after:bg-copper-500" : "text-muted-foreground hover:text-foreground")}
+          >
+            {label}
+            {n ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-amber-500/15 px-1.5 text-[12px] font-semibold text-warn-fg">{n}</span> : null}
+          </button>
+        ))}
+      </nav>
+      {view === "holidays" ? <HolidaysView /> : (
+      <>
       <div className="mb-3 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
           <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-subtle" />
@@ -122,6 +152,8 @@ export default function TeamPage() {
           body={filter === "archived" || q ? undefined : "Add the people you book onto jobs — staff and subcontractors. They don't need a login to be scheduled."}
           action={manage && !q && filter !== "archived" ? <Button onClick={() => ui.openForm({ form: "person" })}><UserPlus /> Add person</Button> : undefined}
         />
+      )}
+      </>
       )}
       <PersonSheet personId={open} onClose={() => setOpen(null)} />
     </div>
@@ -247,6 +279,7 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
             <h3 className="t-eyebrow">Booked</h3>
             {upcoming.length ? <ul className="mt-1 divide-y divide-line">{upcoming.map((b) => <BookingLine key={b.id} b={b} />)}</ul> : <p className="mt-2 text-[15px] text-muted-foreground">No work scheduled.</p>}
           </section>
+          <PersonLeave person={p} />
           {past.length ? (
             <section className="mt-5">
               <h3 className="t-eyebrow">Recent work</h3>

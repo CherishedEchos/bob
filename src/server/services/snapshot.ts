@@ -12,6 +12,9 @@ import { listInvoices, listPayments } from "./finance";
 import { listAccess, listBills, listBookings, listMaterials, listPeople } from "./team";
 import { listMerchants } from "./merchants";
 import { listMyFeeds } from "./calendar";
+import { listFiles } from "./files";
+import { listHandovers } from "./handover";
+import { listAbsences } from "./absences";
 import { HttpError } from "@/server/context";
 
 /**
@@ -44,6 +47,9 @@ export function buildSnapshot(ctx: Ctx): Snapshot {
     bills: listBills(ctx),
     merchants: listMerchants(ctx),
     feeds: listMyFeeds(ctx),
+    files: listFiles(ctx),
+    handovers: listHandovers(ctx),
+    absences: listAbsences(ctx),
     activity: can(ctx.role, "activity.read") ? scoped(ctx).list("activity", { order: "at DESC", limit: 150 }) : [],
     connections: listConnections(ctx),
     mode: { database: "local-sqlite", aiEngine: activeEngine() },

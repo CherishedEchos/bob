@@ -8,6 +8,8 @@ import { buildSnapshot } from "@/server/services/snapshot";
 import * as T from "@/server/services/team";
 import * as M from "@/server/services/merchants";
 import * as Cal from "@/server/services/calendar";
+import * as Abs from "@/server/services/absences";
+import * as Files from "@/server/services/files";
 
 export const runtime = "nodejs";
 
@@ -64,6 +66,11 @@ const OPS: Record<string, (ctx: Ctx, a: Record<string, any>) => Result<unknown> 
   archiveMerchant: (c, a) => M.archiveMerchant(c, s(a.id), a.archived !== false),
   createFeed: (c, a) => Cal.createFeed(c, a.scope === "company" ? "company" : "person"),
   revokeFeed: (c, a) => Cal.revokeFeed(c, s(a.id)),
+  addAbsence: (c, a) => Abs.addAbsence(c, a.input),
+  decideAbsence: (c, a) => Abs.decideAbsence(c, s(a.id), a.decision),
+  cancelAbsence: (c, a) => Abs.cancelAbsence(c, s(a.id)),
+  updateFile: (c, a) => Files.updateFile(c, s(a.id), a.patch ?? {}),
+  deleteFile: (c, a) => Files.deleteFile(c, s(a.id)),
 };
 
 export const POST = authed(async (req, ctx) => {

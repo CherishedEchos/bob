@@ -1,4 +1,5 @@
 import "server-only";
+import { carryEnquiryFiles } from "./files";
 import type {
   ActivityEntry, Customer, Enquiry, EnquiryStatus, Expense, Job, JobStatus, Note, Quote, Task,
 } from "@/lib/types";
@@ -587,5 +588,7 @@ export function convertToJob(ctx: Ctx, args: { enquiryId?: unknown; quoteId?: un
     nextAction: "Schedule the work",
   });
   if (!created.ok) return created;
+  // Photos and attachments from the enquiry come with it (they keep their enquiry link too).
+  if (e) carryEnquiryFiles(ctx, e.id, created.value.id);
   return ok({ ...created.value, existed: false });
 }

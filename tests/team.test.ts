@@ -11,7 +11,7 @@ import * as R from "@/server/services/records";
 import * as T from "@/server/services/team";
 import { buildSnapshot } from "@/server/services/snapshot";
 import { contextFromToken } from "@/server/auth/session";
-import { getDb, initDb, setDbForTests } from "@/server/db";
+import { SCHEMA_VERSION, getDb, initDb, setDbForTests } from "@/server/db";
 import { addDays, dateKeyIn, rangeKeys, weekStart } from "@/lib/dates";
 import { todayKey } from "@/lib/utils";
 import type { Booking, Job } from "@/lib/types";
@@ -256,6 +256,8 @@ describe("Flow 9: existing databases migrate without losing data", () => {
       INSERT INTO users VALUES ('u1', 'boss@live.example', 'Boss', 'x', '2026-01-01');
       INSERT INTO memberships VALUES ('org_live', 'u1', 'owner');
       INSERT INTO jobs (id, org_id, customer_id, title, location, status, notes, created_at) VALUES ('j1', 'org_live', 'c1', 'Porch', 'Oxted', 'scheduled', '[]', '2026-01-01');
+      CREATE TABLE photos (id TEXT PRIMARY KEY, org_id TEXT NOT NULL, related_type TEXT, related_id TEXT, caption TEXT, mime_type TEXT, data TEXT, width REAL, height REAL, bytes REAL, created_at TEXT, created_by TEXT);
+      INSERT INTO photos VALUES ('pho_old1', 'org_live', 'job', 'j1', 'Porch footings', 'image/jpeg', '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP////8=', 10, 10, 24, '2026-01-02T09:00:00Z', 'Boss');
     `);
     initDb(old);
     setDbForTests(old);
@@ -266,7 +268,13 @@ describe("Flow 9: existing databases migrate without losing data", () => {
     expect(job).toEqual({ title: "Porch", site_address: null });
     // Live workspaces never get demo records.
     expect((old.prepare("SELECT COUNT(*) AS n FROM people").get() as { n: number }).n).toBe(0);
-    expect((old.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(3);
+    expect((old.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(SCHEMA_VERSION);
+    // v4: an old site photo becomes a job file with its bytes, once (re-running doesn't duplicate it).
+    initDb(old);
+    const files = old.prepare("SELECT id, job_id, category, title, uploaded_by FROM job_files WHERE org_id = 'org_live'").all() as { id: string; job_id: string; category: string; title: string; uploaded_by: string }[];
+    expect(files).toEqual([{ id: "fil_old1", job_id: "j1", category: "progress", title: "Porch footings", uploaded_by: "Boss" }]);
+    expect((old.prepare("SELECT length(data) AS n FROM file_blobs WHERE file_id = 'fil_old1'").get() as { n: number }).n).toBe(Buffer.from("/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP////8=", "base64").length);
+    expect((old.prepare("SELECT COUNT(*) AS n FROM photos").get() as { n: number }).n).toBe(1);
     expect((old.prepare("PRAGMA table_info(jobs)").all() as { name: string }[]).some((c) => c.name === "access_note")).toBe(true);
   });
 });

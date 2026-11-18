@@ -167,11 +167,36 @@ function SettingsInner() {
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-[13.5px] text-subtle">Owner: everything. Office: day-to-day admin and money. Site team: jobs, tasks, notes and costs — no financial records.</p>
+          <p className="mt-3 text-[13.5px] text-subtle">Owner: everything. Admin: planning, jobs, enquiries, tasks, materials, merchants, team and money — not Settings or connected accounts. Site team: jobs, tasks, notes and costs — no financial records. My work only: their own bookings.</p>
         </Section>
+        <LeavePolicySection org={org} owner={owner} save={save} />
         <PrivacySection org={org} owner={can("data.delete")} save={save} />
       </ul>
     </div>
+  );
+}
+
+function LeavePolicySection({ org, owner, save }: { org: OrgConfig; owner: boolean; save: (p: Record<string, unknown>) => Promise<void> }) {
+  const on = org.leavePolicy?.managersSelfApprove ?? true;
+  return (
+    <Section icon={CalendarDays} title="Team & holidays" subtitle={on ? "Luke and Ryan can record their own leave and approve crew requests." : "A main user's own leave needs the other main user's approval."}>
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          className="mt-1 size-5 accent-[var(--color-copper-500)]"
+          checked={on}
+          disabled={!owner}
+          onChange={(e) => void save({ leavePolicy: { managersSelfApprove: e.target.checked } })}
+        />
+        <span>
+          <span className="block text-[15px] font-medium">Owners and admins can record their own leave as approved</span>
+          <span className="block text-[14px] text-muted-foreground">
+            Either way, owners and admins approve or decline requests from employees, and subcontractors record their own unavailable dates. Manage leave in Team → Holidays.
+          </span>
+        </span>
+      </label>
+      {!owner ? <p className="mt-2 text-[13.5px] text-subtle">Only the owner can change this.</p> : null}
+    </Section>
   );
 }
 

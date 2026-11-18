@@ -76,8 +76,8 @@ const NINETY3: Cast = {
     quickbooksUrl: "https://qbo.intuit.com/app/bills",
   },
   users: [
-    { id: "usr_n93_owner", name: "Owner", email: "owner@ninety3.example", role: "owner" },
-    { id: "usr_n93_office", name: "Office", email: "office@ninety3.example", role: "office" },
+    { id: "usr_n93_owner", name: "Luke", email: "owner@ninety3.example", role: "owner" },
+    { id: "usr_n93_office", name: "Ryan", email: "office@ninety3.example", role: "office" },
     { id: "usr_n93_site", name: "Site team", email: "site@ninety3.example", role: "staff" },
   ],
   people: {

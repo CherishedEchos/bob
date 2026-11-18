@@ -342,7 +342,7 @@ export function StatusText({ tone, children, className }: { tone: "neutral" | "a
 /** Simple segmented tabs for a page's main lists (2–4 options). */
 export function Tabs<T extends string>({ label, value, onChange, options, className }: { label: string; value: T; onChange: (v: T) => void; options: { value: T; label: string; count?: number; highlight?: boolean }[]; className?: string }) {
   return (
-    <div role="tablist" aria-label={label} className={cn("flex min-w-0 flex-1 gap-1 rounded-xl bg-surface-3 p-1", className)}>
+    <div role="tablist" aria-label={label} className={cn("inline-flex min-w-0 max-w-full gap-0.5 rounded-xl bg-surface-3 p-1", className)}>
       {options.map((o) => {
         const active = value === o.value;
         return (
@@ -353,7 +353,7 @@ export function Tabs<T extends string>({ label, value, onChange, options, classN
             aria-selected={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              "flex h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 text-[14.5px] font-semibold transition active:bg-surface-2",
+              "flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[14.5px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-surface-2",
               active ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground",
             )}
           >

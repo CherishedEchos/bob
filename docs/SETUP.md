@@ -44,6 +44,22 @@ Each redirect URI is `$BOB_APP_URL/api/integrations/<provider>/callback`.
 - **Merchants:** trade account references, the password-manager link and "login managed by" are owner/office only — the server removes them for everyone else. Bob refuses text that looks like a password in merchant, material and job fields.
 - **Site details:** each job has its own site address (separate from the customer's address, with "Copy customer address"), optional what3words (format checked only — no what3words API key configured, so the square isn't verified) and a site access note.
 
+## Files, photos and handovers
+
+- **Where the bytes live:** locally (and on Render with a disk) in the `file_blobs` table of the same SQLite database, written in the same transaction as the file's metadata — so there are no orphaned files, and the existing backup of `BOB_DB_PATH` covers uploads too. Plan for disk size: up to **25 MB per file**. On Supabase, use a **private** Storage bucket `job-files` (see the header of `0005`), served only through `/api/files`.
+- **Accepted:** JPG, PNG, WebP, GIF, HEIC/HEIF, PDF, Word, Excel, DWG, DXF, TXT, CSV. Checked by content, not just the name. Only verified images and PDFs preview inline; everything else downloads. HEIC is stored as the original but can't be previewed in most browsers (iPhones usually send JPEG from the file picker).
+- **Thumbnails** are made on the uploading device; the original is always kept untouched.
+- **Retries:** each upload carries a client reference, so retrying never creates a duplicate.
+- **Who sees what:** owners, admins and site team see all files. Invited workers see files marked "Shared with people booked" on jobs they're booked on (until a week after the booking ends) and can add photos/documents there, not drawings. Delete: owners/admins, or the uploader.
+- **Customer handover:** owners/admins tick specific files, preview, then Bob saves the selection and downloads a ZIP (originals + a branded `Start here - index.html`). The saved handover is frozen: files in it keep their bytes even if later deleted from the job. **Download only** — nothing is emailed or shared from Bob.
+
+## Leave and availability
+
+- Team → **Holidays** (also linked from the Diary). Employees request full or half days from My work; owners/admins approve, decline or record leave directly. Subcontractors add "Unavailable" dates, which apply straight away.
+- **Policy** (Settings → Team & holidays, default on): owners/admins can record their own leave as approved. Turn it off and a main user's own leave needs the other main user's approval.
+- Approved leave shows on the Diary (pending is dashed and labelled) and in a person's Team record. Booking someone during approved leave gives a warning the planner can override; approving leave lists their existing bookings in that period. Reasons are private to the person and owners/admins.
+- Dates are plain date keys, so half days and ranges never shift across time zones or the clock change. Leave isn't included in calendar feeds yet.
+
 ## Migrations
 
 - **Local SQLite (what runs today, including Render):** automatic on start-up. `src/server/db/index.ts` → `migrate()` + `addMissingColumns()`. Additive only: new tables, new columns, and a copy-across rebuild of `memberships` to allow the `worker` role. Recorded in `PRAGMA user_version` (now 2). Sample workspaces get the demo team and week once; live workspaces are never given demo records.
@@ -53,7 +69,10 @@ Each redirect URI is `$BOB_APP_URL/api/integrations/<provider>/callback`.
   supabase/migrations/0002_team_schedule.sql
   supabase/migrations/0003_merchants_feeds.sql
   supabase/migrations/0004_admin_invites.sql
+  supabase/migrations/0005_files_handover_leave.sql
   ```
+  `0005` adds job files (with drawing revisions), customer handovers, leave/availability (`absences`) and the `site_visit` enquiry stage, with RLS. Workers reach files only through `public.my_files(org)`. Tested on Postgres 16 with `supabase/tests/rls_files_test.sql` (run it after `rls_team_test.sql` in the same database).
+  Local SQLite is at schema version 4 and upgrades on start-up: new tables `job_files`, `file_blobs`, `handovers`, `absences`; existing site photos are copied into Files & photos once (the old `photos` rows are kept). Sample workspaces get demo drawings, photos, a saved handover and leave once.
   `0004` lets invites grant the `office` (Admin) role.
   `0003` adds merchants, calendar feeds, material order fields, bill payment fields and `jobs.access_note` (all additive). Local SQLite is at schema version 3 and upgrades on start-up; older sample workspaces get demo merchants and access notes once.
   `0002` is additive. It also tightens `is_member()` so invited workers no longer count as members for existing tables; they read their work only through `public.my_work(org)`.

@@ -5,6 +5,7 @@
  * enquiry, job, customer or form without prop-drilling.
  */
 import * as React from "react";
+import { useRouter } from "next/navigation";
 
 export type FormPrefill =
   | { form: "job"; values?: Partial<Record<string, string>>; enquiryId?: string; customerId?: string }
@@ -21,7 +22,7 @@ export type FormPrefill =
   | { form: "bill"; jobId?: string }
   | { form: "merchant"; merchantId?: string };
 
-export type JobTab = "overview" | "schedule" | "tasks" | "materials" | "money";
+export type JobTab = "overview" | "schedule" | "tasks" | "materials" | "files" | "handover" | "money";
 
 interface UIState {
   enquiryId: string | null;
@@ -52,12 +53,17 @@ interface UIValue extends UIState {
 const UIContext = React.createContext<UIValue | null>(null);
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [state, setState] = React.useState<UIState>({ enquiryId: null, enquiryFocus: null, jobId: null, jobTab: "overview", customerId: null, form: null, assistantOpen: false });
   const value = React.useMemo<UIValue>(
     () => ({
       ...state,
       openEnquiry: (id, opts) => setState((s) => ({ ...s, enquiryId: id, enquiryFocus: opts?.focus ?? null, jobId: null, customerId: null, assistantOpen: false })),
-      openJob: (id, opts) => setState((s) => ({ ...s, jobId: id, jobTab: opts?.tab ?? "overview", enquiryId: null, customerId: null, assistantOpen: false })),
+      // A job is a full page (/jobs/[id]) so it can be linked, refreshed and shared.
+      openJob: (id, opts) => {
+        setState((s) => ({ ...s, jobId: null, jobTab: opts?.tab ?? "overview", enquiryId: null, customerId: null, assistantOpen: false }));
+        router.push(`/jobs/${encodeURIComponent(id)}${opts?.tab && opts.tab !== "overview" ? `?tab=${opts.tab}` : ""}`);
+      },
       openCustomer: (id) => setState((s) => ({ ...s, customerId: id, jobId: null, enquiryId: null, assistantOpen: false })),
       openForm: (form) => setState((s) => ({ ...s, form })),
       closeEnquiry: () => setState((s) => ({ ...s, enquiryId: null })),
@@ -67,7 +73,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       closeForm: () => setState((s) => ({ ...s, form: null })),
       setAssistantOpen: (assistantOpen) => setState((s) => ({ ...s, assistantOpen })),
     }),
-    [state],
+    [state, router],
   );
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 }

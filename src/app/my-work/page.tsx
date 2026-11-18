@@ -7,7 +7,7 @@
  * Only their own bookings ever reach this screen.
  */
 import * as React from "react";
-import { AlertTriangle, Check, ChevronDown, ClipboardList, FlaskConical, Loader2, LogOut, MapPin, Package, Phone, RefreshCw, Users } from "lucide-react";
+import { AlertTriangle, CalendarOff, Check, ChevronDown, ClipboardList, FileText, FlaskConical, Loader2, LogOut, MapPin, Package, Phone, Plane, RefreshCw, Users } from "lucide-react";
 import { BobLogo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { toast, Toaster } from "@/components/ui/toaster";
@@ -16,6 +16,13 @@ import { cn, timeAgo } from "@/lib/utils";
 import { SiteActions } from "@/components/jobs/job-parts";
 import { CalendarLink, type FeedInfo } from "@/components/settings/calendar-links";
 import type { MyBooking, MyWork } from "@/server/services/team";
+import type { Absence, JobFile } from "@/lib/types";
+import { UploadButtons, UploadQueue } from "@/components/files/upload-queue";
+import { FileViewer, Thumb } from "@/components/files/files-panel";
+import { CATEGORY_SINGULAR, fileUrl } from "@/lib/files/upload";
+import { ABSENCE_LABEL, PART_LABEL } from "@/lib/leave";
+import { Field, Input, Textarea } from "@/components/ui/input";
+import { Dialog, DialogContent } from "@/components/ui/sheet";
 
 const MAT_LABEL = { to_order: "To order", ordered: "Ordered", on_site: "On site" } as const;
 
@@ -148,7 +155,7 @@ export default function MyWorkPage() {
                 <h2 id="next-title" className="t-eyebrow mb-2">
                   Next
                 </h2>
-                <BookingCard b={next} today={data.today} expanded changed={changed(next)} />
+                <BookingCard b={next} today={data.today} expanded changed={changed(next)} files={(data.files ?? []).filter((f) => f.jobId === next.job.id)} onUploaded={load} />
               </section>
             ) : (
               <div className="panel mt-4 p-5 text-center">
@@ -165,7 +172,7 @@ export default function MyWorkPage() {
                 <ul className="flex flex-col gap-2">
                   {rest.map((b) => (
                     <li key={b.id}>
-                      <BookingCard b={b} today={data.today} changed={changed(b)} />
+                      <BookingCard b={b} today={data.today} changed={changed(b)} files={(data.files ?? []).filter((f) => f.jobId === b.job.id)} onUploaded={load} />
                     </li>
                   ))}
                 </ul>
@@ -195,6 +202,8 @@ export default function MyWorkPage() {
               </section>
             ) : null}
 
+            <TimeOff data={data} onChanged={load} />
+
             <p className="mt-6 text-center text-[12.5px] text-subtle">
               Updated {timeAgo(data.generatedAt)}. Changes from the office show here when you open or refresh.
             </p>
@@ -208,7 +217,7 @@ export default function MyWorkPage() {
   );
 }
 
-function BookingCard({ b, today, expanded = false, changed }: { b: MyBooking; today: string; expanded?: boolean; changed?: boolean }) {
+function BookingCard({ b, today, expanded = false, changed, files, onUploaded }: { b: MyBooking; today: string; expanded?: boolean; changed?: boolean; files: JobFile[]; onUploaded: () => Promise<void> | void }) {
   const [open, setOpen] = React.useState(expanded);
   const when = `${relativeDay(b.date, today)}${b.endDate ? ` – ${formatDayShort(b.endDate)}` : ""}`;
   return (
@@ -250,9 +259,197 @@ function BookingCard({ b, today, expanded = false, changed }: { b: MyBooking; to
             </p>
           ) : null}
           {b.job.contactName ? <p className="text-[14px] text-muted-foreground">Customer: {b.job.contactName}</p> : null}
+          <JobFilesForWorker jobId={b.job.id} files={files} onUploaded={onUploaded} />
         </div>
       ) : null}
     </article>
+  );
+}
+
+/** Drawings and documents shared on the job (current revisions), photos, and a big Add photo button. */
+function JobFilesForWorker({ jobId, files, onUploaded }: { jobId: string; files: JobFile[]; onUploaded: () => Promise<void> | void }) {
+  const [picked, setPicked] = React.useState<File[] | null>(null);
+  const [viewing, setViewing] = React.useState<{ list: JobFile[]; index: number } | null>(null);
+  const latest = new Map<string, JobFile>();
+  for (const f of [...files].sort((a, c) => a.createdAt.localeCompare(c.createdAt))) latest.set(f.groupId, f);
+  const current = [...latest.values()];
+  const docs = current.filter((f) => f.category === "drawing" || f.category === "other");
+  const photos = current.filter((f) => f.category === "progress" || f.category === "completion").sort((a, c) => c.createdAt.localeCompare(a.createdAt));
+  const open = (f: JobFile, list: JobFile[]) => (f.previewable ? setViewing({ list: list.filter((x) => x.previewable), index: list.filter((x) => x.previewable).indexOf(f) }) : window.open(fileUrl(f.id, { download: true }), "_blank", "noopener"));
+  return (
+    <div className="border-t border-line pt-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h4 className="text-[14px] font-semibold">Drawings, files &amp; photos</h4>
+      </div>
+      <UploadButtons onPick={setPicked} primaryLabel="Add photo or file" className="[&>label]:flex-1 [&>label]:justify-center" />
+      {docs.length ? (
+        <ul className="mt-3 divide-y divide-line rounded-xl ring-1 ring-line">
+          {docs.map((f) => (
+            <li key={f.id}>
+              <button type="button" onClick={() => open(f, docs)} className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left active:bg-surface-2">
+                <FileText className="size-5 shrink-0 text-accent-icon" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-medium">
+                    {f.title ?? f.filename}
+                    {f.revision ? <span className="ml-1.5 rounded bg-surface-3 px-1.5 text-[12.5px] font-semibold">{f.revision}</span> : null}
+                  </span>
+                  <span className="block truncate text-[13px] text-muted-foreground">
+                    {CATEGORY_SINGULAR[f.category]}
+                    {f.category === "drawing" ? " · current version" : ""}
+                    {f.description ? ` · ${f.description}` : ""}
+                  </span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {photos.length ? (
+        <ul className="mt-3 grid grid-cols-3 gap-2">
+          {photos.slice(0, 9).map((f) => (
+            <li key={f.id}>
+              <button type="button" onClick={() => open(f, photos)} className="block w-full overflow-hidden rounded-lg ring-1 ring-line" aria-label={`View ${f.title ?? f.filename}`}>
+                <Thumb file={f} className="aspect-square w-full" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {!docs.length && !photos.length ? <p className="mt-2 text-[14px] text-muted-foreground">No files shared on this job yet.</p> : null}
+      {picked ? (
+        <UploadQueue
+          worker
+          target={{ jobId }}
+          files={picked}
+          onClose={() => setPicked(null)}
+          onSaved={async (saved) => {
+            toast(`${saved.length} file${saved.length === 1 ? "" : "s"} added to the job`, "success");
+            await onUploaded();
+          }}
+        />
+      ) : null}
+      {viewing ? <FileViewer list={viewing.list} index={viewing.index} onIndex={(i) => setViewing({ ...viewing, index: i })} onClose={() => setViewing(null)} /> : null}
+    </div>
+  );
+}
+
+/** Their own holidays / unavailable dates, and a request form. */
+function TimeOff({ data, onChanged }: { data: MyWork; onChanged: () => Promise<void> | void }) {
+  const [adding, setAdding] = React.useState(false);
+  const sub = data.person?.kind === "subcontractor";
+  const list = (data.absences ?? []).filter((a) => a.endDate >= data.today && (a.status === "pending" || a.status === "approved")).sort((a, c) => a.startDate.localeCompare(c.startDate));
+  const recent = (data.absences ?? []).filter((a) => a.status === "declined" && a.endDate >= data.today);
+  const cancel = async (a: Absence) => {
+    const r = await fetch("/api/leave", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel", id: a.id }) });
+    const body = (await r.json().catch(() => ({}))) as { error?: string };
+    if (!r.ok) return toast(body.error ?? "Couldn't cancel", "error");
+    toast("Cancelled", "success");
+    await onChanged();
+  };
+  return (
+    <section aria-labelledby="off-title" className="mt-6">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 id="off-title" className="t-eyebrow flex items-center gap-1.5">
+          <CalendarOff className="size-3.5" aria-hidden /> {sub ? "Dates you can't work" : "Holidays"}
+        </h2>
+        <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>
+          <Plane /> {sub ? "Add unavailable dates" : "Request time off"}
+        </Button>
+      </div>
+      {list.length || recent.length ? (
+        <ul className="panel divide-y divide-line overflow-hidden">
+          {[...list, ...recent].map((a) => (
+            <li key={a.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+              <span className="min-w-0">
+                <span className="block text-[15px] font-medium">
+                  {formatDayShort(a.startDate)}
+                  {a.endDate !== a.startDate ? ` – ${formatDayShort(a.endDate)}` : ""}
+                  {a.part ? ` · ${PART_LABEL[a.part]}` : ""}
+                </span>
+                <span className={cn("block text-[13.5px]", a.status === "pending" ? "text-warn-fg" : a.status === "declined" ? "text-danger-fg" : "text-good-fg")}>
+                  {ABSENCE_LABEL[a.kind]} · {a.status === "pending" ? "Waiting for approval" : a.status === "declined" ? "Declined" : "Approved"}
+                </span>
+              </span>
+              {a.status !== "declined" ? (
+                <Button size="sm" variant="ghost" onClick={() => void cancel(a)}>
+                  Cancel
+                </Button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="panel px-4 py-3 text-[15px] text-muted-foreground">{sub ? "No unavailable dates added." : "No time off booked."}</p>
+      )}
+      {adding ? <TimeOffForm sub={sub} today={data.today} onClose={() => setAdding(false)} onSaved={onChanged} /> : null}
+    </section>
+  );
+}
+
+function TimeOffForm({ sub, today, onClose, onSaved }: { sub: boolean; today: string; onClose: () => void; onSaved: () => Promise<void> | void }) {
+  const [v, setV] = React.useState({ startDate: today, endDate: "", part: "full", reason: "" });
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [busy, setBusy] = React.useState(false);
+  const single = !v.endDate || v.endDate === v.startDate;
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent title={sub ? "Dates you can't work" : "Request time off"} description={sub ? "The office sees these on the diary straight away." : "Luke or Ryan will approve it. The answer shows here."}>
+        <form
+          className="space-y-3"
+          noValidate
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            setErrors({});
+            const r = await fetch("/api/leave", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ input: { kind: sub ? "unavailable" : "holiday", startDate: v.startDate, endDate: v.endDate || v.startDate, part: single ? v.part : "full", reason: v.reason } }) }).catch(() => null);
+            setBusy(false);
+            const body = (await r?.json().catch(() => ({}))) as { error?: string; fieldErrors?: Record<string, string>; value?: Absence } | undefined;
+            if (!r?.ok || !body?.value) return setErrors({ _: body?.error ?? "Couldn't send — check your signal and try again. Your dates are still here.", ...(body?.fieldErrors ?? {}) });
+            toast(body.value.status === "pending" ? "Request sent" : "Saved", "success");
+            await onSaved();
+            onClose();
+          }}
+        >
+          {errors._ ? (
+            <p role="alert" className="text-[14px] text-danger-fg">
+              {errors._}
+            </p>
+          ) : null}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="First day" htmlFor="to-start" error={errors.startDate}>
+              <Input id="to-start" type="date" value={v.startDate} onChange={(e) => setV({ ...v, startDate: e.target.value })} />
+            </Field>
+            <Field label="Last day" htmlFor="to-end" error={errors.endDate} hint="Blank for one day">
+              <Input id="to-end" type="date" min={v.startDate} value={v.endDate} onChange={(e) => setV({ ...v, endDate: e.target.value })} />
+            </Field>
+          </div>
+          {single ? (
+            <fieldset>
+              <legend className="mb-1.5 text-[14px] font-medium">How long</legend>
+              <div className="inline-flex gap-1 rounded-xl bg-surface-3 p-1">
+                {([["full", "Full day"], ["am", "Morning"], ["pm", "Afternoon"]] as const).map(([val, label]) => (
+                  <label key={val} className={cn("flex h-10 cursor-pointer items-center rounded-lg px-3 text-[14.5px] font-semibold", v.part === val ? "bg-card text-heading ring-1 ring-line" : "text-muted-foreground")}>
+                    <input type="radio" name="to-part" checked={v.part === val} onChange={() => setV({ ...v, part: val })} className="sr-only" />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
+          <Field label="Reason (optional, private)" htmlFor="to-reason" hint="Only you and Luke/Ryan see this.">
+            <Textarea id="to-reason" rows={2} maxLength={300} value={v.reason} onChange={(e) => setV({ ...v, reason: e.target.value })} />
+          </Field>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={busy}>
+              {busy ? "Sending…" : sub ? "Save dates" : "Send request"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

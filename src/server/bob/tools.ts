@@ -1034,11 +1034,11 @@ const markReplied: ActionTool<{ enquiryId: string }> = {
 const setEnquiryStatus: ActionTool<{ enquiryId: string; status: Enquiry["status"] }, { enquiryId: string; status: Enquiry["status"]; previous: Enquiry["status"] }> = {
   kind: "action",
   name: "set_enquiry_status",
-  description: "Move an enquiry to a new status (new, awaiting_reply, replied, quote_required, quoted, won, lost).",
+  description: "Move an enquiry to a new status (new, awaiting_reply, replied, site_visit, quote_required, quoted, won, lost).",
   category: "internal",
   permission: "enquiries.write",
   confirmation: "undoable",
-  schema: z.object({ enquiryId: id, status: z.enum(["new", "awaiting_reply", "replied", "quote_required", "quoted", "won", "lost"]) }),
+  schema: z.object({ enquiryId: id, status: z.enum(["new", "awaiting_reply", "replied", "site_visit", "quote_required", "quoted", "won", "lost"]) }),
   prepare(ctx, a) {
     const e = R.getEnquiry(ctx, a.enquiryId);
     if (!e) return notFound("enquiry");

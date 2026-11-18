@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { AudioLines, CalendarDays, Play, ChevronLeft, Keyboard, Package, Users, Loader2, MessageCircle, Mic, MoreHorizontal, Pencil, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { AudioLines, CalendarDays, ClipboardList, HardHat, ListChecks, Play, ChevronLeft, ChevronRight, Keyboard, Package, Users, Loader2, MessageCircle, Mic, MoreHorizontal, Pencil, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
 import { flushSync } from "react-dom";
 import { useBob } from "@/lib/bob/provider";
 import type { BobMessage, Chip } from "@/lib/bob/types";
@@ -29,6 +29,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
   const { data, org, user, can } = useStore();
   const ui = useUI();
   const router = useRouter();
+  const atRoot = usePathname() === "/";
   const [menuOpen, setMenuOpen] = React.useState(false);
   // Opened as a panel (e.g. after asking from Today), show the conversation straight away.
   const [home, setHome] = React.useState(variant !== "panel");
@@ -88,6 +89,27 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
   const lastAssistantId = [...messages].reverse().find((m) => m.role === "assistant")?.id;
   const lastUserId = [...messages].reverse().find((m) => m.role === "user")?.id;
 
+  // Navigation shortcuts: owners/admins plan the business; the site team sees their work.
+  const today = new Date().toISOString().slice(0, 10);
+  const toQuote = data.enquiries.filter((e) => e.status === "quote_required").length;
+  const toOrder = data.materials.filter((m) => m.status === "to_order").length;
+  const activeJobs = data.jobs.filter((j) => !["completed", "lost"].includes(j.status)).length;
+  const myPerson = data.people.find((p) => p.userId === user.id);
+  const myTasks = data.tasks.filter((t) => !t.done && (t.assignedUserId === user.id || (myPerson && t.assignedPersonId === myPerson.id))).length;
+  const links: QuickLink[] = can("schedule.manage")
+    ? [
+        { label: "Open diary", href: "/week", icon: CalendarDays, meta: `${data.bookings.filter((b) => b.date <= today && (b.endDate ?? b.date) >= today).length} booked today` },
+        { label: "View jobs", href: "/jobs", icon: HardHat, meta: `${activeJobs} active` },
+        { label: "Jobs to quote", href: "/enquiries?tab=quote", icon: ClipboardList, meta: toQuote ? `${toQuote} waiting` : "None waiting" },
+        { label: "Materials to order", href: "/materials", icon: Package, meta: toOrder ? `${toOrder} to order` : "All ordered" },
+      ]
+    : [
+        { label: "Open diary", href: "/week", icon: CalendarDays, meta: "Who's on what" },
+        { label: "View jobs", href: "/jobs", icon: HardHat, meta: `${activeJobs} active` },
+        { label: "My tasks", href: "/tasks", icon: ListChecks, meta: myTasks ? `${myTasks} open` : "Nothing open" },
+        { label: "Materials", href: "/materials", icon: Package, meta: toOrder ? `${toOrder} to order` : "All ordered" },
+      ];
+
   const shortcuts: Shortcut[] = [
     { label: "What needs my attention today?", icon: MessageCircle, run: () => ask("What needs my attention today?") },
     {
@@ -99,8 +121,6 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
       },
     },
     ...(can("schedule.read") ? [{ label: "Who's working tomorrow?", icon: Users, run: () => ask("Who's working tomorrow?") }] : []),
-    { label: "What still needs ordering this week?", icon: Package, run: () => ask("What still needs ordering this week?") },
-    ...(can("jobs.write") ? [{ label: "Add a new job", icon: CalendarDays, run: () => ui.openForm({ form: "job" }) }] : []),
   ];
 
   const suggestions = [
@@ -119,9 +139,13 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
       {/* ------------------------------ Header ------------------------------ */}
       {variant === "page" ? (
         <header className="relative z-10 grid h-[calc(4rem+env(safe-area-inset-top))] shrink-0 grid-cols-[92px_minmax(0,1fr)_92px] items-center px-2 pt-[env(safe-area-inset-top)] lg:px-6">
-          <Link href="/week" aria-label="Back to Diary" className="grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-surface-3">
-            <ChevronLeft className="size-7" strokeWidth={1.8} />
-          </Link>
+          {atRoot ? (
+            <span aria-hidden />
+          ) : (
+            <Link href="/week" aria-label="Back to Diary" className="grid size-11 place-items-center rounded-full text-foreground/90 hover:bg-surface-3">
+              <ChevronLeft className="size-7" strokeWidth={1.8} />
+            </Link>
+          )}
           <WorkspaceLockup org={org} />
           <div className="relative flex items-center justify-end gap-0.5">
             <SpeakRepliesToggle withLabel={false} />
@@ -235,6 +259,8 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
           orbState={orbState}
           thinking={thinking}
           shortcuts={shortcuts}
+          links={links}
+          greeting={`${greetingNow()}${name}`}
           hasConversation={messages.length > 0}
           onContinue={() => setHome(false)}
           onSubmit={submitText}
@@ -398,6 +424,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
 /* ------------------------------ Ask Bob home (page) ------------------------------ */
 
 type Shortcut = { label: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; run: () => void };
+type QuickLink = { label: string; href: string; meta: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }> };
 
 /** The workspace's own logo and name, "with bob." — works for any trades business. */
 function WorkspaceLockup({ org }: { org: { name: string; shortName: string; logoUrl?: string; dataMode?: string } }) {
@@ -421,11 +448,11 @@ function WorkspaceLockup({ org }: { org: { name: string; shortName: string; logo
 
 /** Orb size that keeps the orb, shortcuts and mic on one iPhone screen. */
 function useOrbSize() {
-  const [size, setSize] = React.useState(190);
+  const [size, setSize] = React.useState(150);
   React.useEffect(() => {
     const calc = () => {
       const h = window.visualViewport?.height ?? window.innerHeight;
-      setSize(Math.round(Math.max(112, Math.min(220, h - 548))));
+      setSize(Math.round(Math.max(96, Math.min(190, h - 660))));
     };
     calc();
     window.addEventListener("resize", calc);
@@ -444,6 +471,8 @@ function AskBobHome({
   orbState,
   thinking,
   shortcuts,
+  links,
+  greeting,
   hasConversation,
   onContinue,
   onSubmit,
@@ -453,6 +482,8 @@ function AskBobHome({
   orbState: OrbState;
   thinking: boolean;
   shortcuts: Shortcut[];
+  links: QuickLink[];
+  greeting: string;
   hasConversation: boolean;
   onContinue: () => void;
   onSubmit: (e?: React.FormEvent) => void;
@@ -501,11 +532,31 @@ function AskBobHome({
             ) : phase === "sending" || thinking ? (
               <p className="text-[22px] font-semibold tracking-tight">Sending to Bob…</p>
             ) : (
-              <h1 className="text-[28px] font-bold leading-tight tracking-[-0.02em] text-[#FAF9F6] min-[400px]:text-[30px]">Hey, how can I help?</h1>
+              <>
+                <p className="text-[15px] font-medium text-white/70">{greeting}</p>
+                <h1 className="mt-0.5 text-[27px] font-bold leading-tight tracking-[-0.02em] text-[#FAF9F6] min-[400px]:text-[30px]">How can I help?</h1>
+              </>
             )}
           </div>
 
-          <ul className="mt-3 w-full space-y-2">
+          <nav aria-label="Shortcuts" className="mt-4 grid w-full grid-cols-2 gap-2">
+            {links.map((l) => (
+              <Link
+                key={l.href + l.label}
+                href={l.href}
+                className="group flex min-h-[64px] items-center gap-3 rounded-xl bg-raised px-3 py-2.5 ring-1 ring-line-strong transition hover:ring-copper-500/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-copper-300"
+              >
+                <l.icon className="size-[22px] shrink-0 text-accent-icon" strokeWidth={1.7} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-semibold leading-tight text-[#FAF9F6]">{l.label}</span>
+                  <span className="block truncate text-[13px] text-white/65">{l.meta}</span>
+                </span>
+                <ChevronRight className="hidden size-4 shrink-0 text-white/40 transition group-hover:text-white/80 min-[400px]:block" aria-hidden />
+              </Link>
+            ))}
+          </nav>
+          <h2 className="mt-4 w-full text-left text-[13px] font-semibold uppercase tracking-wider text-white/55">Ask Bob</h2>
+          <ul className="mt-2 w-full space-y-2">
             {shortcuts.map((s) => (
               <li key={s.label}>
                 <button
@@ -572,10 +623,10 @@ function AskBobHome({
                   type="button"
                   onClick={openKeyboard}
                   disabled={busy}
-                  className="flex min-h-12 flex-col items-center justify-center gap-0.5 justify-self-start rounded-2xl px-2 text-white/85 hover:bg-surface-3 disabled:opacity-40 min-[380px]:flex-row min-[380px]:gap-2 min-[380px]:px-3"
+                  className="flex min-h-12 items-center justify-center gap-2 justify-self-start rounded-full px-3.5 text-white/90 ring-1 ring-white/20 hover:bg-surface-3 hover:ring-white/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-copper-300 disabled:opacity-40"
                 >
-                  <Keyboard className="size-6 shrink-0" strokeWidth={1.6} aria-hidden />
-                  <span className="whitespace-nowrap text-[13.5px] font-medium min-[380px]:text-[15px]">Type instead</span>
+                  <Keyboard className="size-5 shrink-0" strokeWidth={1.7} aria-hidden />
+                  <span className="whitespace-nowrap text-[15px] font-medium">Type</span>
                 </button>
                 <div className="flex flex-col items-center">
                   <BigMic phase={phase} disabled={!speech.supported || busy} onClick={c.toggleMic} />

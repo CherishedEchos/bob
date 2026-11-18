@@ -19,7 +19,7 @@ import { Field, Input, NativeSelect, Textarea } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
 
 type Change = React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
-type Clash = { personId: string; personName: string; jobTitle: string; when: string };
+type Clash = { kind?: "booking" | "absence"; personId: string; personName: string; jobTitle: string; when: string };
 
 function useForm<T extends Record<string, string>>(initial: T) {
   const [values, setValues] = React.useState(initial);
@@ -237,12 +237,20 @@ export function BookingForm({ prefill }: { prefill: Extract<FormPrefill, { form:
       {clashes ? (
         <div role="alert" className="rounded-2xl bg-amber-500/10 p-3.5 ring-1 ring-amber-500/30">
           <p className="flex items-start gap-2 text-[15px] font-semibold text-warn-fg">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden /> Double booking
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden /> {clashes.every((c) => c.kind === "absence") ? "Clashes with leave" : clashes.some((c) => c.kind === "absence") ? "Double booking and leave" : "Double booking"}
           </p>
           <ul className="mt-1 space-y-1 pl-6 text-[14.5px] text-foreground">
             {clashes.map((c, i) => (
               <li key={i}>
-                <strong>{c.personName}</strong> is already on {c.jobTitle} ({c.when}).
+                {c.kind === "absence" ? (
+                  <>
+                    <strong>{c.personName}</strong> is on approved {c.jobTitle} ({c.when}).
+                  </>
+                ) : (
+                  <>
+                    <strong>{c.personName}</strong> is already on {c.jobTitle} ({c.when}).
+                  </>
+                )}
               </li>
             ))}
           </ul>

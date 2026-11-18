@@ -7,10 +7,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   const hasSession = Boolean(request.cookies.get("bob_session")?.value);
-  // Land on This week, decided on the server so nothing else renders first.
-  if (request.nextUrl.pathname === "/") {
+  // The root opens Ask Bob for signed-in users (rendered by src/app/(app)/page.tsx);
+  // invited workers are sent on to My work by the app layout. Deep links are untouched.
+  if (request.nextUrl.pathname === "/" && !hasSession) {
     const url = request.nextUrl.clone();
-    url.pathname = hasSession ? "/week" : "/login";
+    url.pathname = "/login";
     url.search = "";
     return NextResponse.redirect(url);
   }
