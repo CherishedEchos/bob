@@ -30,6 +30,13 @@ services:
       # Optional: set in the Render dashboard to switch on the Claude engine.
       - key: ANTHROPIC_API_KEY
         sync: false
+      # Optional Claude tuning for Ask Bob (defaults: claude-opus-5-5, 30000 ms).
+      - key: BOB_CLAUDE_MODEL
+        sync: false
+      - key: BOB_CLAUDE_EFFORT
+        sync: false
+      - key: BOB_CLAUDE_TIMEOUT_MS
+        sync: false
       # Bob's spoken replies. Set in the Render dashboard (kept server-side).
       - key: ELEVENLABS_API_KEY
         sync: false

@@ -16,7 +16,11 @@ Sign in with a demo account on `/login` (the password is shown there). The local
 
 | Variable(s) | Unlocks | Where to get it |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Bob understands free-form requests with Claude, instead of the demo rules engine | console.anthropic.com |
+| `ANTHROPIC_API_KEY` | Ask Bob uses Claude (with Bob's own tools) for free-form, multi-turn conversation, instead of the built-in engine. Kept server-side only | console.anthropic.com |
+| `BOB_CLAUDE_MODEL` | Optional. Which Claude model Ask Bob uses (default `claude-opus-5-5`) | — |
+| `BOB_CLAUDE_EFFORT` | Optional. `low`, `medium` or `high` — lower is faster for voice | — |
+| `BOB_CLAUDE_TIMEOUT_MS` | Optional. How long one Claude request may take before Bob's built-in engine answers instead (default `30000`) | — |
+| `BOB_ENGINE` | Optional. Set to `rules` to force the built-in engine even when a key is set | — |
 | `BOB_ENCRYPTION_KEY` | Storing any integration's OAuth tokens (required for every integration) | Generate locally: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 | `BOB_APP_URL` | OAuth redirect URIs | Your HTTPS domain |
 | `GOOGLE_CLIENT_ID/SECRET` | Gmail: read enquiries, send approved replies | Google Cloud console → OAuth client (Web). Scopes: `gmail.readonly`, `gmail.send`. Needs Google's OAuth verification before it can be used by the public. |
@@ -130,3 +134,11 @@ All 9 checks should print `PASS` (cross-org read/insert/update/move, token secre
 6. **Hosting:** HTTPS only, environment secrets in the host's secret store, database backups, and error monitoring without customer data in the logs.
 7. **GDPR paperwork:** privacy notice for customers, DPAs with Anthropic, Supabase, the email provider and the accounting provider, a retention schedule (set in Settings), and a breach procedure.
 8. **Security review:** an independent review or penetration test of auth, RLS and the approval flow.
+
+## Ask Bob: invoicing by conversation
+
+Typed and spoken messages go through the same handler (`/api/bob/message` → `handleTurn`). With `ANTHROPIC_API_KEY` set, Claude answers using Bob's tools: `find_jobs_to_bill` (fuzzy search across customer name, site address, town and type of work, tolerating Mackay/McKay/Mackey), `get_job_billing` (Bob's own figures: contract value, deposit, invoices issued, remaining to invoice, unpaid on invoices), `save_invoice_draft` / `delete_invoice_draft` (drafts only, one open draft per job, Undo) and `send_invoice` (separate, with an approval card showing recipient and amount; blocked unless Xero or QuickBooks is connected). Tools are filtered by the signed-in user's role, a turn is limited to 6 model calls, and each call to 30 seconds. If Claude is unavailable or slow, Bob's built-in engine answers the same message with the same billing logic and says so.
+
+Without a key, the built-in engine handles the same invoice conversation. Set **Settings → VAT status** and **payment terms** so Bob doesn't need to ask about VAT and due dates on each invoice.
+
+Test: `npx vitest run tests/invoice-chat.test.ts` (conversations, plus a simulated Claude client) and `node scripts/e2e-ask-bob-invoice.cjs` (the real UI on a throwaway database).

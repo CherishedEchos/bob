@@ -18,6 +18,30 @@ function words(text: string): string[] {
   return text.replace(/[’']s\b/g, "").replace(/[^A-Za-z\s&-]/g, " ").split(/\s+/).filter(Boolean);
 }
 
+/**
+ * A sound-alike key for surnames, so a misheard or misspelt name still finds
+ * candidates: Mackay / McKay / Mackey → "mck", Smith / Smyth → "smth",
+ * Phillips / Filips → "flps". Only used for longer names (or Mac/Mc names),
+ * and always as candidates — Bob still asks if more than one fits.
+ */
+export function soundKey(w: string): string {
+  let s = w.toLowerCase().replace(/[^a-z]/g, "");
+  const mac = s.match(/^ma?c(?=[a-z]{2})/);
+  if (mac) s = s.slice(mac[0].length);
+  s = s.replace(/ph/g, "f").replace(/ck/g, "k").replace(/(.)\1+/g, "$1");
+  if (mac) return `mc${s.replace(/[aeiouy]/g, "")}`;
+  return s[0] ? s[0] + s.slice(1).replace(/[aeiouy]/g, "") : "";
+}
+
+function similarName(word: string, part: string): boolean {
+  if (word.length < 4 || part.length < 4) return false;
+  const macName = /^ma?c/.test(part) && /^ma?c/.test(word);
+  if (!macName && (word.length < 5 || part.length < 5)) return false;
+  const a = soundKey(word);
+  const b = soundKey(part);
+  return a.length >= 3 && a === b && word[0] === part[0];
+}
+
 /** Score how strongly `text` mentions `name` (0 = not at all). */
 export function mentionScore(text: string, name: string): number {
   const raw = words(text);
@@ -32,7 +56,7 @@ export function mentionScore(text: string, name: string): number {
     const singular = p.replace(/s$/, "");
     return lower.some((w, i) => {
       const ws = w.replace(/s$/, "");
-      if (!(w === p || ws === singular || w === `${p}s`)) return false;
+      if (!(w === p || ws === singular || w === `${p}s` || similarName(w, p))) return false;
       if (WORDY_NAMES.has(p) && raw[i][0] !== raw[i][0].toUpperCase()) return false;
       return true;
     });

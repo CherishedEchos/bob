@@ -101,6 +101,7 @@ export async function handleTurn(ctx: Ctx, input: { conversationId?: string; tex
   // Schedule and order-list questions are answered from Bob's own records by the rules engine.
   let engine = BRIEFING_REQUEST.test(input.text) || isBatchReplyRequest(input.text) || WHO_IS_ON.test(input.text) || NEEDS_ORDERING.test(input.text) ? "rules" : activeEngine();
   let out: { replies: Reply[]; state: BobState; changed: boolean };
+  let fallbackNote: string | undefined;
   try {
     out = engine === "claude" ? await claudeTurn(bobCtx, input.text, history, state, conv.id) : await rulesTurn(bobCtx, input.text, state, conv.id);
   } catch (e) {
@@ -108,10 +109,12 @@ export async function handleTurn(ctx: Ctx, input: { conversationId?: string; tex
       // LLM unavailable → fall back to the deterministic engine rather than failing.
       console.error("Claude engine failed, falling back to rules:", e instanceof Error ? e.message : e);
       engine = "rules";
+      fallbackNote = "The AI service didn't respond in time, so Bob's built-in assistant answered this one.";
       out = await rulesTurn(bobCtx, input.text, state, conv.id);
     } else throw e;
   }
 
+  if (fallbackNote && out.replies[0]) out.replies[0] = { ...out.replies[0], text: `${out.replies[0].text}\n\n(${fallbackNote})` };
   const replies = out.replies.map((r) => appendMessage(bobCtx, conv!.id, "assistant", { text: r.text, cards: r.cards, chips: r.chips, actionId: r.actionId, engine }));
   getDb().prepare("UPDATE conversations SET state = ?, updated_at = ? WHERE id = ? AND org_id = ?").run(JSON.stringify(out.state), new Date().toISOString(), conv.id, ctx.orgId);
   return { conversationId: conv.id, messages: [userMsg, ...replies], changed: out.changed };

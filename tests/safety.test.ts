@@ -25,7 +25,7 @@ describe("Incorrect / ambiguous customer matches", () => {
   it("two Sophies and no job clue → asks which, never guesses", async () => {
     const c = new Chat(ctxFor(N93_OWNER));
     await c.say("invoice Sophie £500");
-    expect(c.text).toMatch(/Which Sophie\?/);
+    expect(c.text).toMatch(/more than one that fits|Which/);
     expect(c.text).toContain("Sophie Lambert");
     expect(c.text).toContain("Sophie Reid");
     expect(c.action).toBeUndefined();
@@ -64,9 +64,10 @@ describe("Missing invoice details", () => {
   it("asks for amount when not given", async () => {
     const c = new Chat(ctxFor(N93_OWNER));
     await c.say("send Mark Smith an invoice");
-    expect(c.text).toMatch(/How much/);
+    expect(c.text).toMatch(/final balance, £4,340 — or a different amount/);
     await c.say("£1,000 no VAT 30 days");
-    expect(c.action?.preview).toMatchObject({ total: 1000, amountsAre: "no_vat" });
+    expect(c.text).toMatch(/Saved draft BOB-\d+: £1,000/);
+    expect(F.listInvoices(c.ctx).find((i) => i.jobId === "n93_job_stairs_horley" && i.status === "draft")).toMatchObject({ total: 1000, amountsAre: "no_vat" });
   });
 
   it("service layer rejects an invoice without VAT treatment or due date", () => {
@@ -184,7 +185,8 @@ describe("Unauthorised actions", () => {
     let c = await new Chat(staff).say("who's not paid me?");
     expect(c.text).toMatch(/doesn't have access to money/);
     c = await new Chat(staff).say("invoice Mark Smith £100 no VAT 7 days");
-    expect(c.text).toMatch(/permission/);
+    expect(c.text).toMatch(/doesn't have access to invoices/);
+    expect(F.listInvoices(ctxFor(N93_OWNER)).some((i) => i.total === 100)).toBe(false);
     const out = await requestAction(staff, "record_payment", { jobId: "n93_job_loft_eg", amount: 5600, type: "deposit", method: "bank_transfer", receivedAt: todayKey() }, { origin: "bob" });
     expect(out.kind).toBe("forbidden");
   });
@@ -213,9 +215,11 @@ describe("Failed external integrations", () => {
     });
     const c = new Chat(ctxFor(RDG_OWNER));
     await c.say("invoice Sophie £7,500 for the Copthorne job plus VAT");
+    expect(c.text).toMatch(/Saved draft/);
+    await c.say("send it");
     const v = await c.approve();
     expect(v.status).toBe("failed");
-    expect(v.error).toMatch(/sending failed: Xero returned 503\. Nothing was sent/);
+    expect(v.error).toMatch(/Sending failed: Xero returned 503\. Nothing was sent/);
     const inv = F.listInvoices(c.ctx).find((i) => i.jobId === "rdg_job_kitchen_copthorne")!;
     expect(inv.status).toBe("draft");
     expect(inv.number).toBeUndefined();

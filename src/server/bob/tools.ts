@@ -1,4 +1,5 @@
 import "server-only";
+import * as Bill from "@/server/services/billing";
 /**
  * Bob's authorised tools. This is the ONLY way Bob can read or change data.
  *
@@ -171,6 +172,46 @@ const readTools: ReadTool<unknown>[] = [
       return { data: r.jobs.map((j) => jobForLLM(ctx, j)), cards: r.jobs.length ? [{ type: "jobs", ids: r.jobs.slice(0, 6).map((j) => j.id) }] : [] };
     },
   } as ReadTool<{ query: string }> as ReadTool<unknown>,
+  {
+    kind: "read",
+    name: "find_jobs_to_bill",
+    description:
+      "Find the job someone wants to invoice or ask about, from everything they said: customer name (tolerates misheard spellings like Mackay/McKay/Mackey), site address or street, town and type of work, e.g. 'Sophie Mackay Copthorne', 'Oak Road kitchen', 'Mackey wardrobes'. Returns the best candidates with job ids. If more than one comes back, ask which (use the job titles).",
+    permission: "records.read",
+    schema: z.object({ query: z.string().min(2).max(200).describe("Everything the user said that identifies the job") }),
+    run(ctx, { query }: { query: string }) {
+      const look = Bill.billingLookup(ctx, query);
+      if (look.townMiss) return { data: { no_match: `${look.townMiss.customer} has no job in ${look.townMiss.town}. Their jobs: ${look.townMiss.theirJobs.join(", ") || "none"}. Don't pick a different customer's job.` } };
+      const c = look.candidates;
+      return { data: c.map((x) => ({ job_id: x.jobId, customer: x.customerName, job: x.title, site: x.site, town: x.town, status: x.status, matched_on: x.why })), cards: c.length ? [{ type: "jobs", ids: c.slice(0, 4).map((x) => x.jobId) }] : [] };
+    },
+  } as ReadTool<{ query: string }> as ReadTool<unknown>,
+  {
+    kind: "read",
+    name: "get_job_billing",
+    description:
+      "What's billable on one job, computed by Bob: price, approved variations, contract value, deposit (required, paid, already invoiced?), payments, invoices already issued (with status and unpaid balance), open drafts, remaining_to_invoice (contract value not yet invoiced or paid), unpaid_on_invoices (owed on invoices already sent — never bill this again), whether everything is already invoiced, the business's VAT/terms settings, and the billing options (final balance / deposit) with amounts. Use these figures exactly; never calculate money yourself.",
+    permission: "finance.read",
+    schema: z.object({ job_id: id }),
+    run(ctx, { job_id }: { job_id: string }) {
+      const b = Bill.jobBilling(ctx, job_id);
+      if (!b.ok) return { data: { error: b.error } };
+      const v = b.value;
+      return {
+        data: {
+          job: v.job, customer: { name: v.customer.name, has_email: v.customer.hasEmail },
+          price: v.price, approved_variations: v.approvedVariations, contract_value: v.contractValue,
+          deposit: { required: v.depositRequired, paid: v.depositPaid, already_invoiced: v.depositInvoiced },
+          payments_received: v.paymentsTotal, payments_without_invoice: v.paymentsWithoutInvoice,
+          invoices_issued: v.invoices.map((i) => ({ id: i.id, ref: i.ref, status: i.status, total: i.total, unpaid: i.balance, is_deposit: i.isDeposit, overdue: i.overdue })),
+          open_drafts: v.drafts.map((i) => ({ id: i.id, ref: i.ref, total: i.total })),
+          invoiced_total: v.invoicedTotal, unpaid_on_invoices: v.unpaidOnInvoices, remaining_to_invoice: v.remainingToInvoice, left_to_pay: v.leftToPay,
+          fully_invoiced: v.fullyInvoiced, vat_settings: v.vat, options: v.options,
+        },
+        cards: [{ type: "job_detail", jobId: v.job.id }],
+      };
+    },
+  } as ReadTool<{ job_id: string }> as ReadTool<unknown>,
   {
     kind: "read",
     name: "get_job_details",
@@ -943,12 +984,14 @@ const sendInvoice: ActionTool<{ invoiceId: string }> = {
     const provider = getAccountingProvider(ctx);
     if (!provider) return blocked("No accounting system is connected, so Bob can't send invoices yet. Connect Xero or QuickBooks in Settings, or send it from your accounts software and mark it as sent.");
     const customer = R.getCustomer(ctx, inv.customerId);
+    if (!customer?.email) return blocked(`${customer?.name ?? "This customer"} has no email address on file, so it can't be sent. Add one on their customer record first.`);
     return ready({
       payload: a,
       title: "Send invoice",
       lines: [
         { label: "Invoice", value: inv.draftRef, emphasis: true },
-        { label: "Customer", value: customer?.name ?? "—" },
+        { label: "Customer", value: customer.name },
+        { label: "To", value: customer.email, emphasis: true },
         { label: "Total", value: gbp(inv.total), emphasis: true },
         { label: "Due", value: inv.dueDate ? formatDateInline(inv.dueDate) : "—" },
         { label: "Send via", value: provider.label },
@@ -962,7 +1005,7 @@ const sendInvoice: ActionTool<{ invoiceId: string }> = {
     const inv = F.getInvoice(ctx, a.invoiceId);
     if (!inv) return { ok: false, error: "Invoice not found" };
     const r = await sendViaAccounting(ctx, inv, meta.idempotencyKey);
-    return r.ok ? { ok: true, message: r.message, links: [{ label: "Open invoice", kind: "invoice", id: inv.id }] } : { ok: false, error: r.error, retryable: r.retryable };
+    return r.ok ? { ok: true, message: r.message, links: [{ label: "Open invoice", kind: "invoice", id: inv.id }] } : { ok: false, error: `Sending failed: ${r.error}. Nothing was sent; ${inv.draftRef} is still a draft in Bob.`, retryable: r.retryable };
   },
 };
 
@@ -1057,8 +1100,101 @@ const setEnquiryStatus: ActionTool<{ enquiryId: string; status: Enquiry["status"
 
 /* -------------------------------- Registry -------------------------------- */
 
+interface DraftArgs {
+  jobId: string;
+  basis: Bill.BillingBasis;
+  amount?: number;
+  amountsAre?: Invoice["amountsAre"];
+  vatRate?: number;
+  dueInDays?: number;
+  dueDate?: string;
+  description?: string;
+  invoiceId?: string;
+}
+
+/**
+ * Save (or amend) an invoice DRAFT from a conversation. Runs straight away —
+ * it's a draft, nothing is sent — with Undo. Same billing service as the
+ * built-in engine: one open draft per job, the same request twice returns the
+ * same draft, and amounts for final balance / deposit come from Bob's records.
+ */
+const saveInvoiceDraft: ActionTool<DraftArgs, DraftArgs & { outcomeHint?: string }> = {
+  kind: "action",
+  name: "save_invoice_draft",
+  description:
+    "Save an invoice DRAFT for a job (never sends it). basis: final_balance (Bob uses remaining_to_invoice), deposit (Bob uses the unpaid deposit), or amount (give amount). amountsAre is required unless the business isn't VAT registered — ask 'no VAT, plus VAT or including VAT?' if you don't know. dueInDays is required unless payment terms are set. To change a draft already made in this conversation, pass its invoiceId (and the new amount/VAT/due). If it reports an existing draft on the job, ask whether to update it and then pass that draft's invoiceId.",
+  category: "internal",
+  permission: "invoices.draft",
+  confirmation: "undoable",
+  schema: z.object({
+    jobId: id,
+    basis: z.enum(["final_balance", "deposit", "amount"]),
+    amount: money.refine((n) => n > 0, "Amount must be more than £0").optional(),
+    amountsAre: z.enum(["inclusive", "exclusive", "no_vat"]).optional(),
+    vatRate: z.number().min(0).max(30).optional(),
+    dueInDays: z.number().int().min(0).max(90).optional(),
+    dueDate: dateKey.optional(),
+    description: z.string().trim().min(2).max(200).optional(),
+    invoiceId: id.optional(),
+  }),
+  prepare(ctx, a) {
+    const job = R.getJob(ctx, a.jobId);
+    if (!job) return notFound("job");
+    if (!can(ctx.role, "finance.read")) return blocked("Your account doesn't have access to invoices.");
+    if (a.invoiceId) {
+      const inv = F.getInvoice(ctx, a.invoiceId);
+      if (!inv) return notFound("invoice");
+      if (inv.status !== "draft") return blocked(`${inv.number ?? inv.draftRef} has already been ${inv.status}; only drafts can be changed.`);
+    }
+    return ready({ payload: a, title: a.invoiceId ? "Update invoice draft" : "Invoice draft", category: "internal", lines: [{ label: "Job", value: `${job.customerName} — ${job.title}`, emphasis: true }], notices: [], approveLabel: "Save draft", simulated: false });
+  },
+  execute(ctx, a) {
+    const out = Bill.saveDraftFromConversation(ctx, a);
+    if (!out.ok) {
+      if (out.code === "missing") return { ok: false, error: `MISSING: ${out.missing.join(", ")} — ask the user (one short question).` };
+      if (out.code === "draft_exists") return { ok: false, error: `DRAFT_EXISTS: ${out.message} Its invoiceId is ${out.draft.id}. Ask whether to update it.` };
+      return { ok: false, error: out.message };
+    }
+    const inv = out.invoice;
+    const verb = out.outcome === "existing" ? "Already saved (no duplicate made):" : out.outcome === "updated" ? "Updated" : "Saved";
+    return {
+      ok: true,
+      message: `${verb} draft ${inv.draftRef}: ${gbp(inv.total)}${inv.vat ? ` (${gbp(inv.subtotal)} + ${gbp(inv.vat)} VAT)` : inv.amountsAre === "no_vat" ? ", no VAT" : ""}, due ${formatDateInline(inv.dueDate!)}. Not sent.${out.notes.length ? ` ${out.notes.join(" ")}` : ""}`,
+      result: { invoiceId: inv.id, ref: inv.draftRef, total: inv.total, outcome: out.outcome },
+      undo: out.outcome === "created" ? { invoiceId: inv.id } : undefined,
+      links: [{ label: "Review invoice", kind: "invoice", id: inv.id }],
+    };
+  },
+  undo(ctx, u) {
+    const r = F.deleteInvoiceDraft(ctx, (u as { invoiceId: string }).invoiceId);
+    return r.ok ? { ok: true, message: "Draft deleted." } : { ok: false, error: r.error };
+  },
+};
+
+const deleteInvoiceDraftTool: ActionTool<{ invoiceId: string }> = {
+  kind: "action",
+  name: "delete_invoice_draft",
+  description: "Delete an unsent invoice DRAFT (e.g. the user cancels the draft you just made). Sent invoices can't be deleted.",
+  category: "internal",
+  permission: "invoices.draft",
+  confirmation: "undoable",
+  schema: z.object({ invoiceId: id }),
+  prepare(ctx, a) {
+    const inv = F.getInvoice(ctx, a.invoiceId);
+    if (!inv) return notFound("invoice");
+    if (inv.status !== "draft") return blocked("Only drafts can be deleted.");
+    return ready({ payload: a, title: "Delete draft", category: "internal", lines: [{ label: "Draft", value: inv.draftRef }], notices: [], approveLabel: "Delete", simulated: false });
+  },
+  execute(ctx, a) {
+    const r = F.deleteInvoiceDraft(ctx, a.invoiceId);
+    return r.ok ? { ok: true, message: `Deleted draft ${r.value.draftRef}. Nothing was sent.` } : { ok: false, error: r.error };
+  },
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const actionTools: ActionTool<any, any>[] = [
+  saveInvoiceDraft,
+  deleteInvoiceDraftTool,
   createFollowUp, addNote, createJob, updateJob, addJobExpense, sendEmail, saveEmailDraft, createQuote, createInvoice, sendInvoice, recordPayment, markReplied, setEnquiryStatus,
 ];
 

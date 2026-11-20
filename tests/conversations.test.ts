@@ -86,37 +86,40 @@ describe("Conversation 4 — add a kitchen job for Sarah in Crawley for £12,000
 });
 
 describe("Conversation 5 — invoice Sophie £7,500 for the Copthorne job", () => {
-  it("Ninety3 (no accounting, VAT not configured): asks, then prepares a DRAFT that can't be sent", async () => {
+  it("Ninety3 (no accounting, VAT not configured): asks once, saves a DRAFT, and can't send it", async () => {
     const ctx = ctxFor(N93_OWNER);
     const c = new Chat(ctx);
-    await c.say("Bob, invoice Sophie £7,500 for the Copthorne job.");
-    expect(c.text).toContain("Sophie Lambert's kitchen refit in Copthorne");
-    expect(c.text).toMatch(/including VAT, plus VAT, or no VAT/);
-    expect(c.text).toMatch(/when should it be due/);
-    expect(c.action).toBeUndefined();
+    await c.say("Bob, invoice Sophie Lambert £7,500 for the Copthorne job.");
+    expect(c.text).toMatch(/no VAT, plus VAT or including VAT/);
+    expect(c.text).toMatch(/when's it due/);
+    expect(F.listInvoices(ctx).some((i) => i.jobId === "n93_job_kitchen_copthorne" && i.status === "draft")).toBe(false);
     await c.say("plus VAT, 14 days");
     expect(c.text).toMatch(/VAT rate/);
     await c.say("20%");
-    expect(c.action?.status).toBe("pending");
-    expect(c.action?.approveLabel).toBe("Save draft");
-    expect(c.action?.notices.map((n) => n.text).join(" ")).toMatch(/DRAFT in Bob only/);
-    expect(c.action?.preview).toMatchObject({ kind: "invoice", subtotal: 7500, vat: 1500, total: 9000 });
-    const done = await c.approve();
-    expect(done.status).toBe("executed");
-    expect(done.resultMessage).toMatch(/has NOT been sent/);
+    expect(c.text).toMatch(/Saved draft BOB-\d+: £9,000/);
+    expect(c.text).toMatch(/Sophie Lambert's kitchen refit/);
+    expect(c.text).toMatch(/hasn't been sent/);
+    expect(c.last[0].chips?.[0]).toMatchObject({ kind: "open", label: "Review invoice", record: "invoice" });
     const inv = F.listInvoices(ctx).find((i) => i.jobId === "n93_job_kitchen_copthorne");
-    expect(inv).toMatchObject({ status: "draft", total: 9000 });
+    expect(inv).toMatchObject({ status: "draft", subtotal: 7500, vat: 1500, total: 9000 });
     expect(inv!.number).toBeUndefined();
+    await c.say("send it");
+    expect(c.text).toMatch(/No accounting system is connected/);
+    expect(F.listInvoices(ctx).find((i) => i.id === inv!.id)!.status).toBe("draft");
   });
 
   it("Ridgeway demo (VAT + terms configured, demo accounting): one question, then simulated send", async () => {
     const ctx = ctxFor(RDG_OWNER);
     const c = new Chat(ctx);
     await c.say("Invoice Sophie £7,500 for the Copthorne job");
-    expect(c.text).toContain("Sophie Hart");
     expect(c.text).toMatch(/plus VAT/);
     await c.say("plus VAT");
-    expect(c.action?.approveLabel).toBe("Approve & send (demo)");
+    expect(c.text).toMatch(/Saved draft .*Sophie Hart/);
+    // Sending is a separate step with the recipient and amount, approved explicitly.
+    await c.say("send it");
+    expect(c.action?.tool).toBe("send_invoice");
+    expect(c.action?.lines.find((l) => l.label === "To")?.value).toMatch(/@/);
+    expect(c.action?.approveLabel).toBe("Send (demo)");
     expect(c.action?.simulated).toBe(true);
     const done = await c.approve();
     expect(done.status).toBe("executed");
@@ -165,7 +168,7 @@ describe("Other voice commands from the brief", () => {
     const c = new Chat(ctx);
     await c.say("Bob, add £450 of materials to the Copthorne job.");
     expect(c.text).toMatch(/more than one Copthorne job/);
-    await c.say("the kitchen one");
+    await c.say("the Kitchen refit one");
     expect(c.action?.tool).toBe("add_job_expense");
     expect(c.action?.lines[0].value).toContain("Sophie Lambert");
     await c.approve();
@@ -176,13 +179,16 @@ describe("Other voice commands from the brief", () => {
     const ctx = ctxFor(N93_OWNER);
     const c = new Chat(ctx);
     await c.say("Bob, create an invoice for the remaining balance on the Smith job, no VAT, 7 days");
-    expect(c.text).toContain("remaining balance is £4,340");
-    expect(c.action?.preview).toMatchObject({ total: 4340 });
+    expect(c.text).toMatch(/Saved draft BOB-\d+: £4,340 for the final balance/);
+    expect(F.listInvoices(ctx).find((i) => i.jobId === "n93_job_stairs_horley" && i.status === "draft")).toMatchObject({ total: 4340, amountsAre: "no_vat" });
   });
 
   it("what's happening with that kitchen job in Copthorne", async () => {
     const ctx = ctxFor(N93_OWNER);
     const c = await new Chat(ctx).say("Bob, what's happening with that kitchen job in Copthorne?");
+    // Two Copthorne kitchens (Lambert and Mackay) → asks which, then answers.
+    expect(c.text).toMatch(/Which job\?.*Sophie Lambert.*Sophie Mackay/);
+    await c.say("Lambert's");
     expect(c.text).toMatch(/^Sophie Lambert's kitchen refit in Copthorne is in progress/);
   });
 

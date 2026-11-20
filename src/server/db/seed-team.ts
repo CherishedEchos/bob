@@ -11,7 +11,7 @@ import type { Bill, Booking, Job, Material, Person, Task } from "@/lib/types";
 import { DEFAULT_TIME_ZONE, addDays, dateKeyIn, weekStart } from "@/lib/dates";
 import { hashPassword, randomToken, sha256 } from "@/server/auth/password";
 import type { TableName } from "./index";
-import { seedFilesAndLeave, seedUpdatesAndVariations } from "./seed-files";
+import { seedFilesAndLeave, seedSophieMackay, seedUpdatesAndVariations } from "./seed-files";
 
 type InsertFn = (db: DatabaseSync, table: TableName, orgId: string, obj: { id: string }) => void;
 
@@ -232,6 +232,7 @@ export function seedTeam(db: DatabaseSync, insert: InsertFn, orgId: string, time
   }
   seedFilesAndLeave(db, insert, orgId, s.cast.key, timeZone);
   seedUpdatesAndVariations(db, insert, orgId, s.cast.key);
+  seedSophieMackay(db, insert, orgId, s.cast.key);
   // An invite that's been sent but not accepted (its link is not known to anyone).
   if (s.cast.pendingInvite) {
     const person = s.people.find((p) => p.id === s.personId(s.cast.pendingInvite!.personKey))!;
@@ -257,6 +258,7 @@ export function upgradeSampleData(db: DatabaseSync, insert: InsertFn) {
       try {
         seedFilesAndLeave(db, insert, o.id, TEAM_CASTS[o.id].key, config.timeZone);
         seedUpdatesAndVariations(db, insert, o.id, TEAM_CASTS[o.id].key);
+        seedSophieMackay(db, insert, o.id, TEAM_CASTS[o.id].key);
         // The pilot demo's main users are Luke (owner) and Ryan (admin).
         db.prepare("UPDATE users SET name = 'Luke' WHERE id = 'usr_n93_owner' AND name = 'Owner'").run();
         db.prepare("UPDATE users SET name = 'Ryan' WHERE id = 'usr_n93_office' AND name = 'Office'").run();

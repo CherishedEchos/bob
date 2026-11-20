@@ -8,7 +8,7 @@ import "server-only";
  * like the LLM engine. Every figure comes from the reporting functions; every
  * change goes through requestAction (permissions, validation, approvals).
  */
-import type { ExpenseCategory, JobStatus, PaymentMethod, PaymentType, VatTreatment } from "@/lib/types";
+import type { ExpenseCategory, JobStatus, PaymentMethod, PaymentType } from "@/lib/types";
 import type { Card, Chip } from "@/lib/bob/types";
 import { can } from "@/lib/auth/permissions";
 import { ENQUIRY_STATUS_LABEL, JOB_STATUS_LABEL, SOURCE_LABEL, invoiceBalance, isActiveJob, isOpenEnquiry, jobFinance, needsReply, quoteNeedsFollowUp } from "@/lib/derive";
@@ -19,17 +19,18 @@ import * as F from "@/server/services/finance";
 import * as Rep from "@/server/services/reports";
 import { BRIEFING_REQUEST, morningBriefing } from "./briefing";
 import { BATCH_REPLY_ALL, BATCH_REPLY_THEM, callbackIds, outstandingIds, prepareBatch } from "@/server/services/batch-replies";
-import { getAccountingProvider, getEmailProvider } from "@/server/integrations/registry";
+import { getEmailProvider } from "@/server/integrations/registry";
 import { detectInjection } from "@/server/integrations/safety";
 import { syncInbox } from "@/server/integrations/inbox";
 import { cancelAction } from "./actions";
+import { invoiceFollowUp, isInvoiceRequest, runInvoice, startInvoice, type InvoiceFlow, type InvoiceIO, type InvoiceMemory } from "./invoice-chat";
 import { requestAction } from "./actions";
 import { runReadTool } from "./tools";
 import { NEEDS_ORDERING, WHO_IS_ON, needsOrdering, whoIsOn } from "./schedule-answers";
 import { mentionScore, resolveCustomers, resolveEnquiries, resolveJobs } from "./resolve";
 import {
-  cleanUtterance, detectMethod, findAmounts, isAffirmative, parseDeposit, parseDueDate, parseDueTerms,
-  normaliseSpokenNumbers, parseExpenseCategory, parseLocation, parsePeriod, parseVat, parseVatRate, parseWorkTitle, stripDatePhrases, titleCase,
+  cleanUtterance, detectMethod, findAmounts, isAffirmative, parseDeposit, parseDueDate,
+  normaliseSpokenNumbers, parseExpenseCategory, parseLocation, parsePeriod, parseWorkTitle, stripDatePhrases, titleCase,
 } from "./nlu";
 import {
   depositReminderDraft, enquiryFollowUpDraft, greetingFor, invoiceReminderDraft, listNames, plural, quoteFollowUpDraft, replyDraft, type Draft,
@@ -37,20 +38,6 @@ import {
 
 /* ---------------------------------- Types ---------------------------------- */
 
-type InvoiceFlow = {
-  type: "invoice";
-  text: string;
-  customerId?: string;
-  jobId?: string;
-  noJob?: boolean;
-  amount?: number;
-  balanceMode?: boolean;
-  amountsAre?: VatTreatment;
-  vatRate?: number;
-  dueDate?: string;
-  description?: string;
-  send?: boolean;
-};
 type JobFlow = {
   type: "job";
   text: string;
@@ -82,6 +69,8 @@ export interface BobState {
   lastFlow?: Flow;
   lastActionId?: string;
   focus?: { customerId?: string; jobId?: string; enquiryId?: string };
+  /** The invoice being worked on in this conversation (draft id, VAT/terms answers). */
+  invoice?: InvoiceMemory;
   /** The last list of enquiries Bob showed, for "reply to all of them". */
   lastList?: { kind: "needs_reply" | "new" | "follow_up" | "open"; label: string; ids: string[] };
 }
@@ -143,6 +132,25 @@ async function act(t: Turn, tool: string, args: unknown, lead: string, flow?: Fl
   say(t, lead, { actionId: v.id });
 }
 
+/** Bridge for the invoice conversation (shared with the Claude tools via the billing service). */
+function invoiceIO(t: Turn): InvoiceIO {
+  return {
+    ctx: t.ctx,
+    conversationId: t.conversationId,
+    state: t.state as InvoiceIO["state"],
+    say: (text, extra) => say(t, text, extra),
+    ask: (flow, text, chips) => ask(t, flow, text, chips),
+    offerChoice: (options, flow, question, kind = "job") => offerChoice(t, kind, options, flow, question),
+    listCustomerJobs: (customerId) =>
+      R.listJobs(t.ctx)
+        .filter((j) => j.customerId === customerId && j.status !== "lost")
+        .map((j) => ({ id: j.id, label: jobLabel(j), active: isActiveJob(j) })),
+    markChanged: () => {
+      t.changed = true;
+    },
+  };
+}
+
 /* ------------------------------ Choice helper ------------------------------ */
 
 function ask(t: Turn, flow: Flow, text: string, chips: Chip[] = []) {
@@ -162,7 +170,9 @@ const ORDINALS: Record<string, number> = { first: 0, "1": 0, one: 0, second: 1, 
 
 function pickChoice(text: string, options: { id: string; label: string }[]): string | null {
   const t = text.toLowerCase().trim();
-  const ord = t.match(/\b(first|second|third|fourth|one|two|three|four|[1-4])\b/);
+  // "the kitchen one" names the job; only "the first one", "one", "number 2" are positions.
+  const named = /\bthe\s+(?!first|second|third|fourth|last)[a-z]{3,}\s+one\b/.test(t);
+  const ord = named ? null : t.match(/\b(first|second|third|fourth|one|two|three|four|[1-4])\b/);
   if (ord && (t.length < 20 || /\b(the|number|option)\b/.test(t))) {
     const idx = ORDINALS[ord[1]];
     if (options[idx]) return options[idx].id;
@@ -218,6 +228,9 @@ export async function rulesTurn(ctx: Ctx, raw: string, state: BobState, conversa
     }
     t.state.choice = undefined;
   }
+
+  // 1b) The invoice in progress: amend, confirm, cancel, switch job, "what's left?", or a fresh request.
+  if (await invoiceFollowUp(invoiceIO(t), text)) return done(t);
 
   // 2) Corrections: "no, I meant Sophie Reid"
   const correction = text.match(/^(?:no[,.!]?\s+)?(?:i meant|i mean|sorry,? i meant|not \w+,?\s+i meant)\s+(.+)$/i);
@@ -341,7 +354,7 @@ async function route(t: Turn, text: string, lower: string) {
 
   // Actions
   if (/\bremind me\b|\bset (a |me a )?reminder\b|\badd (a )?(task|reminder)\b|\bdon'?t let me forget\b/.test(lower)) return runFlow(t, { type: "reminder", text });
-  if (/\binvoice\b/.test(lower) && /\b(send|create|make|raise|do|prepare|draft|invoice (?!for|from))\b/.test(lower) || /^invoice\b/.test(lower)) return runFlow(t, invoiceFlowFrom(t, text));
+  if (isInvoiceRequest(text) || /^invoice\b/.test(lower)) return startInvoice(invoiceIO(t), text);
   if (/\b(add|log|record|put)\b.*£?\d.*\b(materials?|costs?|expenses?|skip|labour|hire|timber|supplies)\b.*\b(to|on|for|against)\b/.test(lower) || /\b(add|log|record)\b.*\b(expense|cost)\b/.test(lower))
     return runFlow(t, { type: "expense", text });
   if (/\b(add|create|new|book in|set up)\b.*\bjob\b|\bnew job\b/.test(lower)) return runFlow(t, { type: "job", text });
@@ -699,7 +712,7 @@ async function runFlow(t: Turn, flow: Flow): Promise<void> {
     case "quote":
       return quoteFlow(t, flow);
     case "invoice":
-      return invoiceFlow(t, flow);
+      return runInvoice(invoiceIO(t), flow);
     case "expense":
       return expenseFlow(t, flow);
     case "payment":
@@ -718,21 +731,9 @@ async function runFlow(t: Turn, flow: Flow): Promise<void> {
 /** Fill a waiting flow with the user's answer. */
 function fillFlow(flow: Flow, text: string): Flow {
   switch (flow.type) {
-    case "invoice": {
-      const f = { ...flow };
-      if (f.amount === undefined && !f.balanceMode) {
-        const a = findAmounts(text)[0] ?? (/^\s*\d[\d,]*(\.\d+)?\s*$/.test(text) ? parseFloat(text.replace(/,/g, "")) : undefined);
-        if (a) f.amount = a;
-        if (/\b(balance|what'?s left|remaining|outstanding)\b/i.test(text)) f.balanceMode = true;
-      }
-      f.amountsAre = parseVat(text) ?? f.amountsAre;
-      f.vatRate = parseVatRate(text) ?? f.vatRate;
-      const due = parseDueTerms(text) ?? (/^\s*\d{1,2}\s*$/.test(text) ? { date: addDaysKey(parseInt(text, 10)), phrase: "" } : null);
-      if (due) f.dueDate = due.date;
-      if (/\bno job\b|\bnot for a job\b/i.test(text)) f.noJob = true;
-      f.text = `${flow.text} ${text}`;
-      return f;
-    }
+    case "invoice":
+      // Invoice answers are handled by invoiceFollowUp before this point.
+      return { ...flow, text: `${flow.text} ${text}` };
     case "job": {
       const f = { ...flow };
       const amounts = findAmounts(text);
@@ -990,117 +991,6 @@ async function jobFlow(t: Turn, f: JobFlow) {
     t.state.flow = { ...f, customerId: undefined, forceNewCustomer: false };
     t.state.lastFlow = f;
   }
-}
-
-/* -------------------------------- Invoice -------------------------------- */
-
-function invoiceFlowFrom(t: Turn, text: string): InvoiceFlow {
-  return {
-    type: "invoice",
-    text,
-    amountsAre: parseVat(text) ?? undefined,
-    vatRate: parseVatRate(text) ?? undefined,
-    dueDate: parseDueTerms(text)?.date,
-    balanceMode: /\b(remaining|outstanding|the) balance\b|\bwhat'?s left\b|\bfinal invoice\b|\brest of\b/i.test(text),
-    amount: findAmounts(text)[0],
-    send: /\bsend\b/i.test(text),
-  };
-}
-
-async function invoiceFlow(t: Turn, f: InvoiceFlow) {
-  const ctx = t.ctx;
-  if (!can(ctx.role, "invoices.draft")) return say(t, "Your account doesn't have permission to prepare invoices.");
-
-  // 1) Customer + job
-  if (!f.jobId && !f.noJob) {
-    const r = resolveJobs(ctx, f.text, { includeClosed: true });
-    const active = r.jobs.filter((j) => j.status !== "lost");
-    if (active.length === 1) {
-      f.jobId = active[0].id;
-      f.customerId = active[0].customerId;
-    } else if (active.length > 1 && (r.town || r.keywords.length || r.customers.length)) {
-      return offerChoice(t, "job", active.slice(0, 4).map((j) => ({ id: j.id, label: jobLabel(j) })), f, "Which job is it for?");
-    } else if (!f.customerId) {
-      const people = resolveCustomers(ctx, f.text);
-      if (people.items.length > 1) return offerChoice(t, "customer", people.items.map((c) => ({ id: c.id, label: `${c.name}${c.town ? ` (${c.town})` : ""}` })), f, `Which ${firstName(people.items[0].name)}?`);
-      if (people.items.length === 1) f.customerId = people.items[0].id;
-    }
-    if (!f.jobId && f.customerId) {
-      const theirs = R.listJobs(ctx).filter((j) => j.customerId === f.customerId && j.status !== "lost");
-      if (r.town && !theirs.some((j) => j.location.toLowerCase() === r.town!.toLowerCase())) {
-        const c = R.getCustomer(ctx, f.customerId)!;
-        return say(t, `I can't find a job for ${c.name} in ${r.town}. ${theirs.length ? `Their jobs: ${listNames(theirs.map((j) => `${j.title} (${j.location})`))}.` : "They don't have any jobs on record."} I haven't created anything.`);
-      }
-      const activeTheirs = theirs.filter(isActiveJob);
-      const pool = activeTheirs.length ? activeTheirs : theirs;
-      if (pool.length === 1) f.jobId = pool[0].id;
-      else if (pool.length > 1) return offerChoice(t, "job", pool.map((j) => ({ id: j.id, label: jobLabel(j) })), f, "Which of their jobs is it for?");
-    }
-  }
-  if (!f.customerId) {
-    const r = resolveJobs(ctx, f.text, { includeClosed: true });
-    if (r.clues.includes("customer") === false && !resolveCustomers(ctx, f.text).items.length)
-      return ask(t, f, "Who's the invoice for? Tell me the customer and the job.");
-    return say(t, "I couldn't find that customer in your records, so I haven't created anything. Check the name, or add them as a customer first.");
-  }
-  const customer = R.getCustomer(ctx, f.customerId)!;
-  const job = f.jobId ? R.getJob(ctx, f.jobId) : undefined;
-  t.state.focus = { customerId: customer.id, jobId: job?.id };
-
-  // 2) Amount
-  let balanceNote = "";
-  if (f.balanceMode && job) {
-    const fin = jobFinance(job, F.listPayments(ctx));
-    const invoicedOpen = F.listInvoices(ctx).filter((i) => i.jobId === job.id && (i.status === "sent" || i.status === "draft")).reduce((s, i) => s + (i.status === "draft" ? i.subtotal : invoiceBalance(i)), 0);
-    const left = Math.max(0, Math.round((fin.balance - invoicedOpen) * 100) / 100);
-    if (left <= 0) return say(t, `There's nothing left to invoice on ${customer.name}'s ${job.title.toLowerCase()} — it's either paid or already invoiced.`);
-    f.amount = left;
-    balanceNote = ` The remaining balance is ${gbp(left)} (price ${gbp(job.quotedValue)}, ${gbp(fin.totalPaid)} paid${invoicedOpen ? `, ${gbp(invoicedOpen)} already invoiced` : ""}).`;
-  }
-  if (!f.amount) return ask(t, f, `How much should the invoice to ${customer.name} be for?`);
-
-  // 3) VAT — from settings when they settle it, otherwise ask. Never assumed.
-  if (ctx.org.finance.vatRegistered === false) f.amountsAre = "no_vat";
-  const existing = job ? F.listInvoices(ctx).filter((i) => i.jobId === job.id && i.status !== "void") : [];
-  const existingNote = job
-    ? existing.length
-      ? ` There ${existing.length === 1 ? "is" : "are"} already ${listNames(existing.map((i) => `${i.number ?? i.draftRef} (${gbp(i.total)}, ${i.status})`))} on this job.`
-      : " There are no other invoices on this job."
-    : "";
-  const found = job ? `I've found ${customer.name}'s ${job.title.toLowerCase()} in ${job.location}.` : `This is for ${customer.name}.`;
-  const missing: string[] = [];
-  const chips: Chip[] = [];
-  if (!f.amountsAre) {
-    missing.push(`is ${gbp(f.amount)} including VAT, plus VAT, or no VAT?${ctx.org.finance.vatRegistered === null ? " (VAT isn't set up for your business yet — you can set it in Settings.)" : ""}`);
-  } else if (f.amountsAre !== "no_vat" && f.vatRate === undefined && ctx.org.finance.vatRate == null) {
-    missing.push("which VAT rate should I use — the standard 20%?");
-    chips.push({ kind: "send", label: "20%", text: "20%" });
-  }
-  if (!f.dueDate) {
-    const terms = ctx.org.finance.defaultPaymentTermsDays;
-    if (terms) f.dueDate = addDaysKey(terms);
-    else missing.push("when should it be due — 7, 14 or 30 days?");
-  }
-  if (missing.length) {
-    if (!f.amountsAre) chips.push(...(ctx.org.finance.vatRegistered === null ? [{ kind: "send" as const, label: "No VAT", text: "No VAT" }] : []), { kind: "send", label: "Plus VAT", text: "Plus VAT" }, { kind: "send", label: "Including VAT", text: "Including VAT" });
-    if (!f.dueDate) chips.push({ kind: "send", label: "14 days", text: "14 days" }, { kind: "send", label: "30 days", text: "30 days" });
-    const q = missing.length === 1 ? capital(missing[0]) : `Before I draft ${gbp(f.amount)}: ${missing.map((m, i) => `${i + 1}) ${m}`).join(" ")}`;
-    return ask(t, f, `${found}${balanceNote}${existingNote} ${q}`, chips.slice(0, 5));
-  }
-
-  const provider = getAccountingProvider(ctx);
-  const description = f.description ?? (job ? `${job.title}, ${job.location}${f.balanceMode ? " — remaining balance" : ""}` : "Building work");
-  const sendable = !!provider && can(ctx.role, "invoices.send");
-  const lead = sendable
-    ? `${found}${balanceNote}${existingNote} Here's the invoice — approve it and I'll send it through ${provider!.label}${provider!.simulated ? " (demo — simulated, nothing really sent)" : ""}.`
-    : `${found}${balanceNote}${existingNote} Here's a draft. ${provider ? "" : "No accounting system is connected, so I can only save it as a draft in Bob — it can't be sent yet."}`.trim();
-  await act(
-    t,
-    "create_invoice",
-    { customerId: customer.id, jobId: job?.id, description, amount: f.amount, amountsAre: f.amountsAre, vatRate: f.vatRate, dueDate: f.dueDate, send: sendable },
-    lead,
-    f,
-  );
 }
 
 /* -------------------------------- Expense -------------------------------- */

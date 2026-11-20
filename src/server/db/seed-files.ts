@@ -285,3 +285,31 @@ export function seedUpdatesAndVariations(db: DatabaseSync, insert: InsertFn, org
     addUpdate("kc_2", "kitchen_crawley", 1, "Liam Carter", "Base units and island carcass fitted and levelled.", "in_progress", [`${k}_fil_kc_p2`]);
   }
 }
+
+/**
+ * Fictional customer for the Ask Bob invoicing demo: Sophie Mackay, 7 Oak Road,
+ * Copthorne, with two jobs — the Oak Road kitchen (deposit invoiced and paid,
+ * £9,940 left to bill) and fitted wardrobes (nothing billed yet). Once per
+ * sample workspace; Ninety3 demo only.
+ */
+export function seedSophieMackay(db: DatabaseSync, insert: InsertFn, orgId: string, k: string) {
+  if (k !== "n93") return;
+  if (db.prepare("SELECT 1 FROM customers WHERE org_id = ? AND id = ?").get(orgId, `${k}_cus_mackay`)) return;
+  const now = Date.now();
+  const ago = (d: number) => new Date(now - d * 864e5).toISOString();
+  const dayKey = (d: number) => ago(d).slice(0, 10);
+  insert(db, "customers", orgId, { id: `${k}_cus_mackay`, name: "Sophie Mackay", email: "sophie.mackay@example.com", phone: "07700 900 482", address: "7 Oak Road, Copthorne, RH10 3PB", town: "Copthorne", notes: [], createdAt: ago(60) } as { id: string });
+  const job = (id: string, title: string, kind: string, status: string, price: number, deposit: number, start: number, description: string) =>
+    insert(db, "jobs", orgId, { id, customerId: `${k}_cus_mackay`, title, description, location: "Copthorne", kind, quotedValue: price, depositRequired: deposit, status, startDate: dayKey(start), notes: [], createdAt: ago(55), siteAddress: "7 Oak Road, Copthorne, RH10 3PB", nextAction: status === "in_progress" ? "Final invoice when the worktops are sealed" : "Confirm hanging rail heights" } as unknown as { id: string });
+  job(`${k}_job_mackay_kitchen`, "Oak Road kitchen", "kitchen", "in_progress", 14200, 4260, 21, "Shaker kitchen with an oak-topped island, new flooring and under-cabinet lighting.");
+  job(`${k}_job_mackay_wardrobes`, "Fitted wardrobes", "wardrobes", "scheduled", 3800, 0, -9, "Two alcove wardrobes in the main bedroom, painted to match.");
+  // The deposit was invoiced and paid.
+  const n = (db.prepare("INSERT INTO counters (org_id, name, value) VALUES (?, 'invoice_ref', 1) ON CONFLICT(org_id, name) DO UPDATE SET value = value + 1 RETURNING value").get(orgId) as { value: number }).value;
+  const invId = `${k}_inv_mackay_deposit`;
+  insert(db, "invoices", orgId, {
+    id: invId, customerId: `${k}_cus_mackay`, jobId: `${k}_job_mackay_kitchen`, draftRef: `BOB-${String(n).padStart(4, "0")}`, status: "paid",
+    lines: [{ description: "Oak Road kitchen — deposit", quantity: 1, unitAmount: 4260 }], amountsAre: "no_vat", vatRate: 0, subtotal: 4260, vat: 0, total: 4260,
+    issueDate: dayKey(40), dueDate: dayKey(33), amountPaid: 4260, sentAt: ago(40), paidAt: ago(35), createdAt: ago(40), createdBy: "Ryan",
+  } as unknown as { id: string });
+  insert(db, "payments", orgId, { id: `${k}_pay_mackay_deposit`, jobId: `${k}_job_mackay_kitchen`, invoiceId: invId, amount: 4260, type: "deposit", method: "bank_transfer", receivedAt: dayKey(35), recordedBy: "Ryan", recordedAt: ago(35) } as unknown as { id: string });
+}

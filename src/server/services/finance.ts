@@ -151,6 +151,40 @@ export function voidInvoice(ctx: Ctx, id: string): Result<Invoice> {
   return ok(updated);
 }
 
+/** Amend a DRAFT invoice (amount, VAT treatment, due date, description, job). Sent invoices can't be changed here. */
+export function updateInvoiceDraft(ctx: Ctx, id: string, input: unknown): Result<Invoice> {
+  const no = denied(ctx, "invoices.draft");
+  if (no) return no;
+  const inv = getInvoice(ctx, id);
+  if (!inv) return fail("not_found", "Invoice not found");
+  if (inv.status !== "draft") return fail("conflict", `${inv.number ?? inv.draftRef} has already been ${inv.status}, so it can't be changed here.`);
+  const parsed = invoiceDraftSchema.safeParse(input);
+  if (!parsed.success) return fail("invalid", "Some invoice details are missing.", toFieldErrors(parsed.error));
+  const v = parsed.data;
+  if (v.customerId !== inv.customerId) return fail("invalid", "A draft can't be moved to a different customer.");
+  if (v.jobId) {
+    const job = getJob(ctx, v.jobId);
+    if (!job || job.customerId !== inv.customerId) return fail("invalid", "That job belongs to a different customer.");
+  }
+  const rate = resolveVatRate(ctx, v.amountsAre, v.vatRate);
+  if (!rate.ok) return rate;
+  const totals = computeInvoiceTotals(v.amount, v.amountsAre, rate.value);
+  return ok(tx(() => {
+    const u = scoped(ctx).update<Invoice>("invoices", id, {
+      jobId: v.jobId,
+      lines: [{ description: v.description, quantity: 1, unitAmount: v.amount }],
+      amountsAre: v.amountsAre,
+      vatRate: totals.vatRate,
+      subtotal: totals.subtotal,
+      vat: totals.vat,
+      total: totals.total,
+      dueDate: v.dueDate,
+    })!;
+    audit(ctx, "invoice.draft_updated", `Draft ${inv.draftRef} changed to ${gbp(u.total)} (not sent)`, "invoice", id);
+    return u;
+  }));
+}
+
 export function deleteInvoiceDraft(ctx: Ctx, id: string): Result<Invoice> {
   const no = denied(ctx, "invoices.draft");
   if (no) return no;
