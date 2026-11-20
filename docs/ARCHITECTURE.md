@@ -75,3 +75,12 @@ When an action is approved the engine re-runs `prepare` first, because records m
 ## Going to production (not done yet)
 
 The local SQLite layer is complete and tested. The Supabase schema and RLS are written and tested on Postgres 16, but the app has **not** been switched to a Supabase data adapter or to Supabase Auth. See `docs/SETUP.md` → "Before real data".
+
+## Design system (UI)
+
+- **Tokens** live in `src/app/globals.css` (`@theme`): workspace `#F7F7F5`, white surfaces, sidebar `#19191B`, text `#18181B` / `#71717A`, Bob orange `#F38735`, muted success/warning/overdue colours, one radius scale and four shadow levels (`--shadow-xs…lg`). Type helpers: `.t-page`, `.t-section`, `.t-name`, `.t-meta`, `.t-figure` / `.t-figure-sm` (financial figures), `.skeleton`.
+- **Shared components**: `PageHeader`, `StatCard`, `EmptyState`, `SkeletonRows`, `Tabs`, `StatusText` (`components/common/bits.tsx`); `PersonAvatar`, `PeopleStack`, `jobTone` (one colour per job across diary, cards and team) in `components/common/people.tsx`; `JobCover` (cover photo or neutral placeholder) in `components/jobs/job-cover.tsx`.
+- **Shell**: collapsible dark sidebar on desktop (grouped navigation, account menu, Bob by Cresaro); a floating dark tab bar on phones (Diary · Jobs · microphone · Tasks · More). The microphone opens `/assistant?listen=1` and starts listening.
+- **Landing page**: `/` redirects to the Diary (`/week`). Ask Bob is `/assistant`.
+- **Job financials** (`lib/job-financials.ts`): contract value (price + approved variations), received, outstanding, recorded costs by type plus linked supplier bills, profit and margin — shown only when costs are recorded, and flagged as incomplete when labour, materials or subcontractor costs are missing.
+- **Demo images**: `python3 scripts/build-demo-images.py` renders original illustrative project images into `public/demo/` (no stock photos or real homes). The seed adds them to the sample workspaces, labelled "Illustrative image".

@@ -67,7 +67,7 @@ const json = (page, url, body) => page.evaluate(async ([url, body]) => { const r
   const page = await ctx.newPage();
   await page.goto(BASE + '/login');
   await page.getByRole('button', { name: /Try the demo/ }).click();
-  await page.waitForURL(BASE + '/');
+  await page.waitForURL(/\/week$/);
   const demoSnap = await json(page, '/api/data');
   check('Demo session is the fictional workspace', demoSnap.body.org?.slug === 'ninety3' && demoSnap.body.org?.dataMode === 'sample');
   const demoCookie = (await ctx.cookies()).find((c) => c.name === 'bob_session').value;
@@ -78,10 +78,9 @@ const json = (page, url, body) => page.evaluate(async ([url, body]) => { const r
   await page.screenshot({ path: path.join(OUT, 'phone-390-invite-over-demo.png') });
   await page.getByLabel('Choose a password').fill('luke-test-password-1');
   await page.getByRole('button', { name: 'Sign in as Luke' }).click();
-  await page.waitForURL(BASE + '/');
-  await page.getByRole('heading', { name: 'How can I help?' }).waitFor();
-  const greet = await page.locator('main').innerText();
-  check('Lands on Ask Bob greeting Luke', /Good (morning|afternoon|evening), Luke/.test(greet));
+  await page.waitForURL(/\/week$/);
+  await page.getByRole('heading', { name: 'Diary', level: 1 }).waitFor();
+  check('Lands on the Diary (the landing page)', /\/week$/.test(page.url()));
   const live = await json(page, '/api/data');
   check('In the live Ninety3 workspace (not the demo)', live.body.org?.slug === 'ninety3ltd' && live.body.org?.dataMode === 'live' && live.body.user?.role === 'owner' && live.body.user?.email === LUKE);
   check('Ninety3 branding and Europe/London', live.body.org?.brandColor === '#7B2001' && live.body.org?.wordmark?.onDark && live.body.org?.timeZone === 'Europe/London');
@@ -109,7 +108,7 @@ const json = (page, url, body) => page.evaluate(async ([url, body]) => { const r
   await page.getByLabel('Email').fill(LUKE);
   await page.getByLabel('Password').fill('luke-test-password-1');
   await page.getByRole('button', { name: /^Sign in/ }).click();
-  await page.waitForURL(BASE + '/');
+  await page.waitForURL(/\/week$/);
   const again = await json(page, '/api/data');
   check('Sign back in: same live workspace, job still there', again.body.org?.slug === 'ninety3ltd' && again.body.jobs.some((j) => j.title === 'Oak Road kitchen (test)'));
   const d2 = await b.newContext(DESK);
@@ -128,7 +127,7 @@ const json = (page, url, body) => page.evaluate(async ([url, body]) => { const r
   await rp.goto(BASE + inv.body.value.path);
   await rp.getByLabel('Choose a password').fill('ryan-test-password-1');
   await rp.getByRole('button', { name: 'Set up my login' }).click();
-  await rp.waitForURL(BASE + '/');
+  await rp.waitForURL(/\/week$/);
   const ryan = await json(rp, '/api/data');
   check('Ryan joins the same workspace as admin and sees the same job', ryan.body.org?.slug === 'ninety3ltd' && ryan.body.user?.role === 'office' && ryan.body.jobs.some((j) => j.title === 'Oak Road kitchen (test)'));
 
@@ -139,7 +138,7 @@ const json = (page, url, body) => page.evaluate(async ([url, body]) => { const r
   await dpg.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
   const dsnap = await json(dpg, '/api/data');
   const orgs = await json(dpg, '/api/auth/switch-org');
-  check('Demo has its fictional jobs and none of the live ones', dsnap.body.jobs.length > 3 && !dsnap.body.jobs.some((j) => j.title.includes('Oak Road')));
+  check('Demo has its fictional jobs and none of the live ones', dsnap.body.jobs.length > 3 && !dsnap.body.jobs.some((j) => j.title === 'Oak Road kitchen (test)'));
   check('Demo login cannot switch into the live workspace', !(orgs.body.orgs ?? []).some((o) => o.id === live.body.org.id));
   const sw = await json(dpg, '/api/auth/switch-org', { orgId: live.body.org.id });
   check('Demo login is refused if it asks for the live workspace', sw.status >= 400, String(sw.status));

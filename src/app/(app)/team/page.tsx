@@ -8,14 +8,16 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { HolidaysView, PersonLeave } from "@/components/team/leave";
-import { Archive, CalendarDays, CalendarPlus, Check, Copy, Link2, Mail, Pencil, Phone, Search, ShieldOff, UserPlus, Users } from "lucide-react";
+import { Archive, CalendarDays, CalendarOff, CalendarPlus, Check, Copy, Link2, Mail, Pencil, Phone, Search, ShieldOff, UserPlus, Users } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
-import { addDays, formatDayShort, formatTimeRange, relativeDay } from "@/lib/dates";
+import { addDays, formatDayShort, formatTimeRange, relativeDay, weekStart } from "@/lib/dates";
+import { absencesOnDay } from "@/lib/leave";
+import { PersonAvatar, jobTone } from "@/components/common/people";
 import { bookingEndDate, bookingsOnDay, initials } from "@/lib/schedule";
 import type { Booking, Person, PersonAccess } from "@/lib/types";
 import { cn, copyToClipboard, todayKey } from "@/lib/utils";
-import { EmptyState, ListRow, StatusText, Tabs, pageActionClass } from "@/components/common/bits";
+import { EmptyState, PageHeader, StatCard, StatusText, Tabs, pageActionClass } from "@/components/common/bits";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -60,88 +62,141 @@ function TeamInner() {
   const access = new Map(data.access.map((a) => [a.personId, a]));
   const jobs = new Map(data.jobs.map((j) => [j.id, j]));
 
+  const week = Array.from({ length: 7 }, (_, k) => addDays(weekStart(today), k));
+  const active = data.people.filter((p) => !p.archivedAt);
+  const onSiteToday = active.filter((p) => bookingsOnDay(data.bookings.filter((b) => b.personIds.includes(p.id)), today).length).length;
+  const offToday = active.filter((p) => absencesOnDay(data.absences.filter((x) => x.personId === p.id && x.status === "approved"), today).length).length;
+
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="mb-4 flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="t-page">Team</h1>
-          <p className="t-meta mt-0.5 lg:text-[15px]">
-            {data.people.filter((p) => !p.archivedAt && p.kind === "employee").length} employees · {data.people.filter((p) => !p.archivedAt && p.kind === "subcontractor").length} subcontractors
-          </p>
-        </div>
-        {manage && view === "people" ? (
-          <button type="button" className={pageActionClass} onClick={() => ui.openForm({ form: "person" })}>
-            <UserPlus className="size-[18px]" aria-hidden /> Add person
-          </button>
-        ) : null}
-      </div>
-      <nav aria-label="Team sections" className="mb-4 flex gap-1 border-b border-line">
-        {([["people", "People", 0], ["holidays", "Holidays", pendingLeave]] as const).map(([v, label, n]) => (
-          <button
-            key={v}
-            type="button"
-            aria-current={view === v ? "page" : undefined}
-            onClick={() => router.replace(v === "people" ? "/team" : "/team?view=holidays", { scroll: false })}
-            className={cn("relative flex h-11 items-center gap-1.5 px-3 text-[15px] font-semibold", view === v ? "text-accent-fg after:absolute after:inset-x-2 after:bottom-0 after:h-[2px] after:rounded-t after:bg-copper-500" : "text-muted-foreground hover:text-foreground")}
-          >
-            {label}
-            {n ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-amber-500/15 px-1.5 text-[12px] font-semibold text-warn-fg">{n}</span> : null}
-          </button>
-        ))}
-      </nav>
+    <div className="flex flex-col gap-5 lg:gap-6">
+      <PageHeader
+        title="Team"
+        subtitle={
+          <>
+            {active.filter((p) => p.kind === "employee").length} employees · {active.filter((p) => p.kind === "subcontractor").length} subcontractors
+          </>
+        }
+        actions={
+          manage && view === "people" ? (
+            <button type="button" className={pageActionClass} onClick={() => ui.openForm({ form: "person" })}>
+              <UserPlus className="size-[17px]" aria-hidden /> Add person
+            </button>
+          ) : null
+        }
+      />
+      <Tabs
+        label="Team sections"
+        className="self-start"
+        value={view}
+        onChange={(v) => router.replace(v === "people" ? "/team" : "/team?view=holidays", { scroll: false })}
+        options={[
+          { value: "people", label: "People & availability" },
+          { value: "holidays", label: "Holidays", count: pendingLeave || undefined, highlight: true },
+        ]}
+      />
       {view === "holidays" ? <HolidaysView /> : (
       <>
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row">
-        <div className="relative flex-1">
-          <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-subtle" />
-          <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, company or trade" aria-label="Search team" className="pl-10" />
+      <div className="grid grid-cols-3 gap-3">
+        <StatCard accent label="On site today" value={onSiteToday} sub={`of ${active.length} people`} />
+        <StatCard label="Off today" value={offToday} tone={offToday ? "warn" : "muted"} sub="holiday or unavailable" />
+        <StatCard label="Free today" value={Math.max(0, active.length - onSiteToday - offToday)} tone="good" sub="not booked" />
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex-1 sm:max-w-[360px]">
+          <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-subtle" />
+          <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, company or trade" aria-label="Search team" className="pl-9" />
         </div>
         <Tabs
           label="Team filter"
-          className="sm:max-w-md"
           value={filter}
           onChange={setFilter}
           options={[
             { value: "all", label: "All" },
             { value: "employee", label: "Staff" },
-            { value: "subcontractor", label: "Subs" },
+            { value: "subcontractor", label: "Subcontractors" },
             { value: "archived", label: "Archived" },
           ]}
         />
       </div>
       {list.length ? (
-        <ul className="panel divide-y divide-line overflow-hidden">
+        <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {list.map((p) => {
-            const todays = bookingsOnDay(data.bookings.filter((b) => b.personIds.includes(p.id)), today);
+            const mine = data.bookings.filter((b) => b.personIds.includes(p.id));
+            const todays = bookingsOnDay(mine, today);
             const a = access.get(p.id) ?? { personId: p.id, state: "not_invited" as const };
+            const leave = data.absences.filter((x) => x.personId === p.id && ["approved", "pending"].includes(x.status));
+            const nextLeave = leave.filter((x) => x.endDate >= today).sort((x, y) => x.startDate.localeCompare(y.startDate))[0];
+            const jobIds = [...new Set(mine.filter((b) => bookingEndDate(b) >= today).map((b) => b.jobId))];
             return (
-              <ListRow
-                key={p.id}
-                onOpen={() => setOpen(p.id)}
-                openLabel={`Open ${p.name}`}
-                leading={<Avatar person={p} />}
-                title={p.name}
-                aside={manage ? <StatusText tone={ACCESS_LABEL[a.state].tone}>{ACCESS_LABEL[a.state].label}</StatusText> : undefined}
-                meta={
-                  <>
-                    <span className="block truncate">
-                      {p.kind === "subcontractor" ? "Subcontractor" : "Employee"}
-                      {p.trade ? ` · ${p.trade}` : ""}
+              <li key={p.id} className="relative flex flex-col rounded-2xl bg-card p-4 shadow-[var(--shadow-sm)] ring-1 ring-line transition hover:shadow-[var(--shadow-md)] sm:p-5">
+                <div className="flex items-start gap-3">
+                  <PersonAvatar person={p} size={44} />
+                  <div className="min-w-0 flex-1">
+                    <button type="button" onClick={() => setOpen(p.id)} className="block w-full truncate text-left text-[15.5px] font-semibold tracking-[-0.01em] text-heading after:absolute after:inset-0 after:content-['']" aria-label={`Open ${p.name}`}>
+                      {p.name}
+                    </button>
+                    <div className="truncate text-[13px] text-subtle">
+                      {p.trade || (p.kind === "subcontractor" ? "Subcontractor" : "Employee")}
                       {p.company ? ` · ${p.company}` : ""}
-                    </span>
-                    <span className="mt-0.5 block text-[14px]">
-                      {todays.length ? (
-                        <>
-                          <span className="font-semibold text-foreground">Scheduled today:</span>{" "}
-                          {todays.map((b) => `${jobs.get(b.jobId)?.title ?? "Job"} ${formatTimeRange(b.startTime, b.endTime)}`).join(" · ")}
-                        </>
-                      ) : (
-                        <span className="text-muted-foreground">No work scheduled today</span>
-                      )}
-                    </span>
-                  </>
-                }
-              />
+                    </div>
+                  </div>
+                  <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11.5px] font-medium", p.kind === "subcontractor" ? "border border-dashed border-black/20 text-muted-foreground" : "bg-surface-3 text-foreground/80")}>
+                    {p.kind === "subcontractor" ? "Subcontractor" : "Employee"}
+                  </span>
+                </div>
+
+                <div className="mt-4 rounded-xl bg-surface-2 px-3 py-2.5 text-[13.5px]">
+                  {todays.length ? (
+                    <div className="flex items-center gap-2">
+                      <span className="size-2 shrink-0 rounded-full bg-success" aria-hidden />
+                      <span className="min-w-0 truncate">
+                        <span className="font-medium text-heading">Today:</span> {todays.map((b) => `${jobs.get(b.jobId)?.title ?? "Job"}${jobs.get(b.jobId)?.location ? `, ${jobs.get(b.jobId)?.location}` : ""}`).join(" · ")}
+                      </span>
+                    </div>
+                  ) : absencesOnDay(leave.filter((x) => x.status === "approved"), today).length ? (
+                    <div className="flex items-center gap-2 text-violet-800">
+                      <CalendarOff className="size-3.5 shrink-0" aria-hidden /> Off today
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-subtle">
+                      <span className="size-2 shrink-0 rounded-full bg-black/15" aria-hidden /> Free today
+                    </div>
+                  )}
+                </div>
+
+                {/* This week */}
+                <div className="mt-3 grid grid-cols-7 gap-1" aria-label="This week">
+                  {week.map((d) => {
+                    const bk = bookingsOnDay(mine, d);
+                    const off = absencesOnDay(leave, d)[0];
+                    const tone = bk[0] ? jobTone(bk[0].jobId) : null;
+                    return (
+                      <div
+                        key={d}
+                        title={`${formatDayShort(d)}: ${off ? (off.status === "pending" ? "leave requested" : "off") : bk.length ? bk.map((b) => jobs.get(b.jobId)?.title ?? "Job").join(", ") : "free"}`}
+                        className="flex flex-col items-center gap-1"
+                      >
+                        <span className={cn("text-[10.5px] font-medium uppercase", d === today ? "text-accent-fg" : "text-subtle")}>{new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { weekday: "narrow" })}</span>
+                        <span
+                          className={cn(
+                            "h-6 w-full rounded-md",
+                            off ? (off.status === "pending" ? "border border-dashed border-violet-300 bg-violet-50" : "bg-violet-200/70") : tone ? tone.bar : "bg-surface-3",
+                            d === today && "ring-2 ring-copper-500/40 ring-offset-1 ring-offset-card",
+                          )}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-[12.5px] text-subtle">
+                  <span>
+                    {jobIds.length ? `${jobIds.length} job${jobIds.length === 1 ? "" : "s"} booked` : "No upcoming work"}
+                    {nextLeave ? ` · ${nextLeave.status === "pending" ? "leave requested" : "off"} ${formatDayShort(nextLeave.startDate)}` : ""}
+                  </span>
+                  {manage ? <StatusText tone={ACCESS_LABEL[a.state].tone} className="text-[12px]">{ACCESS_LABEL[a.state].label}</StatusText> : null}
+                </div>
+              </li>
             );
           })}
         </ul>

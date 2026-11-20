@@ -6,6 +6,8 @@
  * viewer, drawing revisions and a customer handover without shipping any
  * real customer material.
  */
+import fs from "node:fs";
+import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { deflateSync } from "node:zlib";
 import type { Absence, FileCategory, Handover, JobFile, JobUpdate, Variation } from "@/lib/types";
@@ -312,4 +314,64 @@ export function seedSophieMackay(db: DatabaseSync, insert: InsertFn, orgId: stri
     issueDate: dayKey(40), dueDate: dayKey(33), amountPaid: 4260, sentAt: ago(40), paidAt: ago(35), createdAt: ago(40), createdBy: "Ryan",
   } as unknown as { id: string });
   insert(db, "payments", orgId, { id: `${k}_pay_mackay_deposit`, jobId: `${k}_job_mackay_kitchen`, invoiceId: invId, amount: 4260, type: "deposit", method: "bank_transfer", receivedAt: dayKey(35), recordedBy: "Ryan", recordedAt: ago(35) } as unknown as { id: string });
+}
+
+/**
+ * Illustrative project images (public/demo/*.jpg, rendered by
+ * scripts/build-demo-images.py — no real homes or stock photos) as job photos
+ * in the sample workspaces, so job cards and galleries look like a working
+ * business. Each is labelled "Illustrative image". Once per sample workspace;
+ * skipped quietly if the images aren't on disk.
+ */
+export function seedIllustrations(db: DatabaseSync, insert: InsertFn, orgId: string, k: string) {
+  const dir = path.join(process.cwd(), "public", "demo");
+  const ago = (d: number) => new Date(Date.now() - d * 36e5 * 24).toISOString();
+  const plan: { key: string; job: string; image: string; category: FileCategory; title: string; days: number; by: string; note?: string; stage?: JobUpdate["stage"]; replaces?: string }[] = [
+    { key: "il_kc", job: "kitchen_crawley", image: "kitchen", category: "progress", title: "Island and units in", days: 0.2, by: "Liam Carter", note: "Wall units hung, worktops on and the island finished. Pendants wired in — just plinths and handles left.", stage: "in_progress" },
+    { key: "il_kcop", job: "kitchen_copthorne", image: "kitchen", category: "progress", title: "Shaker units fitted", days: 1.2, by: "Callum Price", note: "Units fitted and level. Oak worktops arrive Thursday for templating.", stage: "in_progress" },
+    { key: "il_mackay", job: "mackay_kitchen", image: "kitchen", category: "progress", title: "Kitchen nearly there", days: 2.5, by: "Liam Carter", note: "Worktops oiled, pendants up. Sealing tomorrow then it's ready for the final invoice.", stage: "in_progress" },
+    { key: "il_ext", job: "extension_copthorne", image: "extension", category: "progress", title: "Glazing and lantern in", days: 0.6, by: "Callum Price", note: "Bifolds and roof lantern fitted, building is watertight. Plasterers in on Monday.", stage: "in_progress" },
+    { key: "il_loft", job: "loft_eg", image: "loft", category: "drawing", title: "Loft concept (illustrative)", days: 12, by: "Luke" },
+    { key: "il_wh", job: "wardrobes_horsham", image: "wardrobes", category: "drawing", title: "Wardrobe design (illustrative)", days: 9, by: "Ryan" },
+    { key: "il_mw", job: "mackay_wardrobes", image: "wardrobes", category: "drawing", title: "Alcove wardrobes (illustrative)", days: 6, by: "Ryan" },
+    { key: "il_media", job: "mediawall_reigate", image: "media-wall", category: "drawing", title: "Media wall concept (illustrative)", days: 5, by: "Luke" },
+    { key: "il_stairs", job: "stairs_horley", image: "staircase", category: "completion", title: "Oak staircase finished", days: 2.8, by: "Ellie Ward", replaces: "st_tread" },
+    { key: "il_gr", job: "gardenroom_lingfield", image: "garden-room", category: "completion", title: "Garden room finished", days: 30.5, by: "Liam Carter" },
+  ];
+  for (const p of plan) {
+    const id = `${k}_fil_${p.key}`;
+    const jobId = `${k}_job_${p.job}`;
+    if (db.prepare("SELECT 1 FROM job_files WHERE org_id = ? AND id = ?").get(orgId, id)) continue;
+    if (!db.prepare("SELECT 1 FROM jobs WHERE org_id = ? AND id = ?").get(orgId, jobId)) continue;
+    let original: Buffer, thumb: Buffer;
+    try {
+      original = fs.readFileSync(path.join(dir, `${p.image}.jpg`));
+      thumb = fs.readFileSync(path.join(dir, `${p.image}-thumb.jpg`));
+    } catch {
+      return;
+    }
+    const isDrawing = p.category === "drawing";
+    if (p.replaces) {
+      // Swap the flat placeholder picture for the illustration, keeping the record (and its update) as it is.
+      const old = `${k}_fil_${p.replaces}`;
+      if (db.prepare("SELECT 1 FROM job_files WHERE org_id = ? AND id = ? AND filename NOT LIKE '%-illustration.jpg'").get(orgId, old)) {
+        db.prepare("UPDATE job_files SET filename = ?, mime_type = 'image/jpeg', bytes = ?, has_thumb = 1, width = 1200, height = 800, description = ? WHERE org_id = ? AND id = ?").run(`${p.image}-illustration.jpg`, original.length, "Illustrative image — demo only", orgId, old);
+        db.prepare("INSERT OR REPLACE INTO file_blobs (file_id, org_id, kind, data, created_at) VALUES (?, ?, 'original', ?, ?)").run(old, orgId, original, ago(p.days));
+        db.prepare("INSERT OR REPLACE INTO file_blobs (file_id, org_id, kind, data, created_at) VALUES (?, ?, 'thumb', ?, ?)").run(old, orgId, thumb, ago(p.days));
+      }
+      continue;
+    }
+    insert(db, "job_files", orgId, {
+      id, jobId, category: isDrawing ? "other" : p.category, title: p.title, filename: `${p.image}-illustration.jpg`, mimeType: "image/jpeg", bytes: original.length,
+      description: "Illustrative image — demo only", groupId: id, visibility: "team", previewable: true, hasThumb: true, width: 1200, height: 800,
+      uploadedBy: p.by, createdAt: ago(p.days), clientRef: `seed:${p.key}`,
+    } as JobFile & { clientRef: string });
+    db.prepare("INSERT OR REPLACE INTO file_blobs (file_id, org_id, kind, data, created_at) VALUES (?, ?, 'original', ?, ?)").run(id, orgId, original, ago(p.days));
+    db.prepare("INSERT OR REPLACE INTO file_blobs (file_id, org_id, kind, data, created_at) VALUES (?, ?, 'thumb', ?, ?)").run(id, orgId, thumb, ago(p.days));
+    if (p.note) {
+      const uid = `${k}_upd_${p.key}`;
+      insert(db, "job_updates", orgId, { id: uid, jobId, note: p.note, stage: p.stage, authorName: p.by, createdAt: ago(p.days), updatedAt: ago(p.days), clientRef: `seed:${p.key}` } as JobUpdate & { clientRef: string });
+      db.prepare("UPDATE job_files SET update_id = ? WHERE org_id = ? AND id = ?").run(uid, orgId, id);
+    }
+  }
 }

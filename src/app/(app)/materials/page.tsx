@@ -71,7 +71,7 @@ export default function MaterialsPage() {
   const edit = (m: Material) => (write ? ui.openForm({ form: "material", materialId: m.id }) : ui.openJob(m.jobId, { tab: "materials" }));
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="max-w-[1400px]">
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="t-page">Materials</h1>

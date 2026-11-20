@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AudioLines, CalendarDays, ClipboardList, HardHat, ListChecks, Play, ChevronLeft, ChevronRight, Keyboard, Package, Users, Loader2, MessageCircle, Mic, MoreHorizontal, Pencil, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
+import { AudioLines, CalendarDays, ClipboardList, PoundSterling, ReceiptText, HardHat, ListChecks, Play, ChevronLeft, ChevronRight, Keyboard, Package, Users, Loader2, MessageCircle, Mic, MoreHorizontal, Pencil, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
 import { flushSync } from "react-dom";
 import { useBob } from "@/lib/bob/provider";
 import type { BobMessage, Chip } from "@/lib/bob/types";
@@ -55,6 +55,16 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
   }, [messages.length, thinking, speech.interim, inConversation]);
 
   const toggleMic = c.toggleMic;
+
+  // The phone tab bar's microphone opens /assistant?listen=1: start listening straight away.
+  const autoListened = React.useRef(false);
+  React.useEffect(() => {
+    if (variant !== "page" || autoListened.current || typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("listen") !== "1" || !speech.supported) return;
+    autoListened.current = true;
+    window.history.replaceState(null, "", window.location.pathname);
+    if (!speech.listening) toggleMic();
+  }, [variant, speech.supported, speech.listening, toggleMic]);
 
   const ask = (text: string) => {
     setHome(false);
@@ -121,6 +131,16 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
       },
     },
     ...(can("schedule.read") ? [{ label: "Who's working tomorrow?", icon: Users, run: () => ask("Who's working tomorrow?") }] : []),
+  ];
+
+  // Contextual example requests (what Bob can actually do for this account).
+  const examples: Shortcut[] = [
+    ...(can("schedule.read") ? [{ label: "Where is everyone working tomorrow?", icon: Users, run: () => ask("Where is everyone working tomorrow?") }] : []),
+    ...(can("invoices.draft") ? [{ label: "Prepare an invoice for Sophie in Copthorne", icon: ReceiptText, run: () => ask("Prepare an invoice for Sophie in Copthorne") }] : []),
+    { label: "What jobs still need quoting?", icon: ClipboardList, run: () => ask("What jobs still need quoting?") },
+    ...(can("jobs.write") ? [{ label: "Add 20 sheets of plasterboard to the kitchen job", icon: Package, run: () => ask("Add 20 sheets of plasterboard to the kitchen job") }] : []),
+    ...(can("schedule.read") ? [{ label: "Who is on holiday next week?", icon: CalendarDays, run: () => ask("Who is on holiday next week?") }] : []),
+    ...(can("finance.read") ? [{ label: "How much money are we owed?", icon: PoundSterling, run: () => ask("How much money are we owed?") }] : []),
   ];
 
   const suggestions = [
@@ -258,7 +278,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
           inputRef={inputRef}
           orbState={orbState}
           thinking={thinking}
-          shortcuts={shortcuts}
+          shortcuts={[...shortcuts.slice(0, 2), ...examples].slice(0, 6)}
           links={links}
           greeting={`${greetingNow()}${name}`}
           hasConversation={messages.length > 0}
@@ -491,6 +511,10 @@ function AskBobHome({
   const { speech, phase } = c;
   const orbSize = useOrbSize();
   const [typing, setTyping] = React.useState(false);
+  // Desktop: the "Ask Bob anything…" bar is always there.
+  React.useEffect(() => {
+    if (window.matchMedia("(min-width: 1024px)").matches) setTyping(true);
+  }, []);
   const recording = phase === "listening" || phase === "starting";
   const busy = phase === "stopping" || phase === "sending";
   const showComposer = typing || !!c.draft.trim();
@@ -504,7 +528,7 @@ function AskBobHome({
   return (
     <>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className="mx-auto flex min-h-full w-full max-w-md flex-col items-center justify-center px-4 pb-3 pt-1">
+        <div className="mx-auto flex min-h-full w-full max-w-md flex-col items-center justify-center px-4 pb-3 pt-1 lg:max-w-xl">
           <button
             type="button"
             onClick={c.toggleMic}
@@ -535,6 +559,7 @@ function AskBobHome({
               <>
                 <p className="text-[15px] font-medium text-white/70">{greeting}</p>
                 <h1 className="mt-0.5 text-[27px] font-bold leading-tight tracking-[-0.02em] text-[#FAF9F6] min-[400px]:text-[30px]">How can I help?</h1>
+                <p className="mt-1 hidden text-[14px] text-white/50 sm:block">Your building and carpentry business assistant</p>
               </>
             )}
           </div>
@@ -555,18 +580,18 @@ function AskBobHome({
               </Link>
             ))}
           </nav>
-          <h2 className="mt-4 w-full text-left text-[13px] font-semibold uppercase tracking-wider text-white/55">Ask Bob</h2>
-          <ul className="mt-2 w-full space-y-2">
+          <h2 className="mt-5 w-full text-left text-[12px] font-semibold uppercase tracking-[0.08em] text-white/45">Try asking</h2>
+          <ul className="mt-2 grid w-full grid-cols-1 gap-2 min-[400px]:grid-cols-2">
             {shortcuts.map((s) => (
               <li key={s.label}>
                 <button
                   type="button"
                   onClick={s.run}
                   disabled={busy || recording}
-                  className="flex h-11 w-full items-center gap-4 rounded-xl bg-card px-4 text-left text-[16px] text-[#FAF9F6] shadow-[inset_0_1px_0_rgb(255_240_225/0.04)] ring-1 ring-line-strong transition hover:bg-raised active:scale-[0.99] active:bg-raised-hover disabled:opacity-40"
+                  className="flex min-h-[52px] w-full items-center gap-3 rounded-xl bg-white/[0.035] px-3.5 py-2.5 text-left text-[14px] leading-snug text-[#FAF9F6]/90 ring-1 ring-white/[0.09] transition hover:bg-white/[0.06] hover:ring-copper-500/50 active:scale-[0.99] disabled:opacity-40"
                 >
-                  <s.icon className="size-[22px] shrink-0 text-white/85" strokeWidth={1.6} />
-                  <span className="truncate">{s.label}</span>
+                  <s.icon className="size-[18px] shrink-0 text-copper-400" strokeWidth={1.7} />
+                  <span className="line-clamp-2">{s.label}</span>
                 </button>
               </li>
             ))}
@@ -580,8 +605,8 @@ function AskBobHome({
       </div>
 
       {/* Bottom controls: above Safari's toolbar and the keyboard (the shell follows the visible viewport). */}
-      <div className="shrink-0 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-2">
-        <div className="mx-auto max-w-md">
+      <div className="shrink-0 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 lg:pb-8">
+        <div className="mx-auto max-w-md lg:max-w-2xl">
           {showComposer ? (
             <>
               <ComposerStatus phase={recording ? "idle" : phase} interim="" error={speech.error} notice={c.notice} supported={speech.supported} />
@@ -591,7 +616,7 @@ function AskBobHome({
                     type="button"
                     onClick={() => setTyping(false)}
                     aria-label="Close keyboard"
-                    className="grid size-[52px] shrink-0 place-items-center rounded-full text-white/80 ring-1 ring-white/15"
+                    className="grid size-[52px] shrink-0 place-items-center rounded-full text-white/80 ring-1 ring-white/15 lg:hidden"
                   >
                     <X className="size-5" />
                   </button>

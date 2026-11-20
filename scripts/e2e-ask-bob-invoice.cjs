@@ -45,7 +45,7 @@ const login = (page, email) => page.evaluate(async (email) => (await fetch('/api
   const page = await ctx.newPage();
   await page.goto(BASE + '/login');
   check('Signs in as the Ninety3 demo owner', (await login(page, 'owner@ninety3.example')) === 200);
-  await page.goto(BASE + '/');
+  await page.goto(BASE + '/assistant');
   await page.getByRole('heading', { name: 'How can I help?' }).waitFor();
 
   /* Typed, through the composer */
@@ -98,7 +98,7 @@ const login = (page, email) => page.evaluate(async (email) => (await fetch('/api
   });
   await dp.goto(BASE + '/login');
   await login(dp, 'office@ninety3.example');
-  await dp.goto(BASE + '/');
+  await dp.goto(BASE + '/assistant');
   await dp.getByRole('heading', { name: 'How can I help?' }).waitFor();
   await dp.getByRole('button', { name: /talk to Bob/i }).first().click();
   await dp.waitForTimeout(1500);

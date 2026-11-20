@@ -1,8 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { AssistantView } from "@/components/assistant/assistant-view";
-
-/** The opening screen: Ask Bob. Direct links (/week, /jobs/…) open their own screens. */
+/** The diary is the landing page. Ask Bob lives at /assistant (and behind the mic on phones). */
 export default function HomePage() {
-  return <AssistantView variant="page" />;
+  redirect("/week");
 }

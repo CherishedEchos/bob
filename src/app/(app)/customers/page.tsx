@@ -10,6 +10,7 @@ import { gbp, timeAgo, todayKey } from "@/lib/utils";
 import { relativeDayInline } from "@/lib/dates";
 import { EmptyState, ListRow, StatusText, pageSecondaryClass } from "@/components/common/bits";
 import { Input } from "@/components/ui/input";
+import { PersonAvatar } from "@/components/common/people";
 
 export default function CustomersPage() {
   const { data, can } = useStore();
@@ -19,7 +20,7 @@ export default function CustomersPage() {
   const list = data.customers.filter((c) => !q || [c.name, c.town, c.email, c.phone].some((s) => s?.toLowerCase().includes(q)));
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-[1100px]">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="t-page">Customers</h1>
@@ -32,8 +33,8 @@ export default function CustomersPage() {
         ) : null}
       </div>
       <div className="relative mb-3">
-        <Search aria-hidden className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-subtle" />
-        <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, town, phone or email" aria-label="Search customers" className="h-[52px] pl-11 text-[16.5px]" />
+        <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-subtle" />
+        <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, town, phone or email" aria-label="Search customers" className="pl-10" />
       </div>
       {list.length ? (
         <ul className="panel divide-y divide-line overflow-hidden">
@@ -46,9 +47,7 @@ export default function CustomersPage() {
                 onOpen={() => ui.openCustomer(c.id)}
                 openLabel={`Open ${c.name}`}
                 leading={
-                  <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-selected text-[15px] font-semibold text-accent-fg">
-                    {c.name.replace(/^the\s+/i, "").slice(0, 1).toUpperCase()}
-                  </span>
+                  <PersonAvatar name={c.name} size={40} />
                 }
                 title={c.name}
                 aside={can("finance.read") && owed ? <span className="font-semibold text-warn-fg">{gbp(owed)} owed</span> : undefined}

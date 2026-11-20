@@ -10,10 +10,13 @@ import { VariationsPanel } from "@/components/jobs/variations";
 
 import * as React from "react";
 import { PackageCheck } from "lucide-react";
-import { AlarmClock, CalendarClock, CalendarPlus, Check, ChevronLeft, ChevronRight, Lock, Hammer, Inbox, MapPin, MoreHorizontal, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
+import { AlarmClock, CalendarClock, CalendarPlus, Check, ChevronLeft, ChevronRight, Lock, Hammer, Inbox, MapPin, MoreHorizontal, Navigation, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
 import type { JobTab } from "@/lib/store/ui";
 import { formatTimeRange, relativeDayInline } from "@/lib/dates";
-import { nextBookingForJob } from "@/lib/schedule";
+import { nextBookingForJob, peopleOnJob } from "@/lib/schedule";
+import { jobFinancials, type JobFinancials } from "@/lib/job-financials";
+import { JobCover, jobCovers } from "@/components/jobs/job-cover";
+import { PeopleStack } from "@/components/common/people";
 import { JobCrew, JobMaterials, JobSchedule, JobTasks, SharedInstructions } from "./job-parts";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
@@ -24,11 +27,9 @@ import { addDaysKey, cn, firstName, formatDateKey, gbp, timeAgo, todayKey } from
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
-import { JobStatusBadge } from "@/components/common/status";
 import { Badge } from "@/components/ui/badge";
 import { Menu, type MenuItem } from "@/components/ui/menu";
-import { JobTile } from "@/components/common/job-tile";
-import { MoneyRow, ProgressBar } from "@/components/common/bits";
+import { MoneyRow } from "@/components/common/bits";
 import { NotesPanel } from "@/components/common/notes";
 
 /** A folded section inside a record: title + one-line summary, tap to open. */
@@ -71,7 +72,6 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
   const { data, actions, can, user } = useStore();
   const ui = useUI();
   const j = data.jobs.find((x) => x.id === id)!;
-  const fileCount = new Set(data.files.filter((x) => x.jobId === id && !x.deletedAt).map((x) => x.groupId)).size;
   const money = can("finance.read");
   const f = jobFinance(j, data.payments, data.expenses, data.invoices);
   const payments = paymentsForJob(data.payments, j.id);
@@ -81,7 +81,10 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
   const [editingNext, setEditingNext] = React.useState(false);
   const router = useRouter();
   const manager = user.role === "owner" || user.role === "office";
-  const allowed = (t?: JobTab): JobTab => (!t || (t === "money" && !money) || ((t === "handover" || t === "report") && !manager) ? "overview" : t);
+  const allowed = (t?: JobTab): JobTab => {
+    const v: JobTab | undefined = t === "money" ? "financials" : t === "report" ? "handover" : t === "files" ? "photos" : t;
+    return !v || (v === "financials" && !money) || (v === "handover" && !manager) ? "overview" : v;
+  };
   const [tab, setTabState] = React.useState<JobTab>(allowed(initialTab));
   React.useEffect(() => setTabState(allowed(initialTab)), [initialTab, id]); // eslint-disable-line react-hooks/exhaustive-deps
   const setTab = (t: JobTab) => {
@@ -90,16 +93,24 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
   };
   const today = todayKey();
   const nextBooking = nextBookingForJob(data.bookings, j.id, today);
+  const jobFiles = data.files.filter((x) => x.jobId === id && !x.deletedAt);
+  const photoCount = new Set(jobFiles.filter((x) => x.category === "progress" || x.category === "completion").map((x) => x.groupId)).size;
+  const docCount = new Set(jobFiles.filter((x) => x.category === "drawing" || x.category === "other").map((x) => x.groupId)).size;
   const tabs: { value: JobTab; label: string; count?: number }[] = [
     { value: "overview", label: "Overview" },
-    { value: "schedule", label: "Schedule & team", count: data.bookings.filter((b) => b.jobId === j.id && (b.endDate ?? b.date) >= today).length },
-    { value: "tasks", label: "Tasks", count: data.tasks.filter((t) => !t.done && t.relatedType === "job" && t.relatedId === j.id).length },
+    { value: "schedule", label: "Schedule", count: data.bookings.filter((b) => b.jobId === j.id && (b.endDate ?? b.date) >= today).length },
+    { value: "updates", label: "Updates", count: data.updates.filter((u) => u.jobId === j.id).length },
+    { value: "photos", label: "Photos", count: photoCount },
+    { value: "documents", label: "Documents", count: docCount },
     { value: "materials", label: "Materials", count: data.materials.filter((m) => m.jobId === j.id && m.status === "to_order").length },
-    { value: "files", label: "Files & photos", count: fileCount },
-    ...(manager ? [{ value: "report" as const, label: "Handover report", count: data.reportVersions.filter((v) => v.jobId === id).length }] : []),
-    ...(manager ? [{ value: "handover" as const, label: "Handover pack", count: data.handovers.filter((h) => h.jobId === id).length }] : []),
-    ...(money ? [{ value: "money" as const, label: "Money" }] : []),
+    { value: "tasks", label: "Tasks", count: data.tasks.filter((t) => !t.done && t.relatedType === "job" && t.relatedId === j.id).length },
+    ...(money ? [{ value: "financials" as const, label: "Financials" }] : []),
+    ...(manager ? [{ value: "handover" as const, label: "Handover" }] : []),
   ];
+  const fin = jobFinancials(j, data);
+  const covers = jobCovers(data.files);
+  const crew = peopleOnJob(data.bookings, data.people, j.id, today);
+  const mapsHref = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(j.siteAddress || j.location)}`;
   const activity = jobActivity(data, j.id);
 
   React.useEffect(() => setNextAction(j.nextAction ?? ""), [j.id, j.nextAction]);
@@ -140,7 +151,6 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
     ...(j.enquiryId ? [{ label: "Original enquiry", icon: Inbox, onSelect: () => ui.openEnquiry(j.enquiryId!) }] : []),
   ];
 
-  const crewNames = nextBooking ? nextBooking.personIds.map((pid) => data.people.find((p) => p.id === pid)?.name.split(" ")[0]).filter(Boolean).join(", ") : "";
   // One clear primary action: finished jobs go to handover; otherwise schedule or edit the next booking.
   const primary =
     (j.status === "completed" || j.status === "snagging") && manager ? (
@@ -159,79 +169,107 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
       )
     ) : null;
 
+  const upcoming = data.bookings.filter((b) => b.jobId === j.id && (b.endDate ?? b.date) >= today).sort((x, y) => x.date.localeCompare(y.date)).slice(0, 3);
+  const openTasks = data.tasks.filter((t) => !t.done && t.relatedType === "job" && t.relatedId === j.id);
+  const toOrder = data.materials.filter((m) => m.jobId === j.id && m.status === "to_order");
+
   return (
-    <div className="mx-auto w-full max-w-[1280px]">
-      <Link href="/jobs" className="mb-3 inline-flex h-10 items-center gap-1.5 rounded-lg pr-2 text-[14.5px] font-semibold text-muted-foreground hover:text-foreground">
+    <div className="mx-auto w-full max-w-[1480px]">
+      <Link href="/jobs" className="mb-3 inline-flex h-9 items-center gap-1 rounded-lg pr-2 text-[13.5px] font-medium text-subtle hover:text-foreground">
         <ChevronLeft className="size-4" aria-hidden /> Jobs
       </Link>
-      <header className="panel px-5 py-5 sm:px-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <JobTile kind={j.kind} className="hidden size-14 sm:grid" />
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="t-page text-[26px] lg:text-[30px]">{j.title}</h1>
-                <JobStatusBadge status={j.status} />
-                {paymentStatus && paymentStatus.tone !== "neutral" ? <Badge tone={paymentStatus.tone}>{paymentStatus.text}</Badge> : null}
-              </div>
-              <dl className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-[15px]">
-                <div className="flex items-center gap-1.5">
-                  <dt className="sr-only">Customer</dt>
-                  <UserRound className="size-4 text-subtle" aria-hidden />
-                  <dd>
-                    <button className="font-medium text-foreground hover:text-accent-fg hover:underline" onClick={() => ui.openCustomer(j.customerId)}>
-                      {j.customerName}
-                    </button>
-                  </dd>
-                </div>
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <dt className="sr-only">Site</dt>
-                  <MapPin className="size-4 shrink-0 text-accent-icon" aria-hidden />
-                  <dd className="min-w-0 truncate text-foreground/90">{j.siteAddress || j.location}</dd>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <dt className="sr-only">Next booking</dt>
-                  <CalendarClock className="size-4 text-subtle" aria-hidden />
-                  <dd className={nextBooking ? "text-foreground/90" : "text-muted-foreground"}>
-                    {nextBooking ? (
-                      <>
-                        <span className="font-semibold text-foreground">{nextBooking.date < today ? "On site today" : `Booked ${relativeDayInline(nextBooking.date, today)}`}</span> · {formatTimeRange(nextBooking.startTime, nextBooking.endTime)}
-                        {" · "}
-                        {crewNames || <span className="font-semibold text-warn-fg">Unassigned</span>}
-                      </>
-                    ) : (
-                      "Not scheduled yet"
-                    )}
-                  </dd>
-                </div>
-              </dl>
+
+      {/* Project header: cover photo, name, customer, site and status */}
+      <header className="overflow-hidden rounded-2xl bg-card shadow-[var(--shadow-sm)] ring-1 ring-line">
+        <JobCover job={j} file={covers.get(j.id)} large className="h-[190px] w-full sm:h-[230px] lg:h-[260px]">
+          <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/5" />
+          <div className="absolute left-4 top-4 flex flex-wrap gap-1.5 sm:left-6 sm:top-5">
+            <span className="inline-flex h-6 items-center rounded-full bg-white/92 px-2.5 text-[12px] font-semibold text-[#18181b] shadow-sm backdrop-blur">{JOB_STATUS_LABEL[j.status]}</span>
+            {paymentStatus && paymentStatus.tone !== "neutral" ? (
+              <span className={cn("inline-flex h-6 items-center rounded-full px-2.5 text-[12px] font-semibold shadow-sm", paymentStatus.tone === "red" ? "bg-[#d6453d] text-white" : paymentStatus.tone === "green" ? "bg-[#2f9e6e] text-white" : "bg-[#fff4dd] text-[#8a5a00]")}>{paymentStatus.text}</span>
+            ) : null}
+          </div>
+          <div className="absolute inset-x-0 bottom-0 px-4 pb-4 sm:px-6 sm:pb-5">
+            <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.025em] text-white [text-shadow:0_1px_12px_rgb(0_0_0/0.35)] sm:text-[32px]">{j.title}</h1>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px] text-white/85">
+              <button className="flex items-center gap-1.5 font-medium hover:text-white hover:underline" onClick={() => ui.openCustomer(j.customerId)}>
+                <UserRound className="size-4" aria-hidden /> {j.customerName}
+              </button>
+              <span className="flex min-w-0 items-center gap-1.5">
+                <MapPin className="size-4 shrink-0" aria-hidden /> <span className="truncate">{j.siteAddress || j.location}</span>
+              </span>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:justify-end [&>*:last-child]:order-first sm:[&>*:last-child]:order-none">
+        </JobCover>
+
+        {/* Key facts + actions */}
+        <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:flex sm:flex-wrap sm:items-center sm:gap-x-8">
+            {money ? (
+              <div>
+                <dt className="text-[12px] font-medium text-subtle">Contract value</dt>
+                <dd className="text-[18px] font-semibold tabular tracking-[-0.02em] text-heading">{gbp(fin.contractValue)}</dd>
+              </div>
+            ) : null}
+            <div>
+              <dt className="text-[12px] font-medium text-subtle">Next on site</dt>
+              <dd className="text-[14.5px] font-medium text-heading">
+                {nextBooking ? (
+                  <>
+                    {nextBooking.date <= today ? "Today" : relativeDayInline(nextBooking.date, today).replace(/^./, (c) => c.toUpperCase())}
+                    <span className="font-normal text-subtle"> · {formatTimeRange(nextBooking.startTime, nextBooking.endTime)}</span>
+                  </>
+                ) : (
+                  <span className="font-normal text-subtle">Not scheduled</span>
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[12px] font-medium text-subtle">Team</dt>
+              <dd className="mt-0.5 flex h-7 items-center">{crew.length ? <PeopleStack people={crew} size={28} max={4} /> : <span className="text-[14px] text-subtle">{nextBooking ? "Unassigned" : "—"}</span>}</dd>
+            </div>
+            {j.what3words ? (
+              <div>
+                <dt className="text-[12px] font-medium text-subtle">what3words</dt>
+                <dd>
+                  <a href={`https://what3words.com/${encodeURIComponent(j.what3words)}`} target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-[#e11f26] hover:underline">
+                    {"///"}
+                    {j.what3words}
+                  </a>
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center [&>*]:min-w-0">
+            {primary ? <div className="col-span-3 sm:order-last [&>*]:w-full">{primary}</div> : null}
+            <Button asChild variant="secondary" size="sm">
+              <a href={mapsHref} target="_blank" rel="noopener noreferrer">
+                <Navigation /> Directions
+              </a>
+            </Button>
             {j.customerPhone ? (
               <Button asChild variant="secondary" size="sm">
                 <a href={`tel:${j.customerPhone.replace(/\s/g, "")}`}>
-                  <Phone /> Call {firstName(j.customerName)}
+                  <Phone /> <span className="truncate">Call<span className="hidden sm:inline"> {firstName(j.customerName)}</span></span>
                 </a>
               </Button>
             ) : null}
             <Menu
               label="More actions"
               items={[{ label: "Add task", icon: AlarmClock, onSelect: reminder }, ...more]}
-              triggerClassName="flex h-11 items-center gap-1.5 rounded-xl px-3.5 text-[15px] font-medium text-foreground ring-1 ring-line-strong transition hover:bg-raised-hover"
+              triggerClassName="flex h-10 w-full items-center justify-center sm:w-auto gap-1.5 rounded-[10px] bg-card px-3 text-[14px] font-semibold text-foreground shadow-[var(--shadow-xs)] ring-1 ring-line-strong transition hover:bg-raised-hover lg:h-9 lg:text-[13.5px]"
               trigger={
                 <>
-                  <MoreHorizontal className="size-5" aria-hidden /> More
+                  <MoreHorizontal className="size-4" aria-hidden /> More
                 </>
               }
             />
-            {primary}
           </div>
         </div>
       </header>
 
-      {/* Sections: tabs on desktop, a scrollable strip on phones */}
-      <div role="tablist" aria-label="Job sections" className="sticky top-0 z-10 -mx-4 mt-4 flex gap-1 overflow-x-auto border-b border-line bg-app/95 px-4 backdrop-blur scrollbar-none lg:mx-0 lg:px-1">
+      {/* Sections */}
+      <div role="tablist" aria-label="Job sections" className="scrollbar-none sticky top-0 z-10 -mx-4 mt-5 flex gap-0.5 overflow-x-auto border-b border-line bg-background/90 px-4 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
         {tabs.map((t) => (
           <button
             key={t.value}
@@ -242,306 +280,482 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             aria-controls="job-tabpanel"
             onClick={() => setTab(t.value)}
             className={cn(
-              "relative flex h-12 shrink-0 items-center gap-1.5 rounded-t-lg px-3 text-[15px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-              tab === t.value ? "text-accent-fg after:absolute after:inset-x-2 after:bottom-0 after:h-[2px] after:rounded-t after:bg-copper-500" : "text-muted-foreground hover:text-foreground",
+              "relative flex h-11 shrink-0 items-center gap-1.5 px-3 text-[14px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+              tab === t.value ? "font-semibold text-heading after:absolute after:inset-x-3 after:bottom-[-1px] after:h-[2px] after:rounded-full after:bg-copper-500" : "text-subtle hover:text-foreground",
             )}
           >
             {t.label}
-            {t.count ? <span className="tabular rounded-md bg-surface-3 px-1.5 text-[12px] text-muted-foreground">{t.count}</span> : null}
+            {t.count ? <span className={cn("tabular rounded-full px-1.5 text-[11.5px]", tab === t.value ? "bg-copper-500/12 text-accent-fg" : "bg-surface-3 text-subtle")}>{t.count}</span> : null}
           </button>
         ))}
       </div>
 
-      <div id="job-tabpanel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="mt-4">
-      {tab === "overview" ? (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
-          <div className="flex min-w-0 flex-col gap-4">
-            <section aria-labelledby={`next-${j.id}`} className="panel px-5 py-4 sm:px-6">
-              <h2 id={`next-${j.id}`} className="t-eyebrow text-accent-fg">
-                Next step
-              </h2>
-              {editingNext ? (
-                <form
-                  className="mt-2 flex gap-2"
-                  onSubmit={(ev) => {
-                    ev.preventDefault();
-                    void saveNext();
-                  }}
-                >
-                  <Input autoFocus value={nextAction} onChange={(ev) => setNextAction(ev.target.value)} placeholder="What's the next thing to do?" aria-label="Next step" />
-                  <Button type="submit" disabled={(j.nextAction ?? "") === nextAction.trim()}>
-                    <Check /> Save
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setNextAction(j.nextAction ?? "");
-                      setEditingNext(false);
+      <div id="job-tabpanel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="mt-5">
+        {tab === "overview" ? (
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <div className="flex min-w-0 flex-col gap-5">
+              <section aria-labelledby={`next-${j.id}`} className="panel px-5 py-4 sm:px-6">
+                <h2 id={`next-${j.id}`} className="text-[12px] font-semibold uppercase tracking-[0.08em] text-accent-fg">
+                  Next step
+                </h2>
+                {editingNext ? (
+                  <form
+                    className="mt-2 flex gap-2"
+                    onSubmit={(ev) => {
+                      ev.preventDefault();
+                      void saveNext();
                     }}
                   >
-                    Cancel
-                  </Button>
-                </form>
-              ) : (
-                <div className="mt-1 flex flex-wrap items-start justify-between gap-2">
-                  <p className="min-w-0 text-[17px] font-semibold leading-snug text-heading">{jobNextStep(j, data, money)}</p>
-                  {can("jobs.write") ? (
-                    <Button size="sm" variant="ghost" className="-mr-2" onClick={() => setEditingNext(true)}>
-                      <Pencil /> Update
+                    <Input autoFocus value={nextAction} onChange={(ev) => setNextAction(ev.target.value)} placeholder="What's the next thing to do?" aria-label="Next step" />
+                    <Button type="submit" disabled={(j.nextAction ?? "") === nextAction.trim()}>
+                      <Check /> Save
                     </Button>
-                  ) : null}
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setNextAction(j.nextAction ?? "");
+                        setEditingNext(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </form>
+                ) : (
+                  <div className="mt-1 flex flex-wrap items-start justify-between gap-2">
+                    <p className="min-w-0 text-[17px] font-semibold leading-snug tracking-[-0.01em] text-heading">{jobNextStep(j, data, money)}</p>
+                    {can("jobs.write") ? (
+                      <Button size="sm" variant="ghost" className="-mr-2" onClick={() => setEditingNext(true)}>
+                        <Pencil /> Update
+                      </Button>
+                    ) : null}
+                  </div>
+                )}
+              </section>
+
+              {money ? <FinancialSummary fin={fin} onOpen={() => setTab("financials")} /> : null}
+
+              <section className="panel px-5 py-4 sm:px-6" aria-labelledby={`upd-${j.id}`}>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h2 id={`upd-${j.id}`} className="t-section">Recent updates</h2>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setTab("updates")}>
+                      View all
+                    </Button>
+                    <AddUpdateButton job={j} />
+                  </div>
                 </div>
-              )}
-            </section>
+                <UpdatesTimeline job={j} limit={3} />
+              </section>
 
-            <section className="panel px-5 py-4 sm:px-6" aria-labelledby={`upd-${j.id}`}>
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h2 id={`upd-${j.id}`} className="t-eyebrow">Updates from site</h2>
-                <AddUpdateButton job={j} />
+              <section className="panel px-5 py-4 sm:px-6" aria-labelledby={`desc-${j.id}`}>
+                <h2 id={`desc-${j.id}`} className="t-section">
+                  About the job
+                </h2>
+                <p className="reading mt-2 whitespace-pre-wrap text-[15px] leading-relaxed text-foreground/85">{j.description || "No description yet."}</p>
+              </section>
+
+              <div className="panel overflow-hidden [&>section:first-child]:border-t-0">
+                <SharedInstructions job={j} />
               </div>
-              <UpdatesTimeline job={j} limit={4} />
-            </section>
 
-            <section className="panel px-5 py-4 sm:px-6" aria-labelledby={`desc-${j.id}`}>
-              <h2 id={`desc-${j.id}`} className="t-eyebrow">
-                About the job
-              </h2>
-              <p className="reading mt-1.5 whitespace-pre-wrap text-[15.5px] leading-relaxed text-foreground/90">{j.description || "No description yet."}</p>
-            </section>
-
-            <div className="panel overflow-hidden [&>section:first-child]:border-t-0">
-              <SharedInstructions job={j} />
+              <section className="panel px-5 py-4 sm:px-6" aria-labelledby={`notes-${j.id}`}>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h2 id={`notes-${j.id}`} className="t-section">
+                    Internal notes
+                  </h2>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-[12px] font-medium text-muted-foreground">
+                    <Lock className="size-3" aria-hidden /> Office only — never shown to workers or customers
+                  </span>
+                </div>
+                <NotesPanel notes={j.notes} onAdd={(t) => actions.addJobNote(j.id, t)} />
+              </section>
             </div>
 
-            <section className="panel px-5 py-4 sm:px-6" aria-labelledby={`notes-${j.id}`}>
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h2 id={`notes-${j.id}`} className="t-eyebrow">
-                  Internal notes
-                </h2>
-                <span className="inline-flex items-center gap-1 rounded-md bg-surface-3 px-2 py-0.5 text-[12.5px] font-medium text-muted-foreground">
-                  <Lock className="size-3.5" aria-hidden /> Office only — never shown to workers or customers
-                </span>
-              </div>
-              <NotesPanel notes={j.notes} onAdd={(t) => actions.addJobNote(j.id, t)} />
-            </section>
-          </div>
+            <aside className="flex min-w-0 flex-col gap-5">
+              <section className="panel px-5 py-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <h2 className="t-section">Coming up</h2>
+                  <Button size="sm" variant="ghost" className="-mr-2" onClick={() => setTab("schedule")}>
+                    Schedule
+                  </Button>
+                </div>
+                {upcoming.length ? (
+                  <ul className="space-y-2">
+                    {upcoming.map((b) => {
+                      const who = b.personIds.map((pid) => data.people.find((p) => p.id === pid)).filter(Boolean) as typeof data.people;
+                      return (
+                        <li key={b.id} className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-2.5">
+                          <div className="w-11 shrink-0 text-center">
+                            <div className="text-[11px] font-medium uppercase text-subtle">{new Date(`${b.date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short" })}</div>
+                            <div className="text-[17px] font-semibold tabular leading-tight text-heading">{Number(b.date.slice(8))}</div>
+                          </div>
+                          <div className="min-w-0 flex-1 text-[13.5px]">
+                            <div className="font-medium text-heading">{formatTimeRange(b.startTime, b.endTime)}</div>
+                            <div className="truncate text-subtle">{who.length ? who.map((p) => p.name.split(" ")[0]).join(", ") : "Unassigned"}</div>
+                          </div>
+                          <PeopleStack people={who} size={24} max={3} />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="text-[14px] text-subtle">Nothing booked.</p>
+                )}
+              </section>
 
-          <aside className="flex min-w-0 flex-col gap-4">
-            <section className="panel px-5 py-4" aria-labelledby={`dates-${j.id}`}>
-              <h2 id={`dates-${j.id}`} className="t-eyebrow">
-                Key dates
-              </h2>
-              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[15px]">
-                <dt className="text-muted-foreground">Start</dt>
-                <dd>{j.startDate ? formatDateKey(j.startDate) : "Not set"}</dd>
-                <dt className="text-muted-foreground">Next on site</dt>
-                <dd>{nextBooking ? formatDateKey(nextBooking.date) : "Nothing booked"}</dd>
-                {money ? (
-                  <>
-                    <dt className="text-muted-foreground">Deposit due</dt>
-                    <dd>{j.depositDueDate ? formatDateKey(j.depositDueDate) : "Not set"}</dd>
-                  </>
-                ) : null}
-                <dt className="text-muted-foreground">Added</dt>
-                <dd>{formatDateKey(j.createdAt.slice(0, 10))}</dd>
-              </dl>
-              {can("jobs.write") ? (
-                <label className="mt-3 block">
-                  <span className="mb-1 block text-[13.5px] font-medium text-muted-foreground">Job status</span>
-                  <NativeSelect
-                    value={j.status}
-                    onChange={async (e) => {
-                      const s = e.target.value as (typeof JOB_STATUSES)[number];
-                      const res = await actions.setJobStatus(j.id, s);
-                      toast(res.ok ? `Moved to ${JOB_STATUS_LABEL[s]}` : Object.values(res.errors)[0] ?? "Couldn't update", res.ok ? "success" : "error");
-                    }}
-                    className="h-11"
-                  >
-                    {JOB_STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {JOB_STATUS_LABEL[s]}
-                      </option>
+              {openTasks.length || toOrder.length ? (
+                <section className="panel px-5 py-4">
+                  <h2 className="t-section mb-2">Outstanding</h2>
+                  <ul className="space-y-1.5 text-[14px]">
+                    {openTasks.slice(0, 4).map((t) => (
+                      <li key={t.id} className="flex items-center gap-2">
+                        <AlarmClock className="size-4 shrink-0 text-subtle" aria-hidden />
+                        <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                        {t.dueDate ? <span className="shrink-0 text-[12.5px] text-subtle">{formatDateKey(t.dueDate)}</span> : null}
+                      </li>
                     ))}
-                  </NativeSelect>
-                </label>
+                    {toOrder.length ? (
+                      <li>
+                        <button type="button" onClick={() => setTab("materials")} className="flex w-full items-center gap-2 text-left text-accent-fg hover:underline">
+                          <PackageCheck className="size-4 shrink-0" aria-hidden /> {toOrder.length} material{toOrder.length === 1 ? "" : "s"} to order
+                        </button>
+                      </li>
+                    ) : null}
+                  </ul>
+                </section>
               ) : null}
-            </section>
+
+              <div className="panel overflow-hidden [&>section:first-child]:border-t-0">
+                <JobCrew job={j} />
+              </div>
+
+              <section className="panel px-5 py-4" aria-labelledby={`dates-${j.id}`}>
+                <h2 id={`dates-${j.id}`} className="t-section">
+                  Key dates
+                </h2>
+                <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[14px]">
+                  <dt className="text-subtle">Start</dt>
+                  <dd>{j.startDate ? formatDateKey(j.startDate) : "Not set"}</dd>
+                  <dt className="text-subtle">Next on site</dt>
+                  <dd>{nextBooking ? formatDateKey(nextBooking.date) : "Nothing booked"}</dd>
+                  {money ? (
+                    <>
+                      <dt className="text-subtle">Deposit due</dt>
+                      <dd>{j.depositDueDate ? formatDateKey(j.depositDueDate) : "Not set"}</dd>
+                    </>
+                  ) : null}
+                  <dt className="text-subtle">Added</dt>
+                  <dd>{formatDateKey(j.createdAt.slice(0, 10))}</dd>
+                </dl>
+                {can("jobs.write") ? (
+                  <label className="mt-3 block">
+                    <span className="mb-1 block text-[13px] font-medium text-subtle">Job status</span>
+                    <NativeSelect
+                      value={j.status}
+                      onChange={async (e) => {
+                        const st = e.target.value as (typeof JOB_STATUSES)[number];
+                        const res = await actions.setJobStatus(j.id, st);
+                        toast(res.ok ? `Moved to ${JOB_STATUS_LABEL[st]}` : Object.values(res.errors)[0] ?? "Couldn't update", res.ok ? "success" : "error");
+                      }}
+                    >
+                      {JOB_STATUSES.map((st) => (
+                        <option key={st} value={st}>
+                          {JOB_STATUS_LABEL[st]}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                  </label>
+                ) : null}
+              </section>
+
+              <section className="panel px-5 py-4" aria-labelledby={`act-${j.id}`}>
+                <h2 id={`act-${j.id}`} className="t-section">
+                  Recent activity
+                </h2>
+                {activity.length ? (
+                  <ol className="mt-2 space-y-2.5">
+                    {activity.slice(0, 6).map((a) => (
+                      <li key={a.id} className="text-[13.5px] leading-snug">
+                        <span className="text-foreground">{a.summary}</span>
+                        <span className="block text-[12.5px] text-subtle">
+                          {a.actor} · {timeAgo(a.at)}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="mt-2 text-[14px] text-subtle">{can("activity.read") ? "Nothing yet." : "Activity is visible to owners and admins."}</p>
+                )}
+              </section>
+            </aside>
+          </div>
+        ) : null}
+
+        {tab === "updates" ? (
+          <div className="panel px-4 py-4 sm:px-6 sm:py-5">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-line pb-4">
+              <div>
+                <h2 className="t-section">Project timeline</h2>
+                <p className="mt-0.5 text-[13.5px] text-subtle">Photos and notes from site, newest first. Dictate a note with the keyboard&apos;s microphone.</p>
+              </div>
+              <AddUpdateButton job={j} />
+            </div>
+            <UpdatesTimeline job={j} />
+          </div>
+        ) : null}
+        {tab === "photos" ? (
+          <div className="panel px-4 py-4 sm:px-6 sm:py-5">
+            <FilesPanel jobId={j.id} only={["progress", "completion"]} />
+          </div>
+        ) : null}
+        {tab === "documents" ? (
+          <div className="panel px-4 py-4 sm:px-6 sm:py-5">
+            <FilesPanel jobId={j.id} only={["drawing", "other"]} />
+            {money && invoices.length ? (
+              <div className="mt-6 border-t border-line pt-5">
+                <h3 className="mb-2 text-[14px] font-semibold text-heading">Quotes and invoices</h3>
+                <ul className="divide-y divide-line">
+                  {invoices.map((i) => (
+                    <li key={i.id}>
+                      <Link href={`/invoices?open=${i.id}`} className="flex items-center justify-between gap-3 py-2.5 hover:text-accent-fg">
+                        <span className="flex items-center gap-2 text-[14.5px] font-medium">
+                          <ReceiptText className="size-4 text-subtle" aria-hidden /> {i.number ?? i.draftRef}
+                          <span className="text-[13px] font-normal text-subtle">{invoiceStatusLabel(i)}</span>
+                        </span>
+                        <span className="tabular text-[14.5px] font-semibold">{gbp(i.total)}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {tab === "handover" ? (
+          <div className="flex flex-col gap-5">
+            <div className="panel px-4 py-4 sm:px-6 sm:py-5">
+              <ReportTab job={j} />
+            </div>
+            <div className="panel px-4 py-4 sm:px-6 sm:py-5">
+              <h2 className="t-section mb-3">Handover pack</h2>
+              <HandoverPanel job={j} />
+            </div>
+          </div>
+        ) : null}
+        {tab === "schedule" ? (
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <div className="panel overflow-hidden">
+              <JobSchedule job={j} />
+            </div>
             <div className="panel overflow-hidden [&>section:first-child]:border-t-0">
               <JobCrew job={j} />
             </div>
-            <section className="panel px-5 py-4" aria-labelledby={`act-${j.id}`}>
-              <h2 id={`act-${j.id}`} className="t-eyebrow">
-                Recent activity
-              </h2>
-              {activity.length ? (
-                <ol className="mt-2 space-y-2.5">
-                  {activity.slice(0, 8).map((a) => (
-                    <li key={a.id} className="text-[14.5px] leading-snug">
-                      <span className="text-foreground">{a.summary}</span>
-                      <span className="block text-[13px] text-muted-foreground">
-                        {a.actor} · {timeAgo(a.at)}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="mt-2 text-[14.5px] text-muted-foreground">{can("activity.read") ? "Nothing yet." : "Activity is visible to owners and admins."}</p>
-              )}
-            </section>
-          </aside>
-        </div>
-      ) : null}
-
-      {tab === "files" ? (
-        <div className="panel px-4 py-4 sm:px-6 sm:py-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-line pb-4">
-            <p className="text-[14.5px] text-muted-foreground">On site? Add photos with a line about what&apos;s been done — they&apos;re kept together as a dated update.</p>
-            <AddUpdateButton job={j} />
           </div>
-          <FilesPanel jobId={j.id} />
-        </div>
-      ) : null}
-      {tab === "report" ? (
-        <div className="panel px-4 py-4 sm:px-6 sm:py-5">
-          <ReportTab job={j} />
-        </div>
-      ) : null}
-      {tab === "handover" ? (
-        <div className="panel px-4 py-4 sm:px-6 sm:py-5">
-          <HandoverPanel job={j} />
-        </div>
-      ) : null}
-      {tab === "schedule" ? <div className="panel overflow-hidden"><JobSchedule job={j} /></div> : null}
-      {tab === "tasks" ? <div className="panel overflow-hidden"><JobTasks job={j} /></div> : null}
-      {tab === "materials" ? <div className="panel overflow-hidden"><JobMaterials job={j} /></div> : null}
-
-      {tab === "money" && money ? (
-        <div className="panel overflow-hidden">
-          <VariationsPanel job={j} />
-          <div className="px-5 pb-5 sm:px-6">
-        {money ? (
-          <section aria-labelledby={`pay-${j.id}`} className="mt-3 rounded-2xl bg-card px-4 py-3.5 ring-1 ring-line">
-            <div className="flex items-center justify-between gap-3">
-              <h3 id={`pay-${j.id}`} className="t-eyebrow">
-                Payment
-              </h3>
-              {paymentStatus ? <Badge tone={paymentStatus.tone}>{paymentStatus.text}</Badge> : null}
-            </div>
-            <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-              {[
-                ["Price", gbp(j.quotedValue), ""],
-                ["Paid", gbp(f.totalPaid), "text-good-fg"],
-                ["Left to pay", gbp(f.balance), f.balance > 0 ? "text-foreground" : "text-good-fg"],
-              ].map(([l, v, cls]) => (
-                <div key={l}>
-                  <div className={cn("tabular text-[19px] font-semibold", cls)}>{v}</div>
-                  <div className="text-[13px] text-muted-foreground">{l}</div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-2.5 flex items-center gap-3">
-              <ProgressBar value={f.paidPercent} className="flex-1" />
-              <span className="tabular text-[13px] text-muted-foreground">{f.paidPercent}% paid</span>
-            </div>
-            {moneyAction ? (
-              <Button size="sm" className="mt-3" onClick={moneyAction.run}>
-                <moneyAction.icon /> {moneyAction.label}
-              </Button>
-            ) : null}
-          </section>
         ) : null}
+        {tab === "tasks" ? (
+          <div className="panel overflow-hidden">
+            <JobTasks job={j} />
           </div>
-      {money ? (
-        <Fold title="Payments" summary={payments.length ? `${payments.length} · ${gbp(f.totalPaid)} received` : "None yet"}>
-          <MoneyRow label="Deposit required" value={gbp(j.depositRequired)} />
-          <MoneyRow
-            label="Deposit received"
-            value={gbp(Math.min(f.totalPaid, j.depositRequired))}
-            tone={f.depositOutstanding === 0 && j.depositRequired > 0 ? "green" : f.depositOverdue ? "red" : "amber"}
-          />
-          {payments.length ? (
-            <ul className="mt-2 divide-y divide-line">
-              {payments.map((p) => (
-                <li key={p.id} className="flex items-center justify-between gap-3 py-2.5">
-                  <div className="min-w-0">
-                    <div className="text-[15px] font-medium">{PAYMENT_TYPE_LABEL[p.type]}</div>
-                    <div className="text-[13.5px] text-muted-foreground">
-                      {formatDateKey(p.receivedAt)} · {PAYMENT_METHOD_LABEL[p.method]}
-                      {p.reference ? ` · ${p.reference}` : ""} · by {p.recordedBy}
-                    </div>
-                  </div>
-                  <div className="tabular text-[16px] font-semibold text-good-fg">{gbp(p.amount)}</div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-2 text-[15px] text-muted-foreground">No payments recorded yet.</p>
-          )}
-        </Fold>
-      ) : null}
+        ) : null}
+        {tab === "materials" ? (
+          <div className="panel overflow-hidden">
+            <JobMaterials job={j} />
+          </div>
+        ) : null}
 
-      {money ? (
-        <Fold title="Invoices" summary={invoices.length ? invoices.map((i) => `${i.number ?? i.draftRef} ${invoiceStatusLabel(i).toLowerCase()}`).join(" · ") : "None yet"}>
-          {invoices.length ? (
-            <ul className="divide-y divide-line">
-              {invoices.map((i) => (
-                <li key={i.id} className="flex items-center justify-between gap-3 py-2.5">
-                  <div>
-                    <div className="text-[15px] font-medium">{i.number ?? i.draftRef}</div>
-                    <div className="text-[13.5px] text-muted-foreground">
-                      {invoiceStatusLabel(i)}
-                      {i.dueDate ? ` · due ${formatDateKey(i.dueDate)}` : ""}
-                    </div>
-                  </div>
-                  <div className="tabular text-[16px] font-semibold">{gbp(i.total)}</div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-[15px] text-muted-foreground">No invoices for this job yet.</p>
-          )}
-        </Fold>
-      ) : null}
-
-      {money ? (
-        <Fold title="Costs" summary={expenses.length ? `${expenses.length} · ${gbp(f.expenses)}` : "None recorded"}>
-          {expenses.length ? (
-            <ul className="divide-y divide-line">
-              {expenses.map((e) => (
-                <li key={e.id} className="flex items-center justify-between gap-2 py-2.5">
-                  <div className="min-w-0">
-                    <div className="truncate text-[15px] font-medium">{e.description}</div>
-                    <div className="text-[13.5px] text-muted-foreground">
-                      {EXPENSE_CATEGORY_LABEL[e.category]} · {formatDateKey(e.incurredOn)} · by {e.recordedBy}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="tabular text-[16px] font-semibold">{gbp(e.amount)}</span>
-                    {can("expenses.write") ? (
-                      <button
-                        aria-label={`Remove ${e.description}`}
-                        className="grid size-9 place-items-center rounded-lg text-subtle hover:bg-surface-3 hover:text-danger-fg"
-                        onClick={async () => {
-                          const r = await actions.removeExpense(e.id);
-                          toast(r.ok ? "Cost removed" : "Couldn't remove", r.ok ? "success" : "error");
-                        }}
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-[15px] text-muted-foreground">No costs recorded. Tell Bob “add £450 of materials to this job”, or use More → Add a cost.</p>
-          )}
-        </Fold>
-      ) : null}
-
-        </div>
-      ) : null}
+        {tab === "financials" && money ? (
+          <div className="flex flex-col gap-5">
+            <FinancialDetail fin={fin} status={j.status} />
+            <div className="panel overflow-hidden">
+              <VariationsPanel job={j} />
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4 sm:px-6">
+                <div className="flex items-center gap-3">
+                  <span className="text-[14px] font-semibold text-heading">Payment</span>
+                  {paymentStatus ? <Badge tone={paymentStatus.tone}>{paymentStatus.text}</Badge> : null}
+                </div>
+                {moneyAction ? (
+                  <Button size="sm" onClick={moneyAction.run}>
+                    <moneyAction.icon /> {moneyAction.label}
+                  </Button>
+                ) : null}
+              </div>
+              <Fold title="Payments received" summary={payments.length ? `${payments.length} · ${gbp(f.totalPaid)} received` : "None yet"}>
+                <MoneyRow label="Deposit required" value={gbp(j.depositRequired)} />
+                <MoneyRow label="Deposit received" value={gbp(Math.min(f.totalPaid, j.depositRequired))} tone={f.depositOutstanding === 0 && j.depositRequired > 0 ? "green" : f.depositOverdue ? "red" : "amber"} />
+                {payments.length ? (
+                  <ul className="mt-2 divide-y divide-line">
+                    {payments.map((p) => (
+                      <li key={p.id} className="flex items-center justify-between gap-3 py-2.5">
+                        <div className="min-w-0">
+                          <div className="text-[14.5px] font-medium">{PAYMENT_TYPE_LABEL[p.type]}</div>
+                          <div className="text-[13px] text-subtle">
+                            {formatDateKey(p.receivedAt)} · {PAYMENT_METHOD_LABEL[p.method]}
+                            {p.reference ? ` · ${p.reference}` : ""} · by {p.recordedBy}
+                          </div>
+                        </div>
+                        <div className="tabular text-[15px] font-semibold text-good-fg">{gbp(p.amount)}</div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-[14px] text-subtle">No payments recorded yet.</p>
+                )}
+              </Fold>
+              <Fold title="Invoices" summary={invoices.length ? invoices.map((i) => `${i.number ?? i.draftRef} ${invoiceStatusLabel(i).toLowerCase()}`).join(" · ") : "None yet"}>
+                {invoices.length ? (
+                  <ul className="divide-y divide-line">
+                    {invoices.map((i) => (
+                      <li key={i.id} className="flex items-center justify-between gap-3 py-2.5">
+                        <div>
+                          <div className="text-[14.5px] font-medium">{i.number ?? i.draftRef}</div>
+                          <div className="text-[13px] text-subtle">
+                            {invoiceStatusLabel(i)}
+                            {i.dueDate ? ` · due ${formatDateKey(i.dueDate)}` : ""}
+                          </div>
+                        </div>
+                        <div className="tabular text-[15px] font-semibold">{gbp(i.total)}</div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[14px] text-subtle">No invoices for this job yet.</p>
+                )}
+              </Fold>
+              <Fold title="Recorded costs" summary={expenses.length ? `${expenses.length} · ${gbp(f.expenses)}` : "None recorded"} last>
+                {expenses.length ? (
+                  <ul className="divide-y divide-line">
+                    {expenses.map((e) => (
+                      <li key={e.id} className="flex items-center justify-between gap-2 py-2.5">
+                        <div className="min-w-0">
+                          <div className="truncate text-[14.5px] font-medium">{e.description}</div>
+                          <div className="text-[13px] text-subtle">
+                            {EXPENSE_CATEGORY_LABEL[e.category]} · {formatDateKey(e.incurredOn)} · by {e.recordedBy}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="tabular text-[15px] font-semibold">{gbp(e.amount)}</span>
+                          {can("expenses.write") ? (
+                            <button
+                              aria-label={`Remove ${e.description}`}
+                              className="grid size-9 place-items-center rounded-lg text-subtle hover:bg-surface-3 hover:text-danger-fg"
+                              onClick={async () => {
+                                const r = await actions.removeExpense(e.id);
+                                toast(r.ok ? "Cost removed" : "Couldn't remove", r.ok ? "success" : "error");
+                              }}
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[14px] text-subtle">No costs recorded. Tell Bob “add £450 of materials to this job”, or use More → Add a cost.</p>
+                )}
+              </Fold>
+            </div>
+          </div>
+        ) : null}
       </div>
+    </div>
+  );
+}
+
+/** Overview card: the money position in four large numbers. */
+function FinancialSummary({ fin, onOpen }: { fin: JobFinancials; onOpen: () => void }) {
+  const cells: { label: string; value: string; sub: string; tone?: string; subTone?: string }[] = [
+    { label: "Contract value", value: gbp(fin.contractValue), sub: fin.approvedVariations ? `incl. ${gbp(fin.approvedVariations)} variations` : "agreed price" },
+    { label: "Received", value: gbp(fin.received), sub: `${fin.paidPercent}% paid`, tone: "text-good-fg" },
+    { label: "Outstanding", value: gbp(fin.outstanding), sub: fin.outstanding ? "left to pay" : "paid in full" },
+    {
+      label: fin.basis === "actual" ? "Profit" : "Est. profit",
+      value: fin.profit === null ? "—" : gbp(fin.profit),
+      sub: fin.margin === null ? "no costs recorded" : fin.missing.length ? `${fin.margin}% · costs incomplete` : `${fin.margin}% margin`,
+      subTone: fin.margin !== null && fin.missing.length ? "text-warn-fg" : undefined,
+      tone: fin.profit !== null && fin.profit < 0 ? "text-danger-fg" : undefined,
+    },
+  ];
+  return (
+    <section className="panel px-5 py-4 sm:px-6" aria-label="Financial position">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="t-section">Financial position</h2>
+        <Button size="sm" variant="ghost" className="-mr-2" onClick={onOpen}>
+          Financials
+        </Button>
+      </div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {cells.map((c) => (
+          <div key={c.label}>
+            <div className="text-[12.5px] font-medium text-subtle">{c.label}</div>
+            <div className={cn("t-figure-sm mt-0.5", c.tone)}>{c.value}</div>
+            <div className={cn("mt-0.5 text-[12px] text-subtle", c.subTone)}>{c.sub}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-surface-3" title={`${fin.paidPercent}% paid`}>
+        <div className="h-full rounded-full bg-success" style={{ width: `${fin.paidPercent}%` }} />
+      </div>
+    </section>
+  );
+}
+
+/** Financials tab: income, costs by type, profit and margin; gaps called out. */
+function FinancialDetail({ fin, status }: { fin: JobFinancials; status: string }) {
+  const costRows: [string, number, boolean][] = [
+    ["Labour", fin.costs.labour, fin.missing.includes("labour")],
+    ["Materials", fin.costs.materials, fin.missing.includes("materials") && !fin.costs.bills],
+    ["Supplier bills", fin.costs.bills, false],
+    ["Subcontractors", fin.costs.subcontractors, fin.missing.includes("subcontractors")],
+    ["Other (plant, skips)", fin.costs.other, false],
+  ];
+  return (
+    <div className="grid gap-5 lg:grid-cols-3">
+      <section className="panel px-5 py-5 sm:px-6">
+        <h2 className="text-[12.5px] font-medium text-subtle">Agreed contract value</h2>
+        <div className="t-figure mt-1">{gbp(fin.contractValue)}</div>
+        <dl className="mt-4 space-y-2 text-[14px]">
+          <div className="flex justify-between"><dt className="text-subtle">Agreed price</dt><dd className="tabular">{gbp(fin.price)}</dd></div>
+          <div className="flex justify-between"><dt className="text-subtle">Approved variations</dt><dd className="tabular">{gbp(fin.approvedVariations)}</dd></div>
+          <div className="flex justify-between border-t border-line pt-2"><dt className="text-subtle">Payments received</dt><dd className="tabular font-medium text-good-fg">{gbp(fin.received)}</dd></div>
+          <div className="flex justify-between"><dt className="font-medium">Outstanding balance</dt><dd className="tabular font-semibold">{gbp(fin.outstanding)}</dd></div>
+        </dl>
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-surface-3"><div className="h-full rounded-full bg-success" style={{ width: `${fin.paidPercent}%` }} /></div>
+        <p className="mt-1.5 text-[12px] text-subtle">{fin.paidPercent}% of the contract value received</p>
+      </section>
+      <section className="panel px-5 py-5 sm:px-6">
+        <h2 className="text-[12.5px] font-medium text-subtle">Recorded costs</h2>
+        <div className="t-figure mt-1">{gbp(fin.costs.total)}</div>
+        <dl className="mt-4 space-y-2 text-[14px]">
+          {costRows.map(([label, v, gap]) => (
+            <div key={label} className="flex items-center justify-between gap-2">
+              <dt className="text-subtle">{label}</dt>
+              <dd className="tabular">{gap ? <span className="rounded-full bg-warning/14 px-2 py-0.5 text-[12px] font-medium text-warn-fg">Not recorded</span> : gbp(v)}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+      <section className="panel px-5 py-5 sm:px-6">
+        <h2 className="text-[12.5px] font-medium text-subtle">{fin.basis === "actual" ? "Actual profit" : "Estimated profit"}</h2>
+        {fin.profit === null ? (
+          <>
+            <div className="t-figure mt-1 text-subtle">—</div>
+            <p className="mt-3 text-[14px] text-subtle">No costs are recorded on this job yet, so Bob can&apos;t work out a profit. Add labour, materials and subcontractor costs (or link supplier bills) to see it.</p>
+          </>
+        ) : (
+          <>
+            <div className={cn("t-figure mt-1", fin.profit < 0 && "text-danger-fg")}>{gbp(fin.profit)}</div>
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className={cn("t-figure-sm", fin.margin! < 0 ? "text-danger-fg" : fin.margin! < 15 || fin.missing.length ? "text-warn-fg" : "text-good-fg")}>{fin.margin}%</span>
+              <span className="text-[13px] text-subtle">margin</span>
+            </div>
+            <p className="mt-3 text-[13px] text-subtle">
+              Contract value less recorded costs.{" "}
+              {fin.missing.length ? `Incomplete: no ${fin.missing.join(" or ")} costs recorded, so the real figure is likely lower.` : status === "completed" ? "Based on all costs recorded." : "Will change as more costs are recorded."}
+            </p>
+          </>
+        )}
+      </section>
     </div>
   );
 }

@@ -10,7 +10,7 @@ import type { ActionView } from "@/lib/bob/types";
 import type { Invoice } from "@/lib/types";
 import { invoiceBalance, invoiceStatusLabel, isInvoiceOutstanding, isInvoiceOverdue, jobsAwaitingDeposit } from "@/lib/derive";
 import { cn, daysFromToday, formatDateInline, gbp, timeAgo, todayKey } from "@/lib/utils";
-import { DemoNote, EmptyState, ListPanel, ListRow, StatusText, Tabs, pageActionClass } from "@/components/common/bits";
+import { DemoNote, EmptyState, ListPanel, ListRow, PageHeader, StatCard, StatusText, Tabs, pageActionClass, pageSecondaryClass } from "@/components/common/bits";
 import { Button } from "@/components/ui/button";
 import { MoneyRow } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
@@ -54,18 +54,37 @@ function InvoicesInner() {
 
   const qbLink = org.quickbooksUrl || (data.connections.some((c) => c.provider === "quickbooks" && c.status === "connected") ? "https://qbo.intuit.com/app/homepage" : undefined);
 
+  const drafts = data.invoices.filter((i) => i.status === "draft");
+  const draftTotal = drafts.reduce((s, i) => s + i.total, 0);
+  const since30 = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  const received30 = data.payments.filter((p) => p.receivedAt >= since30).reduce((s, p) => s + p.amount, 0);
+  const outstandingCount = data.invoices.filter(isInvoiceOutstanding).length;
+  const overdueCount = data.invoices.filter(isInvoiceOverdue).length;
+
   return (
-    <div className="mx-auto max-w-3xl">
-      {qbLink ? (
-        <div className="mb-2 flex justify-end">
-          <a href={qbLink} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-1.5 rounded-lg px-2 text-[14.5px] font-semibold text-accent-fg hover:bg-surface-2">
-            <ExternalLink className="size-4" aria-hidden /> Open QuickBooks
-          </a>
-        </div>
-      ) : null}
+    <div className="mx-auto flex max-w-[1400px] flex-col gap-5 lg:gap-6">
+      <PageHeader
+        title="Money"
+        subtitle={accounting ? `Invoices sync with ${accounting.accountLabel ?? accounting.provider}` : "Invoices stay as drafts in Bob until Xero or QuickBooks is connected"}
+        actions={
+          <>
+            {qbLink ? (
+              <a href={qbLink} target="_blank" rel="noreferrer" className={cn(pageSecondaryClass, "px-3")}>
+                <ExternalLink className="size-4 text-subtle" aria-hidden /> <span className="hidden sm:inline">Open QuickBooks</span>
+              </a>
+            ) : null}
+            {view === "owed" && can("invoices.draft") ? (
+              <button type="button" onClick={() => ui.openForm({ form: "invoice" })} className={pageActionClass}>
+                <Plus className="size-[17px]" aria-hidden /> <span className="hidden sm:inline">Create invoice draft</span>
+                <span className="sm:hidden">Invoice</span>
+              </button>
+            ) : null}
+          </>
+        }
+      />
       <Tabs
         label="Money"
-        className="mb-4"
+        className="self-start"
         value={view}
         onChange={setView}
         options={[
@@ -75,64 +94,59 @@ function InvoicesInner() {
       />
       {view === "bills" ? <BillsView /> : (
       <>
-      <div className="mb-4 flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="t-page">Money owed to you</h1>
-          <p className={cn("t-meta mt-0.5 lg:text-[15px]", org.dataMode === "sample" && "hidden sm:block")}>{accounting ? `Invoices sync with ${accounting.accountLabel ?? accounting.provider}` : "Invoices stay as drafts in Bob until Xero or QuickBooks is connected"}</p>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard accent label="Outstanding" value={gbp(owed)} sub={`${outstandingCount} invoice${outstandingCount === 1 ? "" : "s"}`} onClick={() => setFilter("outstanding")} />
+          <StatCard label="Overdue" value={gbp(overdue)} tone={overdue ? "danger" : "muted"} sub={overdueCount ? `${overdueCount} past due date` : "Nothing overdue"} onClick={() => setFilter("overdue")} active={filter === "overdue"} />
+          <StatCard label="Drafts" value={gbp(draftTotal)} tone={drafts.length ? undefined : "muted"} sub={`${drafts.length} not sent yet`} onClick={() => setFilter("draft")} active={filter === "draft"} />
+          <StatCard label="Received · 30 days" value={gbp(received30)} tone="good" sub={depositTotal ? `${gbp(depositTotal)} in deposits due` : "Payments recorded"} />
         </div>
-        {can("invoices.draft") ? (
-          <button type="button" onClick={() => ui.openForm({ form: "invoice" })} className={pageActionClass}>
-            <Plus className="size-[18px]" aria-hidden /> <span className="hidden sm:inline">Create invoice draft</span>
-            <span className="sm:hidden">Invoice draft</span>
-          </button>
-        ) : null}
+        <ReceivedChart payments={data.payments} />
       </div>
-
-      <dl className="panel mb-2 grid grid-cols-3 divide-x divide-line">
-        {[
-          { label: "Outstanding invoices", value: gbp(owed), tone: "text-heading" },
-          { label: "Of which overdue", value: gbp(overdue), tone: overdue ? "text-danger-fg" : "text-subtle" },
-          { label: "Deposits due", value: gbp(depositTotal), tone: depositTotal ? "text-warn-fg" : "text-subtle" },
-        ].map((x) => (
-          <div key={x.label} className="flex flex-col-reverse justify-end px-3 py-3 sm:px-4 lg:px-5">
-            <dt className="text-[13px] leading-tight text-muted-foreground sm:text-[13.5px]">{x.label}</dt>
-            <dd className={cn("tabular text-[18px] font-semibold sm:text-[22px]", x.tone)}>{x.value}</dd>
-          </div>
-        ))}
-      </dl>
       {org.dataMode === "sample" ? (
-        <DemoNote className="mb-4">
+        <DemoNote>
           The sent invoices here are sample records. An invoice you create is saved as a draft in Bob — it isn&apos;t sent to anyone{accounting ? " until you approve sending it" : ", and stays a draft until you mark it as sent yourself or connect Xero or QuickBooks"}.
         </DemoNote>
-      ) : (
-        <div className="mb-4" />
-      )}
+      ) : null}
 
-      <Tabs
-        label="Invoices"
-        className="mb-3"
-        value={filter}
-        onChange={setFilter}
-        options={[
-          { value: "outstanding", label: "Outstanding", count: data.invoices.filter(isInvoiceOutstanding).length },
-          { value: "overdue", label: "Overdue", count: data.invoices.filter(isInvoiceOverdue).length, highlight: true },
-          { value: "draft", label: "Drafts", count: data.invoices.filter((i) => i.status === "draft").length },
-          { value: "all", label: "All" },
-        ]}
-      />
+      <div className="flex flex-col gap-3">
+        <Tabs
+          label="Invoices"
+          className="self-start"
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: "outstanding", label: "Awaiting payment", count: outstandingCount },
+            { value: "overdue", label: "Overdue", count: overdueCount, highlight: true },
+            { value: "draft", label: "Drafts", count: drafts.length },
+            { value: "paid", label: "Paid", count: data.invoices.filter((i) => i.status === "paid").length },
+            { value: "all", label: "All" },
+          ]}
+        />
 
-      {list.length ? (
-        <ul className="panel divide-y divide-line overflow-hidden">
-          {list.map((i) => (
-            <InvoiceRow key={i.id} invoice={i} expanded={open === i.id} onToggle={() => setOpen(open === i.id ? null : i.id)} />
-          ))}
-        </ul>
-      ) : (
-        <EmptyState icon={ReceiptText} title="Nothing here" body={filter === "draft" ? "Tap Create invoice draft, or ask Bob to “invoice Sophie £7,500 for the Copthorne job”." : "Nothing in this list."} />
-      )}
+        {list.length ? (
+          <div className="panel overflow-hidden shadow-[var(--shadow-sm)]">
+            <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_140px_120px_130px_24px] gap-4 border-b border-line px-5 py-2.5 text-[12px] font-medium uppercase tracking-[0.06em] text-subtle lg:grid">
+              <span>Customer</span>
+              <span>Job</span>
+              <span>Status</span>
+              <span>Due</span>
+              <span className="text-right">Amount</span>
+              <span />
+            </div>
+            <ul className="divide-y divide-line">
+              {list.map((i) => (
+                <InvoiceRow key={i.id} invoice={i} expanded={open === i.id} onToggle={() => setOpen(open === i.id ? null : i.id)} />
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <EmptyState icon={ReceiptText} title="Nothing here" body={filter === "draft" ? "Tap Create invoice draft, or ask Bob to “invoice Sophie £7,500 for the Copthorne job”." : "Nothing in this list."} />
+        )}
+      </div>
 
       {deposits.length ? (
-        <ListPanel id="deposits" title="Deposits due" count={deposits.length} className="mt-5">
+        <ListPanel id="deposits" title="Deposits due" count={deposits.length}>
           <ul className="divide-y divide-line">
             {deposits.map(({ job, finance }) => (
               <ListRow
@@ -157,6 +171,37 @@ function InvoicesInner() {
   );
 }
 
+/** Payments received by month: six restrained bars, this month highlighted. */
+function ReceivedChart({ payments }: { payments: { amount: number; receivedAt: string }[] }) {
+  const months = Array.from({ length: 6 }, (_, k) => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - (5 - k));
+    const key = d.toISOString().slice(0, 7);
+    return { key, label: d.toLocaleDateString("en-GB", { month: "short" }), total: payments.filter((p) => p.receivedAt.slice(0, 7) === key).reduce((s, p) => s + p.amount, 0) };
+  });
+  const max = Math.max(1, ...months.map((m) => m.total));
+  const total = months.reduce((s, m) => s + m.total, 0);
+  return (
+    <section className="rounded-2xl bg-card px-5 py-4 shadow-[var(--shadow-xs)] ring-1 ring-line" aria-label="Payments received, last six months">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-[12.5px] font-medium text-subtle">Received · 6 months</h2>
+        <span className="text-[15px] font-semibold tabular text-heading">{gbp(total)}</span>
+      </div>
+      <div className="mt-3 flex h-[84px] items-end gap-2">
+        {months.map((m, i) => (
+          <div key={m.key} className="flex flex-1 flex-col items-center gap-1.5" title={`${m.label}: ${gbp(m.total)}`}>
+            <div className="flex h-[64px] w-full items-end">
+              <div className={cn("w-full rounded-[5px]", i === months.length - 1 ? "bg-copper-500" : "bg-[#e7e4de]")} style={{ height: `${Math.max(4, (m.total / max) * 100)}%` }} />
+            </div>
+            <span className="text-[11px] text-subtle">{m.label}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /** Supplier and subcontractor bills the business needs to pay. Bob records payments; it never makes them. */
 function BillsView() {
   const { data, actions, can } = useStore();
@@ -175,32 +220,20 @@ function BillsView() {
   const total = (l: typeof due) => gbp(l.reduce((s, b) => s + b.amount, 0));
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="t-page">Bills to pay</h1>
-          <p className="t-meta mt-0.5 lg:text-[15px]">What the business owes suppliers and subcontractors.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {can("payments.record") ? (
-            <button type="button" onClick={() => ui.openForm({ form: "bill" })} className={pageActionClass}>
-              <Plus className="size-[18px]" aria-hidden /> Add bill
-            </button>
-          ) : null}
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[14px] text-subtle">What the business owes suppliers and subcontractors.</p>
+        {can("payments.record") ? (
+          <button type="button" onClick={() => ui.openForm({ form: "bill" })} className={pageActionClass}>
+            <Plus className="size-[17px]" aria-hidden /> Add bill
+          </button>
+        ) : null}
       </div>
-      <dl className="panel mb-2 grid grid-cols-3 divide-x divide-line">
-        {[
-          { label: "Due", value: total(due), tone: "text-heading" },
-          { label: "Overdue", value: total(overdue), tone: overdue.length ? "text-danger-fg" : "text-subtle" },
-          { label: "Due in 7 days", value: total(week), tone: week.length ? "text-warn-fg" : "text-subtle" },
-        ].map((x) => (
-          <div key={x.label} className="flex flex-col-reverse justify-end px-3 py-3 sm:px-4 lg:px-5">
-            <dt className="text-[13px] leading-tight text-muted-foreground sm:text-[13.5px]">{x.label}</dt>
-            <dd className={cn("tabular text-[18px] font-semibold sm:text-[22px]", x.tone)}>{x.value}</dd>
-          </div>
-        ))}
-      </dl>
-      <DemoNote className="mb-1">Bob doesn&apos;t pay bills or move money. Pay as you normally do (bank app, card), then use Record payment to log it here.</DemoNote>
+      <div className="grid grid-cols-3 gap-3">
+        <StatCard accent label="Due" value={total(due)} sub={`${due.length} bill${due.length === 1 ? "" : "s"}`} />
+        <StatCard label="Overdue" value={total(overdue)} tone={overdue.length ? "danger" : "muted"} sub={overdue.length ? `${overdue.length} late` : "Nothing late"} />
+        <StatCard label="Due in 7 days" value={total(week)} tone={week.length ? "warn" : "muted"} sub={`${week.length} coming up`} />
+      </div>
+      <DemoNote className="-mb-3">Bob doesn&apos;t pay bills or move money. Pay as you normally do (bank app, card), then use Record payment to log it here.</DemoNote>
       <p className="mb-4 pl-[22px] text-[13.5px] text-muted-foreground">
         QuickBooks:{" "}
         {qb?.status === "connected"
@@ -327,20 +360,25 @@ function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expa
 
   return (
     <li className={cn(expanded && "bg-surface-2")}>
-      <button onClick={onToggle} aria-expanded={expanded} className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2 active:bg-surface-3 lg:px-5">
-        <div className="min-w-0 flex-1">
-          <div className="t-name line-clamp-2 break-words">{customer?.name ?? "Customer"}</div>
-          <div className="truncate text-[14px] text-muted-foreground">
+      <button onClick={onToggle} aria-expanded={expanded} className="grid w-full grid-cols-[minmax(0,1fr)_auto_18px] items-center gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2 active:bg-surface-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_140px_120px_130px_24px] lg:gap-4 lg:px-5">
+        <div className="min-w-0">
+          <div className="truncate text-[14.5px] font-semibold text-heading">{customer?.name ?? "Customer"}</div>
+          <div className="truncate text-[13px] text-subtle">
             {i.number ? `${i.number} · ` : ""}
-            {i.draftRef} · {i.lines[0]?.description}
+            {i.draftRef}
+            <span className="lg:hidden"> · {i.lines[0]?.description}</span>
           </div>
         </div>
+        <div className="hidden min-w-0 truncate text-[13.5px] text-muted-foreground lg:block">{job ? job.title : i.lines[0]?.description}</div>
+        <div className="hidden lg:block">
+          <InvoiceStatusPill label={label} />
+        </div>
+        <div className="hidden text-[13.5px] tabular text-muted-foreground lg:block">{i.dueDate ? formatDateInline(i.dueDate) : "—"}</div>
         <div className="text-right">
-          <div className="tabular text-[16px] font-semibold">{gbp(i.status === "draft" || i.status === "paid" ? i.total : invoiceBalance(i))}</div>
-          <StatusText tone={label === "Overdue" ? "red" : label === "Paid" ? "green" : label === "Draft" ? "blue" : "neutral"}>
-            {label}
-            {i.dueDate && i.status === "sent" ? ` · due ${formatDateInline(i.dueDate)}` : ""}
-          </StatusText>
+          <div className="tabular text-[15px] font-semibold text-heading">{gbp(i.status === "draft" || i.status === "paid" ? i.total : invoiceBalance(i))}</div>
+          <div className="mt-0.5 lg:hidden">
+            <InvoiceStatusPill label={label} />
+          </div>
         </div>
         <ChevronDown aria-hidden className={cn("size-[18px] shrink-0 text-subtle transition-transform", expanded && "rotate-180")} />
       </button>
@@ -436,6 +474,22 @@ function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expa
       ) : null}
     </li>
   );
+}
+
+/** Draft, awaiting payment, overdue and paid look clearly different. */
+function InvoiceStatusPill({ label }: { label: string }) {
+  const cls =
+    label === "Overdue"
+      ? "bg-destructive/10 text-danger-fg"
+      : label === "Paid"
+        ? "bg-success/12 text-good-fg"
+        : label === "Draft"
+          ? "border border-dashed border-black/20 text-muted-foreground"
+          : label === "Void"
+            ? "bg-surface-3 text-subtle line-through"
+            : "bg-info/10 text-info-fg";
+  const text = label === "Sent" ? "Awaiting payment" : label;
+  return <span className={cn("inline-flex h-[22px] items-center rounded-full px-2 text-[12px] font-medium", cls)}>{text}</span>;
 }
 
 export default function InvoicesPage() {

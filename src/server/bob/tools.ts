@@ -25,6 +25,7 @@ import { firstName, formatDateInline, gbp, uid } from "@/lib/utils";
 import { scoped, tx } from "@/server/db";
 import type { Ctx } from "@/server/context";
 import * as R from "@/server/services/records";
+import * as Team from "@/server/services/team";
 import * as F from "@/server/services/finance";
 import * as Rep from "@/server/services/reports";
 import { getAccountingProvider, getEmailProvider } from "@/server/integrations/registry";
@@ -1191,10 +1192,52 @@ const deleteInvoiceDraftTool: ActionTool<{ invoiceId: string }> = {
   },
 };
 
+const addMaterial: ActionTool<{ jobId: string; item: string; quantity: string; unit?: string; neededBy?: string }> = {
+  kind: "action",
+  name: "add_material",
+  description: "Add an item to a job's materials list (status: to order). Never orders anything from a merchant.",
+  category: "internal",
+  permission: "materials.write",
+  confirmation: "always",
+  schema: z.object({
+    jobId: id,
+    item: z.string().trim().min(2).max(160),
+    quantity: z.string().trim().min(1).max(30),
+    unit: z.string().trim().max(20).optional(),
+    neededBy: dateKey.optional(),
+  }),
+  prepare(ctx, a) {
+    const j = R.getJob(ctx, a.jobId);
+    if (!j) return notFound("job");
+    return ready({
+      payload: a,
+      title: "Add to materials",
+      lines: [
+        { label: "Item", value: a.item, emphasis: true },
+        { label: "Quantity", value: `${a.quantity}${a.unit ? ` ${a.unit}` : ""}`, emphasis: true },
+        { label: "Job", value: `${j.customerName} — ${j.title}, ${j.location}` },
+        ...(a.neededBy ? [{ label: "Needed by", value: formatDateInline(a.neededBy) }] : []),
+        { label: "Status", value: "To order (nothing is ordered from a merchant)" },
+      ],
+      approveLabel: "Add to list",
+    });
+  },
+  execute(ctx, a) {
+    const r = Team.saveMaterial(ctx, { jobId: a.jobId, item: a.item, quantity: a.quantity, unit: a.unit, neededBy: a.neededBy, status: "to_order" });
+    if (!r.ok) return { ok: false, error: r.error };
+    return { ok: true, message: `Added ${a.quantity}${a.unit ? ` ${a.unit}` : ""} of ${a.item} to the materials list.`, undo: { materialId: r.value.id }, links: [{ label: "Open job", kind: "job", id: a.jobId }] };
+  },
+  undo(ctx, u) {
+    const r = Team.deleteMaterial(ctx, (u as { materialId: string }).materialId);
+    return r.ok ? { ok: true, message: "Removed from the materials list." } : { ok: false, error: r.error };
+  },
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const actionTools: ActionTool<any, any>[] = [
   saveInvoiceDraft,
   deleteInvoiceDraftTool,
+  addMaterial,
   createFollowUp, addNote, createJob, updateJob, addJobExpense, sendEmail, saveEmailDraft, createQuote, createInvoice, sendInvoice, recordPayment, markReplied, setEnquiryStatus,
 ];
 

@@ -11,9 +11,9 @@
 
   /* Light workspace: cool grey canvas, white panels, charcoal type, slate meta.
      Dark tokens live in .theme-dark (sidebar, Ask Bob, toasts, landing page). */
-  --color-background: #f5f6f8;
-  --color-foreground: #16181d;
-  --color-heading: #111317;
+  --color-background: #f7f7f5;
+  --color-foreground: #18181b;
+  --color-heading: #18181b;
 
   /* Charcoal ramp (used by the dark scopes) */
   --color-ink-950: #0c0c0e;
@@ -26,61 +26,71 @@
 
   --color-card: #ffffff;
   --color-raised: #ffffff;
-  --color-raised-hover: #f1f3f6;
-  --color-card-foreground: #16181d;
+  --color-raised-hover: #f4f4f2;
+  --color-card-foreground: #18181b;
   --color-popover: #ffffff;
-  --color-popover-foreground: #16181d;
+  --color-popover-foreground: #18181b;
   /* Text fields: white and visibly editable. */
   --color-field: #ffffff;
   /* Quoted customer messages: light grey, clearly not editable. */
-  --color-message: #f1f3f5;
+  --color-message: #f4f4f2;
   /* Selected rows: pale orange tint plus a slim orange accent. */
-  --color-selected: #fff4ec;
+  --color-selected: #fef3ea;
 
-  --color-copper-200: #ffd2b0;
-  --color-copper-300: #ffb47e;
-  --color-copper-400: #f7944f;
-  --color-copper-500: #ec7a2e;
-  --color-copper-600: #cf631d;
-  --color-copper-700: #a14b15;
+  --color-copper-50: #fef6ef;
+  --color-copper-100: #fde8d6;
+  --color-copper-200: #fbd0ad;
+  --color-copper-300: #f8b07a;
+  --color-copper-400: #f38735;
+  --color-copper-500: #f38735;
+  --color-copper-600: #e2711f;
+  --color-copper-700: #b4520f;
   --color-copper-900: #3a1e0c;
 
-  --color-primary: #d4621a;
+  --color-primary: #f38735;
+  --color-brand: #f38735;
+  --color-sidebar: #19191b;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #f1f3f6;
-  --color-secondary-foreground: #16181d;
-  --color-muted: #f1f3f6;
-  --color-muted-foreground: #4a5160;
-  --color-subtle: #6a7180;
-  --color-accent: #f1f3f6;
-  --color-accent-foreground: #16181d;
-  --color-destructive: #d92d20;
-  --color-success: #12a150;
-  --color-warning: #dc8a06;
-  --color-info: #2e6fdb;
+  --color-secondary: #f4f4f2;
+  --color-secondary-foreground: #18181b;
+  --color-muted: #f4f4f2;
+  --color-muted-foreground: #52525b;
+  --color-subtle: #71717a;
+  --color-accent: #f4f4f2;
+  --color-accent-foreground: #18181b;
+  --color-destructive: #d6453d;
+  --color-success: #2f9e6e;
+  --color-warning: #d4952a;
+  --color-info: #4f6bd8;
 
   /* Semantic helpers */
-  --color-line: rgb(16 24 40 / 0.08);
-  --color-line-strong: rgb(16 24 40 / 0.15);
-  --color-surface-2: rgb(16 24 40 / 0.035);
-  --color-surface-3: rgb(16 24 40 / 0.065);
+  --color-line: rgb(24 24 27 / 0.07);
+  --color-line-strong: rgb(24 24 27 / 0.13);
+  --color-surface-2: rgb(24 24 27 / 0.035);
+  --color-surface-3: rgb(24 24 27 / 0.06);
   --color-accent-fg: #b4520f;
-  --color-accent-icon: #d9661c;
-  --color-danger-fg: #b42318;
-  --color-warn-fg: #955405;
-  --color-good-fg: #067647;
-  --color-info-fg: #1d58b8;
+  --color-accent-icon: #e8792a;
+  --color-danger-fg: #b3322b;
+  --color-warn-fg: #8f5e0e;
+  --color-good-fg: #1f7a54;
+  --color-info-fg: #3a52b5;
   --color-violet-fg: #5b3fc4;
 
-  --color-border: rgb(16 24 40 / 0.09);
-  --color-input: rgb(16 24 40 / 0.2);
-  --color-ring: #ec7a2e;
+  --color-border: rgb(24 24 27 / 0.08);
+  --color-input: rgb(24 24 27 / 0.16);
+  --color-ring: #f38735;
 
-  /* One radius scale: md 8 (chips) · lg 10 (tiles) · xl 14 (controls) · 2xl 16 (panels) · 3xl 20 (sheets) */
+  /* Elevation: hairline + soft ambient shadow */
+  --shadow-xs: 0 1px 2px rgb(24 24 27 / 0.04);
+  --shadow-sm: 0 1px 2px rgb(24 24 27 / 0.04), 0 1px 3px rgb(24 24 27 / 0.05);
+  --shadow-md: 0 1px 2px rgb(24 24 27 / 0.04), 0 6px 16px -4px rgb(24 24 27 / 0.08);
+  --shadow-lg: 0 2px 4px rgb(24 24 27 / 0.04), 0 16px 40px -12px rgb(24 24 27 / 0.18);
+
+  /* One radius scale: md 8 (chips) · lg 10 (controls) · xl 12 (tiles) · 2xl 14 (panels) · 3xl 20 (sheets) */
   --radius-md: 0.5rem;
   --radius-lg: 0.625rem;
-  --radius-xl: 0.875rem;
-  --radius-2xl: 1rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 0.875rem;
   --radius-3xl: 1.25rem;
 
   --animate-orb-a: orb-spin 14s linear infinite;
@@ -110,6 +120,14 @@
     0% { transform: scale(1); opacity: 0.55; }
     100% { transform: scale(1.7); opacity: 0; }
   }
+  @keyframes launch {
+    0% { transform: translateX(-110%); }
+    100% { transform: translateX(320%); }
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
   @keyframes fade-up {
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
@@ -122,7 +140,7 @@
   }
   html {
     color-scheme: light;
-    font-size: 17px;
+    font-size: 16px;
     -webkit-tap-highlight-color: transparent;
   }
   /* App-like on phones: the page itself never scrolls or bounces; only the
@@ -150,7 +168,7 @@
     cursor: not-allowed;
   }
   ::selection {
-    background: rgb(236 122 46 / 0.3);
+    background: rgb(243 135 53 / 0.28);
   }
   input[type="date"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
@@ -191,7 +209,7 @@
     background: var(--color-card);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-2xl);
-    box-shadow: 0 1px 2px rgb(16 24 40 / 0.04);
+    box-shadow: var(--shadow-xs);
   }
   .theme-dark .panel,
   .theme-dark .card-surface {
@@ -201,38 +219,63 @@
   .raised {
     background: var(--color-raised);
     border: 1px solid var(--color-line-strong);
-    box-shadow: 0 12px 32px -12px rgb(16 24 40 / 0.18);
+    box-shadow: var(--shadow-lg);
   }
   /* Type scale */
   .t-page {
-    font-size: 28px;
-    line-height: 1.15;
+    font-size: 30px;
+    line-height: 1.1;
     font-weight: 650;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.025em;
     color: var(--color-heading);
   }
   @media (min-width: 1024px) {
     .t-page {
-      font-size: 32px;
+      font-size: 30px;
     }
   }
   .t-section {
-    font-size: 17px;
+    font-size: 16px;
     line-height: 1.3;
     font-weight: 600;
-    letter-spacing: -0.005em;
+    letter-spacing: -0.01em;
     color: var(--color-heading);
   }
   .t-name {
-    font-size: 15.5px;
+    font-size: 15px;
     line-height: 1.3;
     font-weight: 600;
+    letter-spacing: -0.005em;
     color: var(--color-foreground);
   }
   .t-meta {
-    font-size: 14px;
+    font-size: 13.5px;
     line-height: 1.4;
-    color: var(--color-muted-foreground);
+    color: var(--color-subtle);
+  }
+  /* Financial figures: large, tight, tabular */
+  .t-figure {
+    font-size: 30px;
+    line-height: 1.1;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-heading);
+  }
+  .t-figure-sm {
+    font-size: 22px;
+    line-height: 1.15;
+    font-weight: 650;
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-heading);
+  }
+  /* Skeleton loading */
+  .skeleton {
+    background: linear-gradient(90deg, var(--color-surface-3) 0%, var(--color-surface-2) 50%, var(--color-surface-3) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: var(--radius-md);
   }
   .t-eyebrow {
     font-size: 12px;
@@ -250,9 +293,9 @@
   .theme-dark {
     color-scheme: dark;
     --color-background: #111113;
-    --color-foreground: #f6f3ef;
+    --color-foreground: #f4f4f5;
     --color-heading: #faf9f6;
-    --color-card: #19191c;
+    --color-card: #19191b;
     --color-card-foreground: #f6f3ef;
     --color-raised: #222226;
     --color-raised-hover: #2a2a2f;
@@ -261,12 +304,12 @@
     --color-field: #0f0f11;
     --color-message: rgb(255 255 255 / 0.03);
     --color-selected: #222226;
-    --color-primary: #ec7a2e;
+    --color-primary: #f38735;
     --color-secondary: #2a2a2f;
     --color-secondary-foreground: #f6f3ef;
     --color-muted: #1c1c1f;
-    --color-muted-foreground: #c4c4cb;
-    --color-subtle: #92929b;
+    --color-muted-foreground: #c4c4ca;
+    --color-subtle: #8e8e96;
     --color-accent: #2b2b30;
     --color-accent-foreground: #f6f3ef;
     --color-destructive: #e5484d;

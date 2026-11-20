@@ -21,7 +21,7 @@ import { toast } from "@/components/ui/toaster";
 import { UploadButtons, UploadQueue } from "./upload-queue";
 
 type Filter = "all" | FileCategory;
-const ORDER: FileCategory[] = ["drawing", "progress", "completion", "other"];
+const ALL_ORDER: FileCategory[] = ["drawing", "progress", "completion", "other"];
 
 /** Revision groups: current (newest) first, then the older versions. */
 export function groupRevisions(files: JobFile[]): { current: JobFile; history: JobFile[] }[] {
@@ -33,9 +33,10 @@ export function groupRevisions(files: JobFile[]): { current: JobFile; history: J
   });
 }
 
-export function FilesPanel({ jobId, enquiryId, compact = false }: { jobId?: string; enquiryId?: string; compact?: boolean }) {
+export function FilesPanel({ jobId, enquiryId, compact = false, only }: { jobId?: string; enquiryId?: string; compact?: boolean; only?: FileCategory[] }) {
   const { data, refresh, can, user } = useStore();
-  const all = data.files.filter((f) => (jobId ? f.jobId === jobId : f.enquiryId === enquiryId && !f.jobId) && !f.deletedAt);
+  const all = data.files.filter((f) => (jobId ? f.jobId === jobId : f.enquiryId === enquiryId && !f.jobId) && !f.deletedAt && (!only || only.includes(f.category)));
+  const ORDER = only ? ALL_ORDER.filter((c) => only.includes(c)) : ALL_ORDER;
   const [filter, setFilter] = React.useState<Filter>("all");
   const [query, setQuery] = React.useState("");
   const [sort, setSort] = React.useState<"newest" | "oldest">("newest");
@@ -82,11 +83,11 @@ export function FilesPanel({ jobId, enquiryId, compact = false }: { jobId?: stri
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
             <div className="relative min-w-[200px] flex-1 lg:max-w-[280px]">
               <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-subtle" />
-              <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search files" aria-label="Search files" className="h-11 pl-9" />
+              <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search files" aria-label="Search files" className="pl-9" />
             </div>
             <label className="w-[170px]">
               <span className="sr-only">Show</span>
-              <NativeSelect value={filter} onChange={(e) => setFilter(e.target.value as Filter)} className="h-11">
+              <NativeSelect value={filter} onChange={(e) => setFilter(e.target.value as Filter)}>
                 <option value="all">All files ({groupRevisions(all).length})</option>
                 {ORDER.map((c) => (
                   <option key={c} value={c}>
@@ -97,7 +98,7 @@ export function FilesPanel({ jobId, enquiryId, compact = false }: { jobId?: stri
             </label>
             <label className="w-[130px]">
               <span className="sr-only">Sort</span>
-              <NativeSelect value={sort} onChange={(e) => setSort(e.target.value as "newest" | "oldest")} className="h-11">
+              <NativeSelect value={sort} onChange={(e) => setSort(e.target.value as "newest" | "oldest")}>
                 <option value="newest">Newest</option>
                 <option value="oldest">Oldest</option>
               </NativeSelect>
@@ -356,7 +357,7 @@ function EditFile({ file, onClose, onSaved }: { file: JobFile; onClose: () => vo
             <div>
               <Label htmlFor="ef-cat">Category</Label>
               <NativeSelect id="ef-cat" value={v.category} onChange={(e) => setV({ ...v, category: e.target.value as FileCategory })}>
-                {ORDER.map((c) => (
+                {ALL_ORDER.map((c) => (
                   <option key={c} value={c}>
                     {CATEGORY_SINGULAR[c]}
                   </option>

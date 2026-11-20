@@ -9,6 +9,7 @@
  * the UI only reports success when the server confirms it.
  */
 import * as React from "react";
+import { BobLogo } from "@/components/brand/logo";
 import { toast } from "@/components/ui/toaster";
 import type { AppUser, EnquiryStatus, JobStatus, Note, OrgConfig, Snapshot, Task } from "@/lib/types";
 import type { ActionView } from "@/lib/bob/types";
@@ -221,28 +222,36 @@ export function useStore(): StoreValue {
   return ctx;
 }
 
+/** Bob's launch screen: shown only while the workspace genuinely loads (motion is reduced if the user asks). */
 function SplashScreen({ error, onRetry }: { error: string | null; onRetry: () => void }) {
   return (
-    <div className="bg-app flex min-h-dvh flex-col items-center justify-center gap-5 px-6 text-center">
-      <div className="relative size-16">
-        <div className="absolute inset-0 animate-ping-slow rounded-full bg-copper-500/40" />
-        <div className="relative size-16 rounded-full bg-copper-500/20 ring-1 ring-copper-400/50" />
+    <div className="theme-dark flex min-h-dvh flex-col items-center justify-center gap-7 bg-[#141416] px-6 text-center">
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-1/2 size-[520px] -translate-x-1/2 -translate-y-1/2 animate-breathe rounded-full bg-[radial-gradient(circle,rgb(243_135_53/0.16),transparent_62%)]" />
+      </div>
+      <div className="relative animate-fade-up">
+        <BobLogo height={54} title="Bob" />
       </div>
       {error ? (
-        <div role="alert" className="max-w-sm">
-          <p className="text-[16px] font-semibold text-heading">Couldn&apos;t open the workspace</p>
-          <p className="mt-1 text-[15px] text-muted-foreground">{error}</p>
-          <button onClick={onRetry} className="mt-4 h-11 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white">
+        <div role="alert" className="relative max-w-sm">
+          <p className="text-[16px] font-semibold text-white">Couldn&apos;t open the workspace</p>
+          <p className="mt-1 text-[15px] text-white/65">{error}</p>
+          <button onClick={onRetry} className="mt-4 h-11 rounded-[10px] bg-primary px-5 text-[15px] font-semibold text-white">
             Try again
           </button>
-          <p className="mt-3 text-[13.5px] text-subtle">
-            Still stuck? <a href="/login" className="font-medium text-accent-fg underline">Go back to the start</a> and tap Try the demo.
+          <p className="mt-3 text-[13.5px] text-white/50">
+            Still stuck? <a href="/login" className="font-medium text-copper-300 underline">Go back to the start</a> and tap Try the demo.
           </p>
         </div>
       ) : (
-        <p className="text-[15px] font-medium text-muted-foreground" aria-live="polite">
-          Opening your workspace…
-        </p>
+        <div className="relative flex flex-col items-center gap-3">
+          <div className="h-[3px] w-40 overflow-hidden rounded-full bg-white/10" aria-hidden>
+            <div className="h-full w-1/3 animate-[launch_1.1s_ease-in-out_infinite] rounded-full bg-copper-500" />
+          </div>
+          <p className="text-[13.5px] font-medium text-white/55" aria-live="polite">
+            Opening your workspace…
+          </p>
+        </div>
       )}
     </div>
   );

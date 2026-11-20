@@ -5,28 +5,6 @@ import Link from "next/link";
 import { ChevronRight, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function PageHeader({
-  title,
-  subtitle,
-  actions,
-  className,
-}: {
-  title: string;
-  subtitle?: React.ReactNode;
-  actions?: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={cn("mb-6 flex flex-wrap items-end justify-between gap-4", className)}>
-      <div>
-        <h1 className="t-page">{title}</h1>
-        {subtitle ? <p className="t-meta mt-1 text-[15px]">{subtitle}</p> : null}
-      </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
-    </div>
-  );
-}
-
 export function SectionHeader({
   title,
   href,
@@ -52,29 +30,6 @@ export function SectionHeader({
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={cn("card-surface", className)} {...props} />;
-}
-
-export function EmptyState({
-  icon: Icon,
-  title,
-  body,
-  action,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  body?: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="card-surface flex flex-col items-center px-6 py-10 text-center">
-      <div className="mb-3 grid size-12 place-items-center rounded-xl bg-selected text-accent-icon ring-1 ring-copper-500/20">
-        <Icon className="size-5" />
-      </div>
-      <p className="t-name">{title}</p>
-      {body ? <p className="t-meta mt-1 max-w-xs">{body}</p> : null}
-      {action ? <div className="mt-4">{action}</div> : null}
-    </div>
-  );
 }
 
 export function FilterChips<T extends string>({
@@ -225,7 +180,7 @@ export function ListRow({
           <span className="t-name line-clamp-2 min-w-0 break-words">{title}</span>
           {aside ? <span className="shrink-0 text-[13.5px] tabular text-muted-foreground">{aside}</span> : null}
         </span>
-        {meta ? <span className="mt-0.5 block text-[14.5px] leading-snug text-muted-foreground">{meta}</span> : null}
+        {meta ? <span className="mt-0.5 block text-[13.5px] leading-snug text-subtle">{meta}</span> : null}
       </span>
     </>
   );
@@ -252,11 +207,74 @@ export function ListRow({
 
 /** Primary page action ("Add new…", "Create invoice draft"): orange, compact. */
 export const pageActionClass =
-  "flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 text-[15px] font-semibold text-white shadow-[0_1px_2px_rgb(16_24_40/0.12)] transition hover:bg-copper-600 active:bg-copper-700";
+  "flex h-11 shrink-0 items-center gap-1.5 rounded-[10px] bg-primary px-4 text-[15px] font-semibold tracking-[-0.005em] text-white shadow-[0_1px_2px_rgb(180_82_15/0.25),inset_0_1px_0_rgb(255_255_255/0.18)] transition hover:bg-copper-600 active:scale-[0.98] active:bg-copper-700 lg:h-10 lg:text-[14px]";
 
 /** Secondary page action: white, bordered. */
 export const pageSecondaryClass =
-  "flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-card px-4 text-[15px] font-semibold text-foreground ring-1 ring-line-strong transition hover:bg-raised-hover active:bg-surface-3";
+  "flex h-11 shrink-0 items-center gap-1.5 rounded-[10px] bg-card px-4 text-[15px] font-semibold tracking-[-0.005em] text-foreground shadow-[var(--shadow-xs)] ring-1 ring-line-strong transition hover:bg-raised-hover active:bg-surface-3 lg:h-10 lg:text-[14px]";
+
+/** One page header everywhere: strong title, a quiet summary line, actions on the right. */
+export function PageHeader({ title, subtitle, actions, className }: { title: React.ReactNode; subtitle?: React.ReactNode; actions?: React.ReactNode; className?: string }) {
+  return (
+    <header className={cn("grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 lg:items-end", className)}>
+      <h1 className="t-page min-w-0 lg:col-start-1 lg:row-start-1">{title}</h1>
+      {actions ? <div className="col-start-2 row-start-1 flex shrink-0 flex-wrap items-center justify-end gap-2 lg:row-span-2">{actions}</div> : null}
+      {subtitle ? <p className="col-span-2 text-[13.5px] text-subtle lg:col-span-1 lg:text-[14px]">{subtitle}</p> : null}
+    </header>
+  );
+}
+
+/** A headline figure: label, big number, a quiet line of context. */
+export function StatCard({ label, value, sub, tone, accent, onClick, active }: { label: string; value: React.ReactNode; sub?: React.ReactNode; tone?: "danger" | "warn" | "good" | "muted"; accent?: boolean; onClick?: () => void; active?: boolean }) {
+  const toneCls = tone === "danger" ? "text-danger-fg" : tone === "warn" ? "text-warn-fg" : tone === "good" ? "text-good-fg" : tone === "muted" ? "text-subtle" : "text-heading";
+  const Comp = onClick ? "button" : "div";
+  return (
+    <Comp
+      {...(onClick ? { type: "button" as const, onClick, "aria-pressed": active } : {})}
+      className={cn(
+        "relative flex min-w-0 flex-col rounded-2xl bg-card px-4 py-3.5 text-left shadow-[var(--shadow-xs)] ring-1 ring-line transition sm:px-5 sm:py-4",
+        onClick && "hover:shadow-[var(--shadow-md)]",
+        active && "ring-2 ring-copper-500/60",
+        accent && "bg-sidebar text-white ring-0",
+      )}
+    >
+      <span className={cn("text-[12px] font-medium leading-tight sm:text-[12.5px]", accent ? "text-white/60" : "text-subtle")}>{label}</span>
+      <span className={cn("mt-1 truncate text-[22px] font-semibold tabular leading-tight tracking-[-0.025em] sm:text-[26px]", accent ? "text-white" : toneCls)}>{value}</span>
+      {sub ? <span className={cn("mt-1 line-clamp-2 text-[12px] leading-snug sm:text-[12.5px]", accent ? "text-white/55" : "text-subtle")}>{sub}</span> : null}
+    </Comp>
+  );
+}
+
+/** Useful empty state: an icon, one line of what's missing, and the action that fixes it. */
+export function EmptyState({ icon: Icon, title, body, action, className, bare }: { icon: React.ComponentType<{ className?: string }>; title: string; body?: React.ReactNode; action?: React.ReactNode; className?: string; bare?: boolean }) {
+  return (
+    <div className={cn("flex flex-col items-center justify-center px-6 py-14 text-center", !bare && "card-surface", className)}>
+      <span className="grid size-12 place-items-center rounded-2xl bg-card text-subtle shadow-[var(--shadow-sm)] ring-1 ring-line">
+        <Icon className="size-[22px]" />
+      </span>
+      <p className="mt-4 text-[15px] font-semibold text-heading">{title}</p>
+      {body ? <p className="mt-1 max-w-sm text-[14px] text-subtle">{body}</p> : null}
+      {action ? <div className="mt-5">{action}</div> : null}
+    </div>
+  );
+}
+
+/** Skeleton rows while data loads. */
+export function SkeletonRows({ rows = 5, className }: { rows?: number; className?: string }) {
+  return (
+    <div className={cn("space-y-3", className)} aria-hidden>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <div className="skeleton size-10 rounded-lg" />
+          <div className="flex-1 space-y-2">
+            <div className="skeleton h-3.5 w-2/5" />
+            <div className="skeleton h-3 w-1/4" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /**
  * "Demo · sample data" — one compact label used across the workspace. Pass
@@ -329,7 +347,7 @@ export function Disclosure({
 
 /** Plain-text status with a small coloured dot — readable without the colour. */
 export function StatusText({ tone, children, className }: { tone: "neutral" | "amber" | "green" | "red" | "blue" | "violet"; children: React.ReactNode; className?: string }) {
-  const dot = { neutral: "bg-subtle", amber: "bg-amber-500", green: "bg-emerald-500", red: "bg-red-500", blue: "bg-sky-500", violet: "bg-violet-500" }[tone];
+  const dot = { neutral: "bg-subtle", amber: "bg-warning", green: "bg-success", red: "bg-destructive", blue: "bg-info", violet: "bg-violet-500" }[tone];
   const text = { neutral: "text-muted-foreground", amber: "text-warn-fg", green: "text-good-fg", red: "text-danger-fg", blue: "text-info-fg", violet: "text-violet-fg" }[tone];
   return (
     <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap text-[13.5px] font-medium", text, className)}>
@@ -342,7 +360,7 @@ export function StatusText({ tone, children, className }: { tone: "neutral" | "a
 /** Simple segmented tabs for a page's main lists (2–4 options). */
 export function Tabs<T extends string>({ label, value, onChange, options, className }: { label: string; value: T; onChange: (v: T) => void; options: { value: T; label: string; count?: number; highlight?: boolean }[]; className?: string }) {
   return (
-    <div role="tablist" aria-label={label} className={cn("inline-flex min-w-0 max-w-full gap-0.5 rounded-xl bg-surface-3 p-1", className)}>
+    <div role="tablist" aria-label={label} className={cn("scrollbar-none inline-flex min-w-0 max-w-full gap-0.5 overflow-x-auto rounded-[10px] bg-[#ededea] p-[3px]", className)}>
       {options.map((o) => {
         const active = value === o.value;
         return (
@@ -353,8 +371,8 @@ export function Tabs<T extends string>({ label, value, onChange, options, classN
             aria-selected={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              "flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[14.5px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-surface-2",
-              active ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground",
+              "flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[8px] px-3 text-[14px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:h-8 lg:text-[13.5px]",
+              active ? "bg-card font-semibold text-heading shadow-[0_1px_2px_rgb(24_24_27/0.08),0_0_0_0.5px_rgb(24_24_27/0.06)]" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {o.label}

@@ -51,11 +51,13 @@ void zlib;
   luke.on('pageerror', (e) => errors.push('luke: ' + e.message));
   await luke.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
   await luke.goto(BASE + '/');
+  await luke.waitForURL('**/week');
+  check(1, 'Root opens the Diary after login', new URL(luke.url()).pathname === '/week');
+  await luke.goto(BASE + '/assistant');
   await luke.getByRole('heading', { name: 'How can I help?' }).waitFor();
-  check(1, 'Root opens Ask Bob after login (URL stays /)', new URL(luke.url()).pathname === '/');
   check(1, 'Greets Luke by first name', /Good (morning|afternoon|evening), Luke/.test(await luke.locator('main').innerText()));
   for (const name of ['Open diary', 'View jobs', 'Jobs to quote', 'Materials to order']) check(1, `Shortcut: ${name}`, await luke.getByRole('link', { name: new RegExp(name) }).isVisible());
-  check(1, 'Typing and speaking are both offered', (await luke.getByRole('button', { name: 'Type' }).isVisible()) && (await luke.getByRole('button', { name: /Tap to talk/ }).first().isVisible()));
+  check(1, 'Typing and speaking are both offered', (await luke.getByPlaceholder(/Type to Bob/).isVisible()) && (await luke.getByRole('button', { name: /talk to Bob|Tap to talk|Talk to Bob/ }).first().isVisible()));
   await shot(luke, 'desk-1440-ask-bob');
   await luke.getByRole('link', { name: /Jobs to quote/ }).click();
   await luke.waitForURL('**/enquiries?tab=quote');
@@ -87,8 +89,8 @@ void zlib;
   check(3, 'Luke sees the moved, reassigned booking', after && after.date === london(30) && after.personIds.includes('n93_per_ellie'));
 
   /* 4. Job page: Files & photos, drawing revision, failed upload + retry */
-  await luke.goto(`${BASE}/jobs/${jobId}?tab=files`);
-  await luke.getByRole('tab', { name: /Files & photos/, selected: true }).waitFor();
+  await luke.goto(`${BASE}/jobs/${jobId}?tab=documents`);
+  await luke.getByRole('tab', { name: /Documents/, selected: true }).waitFor();
   const fileInput = luke.locator('input[type=file][multiple]').first();
   let failOnce = true;
   await luke.route('**/api/files', async (route) => {
@@ -129,7 +131,7 @@ void zlib;
   /* 5. Handover: exactly the selected files */
   const crawley = 'n93_job_kitchen_crawley';
   await luke.goto(`${BASE}/jobs/${crawley}?tab=handover`);
-  await luke.getByRole('button', { name: 'Create handover' }).click();
+  await luke.getByRole('button', { name: 'Create handover', exact: true }).click();
   await luke.getByRole('checkbox', { name: /Kitchen layout.*Rev B/ }).check();
   await luke.getByRole('checkbox', { name: /Base units in/ }).check();
   await luke.getByRole('button', { name: /Preview \(2\)/ }).click();

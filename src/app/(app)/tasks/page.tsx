@@ -26,7 +26,7 @@ export default function TasksPage() {
   const due = tasksDue(data.tasks).length;
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-[1100px]">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="t-page">Tasks</h1>

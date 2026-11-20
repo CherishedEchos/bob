@@ -27,6 +27,7 @@ import { invoiceFollowUp, isInvoiceRequest, runInvoice, startInvoice, type Invoi
 import { requestAction } from "./actions";
 import { runReadTool } from "./tools";
 import { NEEDS_ORDERING, WHO_IS_ON, needsOrdering, whoIsOn } from "./schedule-answers";
+import { HANDOVER_REQUEST, NEEDS_QUOTING, ON_HOLIDAY, handoverHelp, needsQuoting, onHoliday } from "./extra-answers";
 import { mentionScore, resolveCustomers, resolveEnquiries, resolveJobs } from "./resolve";
 import {
   cleanUtterance, detectMethod, findAmounts, isAffirmative, parseDeposit, parseDueDate,
@@ -60,8 +61,9 @@ type DraftFlow = { type: "draft"; text: string; enquiryId?: string; customerId?:
 type LookupFlow = { type: "job_lookup"; text: string; jobId?: string };
 type StatusFlow = { type: "job_status"; text: string; jobId?: string; status: JobStatus };
 type DepositFlow = { type: "deposit_check"; text: string; jobId?: string };
+type MaterialFlow = { type: "material"; text: string; jobId?: string; item: string; quantity: string; unit?: string };
 
-export type Flow = InvoiceFlow | JobFlow | QuoteFlow | ReminderFlow | ExpenseFlow | PaymentFlow | DraftFlow | LookupFlow | StatusFlow | DepositFlow;
+export type Flow = InvoiceFlow | JobFlow | QuoteFlow | ReminderFlow | ExpenseFlow | PaymentFlow | DraftFlow | LookupFlow | StatusFlow | DepositFlow | MaterialFlow;
 
 export interface BobState {
   flow?: Flow;
@@ -322,6 +324,22 @@ async function route(t: Turn, text: string, lower: string) {
     const a = needsOrdering(t.ctx);
     return say(t, a.text, a.chips ? { chips: a.chips } : undefined);
   }
+  if (/\bwhere('?s| is| are)\b[^?]*\b(everyone|everybody|the team|the lads|people|the crew)\b/.test(lower)) {
+    const a = whoIsOn(t.ctx, lower);
+    return say(t, a.text, a.chips ? { chips: a.chips } : undefined);
+  }
+  if (ON_HOLIDAY.test(lower) && !/\b(job|site)\b/.test(lower)) {
+    const a = onHoliday(t.ctx, lower);
+    return say(t, a.text, a.chips ? { chips: a.chips } : undefined);
+  }
+  if (NEEDS_QUOTING.test(lower) && !/\b(chase|follow)\b/.test(lower)) {
+    const a = needsQuoting(t.ctx);
+    return say(t, a.text, a.chips ? { chips: a.chips } : undefined);
+  }
+  if (HANDOVER_REQUEST.test(lower)) {
+    const a = handoverHelp(t.ctx, lower);
+    return say(t, a.text, a.chips ? { chips: a.chips } : undefined);
+  }
   if (WHO_IS_ON.test(lower)) {
     const a = whoIsOn(t.ctx, lower);
     return say(t, a.text, a.chips ? { chips: a.chips } : undefined);
@@ -348,7 +366,7 @@ async function route(t: Turn, text: string, lower: string) {
   if (/\b(has|did|have)\b.*\bpaid\b.*\bdeposit\b|\bdeposit\b.*\b(paid|in)\b\??$/.test(lower) && !/\bwho\b/.test(lower)) return runFlow(t, { type: "deposit_check", text });
   if (/\bwho('?s| has| hasn'?t| is)?\b.*\b(not|n'?t)\b.*\bpaid\b.*\bdeposit|\bdeposits? (outstanding|owed|due|waiting)|\bwaiting (on|for) deposits?\b/.test(lower)) return depositsOwed(t);
   if (/\boverdue\b.*\binvoice|\binvoices?\b.*\boverdue\b/.test(lower)) return invoicesReply(t, true);
-  if (/\b(who('?s| has| hasn'?t| is)? (not |n'?t )?paid( me)?|who owes|how much (am i|is) owed|how much (money )?is outstanding|money (owed|outstanding)|outstanding (invoices|money|payments)|show (me )?(my )?(outstanding )?invoices|unpaid invoices)\b/.test(lower))
+  if (/\b(who('?s| has| hasn'?t| is)? (not |n'?t )?paid( me)?|who owes|how much (money )?(am i|is|are we|are us|is the business|do we have) owed|how much (money )?(do people|are we) owe|what('?s| are) we owed|how much (money )?is outstanding|money (owed|outstanding)|outstanding (invoices|money|payments)|show (me )?(my )?(outstanding )?invoices|unpaid invoices)\b/.test(lower))
     return invoicesReply(t, false);
   if (/\b(check|sync|look at|any new) (my )?(e-?mails?|inbox)\b/.test(lower)) return checkInbox(t);
 
@@ -357,6 +375,8 @@ async function route(t: Turn, text: string, lower: string) {
   if (isInvoiceRequest(text) || /^invoice\b/.test(lower)) return startInvoice(invoiceIO(t), text);
   if (/\b(add|log|record|put)\b.*£?\d.*\b(materials?|costs?|expenses?|skip|labour|hire|timber|supplies)\b.*\b(to|on|for|against)\b/.test(lower) || /\b(add|log|record)\b.*\b(expense|cost)\b/.test(lower))
     return runFlow(t, { type: "expense", text });
+  const mat = parseMaterial(text);
+  if (mat) return runFlow(t, { type: "material", text: mat.jobText, item: mat.item, quantity: mat.quantity, unit: mat.unit });
   if (/\b(add|create|new|book in|set up)\b.*\bjob\b|\bnew job\b/.test(lower)) return runFlow(t, { type: "job", text });
   if (/\b(draft|write|send|prepare)\b.*\b(reply|response|answer)\b|\breply to\b/.test(lower)) return runFlow(t, { type: "draft", text, mode: "reply" });
   if (/\b(draft|write|send|prepare)\b.*\b(follow[- ]?up|chaser|reminder email|nudge)\b|\bfollow up with\b|\bchase\b/.test(lower)) return runFlow(t, { type: "draft", text, mode: "follow_up" });
@@ -725,6 +745,8 @@ async function runFlow(t: Turn, flow: Flow): Promise<void> {
       return jobStatusFlow(t, flow);
     case "deposit_check":
       return depositCheckFlow(t, flow);
+    case "material":
+      return materialFlow(t, flow);
   }
 }
 
@@ -1124,7 +1146,7 @@ async function draftFlow(t: Turn, f: DraftFlow) {
 
 /* --------------------------------- Lookups --------------------------------- */
 
-function pickJob(t: Turn, f: LookupFlow | StatusFlow | DepositFlow, question: string, opts: { includeClosed?: boolean } = {}): string | null {
+function pickJob(t: Turn, f: LookupFlow | StatusFlow | DepositFlow | MaterialFlow, question: string, opts: { includeClosed?: boolean } = {}): string | null {
   if (f.jobId) return f.jobId;
   const r = resolveJobs(t.ctx, f.text, { includeClosed: opts.includeClosed ?? true });
   if (r.jobs.length === 1) return r.jobs[0].id;
@@ -1152,6 +1174,37 @@ async function jobLookupFlow(t: Turn, f: LookupFlow) {
     text += ` Money: ${gbp(fin.totalPaid)} of ${gbp(j.quotedValue)} paid${fin.depositOutstanding ? `, deposit of ${gbp(fin.depositOutstanding)} still due` : ""}${fin.expenses ? `; ${gbp(fin.expenses)} of costs recorded` : ""}.`;
   }
   say(t, text, { cards: [{ type: "job_detail", jobId: j.id }], chips: [{ kind: "open", label: "Open job", record: "job", id: j.id }] });
+}
+
+/** "Add 20 sheets of plasterboard to the kitchen job" → which job (if unclear) → approval card. */
+async function materialFlow(t: Turn, f: MaterialFlow) {
+  if (!can(t.ctx.role, "materials.write")) return say(t, "Your account can't change materials lists. Luke or Ryan can add it.");
+  const id = pickJob(t, f, `Which job is the ${f.item} for?`, { includeClosed: false });
+  if (!id) return;
+  f.jobId = id;
+  await act(t, "add_material", { jobId: id, item: f.item, quantity: f.quantity, unit: f.unit }, "Check this and I'll add it to the list.", f);
+}
+
+const NUM_WORDS: Record<string, number> = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, twelve: 12, twenty: 20, thirty: 30, forty: 40, fifty: 50, hundred: 100 };
+const UNITS = ["sheets", "sheet", "bags", "bag", "lengths", "length", "boxes", "box", "packs", "pack", "tubs", "tub", "tins", "tin", "rolls", "roll", "m", "metres", "meters", "lm", "sq m", "pallets", "pallet", "tonnes", "tonne", "litres", "litre"];
+
+/** Parse "20 sheets of plasterboard to the kitchen job". */
+export function parseMaterial(text: string): { quantity: string; unit?: string; item: string; jobText: string } | null {
+  const m = text.match(/\b(?:add|put|we need|need|order)\s+(\d+(?:\.\d+)?|a|an|one|two|three|four|five|six|seven|eight|nine|ten|twelve|twenty|thirty|forty|fifty|hundred)\s+(.+?)\s+(?:to|for|on)\s+(?:the\s+)?(.+?)\s*$/i);
+  if (!m || /£/.test(text)) return null;
+  const qty = /^\d/.test(m[1]) ? m[1] : String(NUM_WORDS[m[1].toLowerCase()] ?? 1);
+  let rest = m[2].trim();
+  let unit: string | undefined;
+  const u = UNITS.find((x) => new RegExp(`^${x}\\b`, "i").test(rest));
+  if (u) {
+    unit = u;
+    rest = rest.slice(u.length).replace(/^\s*of\s+/i, "").trim();
+  }
+  rest = rest.replace(/^of\s+/i, "");
+  if (rest.length < 2) return null;
+  const jobText = m[3].replace(/[.?!]+$/, "");
+  if (!/\b(job|kitchen|extension|loft|wardrobes?|decking|staircase|stairs|bathroom|garden room|media wall|list)\b/i.test(jobText) && jobText.split(/\s+/).length > 4) return null;
+  return { quantity: qty, unit, item: rest, jobText };
 }
 
 async function jobStatusFlow(t: Turn, f: StatusFlow) {

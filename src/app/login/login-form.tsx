@@ -71,11 +71,11 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
         <div className="grid flex-1 grid-cols-1 items-center gap-10 py-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-16 lg:py-12">
           {/* Pitch + entry */}
           <section className="max-w-2xl">
-            <p className="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-[#FF821C]">Your AI trade assistant</p>
+            <p className="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-[#F38735]">Your AI trade assistant</p>
             <h1 className="mt-3 text-[33px] font-bold leading-[1.04] tracking-[-0.035em] text-[#FAF9F6] min-[400px]:text-[36px] sm:text-[52px] lg:text-[58px]">
               <span className="block whitespace-nowrap">You do the work.</span>
               <span className="block whitespace-nowrap">
-                Bob does the <span className="text-[#FF821C]">admin.</span>
+                Bob does the <span className="text-[#F38735]">admin.</span>
               </span>
             </h1>
             <p className="mt-5 max-w-md text-[17px] leading-relaxed text-white/70">
@@ -89,7 +89,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
                 { Icon: Hand, label: "Tap" },
               ].map(({ Icon, label }) => (
                 <span key={label} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-white/[0.05] px-2.5 ring-1 ring-white/10">
-                  <Icon className="size-3.5 text-[#FF9A4A]" /> {label}
+                  <Icon className="size-3.5 text-[#F8A15C]" /> {label}
                 </span>
               ))}
             </div>
@@ -190,7 +190,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
               <Orb state="idle" size={300} className="scale-[0.8] sm:scale-100" />
               <div className="absolute left-0 top-[12%] max-w-[250px] rounded-[14px] bg-[#1a1816]/90 px-4 py-3 shadow-[0_20px_50px_-20px_rgb(0_0_0/0.8)] ring-1 ring-white/10 backdrop-blur">
                 <div className="flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-wider text-white/45">
-                  <Mic className="size-3 text-[#FF9A4A]" /> You, from the van
+                  <Mic className="size-3 text-[#F8A15C]" /> You, from the van
                 </div>
                 <p className="mt-1 text-[15px] leading-snug text-[#FAF9F6]">“Chase Sarah about the loft deposit.”</p>
               </div>
@@ -201,7 +201,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
                 </div>
                 <p className="mt-2 text-[14px] leading-snug text-white/80">Hi Sarah, just a reminder the £5,600 deposit for the loft conversion is now due…</p>
                 <div className="mt-3 flex gap-2">
-                  <span className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-[#FF821C] text-[13px] font-semibold text-white">
+                  <span className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-[#F38735] text-[13px] font-semibold text-white">
                     <Check className="size-3.5" /> Approve
                   </span>
                   <span className="inline-flex h-8 flex-1 items-center justify-center rounded-lg text-[13px] font-medium text-white/75 ring-1 ring-white/15">Edit</span>

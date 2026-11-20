@@ -10,7 +10,7 @@ export default function ActivityPage() {
   const ui = useUI();
   return (
     <>
-      <PageHeader title="Activity log" subtitle="Every change — from the dashboard, from Bob (after approval) or from integrations. Newest first." />
+      <PageHeader className="mb-6" title="Activity log" subtitle="Every change — from the dashboard, from Bob (after approval) or from integrations. Newest first." />
       <Card className="divide-y divide-line">
         {data.activity.map((a) => {
           const clickable =

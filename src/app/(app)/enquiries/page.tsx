@@ -199,7 +199,7 @@ function EnquiriesInner() {
           ) : null}
 
           {tab === "reply" && toDraft > 0 && can("enquiries.write") ? (
-            <Link href="/replies" className="mb-3 flex min-h-[52px] items-center justify-between gap-3 rounded-xl bg-primary px-4 text-[16px] font-semibold text-white shadow-[0_1px_2px_rgb(16_24_40/0.12)] transition hover:bg-copper-600 active:bg-copper-700">
+            <Link href="/replies" className="mb-3 flex min-h-[48px] items-center justify-between gap-3 rounded-xl bg-copper-500/10 px-4 text-[14.5px] font-semibold text-accent-fg ring-1 ring-copper-500/25 transition hover:bg-copper-500/15">
               <span className="flex items-center gap-2">
                 <Sparkles className="size-4" aria-hidden /> Draft {toDraft} {toDraft === 1 ? "reply" : "replies"}
               </span>
