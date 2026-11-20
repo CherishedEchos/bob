@@ -37,6 +37,7 @@ export const POST = authed(async (req, ctx) => {
       description: str("description"),
       revision: str("revision"),
       replacesId: str("replacesId"),
+      updateId: str("updateId"),
       visibility: str("visibility"),
       clientRef: str("clientRef"),
       width: num("width"),

@@ -22,7 +22,7 @@ export type FormPrefill =
   | { form: "bill"; jobId?: string }
   | { form: "merchant"; merchantId?: string };
 
-export type JobTab = "overview" | "schedule" | "tasks" | "materials" | "files" | "handover" | "money";
+export type JobTab = "overview" | "schedule" | "tasks" | "materials" | "files" | "report" | "handover" | "money";
 
 interface UIState {
   enquiryId: string | null;

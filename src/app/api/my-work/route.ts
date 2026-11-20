@@ -2,6 +2,7 @@ import { authed, fromResult, readJson } from "@/server/http";
 import { completeMyTask, myWork, type MyWork } from "@/server/services/team";
 import { listFiles } from "@/server/services/files";
 import { myAbsences } from "@/server/services/absences";
+import { listUpdates } from "@/server/services/updates";
 import type { Ctx } from "@/server/context";
 
 export const runtime = "nodejs";
@@ -11,7 +12,7 @@ function full(ctx: Ctx) {
   const r = myWork(ctx);
   if (!r.ok) return r;
   const jobs = new Set(r.value.bookings.map((b) => b.job.id));
-  const value: MyWork = { ...r.value, files: listFiles(ctx).filter((f) => f.jobId && jobs.has(f.jobId)), absences: r.value.person ? myAbsences(ctx) : [] };
+  const value: MyWork = { ...r.value, files: listFiles(ctx).filter((f) => f.jobId && jobs.has(f.jobId)), updates: listUpdates(ctx).filter((u) => jobs.has(u.jobId)), absences: r.value.person ? myAbsences(ctx) : [] };
   return { ok: true as const, value };
 }
 

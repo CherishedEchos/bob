@@ -87,7 +87,23 @@ export const TABLES = {
     jobId: "text", enquiryId: "text", category: "text", title: "text", filename: "text", mimeType: "text", bytes: "real",
     description: "text", revision: "text", groupId: "text", visibility: "text", previewable: "bool", hasThumb: "bool",
     width: "real", height: "real", uploadedBy: "text", uploadedByUserId: "text", createdAt: "text", deletedAt: "text",
-    deletedBy: "text", checksum: "text", clientRef: "text",
+    deletedBy: "text", checksum: "text", clientRef: "text", updateId: "text", reportId: "text",
+  },
+  job_updates: {
+    jobId: "text", note: "text", stage: "text", authorName: "text", authorUserId: "text", createdAt: "text", updatedAt: "text",
+    clientRef: "text", deletedAt: "text",
+  },
+  variations: {
+    jobId: "text", description: "text", amount: "real", amountsAre: "text", status: "text", invoiceId: "text", approvedAt: "text",
+    createdAt: "text", createdBy: "text",
+  },
+  handover_reports: {
+    jobId: "text", selection: "json", content: "json", revision: "real", aiStatus: "text", aiNote: "text", createdBy: "text",
+    createdAt: "text", updatedBy: "text", updatedAt: "text",
+  },
+  report_versions: {
+    reportId: "text", jobId: "text", version: "real", fileId: "text", filename: "text", pages: "real", createdBy: "text", createdAt: "text",
+    content: "json",
   },
   handovers: {
     jobId: "text", title: "text", jobTitle: "text", siteAddress: "text", completionDate: "text", message: "text",
@@ -285,6 +301,8 @@ export function initDb(db: DatabaseSync) {
   // A retried upload (same client reference) never creates a second file.
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS job_files_client_ref_idx ON job_files(org_id, client_ref) WHERE client_ref IS NOT NULL");
   db.exec("CREATE INDEX IF NOT EXISTS job_files_job_idx ON job_files(org_id, job_id)");
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS job_updates_client_ref_idx ON job_updates(org_id, client_ref) WHERE client_ref IS NOT NULL");
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS report_versions_num_idx ON report_versions(org_id, report_id, version)");
   db.exec("CREATE INDEX IF NOT EXISTS absences_person_idx ON absences(org_id, person_id, start_date)");
   const row = db.prepare("SELECT COUNT(*) AS n FROM orgs").get() as { n: number };
   if (row.n === 0) {
@@ -303,7 +321,7 @@ export function initDb(db: DatabaseSync) {
  * Schema migrations for existing databases. Additive only: nothing is dropped
  * and every existing row is kept. Recorded in PRAGMA user_version.
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 function migrate(db: DatabaseSync) {
   const version = (db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version;
   const hasMemberships = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='memberships'").get();
@@ -367,9 +385,9 @@ function migrateJobPhotos(db: DatabaseSync) {
 function addNinety3Wordmark(db: DatabaseSync) {
   const rows = db.prepare("SELECT id, config FROM orgs").all() as { id: string; config: string }[];
   for (const r of rows) {
-    const c = JSON.parse(r.config) as { logoUrl?: string; wordmark?: unknown };
-    if (c.logoUrl !== "/brand/ninety3-logo.png" || c.wordmark) continue;
-    const next = { ...c, wordmark: { onDark: "/brand/ninety3-wordmark-white.png", onLight: "/brand/ninety3-wordmark.png" } };
+    const c = JSON.parse(r.config) as { logoUrl?: string; wordmark?: unknown; brandColor?: string };
+    if (c.logoUrl !== "/brand/ninety3-logo.png" || (c.wordmark && c.brandColor)) continue;
+    const next = { ...c, wordmark: c.wordmark ?? { onDark: "/brand/ninety3-wordmark-white.png", onLight: "/brand/ninety3-wordmark.png" }, brandColor: c.brandColor ?? "#7B2001" };
     db.prepare("UPDATE orgs SET config = ? WHERE id = ?").run(JSON.stringify(next), r.id);
   }
 }

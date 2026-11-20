@@ -29,6 +29,12 @@ const EFFORT = () => (process.env.BOB_CLAUDE_EFFORT as "low" | "medium" | "high"
 const MAX_STEPS = 8;
 
 let clientFactory: () => Pick<Anthropic, "beta"> = () => new Anthropic();
+/** The same client (and test injection) for other AI features, e.g. handover report drafting. */
+export function anthropicClient(): Pick<Anthropic, "beta"> {
+  return clientFactory();
+}
+export const claudeModel = MODEL;
+
 /** Tests inject a fake client. */
 export function setClaudeClientForTests(f: (() => Pick<Anthropic, "beta">) | null) {
   clientFactory = f ?? (() => new Anthropic());

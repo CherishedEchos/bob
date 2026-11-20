@@ -10,6 +10,8 @@ import * as M from "@/server/services/merchants";
 import * as Cal from "@/server/services/calendar";
 import * as Abs from "@/server/services/absences";
 import * as Files from "@/server/services/files";
+import * as Var from "@/server/services/variations";
+import * as Rep from "@/server/services/handover-reports";
 
 export const runtime = "nodejs";
 
@@ -71,6 +73,13 @@ const OPS: Record<string, (ctx: Ctx, a: Record<string, any>) => Result<unknown> 
   cancelAbsence: (c, a) => Abs.cancelAbsence(c, s(a.id)),
   updateFile: (c, a) => Files.updateFile(c, s(a.id), a.patch ?? {}),
   deleteFile: (c, a) => Files.deleteFile(c, s(a.id)),
+  saveVariation: (c, a) => Var.saveVariation(c, a.input),
+  deleteVariation: (c, a) => Var.deleteVariation(c, s(a.id)),
+  createReport: (c, a) => Rep.createReport(c, a),
+  saveReport: (c, a) => Rep.saveReport(c, a),
+  generateReport: (c, a) => Rep.generateReport(c, a),
+  proposeRewrite: (c, a) => Rep.proposeRewrite(c, a),
+  exportReport: (c, a) => Rep.exportReport(c, a),
 };
 
 export const POST = authed(async (req, ctx) => {
@@ -82,9 +91,11 @@ export const POST = authed(async (req, ctx) => {
   if (res instanceof Response) {
     // Booking clashes come back with the details so the planner can confirm.
     const clashes = (result as { clashes?: unknown }).clashes;
-    if (clashes) {
+    // A report save that lost a race returns the other person's version, so nothing is lost on screen.
+    const current = (result as { current?: unknown }).current;
+    if (clashes || current) {
       const json = await res.json();
-      return NextResponse.json({ ...json, clashes }, { status: res.status });
+      return NextResponse.json({ ...json, clashes, current }, { status: res.status });
     }
     return res;
   }

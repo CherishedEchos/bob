@@ -11,7 +11,7 @@ import "server-only";
  * A person record is separate from login access: people can be booked before
  * (or without ever) being invited. Accepting an invite links the two.
  */
-import type { Absence, Bill, Booking, Job, JobFile, Material, Person, PersonAccess, Role, Task } from "@/lib/types";
+import type { Absence, Bill, Booking, Job, JobFile, JobUpdate, Material, Person, PersonAccess, Role, Task } from "@/lib/types";
 import { bookingInputSchema, billInputSchema, billPaymentSchema, materialInputSchema, personInputSchema } from "@/lib/validation";
 import { addDays, formatDayShort, formatTimeRange, rangeKeys, timeToMinutes } from "@/lib/dates";
 import { can } from "@/lib/auth/permissions";
@@ -554,6 +554,8 @@ export interface MyWork {
   materials: (Pick<Material, "id" | "item" | "quantity" | "status" | "neededBy"> & { jobId: string })[];
   /** Files shared with the team on these jobs (added by the My work route). */
   files?: JobFile[];
+  /** Updates on these jobs (added by the My work route). */
+  updates?: JobUpdate[];
   /** Their own leave / unavailability (added by the My work route). */
   absences?: Absence[];
   generatedAt: string;

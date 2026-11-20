@@ -27,6 +27,6 @@ export const GET = authed(async (req, ctx, params) => {
   });
 }, { workers: true });
 
-export const PATCH = authed(async (req, ctx, params) => fromResult(updateFile(ctx, params.id, await readJson(req))));
+export const PATCH = authed(async (req, ctx, params) => fromResult(updateFile(ctx, params.id, await readJson(req))), { workers: true });
 
 export const DELETE = authed(async (_req, ctx, params) => fromResult(deleteFile(ctx, params.id)), { workers: true });

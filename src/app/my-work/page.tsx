@@ -7,7 +7,7 @@
  * Only their own bookings ever reach this screen.
  */
 import * as React from "react";
-import { AlertTriangle, CalendarOff, Check, ChevronDown, ClipboardList, FileText, FlaskConical, Loader2, LogOut, MapPin, Package, Phone, Plane, RefreshCw, Users } from "lucide-react";
+import { AlertTriangle, CalendarOff, Camera, Check, ChevronDown, ClipboardList, FileText, FlaskConical, Loader2, LogOut, MapPin, Package, Phone, Plane, RefreshCw, Users } from "lucide-react";
 import { BobLogo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { toast, Toaster } from "@/components/ui/toaster";
@@ -16,8 +16,9 @@ import { cn, timeAgo } from "@/lib/utils";
 import { SiteActions } from "@/components/jobs/job-parts";
 import { CalendarLink, type FeedInfo } from "@/components/settings/calendar-links";
 import type { MyBooking, MyWork } from "@/server/services/team";
-import type { Absence, JobFile } from "@/lib/types";
+import type { Absence, JobFile, JobUpdate } from "@/lib/types";
 import { UploadButtons, UploadQueue } from "@/components/files/upload-queue";
+import { AddUpdateDialog, STAGE_LABEL } from "@/components/updates/add-update";
 import { FileViewer, Thumb } from "@/components/files/files-panel";
 import { CATEGORY_SINGULAR, fileUrl } from "@/lib/files/upload";
 import { ABSENCE_LABEL, PART_LABEL } from "@/lib/leave";
@@ -167,7 +168,7 @@ export default function MyWorkPage() {
                 <h2 id="next-title" className="t-eyebrow mb-2">
                   Next
                 </h2>
-                <BookingCard b={next} today={data.today} expanded changed={changed(next)} files={(data.files ?? []).filter((f) => f.jobId === next.job.id)} onUploaded={load} />
+                <BookingCard b={next} today={data.today} expanded changed={changed(next)} files={(data.files ?? []).filter((f) => f.jobId === next.job.id)} updates={(data.updates ?? []).filter((u) => u.jobId === next.job.id)} onUploaded={load} />
               </section>
             ) : (
               <div className="panel mt-4 p-5 text-center">
@@ -184,7 +185,7 @@ export default function MyWorkPage() {
                 <ul className="flex flex-col gap-2">
                   {rest.map((b) => (
                     <li key={b.id}>
-                      <BookingCard b={b} today={data.today} changed={changed(b)} files={(data.files ?? []).filter((f) => f.jobId === b.job.id)} onUploaded={load} />
+                      <BookingCard b={b} today={data.today} changed={changed(b)} files={(data.files ?? []).filter((f) => f.jobId === b.job.id)} updates={(data.updates ?? []).filter((u) => u.jobId === b.job.id)} onUploaded={load} />
                     </li>
                   ))}
                 </ul>
@@ -229,7 +230,7 @@ export default function MyWorkPage() {
   );
 }
 
-function BookingCard({ b, today, expanded = false, changed, files, onUploaded }: { b: MyBooking; today: string; expanded?: boolean; changed?: boolean; files: JobFile[]; onUploaded: () => Promise<void> | void }) {
+function BookingCard({ b, today, expanded = false, changed, files, updates, onUploaded }: { b: MyBooking; today: string; expanded?: boolean; changed?: boolean; files: JobFile[]; updates: JobUpdate[]; onUploaded: () => Promise<void> | void }) {
   const [open, setOpen] = React.useState(expanded);
   const when = `${relativeDay(b.date, today)}${b.endDate ? ` – ${formatDayShort(b.endDate)}` : ""}`;
   return (
@@ -271,10 +272,39 @@ function BookingCard({ b, today, expanded = false, changed, files, onUploaded }:
             </p>
           ) : null}
           {b.job.contactName ? <p className="text-[14px] text-muted-foreground">Customer: {b.job.contactName}</p> : null}
+          <WorkerUpdates jobId={b.job.id} jobTitle={b.job.title} updates={updates} files={files} onSaved={onUploaded} />
           <JobFilesForWorker jobId={b.job.id} files={files} onUploaded={onUploaded} />
         </div>
       ) : null}
     </article>
+  );
+}
+
+/** "Add update" from site, and the latest few updates on the job. */
+function WorkerUpdates({ jobId, jobTitle, updates, files, onSaved }: { jobId: string; jobTitle: string; updates: JobUpdate[]; files: JobFile[]; onSaved: () => Promise<void> | void }) {
+  const [open, setOpen] = React.useState(false);
+  const recent = [...updates].sort((a, c) => c.createdAt.localeCompare(a.createdAt)).slice(0, 3);
+  return (
+    <div className="border-t border-line pt-3">
+      <Button className="h-13 w-full text-[16px]" onClick={() => setOpen(true)}>
+        <Camera /> Add update
+      </Button>
+      {recent.length ? (
+        <ul className="mt-3 space-y-2">
+          {recent.map((u) => {
+            const n = files.filter((f) => f.updateId === u.id).length;
+            return (
+              <li key={u.id} className="text-[14px]">
+                <span className="font-semibold">{formatDayShort(u.createdAt.slice(0, 10))}</span>
+                <span className="text-muted-foreground"> · {u.authorName}{u.stage ? ` · ${STAGE_LABEL[u.stage]}` : ""}{n ? ` · ${n} photo${n === 1 ? "" : "s"}` : ""}</span>
+                {u.note ? <span className="block text-foreground/90">{u.note}</span> : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      {open ? <AddUpdateDialog jobId={jobId} jobTitle={jobTitle} onClose={() => setOpen(false)} onSaved={onSaved} /> : null}
+    </div>
   );
 }
 

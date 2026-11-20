@@ -8,7 +8,7 @@
  */
 import type { DatabaseSync } from "node:sqlite";
 import { deflateSync } from "node:zlib";
-import type { Absence, FileCategory, Handover, JobFile } from "@/lib/types";
+import type { Absence, FileCategory, Handover, JobFile, JobUpdate, Variation } from "@/lib/types";
 import { DEFAULT_TIME_ZONE, addDays, dateKeyIn, weekStart } from "@/lib/dates";
 import { crc32 } from "@/server/zip";
 import type { TableName } from "./index";
@@ -169,7 +169,7 @@ export function seedFilesAndLeave(db: DatabaseSync, insert: InsertFn, orgId: str
     { key: "gr_c1", job: "gardenroom_lingfield", category: "completion", title: "Finished studio - inside", filename: "garden-room-inside.png", daysAgo: 30, by: "Liam Carter", description: "Cedar ceiling and oak floor finished.", data: () => roomPicture(3, 960, 720) },
     { key: "gr_c2", job: "gardenroom_lingfield", category: "completion", title: "Finished studio - desk wall", filename: "garden-room-desk.png", daysAgo: 30, by: "Liam Carter", data: () => roomPicture(1, 960, 720) },
     { key: "gr_cert", job: "gardenroom_lingfield", category: "other", title: "Electrical installation certificate", filename: "EIC - garden room.pdf", daysAgo: 29, by: "Ryan", description: "From Davies Electrical.", data: () => pdfDrawing("Electrical certificate (sample)", "-", site("gardenroom_lingfield") || "Lingfield", 0) },
-    { key: "gr_p1", job: "gardenroom_lingfield", category: "progress", title: "Base and frame", filename: "frame.png", daysAgo: 48, by: "Callum Price", description: "Internal progress photo — not for the customer pack.", data: () => roomPicture(2, 960, 720) },
+    { key: "gr_p1", job: "gardenroom_lingfield", category: "progress", title: "Base and frame", filename: "frame.png", daysAgo: 48, by: "Callum Price", description: "Timber frame up on the ground-screw base.", data: () => roomPicture(2, 960, 720) },
   ];
   const now = Date.now();
   const ids: Record<string, string> = {};
@@ -238,4 +238,50 @@ export function seedFilesAndLeave(db: DatabaseSync, insert: InsertFn, orgId: str
     { id: `${k}_abs_mark`, personId: pid("mark"), kind: "unavailable", startDate: addDays(mon, 3), endDate: addDays(mon, 4), status: "approved", requestedBy: "Mark Davies", decidedBy: "Mark Davies", decidedAt: nowIso, createdAt: nowIso, updatedAt: nowIso },
   ];
   for (const a of leave) if (people.has(a.personId)) insert(db, "absences", orgId, a);
+}
+
+
+/**
+ * Job updates, an extra portrait photo and an approved variation for the demo
+ * handover report: the finished garden room (a full report with costs) and the
+ * Oak staircase (a small one-page report). Runs once per sample workspace.
+ */
+export function seedUpdatesAndVariations(db: DatabaseSync, insert: InsertFn, orgId: string, k: string) {
+  const done = db.prepare("SELECT COUNT(*) AS n FROM job_updates WHERE org_id = ? AND client_ref LIKE 'seed:%'").get(orgId) as { n: number };
+  if (done.n > 0) return;
+  const job = (key: string) => `${k}_job_${key}`;
+  const exists = (id: string) => !!db.prepare("SELECT 1 FROM jobs WHERE org_id = ? AND id = ?").get(orgId, id);
+  const ago = (d: number) => new Date(Date.now() - d * 864e5).toISOString();
+  const addFile = (key: string, jobKey: string, category: FileCategory, title: string, filename: string, data: Buffer, days: number, by: string, w: number, h: number, description?: string) => {
+    const id = `${k}_fil_${key}`;
+    insert(db, "job_files", orgId, { id, jobId: job(jobKey), category, title, filename, mimeType: "image/png", bytes: data.length, description, groupId: id, visibility: "team", previewable: true, hasThumb: false, width: w, height: h, uploadedBy: by, createdAt: ago(days), clientRef: `seed:${key}` } as JobFile & { clientRef: string });
+    db.prepare("INSERT OR REPLACE INTO file_blobs (file_id, org_id, kind, data, created_at) VALUES (?, ?, 'original', ?, ?)").run(id, orgId, data, ago(days));
+    return id;
+  };
+  const addUpdate = (key: string, jobKey: string, days: number, by: string, note: string | undefined, stage: JobUpdate["stage"], fileIds: string[]) => {
+    const id = `${k}_upd_${key}`;
+    insert(db, "job_updates", orgId, { id, jobId: job(jobKey), note, stage, authorName: by, createdAt: ago(days), updatedAt: ago(days), clientRef: `seed:${key}` } as JobUpdate & { clientRef: string });
+    for (const f of fileIds) db.prepare("UPDATE job_files SET update_id = ? WHERE org_id = ? AND id = ?").run(id, orgId, f);
+  };
+
+  if (exists(job("gardenroom_lingfield"))) {
+    const before = addFile("gr_before", "gardenroom_lingfield", "progress", "Garden before work", "IMG_2201.png", roomPicture(5, 960, 720), 62, "Luke", 960, 720);
+    const door = addFile("gr_door", "gardenroom_lingfield", "completion", "", "IMG_2290.png", roomPicture(4, 720, 960), 31, "Liam Carter", 720, 960);
+    addUpdate("gr_1", "gardenroom_lingfield", 62, "Luke", "Site cleared at the end of the garden. Ground is level enough for a ground-screw base.", "before", [before]);
+    addUpdate("gr_2", "gardenroom_lingfield", 48, "Callum Price", "Ground screws in and the timber frame is up. Breather membrane on before the rain tomorrow.", "in_progress", [`${k}_fil_gr_p1`]);
+    addUpdate("gr_3", "gardenroom_lingfield", 38, "Liam Carter", "Cedar cladding finished on all four sides. Customer asked for a cedar step and small canopy over the door — agreed as a variation.", "in_progress", []);
+    addUpdate("gr_4", "gardenroom_lingfield", 31, "Liam Carter", "Finished: oak floor down, cedar ceiling oiled, sockets and lights tested by Davies Electrical. Step and canopy fitted.", "finished", [`${k}_fil_gr_c1`, `${k}_fil_gr_c2`, door]);
+    const v: Variation = { id: `${k}_var_gr_step`, jobId: job("gardenroom_lingfield"), description: "Cedar step and door canopy", amount: 650, amountsAre: "no_vat", status: "approved", approvedAt: ago(38), createdAt: ago(38), createdBy: "Luke" };
+    insert(db, "variations", orgId, v);
+    // The job was marked complete 30 days ago (so the report can show a recorded completion date).
+    db.prepare("INSERT INTO activity (id, org_id, at, actor, via, action, summary, entity_type, entity_id) VALUES (?, ?, ?, 'Luke', 'dashboard', 'job.status_changed', ?, 'job', ?)").run(`${k}_act_gr_done`, orgId, ago(30), "Claire Dawson's garden room moved to Completed", job("gardenroom_lingfield"));
+  }
+  if (exists(job("stairs_horley"))) {
+    const tread = addFile("st_tread", "stairs_horley", "completion", "Oak staircase with glass balustrade", "stairs.png", roomPicture(6, 720, 960), 3, "Ellie Ward", 720, 960);
+    addUpdate("st_1", "stairs_horley", 3, "Ellie Ward", "Squeaky third tread re-fixed and glued. Balustrade glass cleaned and checked.", "finished", [tread]);
+  }
+  if (exists(job("kitchen_crawley"))) {
+    addUpdate("kc_1", "kitchen_crawley", 4, "Liam Carter", "Old units stripped out, walls back to plaster. Ready for first fix.", "before", [`${k}_fil_kc_p1`]);
+    addUpdate("kc_2", "kitchen_crawley", 1, "Liam Carter", "Base units and island carcass fitted and levelled.", "in_progress", [`${k}_fil_kc_p2`]);
+  }
 }

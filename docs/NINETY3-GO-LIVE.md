@@ -59,11 +59,21 @@ Merge this branch to main ("push to main"), then in the Render dashboard:
 
 If an email is still blank, the log says `Luke (owner) is waiting for an email`. The workspace and Team records exist anyway. Add the email to the Secret File, save, and restart (**Manual Deploy → Restart service**) to get the link.
 
+## Opening the invite where a demo is already signed in
+
+If the browser or phone already has the demo open (for example in the meeting), the invite page says so: it shows the demo account that's signed in and the email the invite is for. **Sign in as Luke** signs the demo out and creates Luke's own login for the invited email only. Nothing from the demo is carried over, and the demo account never gets access to the live workspace. A used link can't be claimed again.
+
+## Checking Luke's membership
+
+- In Bob as Luke: Settings → Team lists Luke as **Owner** with his email; the sidebar shows the Ninety3 wordmark and there's no "Demo · sample data" strip.
+- In the Render log: once he has accepted, restarts print nothing new for him.
+- Activity log (Settings → Activity): "Luke accepted their invite and signed in as the owner".
+
 ## What Luke and Ryan do
 
 1. Open the link and choose a password (8+ characters).
 2. Click **Set up my login**.
-3. They land on the **Ninety3 Diary**. From then on they sign in at `/login` with their email and password.
+3. They land on **Ask Bob** in the Ninety3 workspace ("Good morning, Luke"). From then on they sign in at `/login` → **Sign in to your business** with their email and password, on any device. "Try the demo" on the same page is separate and only ever opens the fictional workspace.
 
 Each sees the other's changes on the Diary within about 20 seconds, or straight away when they switch back to the tab. Verified in a test workspace: see `scripts/e2e-live-workspace.cjs`.
 

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { BobLogo } from "@/components/brand/logo";
-import { ArrowRight, Check, FlaskConical, Hand, Keyboard, Loader2, LogIn, Mic, Users } from "lucide-react";
+import { Check, FlaskConical, Hand, Keyboard, Loader2, LogIn, Mic, Users } from "lucide-react";
 import { Orb } from "@/components/assistant/orb";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
@@ -65,7 +65,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
       <div className="relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-5 pb-8 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-8 lg:px-12 lg:pt-10">
         <header className="flex items-center justify-between">
           <BobLogo height={30} title="Bob" />
-          <span className="rounded-md bg-white/[0.06] px-2.5 py-1 text-[12.5px] font-medium text-white/70 ring-1 ring-white/10">Demo preview</span>
+          {demoPassword ? <span className="rounded-md bg-white/[0.06] px-2.5 py-1 text-[12.5px] font-medium text-white/70 ring-1 ring-white/10">Demo available</span> : null}
         </header>
 
         <div className="grid flex-1 grid-cols-1 items-center gap-10 py-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-16 lg:py-12">
@@ -94,45 +94,17 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
               ))}
             </div>
 
-            {primary && demoPassword ? (
-              <div className="mt-8">
-                <Button
-                  size="lg"
-                  className="h-14 w-full text-[17px] sm:w-auto sm:px-8"
-                  disabled={!!busy}
-                  onClick={() => void signIn(undefined, { email: primary.email, password: demoPassword })}
-                >
-                  {busy === primary.email ? (
-                    <>
-                      <Loader2 className="animate-spin" /> Opening the demo workspace…
-                    </>
-                  ) : (
-                    <>
-                      <ArrowRight /> Try the demo
-                    </>
-                  )}
-                </Button>
-                <span className="sr-only" aria-live="polite">
-                  {busy === primary.email ? "Opening the demo workspace" : ""}
-                </span>
-                <p className="mt-3 flex items-start gap-1.5 text-[14px] leading-snug text-white/60">
-                  <FlaskConical className="mt-0.5 size-4 shrink-0 text-sky-300/80" />
-                  Opens a fictional Ninety3 workspace. Sample customers only — nothing is ever sent to anyone.
-                </p>
-              </div>
-            ) : null}
-
             {error ? (
               <p role="alert" className="mt-4 max-w-md rounded-xl bg-red-500/10 px-4 py-3 text-[15px] leading-snug text-danger-fg ring-1 ring-red-400/30">
                 {error}
               </p>
             ) : null}
 
-            <div className="mt-8 space-y-2.5">
-              <details className="group panel px-4 py-3" open={!demoPassword}>
-                <summary className="cursor-pointer list-none text-[15px] font-medium text-white/85 marker:hidden">
+            <div className="mt-7 space-y-2.5">
+              <details className="group panel px-4 py-3" open>
+                <summary className="cursor-pointer list-none text-[16px] font-semibold text-white marker:hidden">
                   <span className="inline-flex items-center gap-2">
-                    <LogIn className="size-4 text-white/50" /> Sign in with an account
+                    <LogIn className="size-4 text-white/60" /> Sign in to your business
                   </span>
                 </summary>
                 <form onSubmit={signIn} className="mt-4 space-y-4" noValidate>
@@ -147,6 +119,35 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
                   </Button>
                 </form>
               </details>
+            {primary && demoPassword ? (
+              <div className="mt-5">
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="h-13 w-full text-[16px] sm:w-auto sm:px-6"
+                  disabled={!!busy}
+                  onClick={() => void signIn(undefined, { email: primary.email, password: demoPassword })}
+                >
+                  {busy === primary.email ? (
+                    <>
+                      <Loader2 className="animate-spin" /> Opening the demo workspace…
+                    </>
+                  ) : (
+                    <>
+                      <FlaskConical /> Try the demo (fictional data)
+                    </>
+                  )}
+                </Button>
+                <span className="sr-only" aria-live="polite">
+                  {busy === primary.email ? "Opening the demo workspace" : ""}
+                </span>
+                <p className="mt-3 flex items-start gap-1.5 text-[14px] leading-snug text-white/60">
+                  <FlaskConical className="mt-0.5 size-4 shrink-0 text-sky-300/80" />
+                  Opens a fictional Ninety3 workspace. Sample customers only — nothing is ever sent to anyone.
+                </p>
+              </div>
+            ) : null}
+
 
               {demo.length && demoPassword ? (
                 <details className="panel px-4 py-3">

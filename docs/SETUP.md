@@ -53,6 +53,18 @@ Each redirect URI is `$BOB_APP_URL/api/integrations/<provider>/callback`.
 - **Who sees what:** owners, admins and site team see all files. Invited workers see files marked "Shared with people booked" on jobs they're booked on (until a week after the booking ends) and can add photos/documents there, not drawings. Delete: owners/admins, or the uploader.
 - **Customer handover:** owners/admins tick specific files, preview, then Bob saves the selection and downloads a ZIP (originals + a branded `Start here - index.html`). The saved handover is frozen: files in it keep their bytes even if later deleted from the job. **Download only** — nothing is emailed or shared from Bob.
 
+## Job updates and the customer handover report
+
+- **Add update** (job Overview, Files & photos, and My work for crew): a short note and/or photos, an optional stage (Before / In progress / Finished), saved as one dated update with the author's name. Photos keep their original files and also appear in Files & photos (Finished photos are filed as Completion). Each photo uploads on its own with Retry; a retried save never makes a second update. Crew can add updates only on jobs they're booked on, and caption their own photos.
+- **Variations** (job → Money): description, amount, VAT treatment, status, and the invoice it was billed on (so it's never counted twice).
+- **Handover report** (job → Handover report, owners/admins): choose updates, photos, drawings/documents and whether to include costs → **Draft the report** → edit headings, paragraphs, bullets and captions, pick the cover photo, reorder and hide → **Preview PDF** (the exact file) → **Save version & download PDF**. Each export is a numbered version kept on the job ("Ninety3 - Garden Room - Handover v1.pdf"); later edits make v2. Versions can't be deleted and only owners/admins can download them. A version can go into the Handover pack, where it sits at the top as the overview.
+- **What the AI sees:** only the ticked updates, photo captions, document titles and completed tasks, plus the job title and description. Never internal notes, site access notes, entry codes, money or unticked files. It writes prose only; any sentence it returns with a £ amount is dropped. All figures come from Bob: agreed price, approved variations, invoiced to date (sent/paid invoices, VAT as recorded), payments received, left to pay, and "due on invoices" only for invoiced, unpaid amounts. Supplier costs, expenses and margins are never read. If there's no agreed price, the section can be left out or filled with figures typed in for this report (labelled as such; bookkeeping isn't changed).
+- **AI configuration:** set `ANTHROPIC_API_KEY` (and optionally `BOB_CLAUDE_MODEL`, default `claude-opus-5-5`). Without it, or if the request fails, Bob keeps the selections and opens an editable draft from the job details, updates and photos, and says so in the editor. "Rewrite this section" needs the key; without it the text is left unchanged.
+- **Branding:** the PDF uses the workspace's light wordmark (or logo), name, contact details and `brandColor` (falls back to the accent). Ninety3 uses `#7B2001`, sampled from its supplied logo. Other businesses set `brandColor` and `wordmark` in their workspace file.
+- **Photos in the PDF:** JPEG and PNG originals are embedded as uploaded (EXIF rotation respected; fitted, never stretched or cropped). HEIC and WebP use the thumbnail made on the phone; if there isn't one, the editor says the photo will be left out.
+- **Sending:** download only. Gmail/Outlook adapters exist but aren't connected or live-tested and don't support attachments, so there's no "Send to customer" yet.
+- **Dependency:** `pdfkit` (server-side, listed in `serverExternalPackages`).
+
 ## Leave and availability
 
 - Team → **Holidays** (also linked from the Diary). Employees request full or half days from My work; owners/admins approve, decline or record leave directly. Subcontractors add "Unavailable" dates, which apply straight away.
@@ -70,7 +82,9 @@ Each redirect URI is `$BOB_APP_URL/api/integrations/<provider>/callback`.
   supabase/migrations/0003_merchants_feeds.sql
   supabase/migrations/0004_admin_invites.sql
   supabase/migrations/0005_files_handover_leave.sql
+  supabase/migrations/0006_updates_variations_reports.sql
   ```
+  `0006` adds job updates, variations, handover reports and report versions (owners/admins only), and hides report PDFs from everyone else. Local SQLite is at schema version 5.
   `0005` adds job files (with drawing revisions), customer handovers, leave/availability (`absences`) and the `site_visit` enquiry stage, with RLS. Workers reach files only through `public.my_files(org)`. Tested on Postgres 16 with `supabase/tests/rls_files_test.sql` (run it after `rls_team_test.sql` in the same database).
   Local SQLite is at schema version 4 and upgrades on start-up: new tables `job_files`, `file_blobs`, `handovers`, `absences`; existing site photos are copied into Files & photos once (the old `photos` rows are kept). Sample workspaces get demo drawings, photos, a saved handover and leave once.
   `0004` lets invites grant the `office` (Admin) role.

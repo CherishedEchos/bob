@@ -50,6 +50,7 @@ interface WorkspaceSpec {
   tradeType?: string;
   logoUrl?: string;
   wordmark?: { onDark?: string; onLight?: string };
+  brandColor?: string;
   accent?: string;
   services?: string[];
   serviceArea?: string[];
@@ -110,6 +111,7 @@ export function provisionWorkspaces(db: DatabaseSync, file = process.env.BOB_WOR
           tradeType: w.tradeType ?? "Building & carpentry",
           logoUrl: w.logoUrl,
           wordmark: w.wordmark,
+          brandColor: w.brandColor,
           accent: w.accent ?? "#E4752F",
           services: w.services ?? [],
           serviceArea: w.serviceArea ?? [],

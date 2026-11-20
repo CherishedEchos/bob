@@ -58,6 +58,7 @@ export interface UploadFields {
   description?: string;
   revision?: string;
   replacesId?: string;
+  updateId?: string;
   visibility?: "team" | "office";
   clientRef: string;
 }

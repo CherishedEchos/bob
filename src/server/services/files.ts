@@ -23,6 +23,7 @@ import { getDb, scoped, tx } from "@/server/db";
 import { fail, ok, type Ctx, type Result } from "@/server/context";
 import { audit } from "./records";
 import { workerJobIds } from "./team";
+import { getUpdateForUpload } from "./updates";
 
 export const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MAX_THUMB_BYTES = 400 * 1024;
@@ -101,7 +102,9 @@ export function classify(filename: string, bytes: Buffer): { ok: true; kind: Kin
 
 /** Files this person can see (metadata only, newest first). */
 export function listFiles(ctx: Ctx, opts: { includeDeleted?: boolean } = {}): JobFile[] {
-  const rows = scoped(ctx).list<Row>("job_files", { where: opts.includeDeleted ? undefined : "deleted_at IS NULL", order: "created_at DESC" });
+  const all = scoped(ctx).list<Row>("job_files", { where: opts.includeDeleted ? undefined : "deleted_at IS NULL", order: "created_at DESC" });
+  // Exported handover reports can show money: owners and admins only.
+  const rows = isManager(ctx) ? all : all.filter((f) => !f.reportId);
   if (can(ctx.role, "records.read")) return rows.map(meta);
   if (!can(ctx.role, "mywork.read")) return [];
   const jobs = workerJobIds(ctx);
@@ -115,7 +118,7 @@ const meta = (r: Row): JobFile => {
 };
 
 function canSee(ctx: Ctx, f: Row): boolean {
-  if (f.deletedAt && !isManager(ctx)) return false;
+  if ((f.deletedAt || f.reportId) && !isManager(ctx)) return false;
   if (can(ctx.role, "records.read")) return true;
   if (!can(ctx.role, "mywork.read")) return false;
   return !!f.jobId && f.visibility === "team" && workerJobIds(ctx).has(f.jobId);
@@ -141,6 +144,7 @@ export interface UploadInput {
   description?: string;
   revision?: string;
   replacesId?: string;
+  updateId?: string;
   visibility?: string;
   clientRef?: string;
   width?: number;
@@ -175,6 +179,13 @@ export function uploadFile(ctx: Ctx, input: UploadInput): Result<JobFile & { exi
   else if (input.enquiryId && !worker) enquiry = db.get<Enquiry>("enquiries", input.enquiryId);
   if (!job && !enquiry) return fail("not_found", input.enquiryId ? "Enquiry not found" : "Job not found");
   if (worker && (!job || !workerJobIds(ctx).has(job.id))) return fail("not_found", "Job not found");
+
+  let updateId: string | undefined;
+  if (input.updateId) {
+    const u = getUpdateForUpload(ctx, input.updateId);
+    if (!u || !job || u.jobId !== job.id) return fail("not_found", "That job update wasn't found. Save the update again, then retry the photo.");
+    updateId = u.id;
+  }
 
   const filename = (clean(input.filename, 160) ?? "file").replace(/[\\/:*?"<>|]+/g, "-");
   if (!input.data.length) return fail("invalid", `${filename} is empty.`);
@@ -214,6 +225,7 @@ export function uploadFile(ctx: Ctx, input: UploadInput): Result<JobFile & { exi
     description,
     revision: clean(input.revision, 30),
     groupId: groupId ?? id,
+    updateId,
     visibility,
     previewable: kind.kind.previewable,
     hasThumb: !!thumb,
@@ -250,10 +262,12 @@ const sniffThumb = (b: Buffer) => startsWith(b, [0xff, 0xd8, 0xff]) || startsWit
 /* ------------------------------ Edit / delete ------------------------------ */
 
 export function updateFile(ctx: Ctx, id: string, patch: { title?: unknown; description?: unknown; category?: unknown; revision?: unknown; visibility?: unknown }): Result<JobFile> {
-  if (!can(ctx.role, "notes.write")) return fail("forbidden", "Your account can't edit files.");
   const db = scoped(ctx);
   const f = db.get<Row>("job_files", id);
-  if (!f || f.deletedAt) return fail("not_found", "File not found");
+  if (!f || f.deletedAt || !canSee(ctx, f)) return fail("not_found", "File not found");
+  // Crew can caption their own photos on jobs they're booked on.
+  if (!can(ctx.role, "notes.write") && !(can(ctx.role, "mywork.read") && f.uploadedByUserId === ctx.userId)) return fail("forbidden", "Your account can't edit files.");
+  if (f.reportId) return fail("conflict", "Issued handover reports can't be edited.");
   if (!isManager(ctx) && f.uploadedByUserId !== ctx.userId) return fail("forbidden", "Only the office or the person who added it can edit this file.");
   const s = (v: unknown, max: number) => (typeof v === "string" ? clean(v, max) ?? (null as unknown as undefined) : undefined);
   const next: Partial<Row> = {};
@@ -285,6 +299,7 @@ export function deleteFile(ctx: Ctx, id: string): Result<{ id: string; keptForHa
   const db = scoped(ctx);
   const f = db.get<Row>("job_files", id);
   if (!f || f.deletedAt || !canSee(ctx, f)) return fail("not_found", "File not found");
+  if (f.reportId) return fail("conflict", "Issued handover reports are kept so you can always retrieve the exact version sent.");
   const mine = f.uploadedByUserId === ctx.userId;
   if (!isManager(ctx) && !mine) return fail("forbidden", "Only an owner or admin, or the person who added it, can delete this file.");
   const kept = inHandover(ctx, id);

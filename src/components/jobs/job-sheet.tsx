@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FilesPanel } from "@/components/files/files-panel";
 import { HandoverPanel } from "@/components/files/handover-panel";
+import { AddUpdateButton, UpdatesTimeline } from "@/components/updates/updates-timeline";
+import { ReportTab } from "@/components/reports/report-tab";
+import { VariationsPanel } from "@/components/jobs/variations";
 
 import * as React from "react";
 import { PackageCheck } from "lucide-react";
@@ -78,7 +81,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
   const [editingNext, setEditingNext] = React.useState(false);
   const router = useRouter();
   const manager = user.role === "owner" || user.role === "office";
-  const allowed = (t?: JobTab): JobTab => (!t || (t === "money" && !money) || (t === "handover" && !manager) ? "overview" : t);
+  const allowed = (t?: JobTab): JobTab => (!t || (t === "money" && !money) || ((t === "handover" || t === "report") && !manager) ? "overview" : t);
   const [tab, setTabState] = React.useState<JobTab>(allowed(initialTab));
   React.useEffect(() => setTabState(allowed(initialTab)), [initialTab, id]); // eslint-disable-line react-hooks/exhaustive-deps
   const setTab = (t: JobTab) => {
@@ -93,7 +96,8 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
     { value: "tasks", label: "Tasks", count: data.tasks.filter((t) => !t.done && t.relatedType === "job" && t.relatedId === j.id).length },
     { value: "materials", label: "Materials", count: data.materials.filter((m) => m.jobId === j.id && m.status === "to_order").length },
     { value: "files", label: "Files & photos", count: fileCount },
-    ...(manager ? [{ value: "handover" as const, label: "Handover", count: data.handovers.filter((h) => h.jobId === id).length }] : []),
+    ...(manager ? [{ value: "report" as const, label: "Handover report", count: data.reportVersions.filter((v) => v.jobId === id).length }] : []),
+    ...(manager ? [{ value: "handover" as const, label: "Handover pack", count: data.handovers.filter((h) => h.jobId === id).length }] : []),
     ...(money ? [{ value: "money" as const, label: "Money" }] : []),
   ];
   const activity = jobActivity(data, j.id);
@@ -140,8 +144,8 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
   // One clear primary action: finished jobs go to handover; otherwise schedule or edit the next booking.
   const primary =
     (j.status === "completed" || j.status === "snagging") && manager ? (
-      <Button className="w-full sm:w-auto" onClick={() => setTab("handover")}>
-        <PackageCheck /> Customer handover
+      <Button className="w-full sm:w-auto" onClick={() => setTab("report")}>
+        <PackageCheck /> {data.reports.some((r) => r.jobId === j.id) ? "Handover report" : "Create handover report"}
       </Button>
     ) : j.status === "completed" || j.status === "lost" ? null : can("schedule.manage") ? (
       nextBooking ? (
@@ -290,6 +294,14 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
               )}
             </section>
 
+            <section className="panel px-5 py-4 sm:px-6" aria-labelledby={`upd-${j.id}`}>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 id={`upd-${j.id}`} className="t-eyebrow">Updates from site</h2>
+                <AddUpdateButton job={j} />
+              </div>
+              <UpdatesTimeline job={j} limit={4} />
+            </section>
+
             <section className="panel px-5 py-4 sm:px-6" aria-labelledby={`desc-${j.id}`}>
               <h2 id={`desc-${j.id}`} className="t-eyebrow">
                 About the job
@@ -382,7 +394,16 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
 
       {tab === "files" ? (
         <div className="panel px-4 py-4 sm:px-6 sm:py-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-line pb-4">
+            <p className="text-[14.5px] text-muted-foreground">On site? Add photos with a line about what&apos;s been done — they&apos;re kept together as a dated update.</p>
+            <AddUpdateButton job={j} />
+          </div>
           <FilesPanel jobId={j.id} />
+        </div>
+      ) : null}
+      {tab === "report" ? (
+        <div className="panel px-4 py-4 sm:px-6 sm:py-5">
+          <ReportTab job={j} />
         </div>
       ) : null}
       {tab === "handover" ? (
@@ -396,6 +417,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
 
       {tab === "money" && money ? (
         <div className="panel overflow-hidden">
+          <VariationsPanel job={j} />
           <div className="px-5 pb-5 sm:px-6">
         {money ? (
           <section aria-labelledby={`pay-${j.id}`} className="mt-3 rounded-2xl bg-card px-4 py-3.5 ring-1 ring-line">

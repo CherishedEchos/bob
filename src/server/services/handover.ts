@@ -66,8 +66,9 @@ export function createHandover(ctx: Ctx, input: { jobId?: unknown; fileIds?: unk
   const total = files.reduce((s, f) => s + f.bytes, 0);
   if (total > MAX_HANDOVER_BYTES) return fail("invalid", "Those files add up to more than 1 GB. Split them into two handovers.");
   const order: FileCategory[] = ["drawing", "completion", "progress", "other"];
-  files.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || a.createdAt.localeCompare(b.createdAt));
-  const paths = zipPaths(files);
+  // An exported handover report goes first, as the overview of the pack.
+  files.sort((a, b) => Number(!!b.reportId) - Number(!!a.reportId) || order.indexOf(a.category) - order.indexOf(b.category) || a.createdAt.localeCompare(b.createdAt));
+  const paths = zipPaths(files).map((p, i) => ((files[i] as JobFile & { reportId?: string }).reportId ? safeName(files[i].filename) : p));
   const items: HandoverItem[] = files.map((f, i) => ({
     fileId: f.id, zipPath: paths[i], title: f.title ?? f.filename, filename: f.filename, category: f.category,
     description: f.description, revision: f.revision, bytes: f.bytes, mimeType: f.mimeType,

@@ -12,7 +12,16 @@ import { BobLogo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 
-type Info = { state: "pending" | "accepted" | "expired" | "revoked" | "invalid" | "not_invited"; businessName?: string; personName?: string; email?: string; hasAccount?: boolean; owner?: boolean; role?: "owner" | "office" | "staff" | "worker" };
+type Info = {
+  state: "pending" | "accepted" | "expired" | "revoked" | "invalid" | "not_invited";
+  businessName?: string;
+  personName?: string;
+  email?: string;
+  hasAccount?: boolean;
+  owner?: boolean;
+  role?: "owner" | "office" | "staff" | "worker";
+  signedInAs?: { name: string; email: string; businessName: string; demo: boolean; isInvitee: boolean };
+};
 
 const DEAD: Record<string, [string, string]> = {
   accepted: ["This invite has already been used", "If it was you, sign in with the email it was sent to."],
@@ -84,6 +93,22 @@ export default function InvitePage() {
                     : `${info.businessName} has invited you to see your jobs in Bob — when and where you're booked, directions and instructions.`}
               </p>
             </div>
+            {info.signedInAs && !info.signedInAs.isInvitee ? (
+              <div role="note" className="rounded-xl bg-amber-500/10 p-3 text-[14.5px] ring-1 ring-amber-500/30">
+                <p className="font-semibold text-warn-fg">This browser is signed in as someone else</p>
+                <p className="mt-1">
+                  {info.signedInAs.demo ? (
+                    <>Signed in to the <strong>demo</strong> (fictional data) as {info.signedInAs.name} ({info.signedInAs.email}).</>
+                  ) : (
+                    <>Signed in as <strong>{info.signedInAs.name}</strong> ({info.signedInAs.email}) at {info.signedInAs.businessName}.</>
+                  )}{" "}
+                  This invite is for <strong>{info.email}</strong>.
+                </p>
+                <p className="mt-1 text-muted-foreground">Continuing signs that session out and sets up {info.personName ? `${info.personName.split(" ")[0]}'s` : "their"} own login. Nothing from the {info.signedInAs.demo ? "demo" : "other session"} is carried over.</p>
+              </div>
+            ) : info.signedInAs?.isInvitee ? (
+              <p role="note" className="rounded-xl bg-surface-2 p-3 text-[14.5px]">You&apos;re already signed in as {info.signedInAs.email}. Enter your password to add {info.businessName} to your login.</p>
+            ) : null}
             <Field label="Email" htmlFor="inv-email" hint="The invite only works for this email.">
               <Input id="inv-email" value={info.email ?? ""} readOnly autoComplete="username" className="bg-message" />
             </Field>
@@ -96,7 +121,7 @@ export default function InvitePage() {
               </p>
             ) : null}
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? <Loader2 className="animate-spin" /> : <ArrowRight />} {busy ? "Setting up…" : info.owner || info.role === "office" ? "Set up my login" : "Accept and see my work"}
+              {busy ? <Loader2 className="animate-spin" /> : <ArrowRight />} {busy ? "Setting up…" : info.signedInAs && !info.signedInAs.isInvitee ? `Sign in as ${info.personName?.split(" ")[0] ?? "the invited person"}` : info.owner || info.role === "office" ? "Set up my login" : "Accept and see my work"}
             </Button>
           </form>
         ) : null}

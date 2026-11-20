@@ -12,12 +12,15 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   devIndicators: false,
+  // pdfkit reads its font metric files from node_modules at runtime.
+  serverExternalPackages: ["pdfkit"],
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
       // The app itself must never be framed (clickjacking)…
-      { source: "/((?!f/|api/files/).*)", headers: [{ key: "X-Frame-Options", value: "DENY" }, { key: "Content-Security-Policy", value: "frame-ancestors 'none'" }] },
+      { source: "/((?!f/|api/files/|api/handover-reports/).*)", headers: [{ key: "X-Frame-Options", value: "DENY" }, { key: "Content-Security-Policy", value: "frame-ancestors 'none'" }] },
       // Private job files can be previewed (PDF viewer) inside Bob's own pages only.
+      { source: "/api/handover-reports/:path*", headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }, { key: "Content-Security-Policy", value: "frame-ancestors 'self'" }] },
       { source: "/api/files/:path*", headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }, { key: "Content-Security-Policy", value: "frame-ancestors 'self'" }] },
       // …except the public enquiry form, which businesses embed on their own websites.
       { source: "/f/:path*", headers: [{ key: "Content-Security-Policy", value: "frame-ancestors *" }] },

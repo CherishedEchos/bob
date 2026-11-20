@@ -15,6 +15,9 @@ import { listMyFeeds } from "./calendar";
 import { listFiles } from "./files";
 import { listHandovers } from "./handover";
 import { listAbsences } from "./absences";
+import { listUpdates } from "./updates";
+import { listVariations } from "./variations";
+import { listReportVersions, listReports } from "./handover-reports";
 import { HttpError } from "@/server/context";
 
 /**
@@ -50,6 +53,10 @@ export function buildSnapshot(ctx: Ctx): Snapshot {
     files: listFiles(ctx),
     handovers: listHandovers(ctx),
     absences: listAbsences(ctx),
+    updates: listUpdates(ctx),
+    variations: listVariations(ctx),
+    reports: listReports(ctx),
+    reportVersions: listReportVersions(ctx),
     activity: can(ctx.role, "activity.read") ? scoped(ctx).list("activity", { order: "at DESC", limit: 150 }) : [],
     connections: listConnections(ctx),
     mode: { database: "local-sqlite", aiEngine: activeEngine() },

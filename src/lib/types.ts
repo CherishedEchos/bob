@@ -27,6 +27,8 @@ export interface OrgConfig {
   logoUrl?: string;
   /** Full wordmark: onDark (white, for the sidebar and Ask Bob) and onLight (for customer documents). */
   wordmark?: { onDark?: string; onLight?: string };
+  /** Restrained colour for customer documents (headings, rules). Falls back to the accent. */
+  brandColor?: string;
   /** Brand accent (hex). Ninety3 uses the copper/orange from the brand kit. */
   accent: string;
   services: string[];
@@ -461,6 +463,122 @@ export interface JobFile {
   uploadedByUserId?: ID;
   createdAt: string;
   deletedAt?: string;
+  /** The job update this photo belongs to, if any. */
+  updateId?: ID;
+  /** Set on an exported handover report PDF (owners/admins only). */
+  reportId?: ID;
+}
+
+export type UpdateStage = "before" | "in_progress" | "finished";
+
+/** A dated update on a job: a short note and/or photos (the photos are JobFiles with updateId). */
+export interface JobUpdate {
+  id: ID;
+  jobId: ID;
+  note?: string;
+  stage?: UpdateStage;
+  authorName: string;
+  authorUserId?: ID;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A change to the agreed work and price. Customer-facing; internal costs never live here. */
+export interface Variation {
+  id: ID;
+  jobId: ID;
+  description: string;
+  amount: number;
+  amountsAre: VatTreatment;
+  status: "proposed" | "approved" | "declined";
+  /** Set when this variation has been billed on an invoice (so it's not counted twice). */
+  invoiceId?: ID;
+  approvedAt?: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+/* ------------------------------ Handover report ------------------------------ */
+
+export interface ReportSection {
+  id: string;
+  kind: "text" | "bullets" | "photos" | "costs";
+  heading: string;
+  body?: string;
+  items?: string[];
+  hidden?: boolean;
+}
+
+export interface ReportPhoto {
+  fileId: ID;
+  caption: string;
+  include: boolean;
+}
+
+/** A figure typed in for the report only (never touches invoices or payments). */
+export interface ReportManualFigure {
+  label: string;
+  amount: number;
+}
+
+export interface ReportSelection {
+  updateIds: ID[];
+  photoIds: ID[];
+  /** Drawings, certificates and other documents the narrative may mention. */
+  fileIds: ID[];
+  includeCosts: boolean;
+}
+
+export interface ReportContent {
+  title: string;
+  customerName: string;
+  siteAddress?: string;
+  completionDate?: string;
+  coverFileId?: ID;
+  sections: ReportSection[];
+  photos: ReportPhoto[];
+  /** Cost section source: figures from Bob's records, or figures typed in for this report. */
+  costMode: "records" | "manual";
+  manualFigures: ReportManualFigure[];
+  /** Editor-only notes ("No caption — add one?"). Never printed. */
+  prompts: { target: string; text: string }[];
+}
+
+export interface HandoverReport {
+  id: ID;
+  jobId: ID;
+  selection: ReportSelection;
+  content: ReportContent;
+  /** Increments on every save; a save based on an older revision is refused (protects the other person's edits). */
+  revision: number;
+  aiStatus: "none" | "drafted" | "fallback";
+  aiNote?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string;
+  updatedAt: string;
+}
+
+/** An exported PDF. The bytes are a JobFile (reportId set), so the exact issued document can be retrieved. */
+export interface ReportVersion {
+  id: ID;
+  reportId: ID;
+  jobId: ID;
+  version: number;
+  fileId: ID;
+  filename: string;
+  pages: number;
+  createdBy: string;
+  createdAt: string;
+}
+
+/** A line of the customer cost summary. Amounts come only from Bob's records (or labelled report figures). */
+export interface CostLine {
+  key: string;
+  label: string;
+  amount: number;
+  note?: string;
+  strong?: boolean;
 }
 
 export interface HandoverItem {
@@ -543,6 +661,10 @@ export interface Snapshot {
   files: JobFile[];
   handovers: Handover[];
   absences: Absence[];
+  updates: JobUpdate[];
+  variations: Variation[];
+  reports: HandoverReport[];
+  reportVersions: ReportVersion[];
   activity: ActivityEntry[];
   connections: Connection[];
   mode: ModeInfo;
