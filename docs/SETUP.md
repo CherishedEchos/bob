@@ -142,3 +142,11 @@ Typed and spoken messages go through the same handler (`/api/bob/message` → `h
 Without a key, the built-in engine handles the same invoice conversation. Set **Settings → VAT status** and **payment terms** so Bob doesn't need to ask about VAT and due dates on each invoice.
 
 Test: `npx vitest run tests/invoice-chat.test.ts` (conversations, plus a simulated Claude client) and `node scripts/e2e-ask-bob-invoice.cjs` (the real UI on a throwaway database).
+
+### What Ask Bob can look up (Claude engine)
+
+Claude reads the workspace through server-side tools, one question at a time — never a whole-database dump: diary bookings (`get_schedule`), availability (`get_team_availability`), holidays (`list_holidays`), the team (`list_team`), materials (`list_materials`), merchants with what's waiting to order (`list_merchants`, contact details only — account numbers, password-manager links and merchant notes are never sent), a full job profile (`get_job_profile`: crew, bookings, materials, tasks, updates, variations, money, handover status), jobs by stage including ready to invoice (`list_jobs`), quotes, enquiries to quote, tasks with assignees, site updates, handover reports, the morning briefing and someone's priorities (`get_person_priorities`). Every tool runs with the signed-in user's role: money tools aren't offered to site accounts, and leave reasons are never included. Bob remembers the job, customer and person being discussed for follow-ups.
+
+Voice requests get a short spoken first sentence; extra detail is shown on screen. At most two record cards appear under an answer.
+
+**Is Claude really answering?** Settings → Bob → AI connection shows how many answers came from Claude and how many fell back to the built-in assistant since the server started, the last error, and a **Test connection** button that makes a tiny live request. A fallback is also labelled under the reply ("…so Bob's built-in assistant answered this one").

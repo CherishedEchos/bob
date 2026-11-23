@@ -334,6 +334,50 @@ function FinanceSection({ org, owner, save }: { org: OrgConfig; owner: boolean; 
   );
 }
 
+/** Shows whether Claude has been answering (or Bob fell back), and runs a tiny live test. */
+function AiCheck() {
+  const [status, setStatus] = React.useState<{ model?: string; health?: { ok: number; failed: number; lastOkAt?: string; lastErrorAt?: string; lastError?: string; lastModel?: string } } | null>(null);
+  const [test, setTest] = React.useState<{ ok: boolean; model?: string; ms?: number; error?: string } | null>(null);
+  const [busy, setBusy] = React.useState(false);
+  const load = React.useCallback(() => {
+    void fetch("/api/bob/ai-status").then(async (r) => (r.ok ? setStatus(await r.json()) : null));
+  }, []);
+  React.useEffect(load, [load]);
+  const h = status?.health;
+  const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—");
+  return (
+    <div className="rounded-xl bg-surface-2 px-3.5 py-3 text-[13.5px] ring-1 ring-line">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-medium text-heading">AI connection</span>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            const r = await fetch("/api/bob/ai-status", { method: "POST" });
+            setTest(await r.json().catch(() => ({ ok: false, error: "No response" })));
+            setBusy(false);
+            load();
+          }}
+        >
+          {busy ? "Testing…" : "Test connection"}
+        </Button>
+      </div>
+      <p className="mt-1.5 text-subtle">
+        Model {h?.lastModel ?? status?.model ?? "—"} · since the server started: {h?.ok ?? 0} answered by Claude, {h?.failed ?? 0} fell back to the built-in assistant.
+        {h?.lastOkAt ? ` Last Claude answer ${when(h.lastOkAt)}.` : ""}
+      </p>
+      {h?.lastError ? (
+        <p className="mt-1 text-danger-fg">
+          Last problem ({when(h.lastErrorAt)}): {h.lastError}
+        </p>
+      ) : null}
+      {test ? <p className={cn("mt-1 font-medium", test.ok ? "text-good-fg" : "text-danger-fg")}>{test.ok ? `Connected — ${test.model} replied in ${test.ms} ms.` : `Test failed: ${test.error}`}</p> : null}
+    </div>
+  );
+}
+
 function BobSection({ org, owner, save }: { org: OrgConfig; owner: boolean; save: (p: Record<string, unknown>) => Promise<void> }) {
   const { data } = useStore();
   const [signOff, setSignOff] = React.useState(org.assistant.signOff);
@@ -347,6 +391,7 @@ function BobSection({ org, owner, save }: { org: OrgConfig; owner: boolean; save
     <Section icon={Bot} title="Bob" subtitle="How your assistant behaves.">
       <div className="mb-4 space-y-2 text-[14.5px]">
         <StatusLine ok={data.mode.aiEngine === "claude"} label="Understanding" value={data.mode.aiEngine === "claude" ? "Claude AI (live)" : "Demo rules engine — set ANTHROPIC_API_KEY on the server for full AI"} />
+        {data.mode.aiEngine === "claude" && (data.user.role === "owner" || data.user.role === "office") ? <AiCheck /> : null}
         <StatusLine ok={!!voice} label="Voice" value={voice === null ? "Checking…" : voice ? "Browser speech recognition available on this device" : "Not available in this browser — typing works the same"} />
         <StatusLine ok={false} label="Database" value="Local demo database (SQLite). Supabase is set up in code but not connected." />
       </div>

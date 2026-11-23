@@ -31,6 +31,7 @@ import * as Rep from "@/server/services/reports";
 import { getAccountingProvider, getEmailProvider } from "@/server/integrations/registry";
 import { detectInjection, wrapUntrusted } from "@/server/integrations/safety";
 import { resolveJobs } from "./resolve";
+import { workspaceReadTools } from "./tools-workspace";
 
 /* --------------------------------- Types --------------------------------- */
 
@@ -1241,7 +1242,7 @@ const actionTools: ActionTool<any, any>[] = [
   createFollowUp, addNote, createJob, updateJob, addJobExpense, sendEmail, saveEmailDraft, createQuote, createInvoice, sendInvoice, recordPayment, markReplied, setEnquiryStatus,
 ];
 
-export const TOOLS: Record<string, AnyTool> = Object.fromEntries([...readTools, ...actionTools].map((t) => [t.name, t]));
+export const TOOLS: Record<string, AnyTool> = Object.fromEntries([...readTools, ...workspaceReadTools, ...actionTools].map((t) => [t.name, t]));
 
 export function getTool(name: string): AnyTool | undefined {
   return TOOLS[name];

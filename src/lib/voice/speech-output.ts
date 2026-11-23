@@ -292,6 +292,9 @@ export function spokenSummary(replies: BobMessage[], request?: string): string {
     if (action.status === "executed" && action.resultMessage) return shorten(action.resultMessage);
     if (action.error) return shorten(action.error);
   }
+  // Claude puts the spoken answer in the first paragraph and on-screen detail after a blank line.
+  const first = assistant.find((m) => m.text)?.text ?? "";
+  if (assistant.some((m) => m.engine === "claude") && /\n\s*\n/.test(first)) return shorten(first.split(/\n\s*\n/)[0]);
   const text = assistant.map((m) => m.text).filter(Boolean).join(" ");
   // The briefing is meant to be heard in full (it's already kept under the voice limit).
   if (request && /\bbriefing\b|\bread me my day\b|\bbrief me\b/i.test(request)) return shorten(text, 600);

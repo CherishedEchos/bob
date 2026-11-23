@@ -35,6 +35,13 @@ describe("Ask Bob home examples", () => {
     await c.approve();
     expect(listMaterials(ctx).some((m) => m.item === "plasterboard" && m.quantity === "20" && m.unit === "sheets" && m.status === "to_order")).toBe(true);
   });
+  it("built-in fallback: availability, merchants, ready to invoice, outstanding on a job, someone's priorities", async () => {
+    expect(await ask("Who is available next Thursday?")).toMatch(/^Free |^Nobody is completely free/);
+    expect(await ask("Which merchants do I need to contact?")).toMatch(/merchants? to contact: .*Sussex Builders Merchants/);
+    expect(await ask("Which jobs are ready to invoice?")).toMatch(/ready to invoice: .*Mark Smith's oak staircase — £4,340/);
+    expect(await ask("What is outstanding on the Patels' kitchen?")).toMatch(/^On The Patels' kitchen renovation: .*£7,500 left to pay — £4,000 on invoices already sent and £3,500 not yet invoiced/);
+    expect(await ask("What should Ryan prioritise today?")).toMatch(/office list/);
+  });
   it("money questions stay private for a site account", async () => {
     expect(await ask("How much money are we owed?", N93_STAFF)).not.toMatch(/£\d/);
   });

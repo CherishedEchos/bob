@@ -9,7 +9,7 @@ import { uid } from "@/lib/utils";
 import { getDb } from "@/server/db";
 import type { Ctx } from "@/server/context";
 import { getActionView } from "./actions";
-import { claudeConfigured, claudeTurn } from "./claude";
+import { claudeConfigured, claudeTurn, noteClaudeFailure } from "./claude";
 import { rulesTurn, type BobState, type Reply } from "./rules";
 import { BRIEFING_REQUEST } from "./briefing";
 import { isBatchReplyRequest } from "@/server/services/batch-replies";
@@ -99,17 +99,21 @@ export async function handleTurn(ctx: Ctx, input: { conversationId?: string; tex
   // The briefing and batch replies are built only from records (and batch
   // replies go to a review screen), so they're the same whichever engine is on.
   // Schedule and order-list questions are answered from Bob's own records by the rules engine.
-  let engine = BRIEFING_REQUEST.test(input.text) || isBatchReplyRequest(input.text) || WHO_IS_ON.test(input.text) || NEEDS_ORDERING.test(input.text) ? "rules" : activeEngine();
+  // Batch replies open a review screen, so they always use the built-in flow. With Claude on, everything
+  // else (briefing, schedule, materials…) goes to Claude, which has tools for each of those records.
+  let engine = isBatchReplyRequest(input.text) || (activeEngine() !== "claude" && (BRIEFING_REQUEST.test(input.text) || WHO_IS_ON.test(input.text) || NEEDS_ORDERING.test(input.text))) ? "rules" : activeEngine();
   let out: { replies: Reply[]; state: BobState; changed: boolean };
   let fallbackNote: string | undefined;
   try {
-    out = engine === "claude" ? await claudeTurn(bobCtx, input.text, history, state, conv.id) : await rulesTurn(bobCtx, input.text, state, conv.id);
+    out = engine === "claude" ? await claudeTurn(bobCtx, input.text, history, state, conv.id, input.via) : await rulesTurn(bobCtx, input.text, state, conv.id);
   } catch (e) {
     if (engine === "claude") {
       // LLM unavailable → fall back to the deterministic engine rather than failing.
-      console.error("Claude engine failed, falling back to rules:", e instanceof Error ? e.message : e);
+      console.error("Claude engine failed, falling back to rules:", e instanceof Error ? `${e.name}: ${e.message}` : e);
+      noteClaudeFailure(e);
       engine = "rules";
-      fallbackNote = "The AI service didn't respond in time, so Bob's built-in assistant answered this one.";
+      const timeout = /timeout|timed out/i.test(e instanceof Error ? `${e.name} ${e.message}` : String(e));
+      fallbackNote = timeout ? "The AI service didn't respond in time, so Bob's built-in assistant answered this one." : "The AI service wasn't available just now, so Bob's built-in assistant answered this one.";
       out = await rulesTurn(bobCtx, input.text, state, conv.id);
     } else throw e;
   }

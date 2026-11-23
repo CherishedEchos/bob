@@ -27,7 +27,7 @@ import { invoiceFollowUp, isInvoiceRequest, runInvoice, startInvoice, type Invoi
 import { requestAction } from "./actions";
 import { runReadTool } from "./tools";
 import { NEEDS_ORDERING, WHO_IS_ON, needsOrdering, whoIsOn } from "./schedule-answers";
-import { HANDOVER_REQUEST, NEEDS_QUOTING, ON_HOLIDAY, handoverHelp, needsQuoting, onHoliday } from "./extra-answers";
+import { HANDOVER_REQUEST, OUTSTANDING_ON, jobOutstanding, MERCHANTS_TO_CONTACT, NEEDS_QUOTING, ON_HOLIDAY, PRIORITISE, READY_TO_INVOICE, WHO_IS_AVAILABLE, handoverHelp, merchantsToContact, needsQuoting, onHoliday, personPriorities, readyToInvoice, whoIsAvailable } from "./extra-answers";
 import { mentionScore, resolveCustomers, resolveEnquiries, resolveJobs } from "./resolve";
 import {
   cleanUtterance, detectMethod, findAmounts, isAffirmative, parseDeposit, parseDueDate,
@@ -70,7 +70,7 @@ export interface BobState {
   choice?: { kind: "customer" | "job" | "enquiry"; options: { id: string; label: string }[]; flow: Flow };
   lastFlow?: Flow;
   lastActionId?: string;
-  focus?: { customerId?: string; jobId?: string; enquiryId?: string };
+  focus?: { customerId?: string; customerName?: string; jobId?: string; enquiryId?: string; personName?: string };
   /** The invoice being worked on in this conversation (draft id, VAT/terms answers). */
   invoice?: InvoiceMemory;
   /** The last list of enquiries Bob showed, for "reply to all of them". */
@@ -328,6 +328,21 @@ async function route(t: Turn, text: string, lower: string) {
     const a = whoIsOn(t.ctx, lower);
     return say(t, a.text, a.chips ? { chips: a.chips } : undefined);
   }
+  const sayA = (a: { text: string; chips?: Chip[] }) => say(t, a.text, a.chips ? { chips: a.chips } : undefined);
+  if (OUTSTANDING_ON.test(lower)) {
+    const r = resolveJobs(t.ctx, text, { includeClosed: true });
+    if (r.jobs.length === 1) {
+      t.state.focus = { ...t.state.focus, jobId: r.jobs[0].id, customerId: r.jobs[0].customerId, customerName: r.jobs[0].customerName };
+      return sayA(jobOutstanding(t.ctx, r.jobs[0].id));
+    }
+    if (!r.jobs.length && t.state.focus?.jobId && /\b(it|that|this)\b/.test(lower)) return sayA(jobOutstanding(t.ctx, t.state.focus.jobId));
+    return runFlow(t, { type: "job_lookup", text });
+  }
+  if (WHO_IS_AVAILABLE.test(lower)) return sayA(whoIsAvailable(t.ctx, lower));
+  if (READY_TO_INVOICE.test(lower)) return sayA(readyToInvoice(t.ctx));
+  if (MERCHANTS_TO_CONTACT.test(lower)) return sayA(merchantsToContact(t.ctx));
+  const prio = lower.match(PRIORITISE);
+  if (prio && !["i", "we"].includes(prio[1])) return sayA(personPriorities(t.ctx, prio[1]));
   if (ON_HOLIDAY.test(lower) && !/\b(job|site)\b/.test(lower)) {
     const a = onHoliday(t.ctx, lower);
     return say(t, a.text, a.chips ? { chips: a.chips } : undefined);
