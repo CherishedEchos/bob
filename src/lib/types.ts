@@ -40,7 +40,7 @@ export interface OrgConfig {
    * Finance settings. `null` means "not configured" — Bob will ask rather than
    * guess (e.g. VAT treatment, payment terms).
    */
-  finance: { vatRegistered: boolean | null; vatRate: number | null; defaultPaymentTermsDays: number | null };
+  finance: { vatRegistered: boolean | null; vatRate: number | null; defaultPaymentTermsDays: number | null; /** How job prices and amounts are quoted when VAT registered. */ pricesAre?: "exclusive" | "inclusive" | null };
   /** "sample" = fictional records, nothing is sent anywhere. */
   dataMode: "sample" | "live";
   /** True for the fictional prospect-demo organisation. */
@@ -258,6 +258,8 @@ export interface Task {
   assignedUserId?: ID;
   /** A team member or subcontractor from Team (they may not have a login). */
   assignedPersonId?: ID;
+  /** Unset means normal. */
+  priority?: "high" | "normal" | "low";
   createdAt: string;
   createdBy: string;
   completedAt?: string;

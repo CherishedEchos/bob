@@ -1,4 +1,5 @@
 import "server-only";
+import { friendlyError } from "./friendly";
 /**
  * The action engine: the ONLY path by which Bob (or the dashboard's approval
  * dialogs) can execute an action tool.
@@ -135,7 +136,10 @@ export async function requestAction(
     return { kind: "forbidden", message: "Your account doesn't have permission to do that. Ask the account owner if you need it." };
   }
   const parsed = tool.schema.safeParse(rawArgs);
-  if (!parsed.success) return { kind: "invalid", message: parsed.error.issues[0]?.message ?? "Some details are missing." };
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { kind: "invalid", message: friendlyError(issue ? `${issue.path.join(".")} ${issue.message}` : undefined, "I'm missing a detail for that — could you say it again with a bit more?") };
+  }
   const prepared = await tool.prepare(ctx, parsed.data);
   if (!prepared.ok) return { kind: prepared.code, message: prepared.message };
 
@@ -165,7 +169,8 @@ export async function requestAction(
     opts.origin,
     toolName,
     prepared.value.category ?? tool.category,
-    JSON.stringify(prepared.value.payload),
+    // The validated request, so approval re-checks it against the records as they are then.
+    JSON.stringify(parsed.data),
     JSON.stringify(toStoredView(prepared.value, tool)),
     `${id}-${uid("k")}`,
     payloadHash,
@@ -178,6 +183,27 @@ export async function requestAction(
     return { kind: "action", view, ranImmediately: true };
   }
   return { kind: "action", view: getActionView(ctx, id)!, ranImmediately: false };
+}
+
+/**
+ * After an approved change, the conversation remembers it, so follow-ups work:
+ * "make that seven-fifty" amends the draft just saved; "that job" / "her" mean the record just changed.
+ */
+function rememberInConversation(ctx: Ctx, row: ActionRow, links?: ActionView["links"]) {
+  if (!row.conversation_id) return;
+  const db = getDb();
+  const conv = db.prepare("SELECT state FROM conversations WHERE id = ? AND org_id = ?").get(row.conversation_id, ctx.orgId) as { state: string } | undefined;
+  if (!conv) return;
+  const state = JSON.parse(conv.state || "{}") as { focus?: Record<string, string | undefined>; invoice?: { draftInvoiceId?: string } };
+  const args = JSON.parse(row.args) as Record<string, unknown>;
+  const inv = links?.find((l) => l.kind === "invoice");
+  if (row.tool === "save_invoice_draft" && inv) state.invoice = { ...state.invoice, draftInvoiceId: inv.id };
+  const jobId = typeof args.jobId === "string" ? args.jobId : links?.find((l) => l.kind === "job")?.id;
+  const customerId = typeof args.customerId === "string" ? args.customerId : undefined;
+  if (jobId || customerId) state.focus = { ...state.focus, ...(jobId ? { jobId } : {}), ...(customerId ? { customerId } : {}) };
+  const who = (typeof args.person === "string" && args.person) || (Array.isArray(args.people) && typeof args.people[0] === "string" && args.people[0]) || undefined;
+  if (who) state.focus = { ...state.focus, personName: who };
+  db.prepare("UPDATE conversations SET state = ? WHERE id = ? AND org_id = ?").run(JSON.stringify(state), row.conversation_id, ctx.orgId);
 }
 
 /** Approve a pending action. Safe to call more than once. */
@@ -235,7 +261,7 @@ export async function approveAction(ctx: Ctx, id: string, edits?: Record<string,
     db.prepare("UPDATE bob_actions SET status = ?, result = ?, error = ?, undo = ?, executed_at = ? WHERE id = ? AND org_id = ?").run(
       status,
       fields.result !== undefined ? JSON.stringify(fields.result) : null,
-      fields.error ?? null,
+      fields.error ? friendlyError(fields.error) : null,
       fields.undo !== undefined ? JSON.stringify(fields.undo) : null,
       new Date().toISOString(),
       id,
@@ -258,7 +284,10 @@ export async function approveAction(ctx: Ctx, id: string, edits?: Record<string,
   const actx: Ctx = { ...ctx, via: row.origin === "bob" ? "bob" : ctx.via };
   try {
     const out = await tool.execute(actx, recheck.value.payload, { idempotencyKey: row.idempotency_key, actionId: id });
-    if (out.ok) finish("executed", { result: { message: out.message, links: out.links, data: out.result }, undo: out.undo });
+    if (out.ok) {
+      finish("executed", { result: { message: out.message, links: out.links, data: out.result }, undo: out.undo });
+      rememberInConversation(ctx, row, out.links);
+    }
     else {
       finish("failed", { error: out.error });
       audit(actx, "bob.action_failed", `${recheck.value.title} failed: ${out.error}`);

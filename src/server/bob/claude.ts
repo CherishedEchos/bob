@@ -20,6 +20,7 @@ import type { Ctx } from "@/server/context";
 import { getJob } from "@/server/services/records";
 import { getInvoice } from "@/server/services/finance";
 import { requestAction } from "./actions";
+import { friendlyError } from "./friendly";
 import { TOOLS, runReadTool } from "./tools";
 import type { Reply, TurnOutput, BobState } from "./rules";
 
@@ -34,7 +35,7 @@ const MAX_STEPS = 6;
 /** Per request; the SDK retries once on connection errors. */
 const REQUEST_TIMEOUT_MS = Number(process.env.BOB_CLAUDE_TIMEOUT_MS || 30_000);
 /** One drafting path: save_invoice_draft. Sending stays a separate, approved action (send_invoice). */
-const HIDDEN_FROM_CLAUDE = new Set(["create_invoice", "get_job_details", "list_tasks"]);
+const HIDDEN_FROM_CLAUDE = new Set(["create_invoice", "get_job_details", "list_tasks", "create_follow_up"]);
 
 let clientFactory: () => Pick<Anthropic, "beta"> = () => new Anthropic();
 
@@ -121,6 +122,11 @@ Rules:
 - Talk naturally. Answer small talk directly in a sentence. For anything about the business, look it up with tools first.
 - UK phrasing: "sort an invoice", "put a bill together", "knock up an invoice", "prepare/draft an invoice" all mean save an invoice DRAFT. "What's left on that job?" means get_job_billing for the job in focus. "Seven-fifty" for a price means £750. If an amount or meaning is genuinely ambiguous, ask ONE short question.
 - Invoicing: (1) find_jobs_to_bill with everything they said (name, street, town, type of work). If one job fits, use it and name it in your reply; if several, ask which by job title. (2) get_job_billing and use its numbers exactly. remaining_to_invoice is what's left to bill; unpaid_on_invoices is money owed on invoices already sent — never bill that again. If fully_invoiced, say which invoice(s) exist and their status instead of making another. Don't offer the deposit if it's already paid or invoiced. (3) Once the job and what it's for (final balance, deposit or an amount) are clear, call save_invoice_draft straight away — don't ask "shall I?". Only ask about VAT or due date if the tool reports them MISSING. (4) Reply with the draft ref, total and that it hasn't been sent. Sending is separate: only with send_invoice, after they ask, and it needs their approval.
+- Making changes: use the action tools (customers, bookings, holidays, team, jobs, variations, progress notes, materials, tasks, enquiries, quotes, invoices, payments, handover reports). Each shows the user a short preview to approve or edit; nothing changes until they approve. Look records up first (search_customers, search_jobs, get_schedule, list_holidays, list_materials, list_tasks_detailed, list_quotes) to get the right ids; if a name could be more than one record or person, ask one short question.
+- Several requests in one message (e.g. "change Sophie's surname to McKay and prepare her final invoice"): handle every part — propose each change with its own tool call, in the same turn — then say in one short sentence what's ready to approve. Don't drop a part, and don't propose the same change twice.
+- Follow-ups: "him/her/them", "that job", "when he gets back" refer to what was just discussed (see conversation memory and earlier results). "When he gets back" means the first working day after their leave ends.
+- Never invent ids, amounts, dates or names. If a tool asks a question (status "clarify"), ask the user exactly that, briefly.
+- After a change is approved you'll see status "executed": confirm in a few words. If something fails, explain simply what to do next — never quote error codes or technical messages.
 - If asked for something you have no tool for, say so in one sentence and offer the closest thing you can do.${focusNote(ctx, state)}`;
 }
 
@@ -160,7 +166,7 @@ export async function claudeTurn(
   const actionReplies: Reply[] = [];
   let changed = false;
   let finalText = "";
-  let actionProposed = false;
+  let proposedCount = 0;
 
   let finished = false;
   for (let step = 0; step < MAX_STEPS; step++) {
@@ -169,8 +175,8 @@ export async function claudeTurn(
       max_tokens: 4000,
       system: systemPrompt(ctx, state, via),
       tools,
-      // After an approval card is shown, let Claude explain it but not chain more actions.
-      tool_choice: actionProposed ? { type: "none" } : { type: "auto" },
+      // Several requests in one message can each propose a card; after four cards, Claude just explains.
+      tool_choice: proposedCount >= 4 ? { type: "none" } : { type: "auto" },
       messages,
       output_config: { effort: EFFORT() },
       betas: ["server-side-fallback-2026-07-01"],
@@ -211,11 +217,12 @@ export async function claudeTurn(
         continue;
       }
       const v = out.view;
+      rememberFromProposal(state, use.input as Record<string, unknown>);
       if (v.status === "executed") changed = true;
       if (v.status === "executed") rememberFromAction(state, use.name, use.input as Record<string, unknown>, v.links);
-      else if (v.status === "pending") actionProposed = true;
+      else if (v.status === "pending") proposedCount++;
       actionReplies.push({
-        text: v.status === "executed" ? (v.resultMessage ?? "Done.") : v.status === "pending" ? "" : `That didn't work: ${v.error ?? v.status}.`,
+        text: v.status === "executed" ? (v.resultMessage ?? "Done.") : v.status === "pending" ? "" : `${friendlyError(v.error, "That didn't work")} Nothing was changed.`,
         actionId: v.id,
       });
       results.push({
@@ -268,6 +275,14 @@ function rememberFromRead(ctx: Ctx, state: BobState, tool: string, input: unknow
   const who = (input as { person?: string; name?: string; assignee?: string } | undefined) ?? {};
   const personName = who.person ?? who.name ?? who.assignee;
   if (personName && ["get_schedule", "get_person_priorities", "list_tasks_detailed"].includes(tool) && !(data as { error?: string } | undefined)?.error) state.focus = { ...state.focus, personName };
+}
+
+/** A proposed change also sets the context: "him", "that job", "her" refer to what it's about. */
+function rememberFromProposal(state: BobState, input: Record<string, unknown>) {
+  const who = (typeof input.person === "string" && input.person) || (Array.isArray(input.people) && typeof input.people[0] === "string" && input.people[0]) || (typeof input.assignee === "string" && input.assignee) || undefined;
+  if (who) state.focus = { ...state.focus, personName: who };
+  if (typeof input.jobId === "string") state.focus = { ...state.focus, jobId: input.jobId };
+  if (typeof input.customerId === "string") state.focus = { ...state.focus, customerId: input.customerId };
 }
 
 function rememberFromAction(state: BobState, tool: string, input: Record<string, unknown>, links?: { kind: string; id: string }[]) {

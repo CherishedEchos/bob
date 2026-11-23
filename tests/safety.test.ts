@@ -77,7 +77,8 @@ describe("Missing invoice details", () => {
   });
 
   it("refuses VAT when the VAT rate is unknown rather than assuming 20%", () => {
-    const ctx = ctxFor(N93_OWNER); // Ninety3 VAT not configured
+    const ctx = ctxFor(N93_OWNER);
+    ctx.org.finance = { vatRegistered: null, vatRate: null, defaultPaymentTermsDays: null }; // VAT not configured
     const r = F.createInvoiceDraft(ctx, { customerId: "n93_cus_smith", amount: 100, description: "Test", amountsAre: "exclusive", dueDate: addDaysKey(7) });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toMatch(/VAT rate isn't set up/);

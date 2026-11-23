@@ -140,6 +140,7 @@ export const taskInputSchema = z.object({
   customerId: id.optional(),
   assignedUserId: id.optional(),
   assignedPersonId: optStr(80),
+  priority: z.enum(["high", "normal", "low"]).optional(),
 });
 export type TaskInput = z.input<typeof taskInputSchema>;
 

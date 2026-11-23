@@ -29,6 +29,7 @@ const schema = z.object({
       vatRegistered: z.boolean().nullable(),
       vatRate: z.number().min(0).max(30).nullable(),
       defaultPaymentTermsDays: z.number().int().min(0).max(120).nullable(),
+      pricesAre: z.enum(["exclusive", "inclusive"]).nullable(),
     })
     .partial()
     .optional(),

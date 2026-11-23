@@ -61,7 +61,7 @@ export const TABLES = {
   },
   tasks: {
     title: "text", dueDate: "text", done: "bool", customerId: "text", relatedType: "text", relatedId: "text",
-    assignedUserId: "text", createdAt: "text", createdBy: "text", completedAt: "text", assignedPersonId: "text",
+    assignedUserId: "text", createdAt: "text", createdBy: "text", completedAt: "text", assignedPersonId: "text", priority: "text",
   },
   people: {
     name: "text", kind: "text", company: "text", trade: "text", phone: "text", email: "text", userId: "text",

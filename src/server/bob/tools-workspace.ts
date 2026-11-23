@@ -18,7 +18,7 @@ import { addDays, formatTimeRange, rangeKeys, weekStart } from "@/lib/dates";
 import { bookingDays, bookingEndDate, bookingsOnDay } from "@/lib/schedule";
 import { ENQUIRY_STATUS_LABEL, EXPENSE_CATEGORY_LABEL, JOB_STATUS_LABEL, invoiceBalance, isInvoiceOverdue, needsReply } from "@/lib/derive";
 import type { Absence, Booking, Job, Person } from "@/lib/types";
-import { todayKey } from "@/lib/utils";
+import { formatDateInline, gbp, todayKey } from "@/lib/utils";
 import type { Ctx } from "@/server/context";
 import { usersInOrg } from "@/server/auth/session";
 import * as R from "@/server/services/records";
@@ -81,6 +81,26 @@ function absencesIn(ctx: Ctx, from: string, to: string) {
 }
 
 export const workspaceReadTools: ReadTool<unknown>[] = [
+  {
+    kind: "read",
+    name: "draft_payment_reminder",
+    description: "Prepare a polite payment reminder for an unpaid invoice (shown as a draft to copy, or to send with send_email if email is connected). Uses the invoice's real amount, reference and due date. Nothing is sent.",
+    permission: "finance.read",
+    schema: z.object({ invoice_id: id }),
+    run(ctx, { invoice_id }: { invoice_id: string }) {
+      const inv = F.getInvoice(ctx, invoice_id);
+      if (!inv || inv.status === "draft" || inv.status === "void") return { data: { error: "That invoice isn't one that's been sent." } };
+      const owed = invoiceBalance(inv);
+      if (owed <= 0) return { data: { error: "That invoice is already paid." } };
+      const c = R.getCustomer(ctx, inv.customerId);
+      const ref = inv.number ?? inv.draftRef;
+      const first = c?.name.replace(/^the\s+/i, "").split(/\s+/)[0] ?? "there";
+      const overdue = isInvoiceOverdue(inv);
+      const subject = `Invoice ${ref}${overdue ? " — now overdue" : " — reminder"}`;
+      const body = `Hi ${first},\n\nJust a friendly reminder that invoice ${ref} for ${gbp(owed)}${inv.dueDate ? ` ${overdue ? "was due on" : "is due on"} ${formatDateInline(inv.dueDate)}` : ""}${overdue ? " and is now overdue" : ""}. If you've already paid, please ignore this and thank you.\n\n${ctx.org.assistant.signOff}`;
+      return { data: { to: c?.email, subject, body, amount_owed: owed, overdue }, cards: [{ type: "draft", to: c?.email ?? c?.phone ?? "", subject, body, note: "Not sent — copy it, or ask me to send it if email is connected." } as Card] };
+    },
+  } as ReadTool<{ invoice_id: string }> as ReadTool<unknown>,
   {
     kind: "read",
     name: "get_schedule",
@@ -149,6 +169,7 @@ export const workspaceReadTools: ReadTool<unknown>[] = [
     run(ctx, a: { from: string; to: string }) {
       const { byId } = names(ctx);
       const list = absencesIn(ctx, a.from, a.to >= a.from ? a.to : a.from).map((x) => ({
+        absence_id: x.id,
         name: byId.get(x.personId)?.name ?? "someone",
         kind: ABSENCE_LABEL[x.kind],
         from: x.startDate,
@@ -478,7 +499,9 @@ export const workspaceReadTools: ReadTool<unknown>[] = [
         .sort((x, y) => x.dueDate.localeCompare(y.dueDate));
       return {
         data: list.slice(0, 30).map((t) => ({
+          task_id: t.id,
           title: t.title,
+          priority: t.priority ?? "normal",
           due: t.dueDate,
           overdue: t.dueDate < today,
           for: (t.assignedPersonId && people.get(t.assignedPersonId)) || (t.assignedUserId && users.get(t.assignedUserId)) || "office",

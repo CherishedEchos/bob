@@ -60,8 +60,8 @@ describe("Claude engine", () => {
     const actionId = out.replies.find((r) => r.actionId)!.actionId!;
     expect(getActionView(ctx, actionId)?.status).toBe("pending");
     expect(out.changed).toBe(false);
-    // After proposing, the model was not allowed to chain more tools.
-    expect(seen[2].tool_choice).toEqual({ type: "none" });
+    // Several requests can each propose a card, but a turn is capped (4 cards) and nothing runs without approval.
+    expect(out.replies.filter((r) => r.actionId).every((r) => getActionView(ctx, r.actionId!)?.status === "pending")).toBe(true);
   });
 
   it("only offers tools the user's role permits", async () => {
@@ -69,7 +69,8 @@ describe("Claude engine", () => {
     setClaudeClientForTests(fakeClient([() => say("ok")], seen));
     await claudeTurn({ ...ctxFor(N93_STAFF), via: "bob" }, "hello", [], {}, "conv_x");
     const names = seen[0].tools.map((t) => t.name);
-    expect(names).toContain("create_follow_up");
+    expect(names).toContain("create_task");
+    expect(names).not.toContain("create_follow_up");
     expect(names).not.toContain("create_invoice");
     expect(names).not.toContain("get_money_owed");
     expect(names).not.toContain("send_email");

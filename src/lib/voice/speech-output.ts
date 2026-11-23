@@ -279,6 +279,8 @@ function shorten(text: string, max = 240): string {
  */
 export function spokenSummary(replies: BobMessage[], request?: string): string {
   const assistant = replies.filter((m) => m.role === "assistant");
+  const pending = assistant.filter((m) => m.action?.status === "pending").map((m) => m.action!);
+  if (pending.length > 1) return `I've prepared ${pending.length} changes: ${pending.map((a) => a.title.toLowerCase()).join(" and ")}. Check them and approve.`;
   const action = assistant.find((m) => m.action)?.action;
   if (action) {
     if (action.status === "pending") {

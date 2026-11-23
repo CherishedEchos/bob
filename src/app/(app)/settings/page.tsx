@@ -296,6 +296,7 @@ function FinanceSection({ org, owner, save }: { org: OrgConfig; owner: boolean; 
   const [vat, setVat] = React.useState(org.finance.vatRegistered === null ? "unset" : org.finance.vatRegistered ? "yes" : "no");
   const [rate, setRate] = React.useState(org.finance.vatRate != null ? String(org.finance.vatRate) : "");
   const [terms, setTerms] = React.useState(org.finance.defaultPaymentTermsDays != null ? String(org.finance.defaultPaymentTermsDays) : "");
+  const [pricesAre, setPricesAre] = React.useState(org.finance.pricesAre ?? "");
   return (
     <Section icon={PoundSterling} title="Invoicing" subtitle="Bob never guesses these — if they're not set, he asks each time.">
       <form
@@ -307,6 +308,7 @@ function FinanceSection({ org, owner, save }: { org: OrgConfig; owner: boolean; 
               vatRegistered: vat === "unset" ? null : vat === "yes",
               vatRate: vat === "yes" && rate ? Number(rate) : null,
               defaultPaymentTermsDays: terms ? Number(terms) : null,
+              pricesAre: vat === "yes" && pricesAre ? pricesAre : null,
             },
           });
         }}
@@ -322,6 +324,15 @@ function FinanceSection({ org, owner, save }: { org: OrgConfig; owner: boolean; 
           {vat === "yes" ? (
             <Field label="VAT rate (%)" htmlFor="f-rate" hint="Standard UK rate is 20%. Check with your accountant.">
               <Input id="f-rate" inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} />
+            </Field>
+          ) : null}
+          {vat === "yes" ? (
+            <Field label="Your prices and quotes are" htmlFor="f-prices" hint={pricesAre ? "Bob uses this for final balances and deposits." : "Not set — Bob will ask whether each invoice is plus VAT or including VAT."}>
+              <NativeSelect id="f-prices" value={pricesAre} onChange={(e) => setPricesAre(e.target.value as typeof pricesAre)}>
+                <option value="">Not set — ask me each time</option>
+                <option value="exclusive">Plus VAT (VAT added on top)</option>
+                <option value="inclusive">Including VAT</option>
+              </NativeSelect>
             </Field>
           ) : null}
           <Field label="Default payment terms (days)" htmlFor="f-terms" hint={terms ? undefined : "Not set — Bob will ask when an invoice is due."}>

@@ -251,12 +251,23 @@ export type DraftOutcome =
   | { ok: false; code: "draft_exists"; draft: BillingInvoice; message: string }
   | { ok: false; code: "nothing_left" | "duplicate" | "forbidden" | "not_found" | "invalid"; message: string };
 
-export function saveDraftFromConversation(ctx: Ctx, input: DraftInput): DraftOutcome {
+export type DraftPlan =
+  | { ok: true; job: Job; draftInput: { customerId: string; jobId: string; description: string; amount: number; amountsAre: Invoice["amountsAre"]; vatRate?: number; dueDate: string }; notes: string[]; usedDefaults: { vat: boolean; terms: boolean } }
+  | Exclude<DraftOutcome, { ok: true }>;
+
+/**
+ * Work out a draft without saving it: amount from Bob's billing figures, VAT
+ * and due date from what the user said or the company's invoice settings
+ * (VAT status, rate, how prices are quoted, payment terms). Used for the
+ * confirmation preview and again when it's saved.
+ */
+export function planDraft(ctx: Ctx, input: DraftInput): DraftPlan {
   if (!can(ctx.role, "invoices.draft")) return { ok: false, code: "forbidden", message: "Your account can't prepare invoices." };
   const b = jobBilling(ctx, input.jobId);
   if (!b.ok) return { ok: false, code: b.code === "forbidden" ? "forbidden" : "not_found", message: b.error };
   const bill = b.value;
   const job = getJob(ctx, input.jobId)!;
+  const fin = ctx.org.finance;
 
   let amount = input.amount;
   if (input.basis === "final_balance") amount = amount ?? bill.remainingToInvoice;
@@ -267,10 +278,12 @@ export function saveDraftFromConversation(ctx: Ctx, input: DraftInput): DraftOut
 
   const missing: ("amount" | "vat" | "vat_rate" | "due")[] = [];
   if (!amount || amount <= 0) missing.push("amount");
-  const amountsAre = ctx.org.finance.vatRegistered === false ? "no_vat" : input.amountsAre;
+  // Company settings first: not VAT registered → no VAT; registered → how its prices are quoted.
+  const vatDefault = fin.vatRegistered === false ? "no_vat" : fin.vatRegistered && fin.pricesAre ? fin.pricesAre : undefined;
+  const amountsAre = fin.vatRegistered === false ? "no_vat" : input.amountsAre ?? vatDefault;
   if (!amountsAre) missing.push("vat");
-  else if (amountsAre !== "no_vat" && input.vatRate === undefined && ctx.org.finance.vatRate == null) missing.push("vat_rate");
-  const dueDate = input.dueDate ?? (input.dueInDays ? addDaysKey(input.dueInDays) : ctx.org.finance.defaultPaymentTermsDays ? addDaysKey(ctx.org.finance.defaultPaymentTermsDays) : undefined);
+  else if (amountsAre !== "no_vat" && input.vatRate === undefined && fin.vatRate == null) missing.push("vat_rate");
+  const dueDate = input.dueDate ?? (input.dueInDays ? addDaysKey(input.dueInDays) : fin.defaultPaymentTermsDays ? addDaysKey(fin.defaultPaymentTermsDays) : undefined);
   if (!dueDate) missing.push("due");
   if (missing.length) return { ok: false, code: "missing", missing, message: `Still need: ${missing.join(", ")}.` };
 
@@ -279,21 +292,31 @@ export function saveDraftFromConversation(ctx: Ctx, input: DraftInput): DraftOut
   const notes: string[] = [];
   if (input.basis === "amount" && amount! > bill.remainingToInvoice + 0.01 && !input.invoiceId) notes.push(`That's more than the ${gbp(bill.remainingToInvoice)} left to invoice on this job.`);
   if (bill.unpaidOnInvoices > 0) notes.push(`Separately, ${gbp(bill.unpaidOnInvoices)} is still unpaid on invoices already sent.`);
+  if (!input.invoiceId) {
+    const existing = scoped(ctx).list<Invoice>("invoices", { where: "job_id = ? AND status = 'draft'", params: [job.id], order: "created_at DESC" });
+    const same = existing.find((i) => Math.abs(i.lines[0]?.unitAmount - draftInput.amount) < 0.01 && i.amountsAre === draftInput.amountsAre);
+    if (!same && existing.length) {
+      const d = asBillingInvoice(existing[0]);
+      return { ok: false, code: "draft_exists", draft: d, message: `There's already a draft ${d.ref} for ${gbp(d.total)} on this job.` };
+    }
+  }
+  return { ok: true, job, draftInput, notes, usedDefaults: { vat: !input.amountsAre, terms: !input.dueDate && !input.dueInDays } };
+}
+
+export function saveDraftFromConversation(ctx: Ctx, input: DraftInput): DraftOutcome {
+  const plan = planDraft(ctx, input);
+  if (!plan.ok) return plan;
+  const { job, draftInput, notes } = plan;
 
   if (input.invoiceId) {
     const r = updateInvoiceDraft(ctx, input.invoiceId, draftInput);
     if (!r.ok) return { ok: false, code: r.code === "forbidden" ? "forbidden" : r.code === "not_found" ? "not_found" : "invalid", message: r.error };
     return { ok: true, invoice: r.value, outcome: "updated", notes };
   }
-  // One open draft per job: same amount → it's the same request (double tap, retry); different → ask.
+  // One open draft per job: same amount → it's the same request (double tap, retry); a different one was refused in planDraft.
   const existing = scoped(ctx).list<Invoice>("invoices", { where: "job_id = ? AND status = 'draft'", params: [job.id], order: "created_at DESC" });
-  const target = draftInput.amount;
-  const same = existing.find((i) => Math.abs(i.lines[0]?.unitAmount - target) < 0.01 && i.amountsAre === draftInput.amountsAre);
+  const same = existing.find((i) => Math.abs(i.lines[0]?.unitAmount - draftInput.amount) < 0.01 && i.amountsAre === draftInput.amountsAre);
   if (same) return { ok: true, invoice: same, outcome: "existing", notes };
-  if (existing.length) {
-    const d = asBillingInvoice(existing[0]);
-    return { ok: false, code: "draft_exists", draft: d, message: `There's already a draft ${d.ref} for ${gbp(d.total)} on this job.` };
-  }
   const r = createInvoiceDraft(ctx, draftInput);
   if (!r.ok) return { ok: false, code: r.code === "conflict" ? "duplicate" : "invalid", message: r.error };
   return { ok: true, invoice: r.value, outcome: "created", notes };

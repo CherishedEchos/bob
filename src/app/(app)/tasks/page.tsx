@@ -133,10 +133,13 @@ function TaskRow({ task: t }: { task: Task }) {
         </button>
         <button type="button" aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} details: ${t.title}`} onClick={() => setOpen((o) => !o)} className="row-target flex min-w-0 flex-1 items-center gap-3 py-0.5 text-left after:absolute after:inset-0 after:content-['']">
           <span className="min-w-0 flex-1">
-            <span className={cn("block text-[15.5px] font-medium leading-snug", t.done && "font-normal text-muted-foreground line-through")}>{t.title}</span>
+            <span className={cn("block text-[15.5px] font-medium leading-snug", t.done && "font-normal text-muted-foreground line-through")}>
+              {t.priority === "high" && !t.done ? <span className="mr-1.5 inline-flex h-5 items-center rounded-full bg-destructive/10 px-1.5 align-[2px] text-[11.5px] font-semibold text-danger-fg">High</span> : null}
+              {t.title}
+            </span>
             <span className="mt-0.5 flex flex-wrap gap-x-3 text-[14px] text-muted-foreground">
               <span className={cn(overdue && "font-semibold text-danger-fg", !t.done && daysFromToday(t.dueDate) === 0 && "font-semibold text-warn-fg")}>{when(t)}</span>
-              <span>{person ? `For ${person.name}` : "Office"}</span>
+              <span>{person ? `For ${person.name}` : assignee ? `For ${assignee.name}` : "Office"}</span>
               {job ? <span>{job.title} · {job.customerName}</span> : customer ? <span>{customer.name}</span> : null}
             </span>
           </span>

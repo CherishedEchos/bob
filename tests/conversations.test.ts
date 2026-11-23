@@ -88,6 +88,7 @@ describe("Conversation 4 — add a kitchen job for Sarah in Crawley for £12,000
 describe("Conversation 5 — invoice Sophie £7,500 for the Copthorne job", () => {
   it("Ninety3 (no accounting, VAT not configured): asks once, saves a DRAFT, and can't send it", async () => {
     const ctx = ctxFor(N93_OWNER);
+    ctx.org.finance = { vatRegistered: null, vatRate: null, defaultPaymentTermsDays: null };
     const c = new Chat(ctx);
     await c.say("Bob, invoice Sophie Lambert £7,500 for the Copthorne job.");
     expect(c.text).toMatch(/no VAT, plus VAT or including VAT/);
@@ -108,13 +109,11 @@ describe("Conversation 5 — invoice Sophie £7,500 for the Copthorne job", () =
     expect(F.listInvoices(ctx).find((i) => i.id === inv!.id)!.status).toBe("draft");
   });
 
-  it("Ridgeway demo (VAT + terms configured, demo accounting): one question, then simulated send", async () => {
+  it("Ridgeway demo (VAT, prices plus VAT and terms configured, demo accounting): no questions, then simulated send", async () => {
     const ctx = ctxFor(RDG_OWNER);
     const c = new Chat(ctx);
     await c.say("Invoice Sophie £7,500 for the Copthorne job");
-    expect(c.text).toMatch(/plus VAT/);
-    await c.say("plus VAT");
-    expect(c.text).toMatch(/Saved draft .*Sophie Hart/);
+    expect(c.text).toMatch(/Saved draft .*£9,000 .*Sophie Hart/);
     // Sending is a separate step with the recipient and amount, approved explicitly.
     await c.say("send it");
     expect(c.action?.tool).toBe("send_invoice");

@@ -64,8 +64,7 @@ const login = (page, email) => page.evaluate(async (email) => (await fetch('/api
   t = await say('the kitchen one');
   check('UI: shows £9,940 left on the Oak Road kitchen', t.includes('£9,940 is left to invoice'));
   t = await say('the final balance');
-  check('UI: asks VAT and terms once (settings unset)', /no VAT, plus VAT or including VAT\?/.test(t));
-  t = await say('no VAT, 14 days');
+  check('UI: uses the demo invoice settings (no VAT, 14 days) — no questions', !/plus VAT or including VAT\?/.test(t));
   check('UI: draft saved, not sent, with Review invoice', /Saved draft BOB-\d+: £9,940/.test(t) && /hasn't been sent/.test(t) && (await page.getByRole('button', { name: 'Review invoice' }).or(page.getByRole('link', { name: 'Review invoice' })).count()) > 0);
   t = await say('yeah, draft that');
   check('UI: no second draft', /haven't made a second one/.test(t));

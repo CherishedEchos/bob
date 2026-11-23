@@ -417,6 +417,24 @@ export function createTask(ctx: Ctx, input: unknown): Result<Task> {
   return ok(task);
 }
 
+/** Change a task's title, due date, who it's for or priority. */
+export function updateTask(ctx: Ctx, id: string, patch: unknown): Result<Task> {
+  const no = denied(ctx, "tasks.write");
+  if (no) return no;
+  const t = scoped(ctx).get<Task>("tasks", id);
+  if (!t) return fail("not_found", "Reminder not found");
+  const parsed = taskInputSchema.pick({ title: true, dueDate: true, assignedUserId: true, assignedPersonId: true, priority: true }).partial().safeParse(patch);
+  if (!parsed.success) return fail("invalid", "Check the reminder.", toFieldErrors(parsed.error));
+  const v = parsed.data as Partial<Task>;
+  if (v.assignedPersonId && !scoped(ctx).get("people", v.assignedPersonId)) return fail("not_found", "That person isn't in your team.");
+  const updated = tx(() => {
+    const u = scoped(ctx).update<Task>("tasks", id, v)!;
+    audit(ctx, "task.updated", `Reminder changed: ${u.title}${v.dueDate ? ` (due ${formatDateInline(v.dueDate)})` : ""}`, "task", id);
+    return u;
+  });
+  return ok(updated);
+}
+
 export function setTaskDone(ctx: Ctx, id: string, done: boolean): Result<Task> {
   const no = denied(ctx, "tasks.write");
   if (no) return no;
@@ -526,6 +544,23 @@ export function createQuote(ctx: Ctx, input: unknown): Result<Quote> {
     audit(ctx, "quote.recorded", `Quote ${v.status === "sent" ? "recorded as sent" : "drafted"} for ${c.name}: ${gbp(v.amount)}`, "quote", quote.id);
   });
   return ok(quote);
+}
+
+/** Edit a quote's description, amount or follow-up date (not once it's been accepted or declined). */
+export function updateQuote(ctx: Ctx, id: string, patch: { description?: unknown; amount?: unknown; followUpDate?: unknown }): Result<Quote> {
+  const no = denied(ctx, "quotes.write");
+  if (no) return no;
+  const q = scoped(ctx).get<Quote>("quotes", id);
+  if (!q) return fail("not_found", "Quote not found");
+  if (q.status === "accepted" || q.status === "declined") return fail("conflict", `That quote has already been ${q.status}, so it can't be changed.`);
+  const parsed = quoteInputSchema.pick({ description: true, amount: true, followUpDate: true }).partial().safeParse(patch);
+  if (!parsed.success) return fail("invalid", "Check the quote.", toFieldErrors(parsed.error));
+  const updated = tx(() => {
+    const u = scoped(ctx).update<Quote>("quotes", id, parsed.data as Partial<Quote>)!;
+    audit(ctx, "quote.updated", `Quote changed: ${u.description}${parsed.data.amount !== undefined ? ` (${gbp(u.amount)})` : ""}`, "quote", id);
+    return u;
+  });
+  return ok(updated);
 }
 
 export function setQuoteStatus(ctx: Ctx, id: string, status: Quote["status"]): Result<Quote> {

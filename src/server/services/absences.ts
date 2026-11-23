@@ -169,6 +169,21 @@ export function decideAbsence(ctx: Ctx, id: string, decision: unknown): Result<A
   return ok({ ...out, affected: status === "approved" ? bookingsAffectedBy(ctx, out) : [] });
 }
 
+/** Change the dates or type of leave (owners/admins): the old entry is cancelled and the new one recorded, together. */
+export function amendAbsence(ctx: Ctx, id: string, raw: unknown): Result<Absence & { affected: AffectedBooking[] }> {
+  if (!isManager(ctx)) return fail("forbidden", "Only an owner or admin can change someone's leave.");
+  const a = scoped(ctx).get<Absence>("absences", id);
+  if (!a || a.status === "cancelled" || a.status === "declined") return fail("not_found", "Leave not found");
+  const next = { personId: a.personId, kind: a.kind, startDate: a.startDate, endDate: a.endDate, part: a.part, ...(raw as object) };
+  return tx(() => {
+    const c = cancelAbsence(ctx, id);
+    if (!c.ok) return c as Result<Absence & { affected: AffectedBooking[] }>;
+    const r = addAbsence(ctx, next);
+    if (!r.ok) throw new Error(r.error);
+    return r;
+  });
+}
+
 /** Cancel leave: the person themselves (their own) or a manager. The diary updates straight away. */
 export function cancelAbsence(ctx: Ctx, id: string): Result<Absence> {
   const db = scoped(ctx);

@@ -249,6 +249,11 @@ export function upgradeSampleData(db: DatabaseSync, insert: InsertFn) {
   for (const o of orgs) {
     const config = JSON.parse(o.config) as { dataMode?: string; timeZone?: string };
     if (config.dataMode !== "sample" || !TEAM_CASTS[o.id]) continue;
+    // The fictional Ninety3 demo has invoice settings (no VAT, 14 days) so Bob can show them in use.
+    const fin = (config as { finance?: { vatRegistered: boolean | null; vatRate: number | null; defaultPaymentTermsDays: number | null } }).finance;
+    if (TEAM_CASTS[o.id].key === "n93" && fin && fin.vatRegistered === null && fin.defaultPaymentTermsDays === null) {
+      db.prepare("UPDATE orgs SET config = ? WHERE id = ?").run(JSON.stringify({ ...config, finance: { ...fin, vatRegistered: false, defaultPaymentTermsDays: 14 } }), o.id);
+    }
     const has = db.prepare("SELECT COUNT(*) AS n FROM people WHERE org_id = ?").get(o.id) as { n: number };
     if (has.n > 0) {
       // Team already seeded (earlier version): add merchants and access notes once.

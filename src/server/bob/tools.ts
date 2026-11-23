@@ -32,6 +32,7 @@ import { getAccountingProvider, getEmailProvider } from "@/server/integrations/r
 import { detectInjection, wrapUntrusted } from "@/server/integrations/safety";
 import { resolveJobs } from "./resolve";
 import { workspaceReadTools } from "./tools-workspace";
+import { workspaceActionTools } from "./tools-actions";
 
 /* --------------------------------- Types --------------------------------- */
 
@@ -556,54 +557,6 @@ const createJob: ActionTool<CreateJobArgs> = {
   },
 };
 
-interface UpdateJobArgs {
-  jobId: string;
-  status?: Job["status"];
-  startDate?: string;
-  nextAction?: string;
-}
-
-const updateJob: ActionTool<UpdateJobArgs, UpdateJobArgs & { previous: Partial<Job> }> = {
-  kind: "action",
-  name: "update_job",
-  description: "Change a job's status, start date or next action.",
-  category: "internal",
-  permission: "jobs.write",
-  confirmation: "always",
-  schema: z.object({ jobId: id, status: jobStatusSchema.optional(), startDate: dateKey.optional(), nextAction: z.string().trim().max(240).optional() }),
-  prepare(ctx, a) {
-    const j = R.getJob(ctx, a.jobId);
-    if (!j) return notFound("job");
-    if (!a.status && !a.startDate && a.nextAction === undefined) return { ok: false, code: "clarify", message: "What would you like to change on the job?" };
-    const lines: ActionLine[] = [{ label: "Job", value: `${j.customerName} — ${j.title}, ${j.location}`, emphasis: true }];
-    if (a.status) lines.push({ label: "Status", value: `${JOB_STATUS_LABEL[j.status]} → ${JOB_STATUS_LABEL[a.status]}` });
-    if (a.startDate) lines.push({ label: "Start date", value: `${j.startDate ? formatDateInline(j.startDate) : "not set"} → ${formatDateInline(a.startDate)}` });
-    if (a.nextAction !== undefined) lines.push({ label: "Next action", value: a.nextAction || "(cleared)" });
-    const notices: ActionNotice[] = [];
-    if (a.status === "completed") {
-      const fin = jobFinance(j, F.listPayments(ctx));
-      if (fin.balance > 0 && can(ctx.role, "finance.read")) notices.push({ tone: "warning", text: `${gbp(fin.balance)} is still unpaid on this job.` });
-    }
-    return ready({ payload: { ...a, previous: { status: j.status, startDate: j.startDate, nextAction: j.nextAction } }, title: "Update job", lines, notices, approveLabel: "Update job" });
-  },
-  execute(ctx, a) {
-    if (a.status) {
-      const r = R.setJobStatus(ctx, a.jobId, a.status);
-      if (!r.ok) return { ok: false, error: r.error };
-    }
-    if (a.startDate || a.nextAction !== undefined) {
-      const r = R.updateJob(ctx, a.jobId, { startDate: a.startDate, nextAction: a.nextAction });
-      if (!r.ok) return { ok: false, error: r.error };
-    }
-    return { ok: true, message: "Job updated.", undo: { jobId: a.jobId, previous: a.previous }, links: [{ label: "Open job", kind: "job", id: a.jobId }] };
-  },
-  undo(ctx, u) {
-    const { jobId, previous } = u as { jobId: string; previous: Partial<Job> };
-    if (previous.status) R.setJobStatus(ctx, jobId, previous.status);
-    R.updateJob(ctx, jobId, { startDate: previous.startDate ?? null, nextAction: previous.nextAction ?? "" });
-    return { ok: true, message: "Change undone." };
-  },
-};
 
 const addJobExpense: ActionTool<{ jobId: string; amount: number; category: string; description: string; incurredOn: string }> = {
   kind: "action",
@@ -1120,14 +1073,49 @@ interface DraftArgs {
  * built-in engine: one open draft per job, the same request twice returns the
  * same draft, and amounts for final balance / deposit come from Bob's records.
  */
+const VAT_WORDS = { inclusive: "including VAT", exclusive: "plus VAT", no_vat: "no VAT" } as const;
+const MISSING_QUESTION = (m: string[]) => {
+  const parts: string[] = [];
+  if (m.includes("amount")) parts.push("how much should it be for");
+  if (m.includes("vat")) parts.push("is that no VAT, plus VAT or including VAT");
+  if (m.includes("vat_rate")) parts.push("which VAT rate — the standard 20%");
+  if (m.includes("due")) parts.push("when should it be due — 7, 14 or 30 days");
+  const q = parts.join(", and ");
+  return `${q.charAt(0).toUpperCase()}${q.slice(1)}? (Set VAT and payment terms in Settings and I won't need to ask.)`;
+};
+
+/** The invoice preview: exact amount, VAT and due date, from Bob's billing figures and the company's settings. */
+function previewDraft(ctx: Ctx, a: DraftArgs, job: Job): PrepareResult<DraftArgs> {
+  const plan = Bill.planDraft(ctx, a);
+  if (!plan.ok) {
+    if (plan.code === "missing") return { ok: false, code: "clarify", message: MISSING_QUESTION(plan.missing) };
+    if (plan.code === "draft_exists") return { ok: false, code: "clarify", message: `There's already a draft ${plan.draft.ref} for ${gbp(plan.draft.total)} on this job — shall I change that one instead? (pass invoiceId ${plan.draft.id})` };
+    return { ok: false, code: "blocked", message: plan.message };
+  }
+  const d = plan.draftInput;
+  const rate = d.amountsAre === "no_vat" ? 0 : (a.vatRate ?? ctx.org.finance.vatRate ?? 20);
+  const totals = computeInvoiceTotals(d.amount, d.amountsAre, rate);
+  const lines: ActionLine[] = [
+    { label: "Customer", value: job.customerName },
+    { label: "Job", value: job.title },
+    { label: "For", value: a.basis === "final_balance" ? "Final balance" : a.basis === "deposit" ? "Deposit" : d.description },
+    { label: "Amount", value: d.amountsAre === "no_vat" ? `${gbp(totals.total)} (no VAT)` : `${gbp(totals.total)} (${gbp(totals.subtotal)} + ${gbp(totals.vat)} VAT)`, emphasis: true },
+    { label: "Due", value: `${formatDateInline(d.dueDate)}${plan.usedDefaults.terms && ctx.org.finance.defaultPaymentTermsDays ? ` (${ctx.org.finance.defaultPaymentTermsDays}-day terms)` : ""}` },
+  ];
+  const notices: ActionNotice[] = plan.notes.map((t) => ({ tone: "info", text: t }));
+  if (plan.usedDefaults.vat) notices.push({ tone: "info", text: `VAT: ${VAT_WORDS[d.amountsAre]}, from your invoice settings.` });
+  notices.push({ tone: "info", text: "Saved as a draft in Bob — nothing is sent." });
+  return { ok: true, value: { payload: a, title: a.invoiceId ? "Change invoice draft" : "Invoice draft", category: "internal", lines, notices, approveLabel: a.invoiceId ? "Save changes" : "Save draft", simulated: false } };
+}
+
 const saveInvoiceDraft: ActionTool<DraftArgs, DraftArgs & { outcomeHint?: string }> = {
   kind: "action",
   name: "save_invoice_draft",
   description:
-    "Save an invoice DRAFT for a job (never sends it). basis: final_balance (Bob uses remaining_to_invoice), deposit (Bob uses the unpaid deposit), or amount (give amount). amountsAre is required unless the business isn't VAT registered — ask 'no VAT, plus VAT or including VAT?' if you don't know. dueInDays is required unless payment terms are set. To change a draft already made in this conversation, pass its invoiceId (and the new amount/VAT/due). If it reports an existing draft on the job, ask whether to update it and then pass that draft's invoiceId.",
+    "Prepare an invoice DRAFT for a job (never sends it); the user sees a preview and approves it. basis: final_balance (Bob uses remaining_to_invoice), deposit (the unpaid deposit) or amount (give amount). Leave amountsAre and dueInDays out unless the user said them — Bob applies the company's VAT setting and payment terms, and only asks if they aren't configured. To change a draft, pass its invoiceId with the new amount/VAT/due date.",
   category: "internal",
   permission: "invoices.draft",
-  confirmation: "undoable",
+  confirmation: "always",
   schema: z.object({
     jobId: id,
     basis: z.enum(["final_balance", "deposit", "amount"]),
@@ -1148,7 +1136,7 @@ const saveInvoiceDraft: ActionTool<DraftArgs, DraftArgs & { outcomeHint?: string
       if (!inv) return notFound("invoice");
       if (inv.status !== "draft") return blocked(`${inv.number ?? inv.draftRef} has already been ${inv.status}; only drafts can be changed.`);
     }
-    return ready({ payload: a, title: a.invoiceId ? "Update invoice draft" : "Invoice draft", category: "internal", lines: [{ label: "Job", value: `${job.customerName} — ${job.title}`, emphasis: true }], notices: [], approveLabel: "Save draft", simulated: false });
+    return previewDraft(ctx, a, job);
   },
   execute(ctx, a) {
     const out = Bill.saveDraftFromConversation(ctx, a);
@@ -1239,10 +1227,10 @@ const actionTools: ActionTool<any, any>[] = [
   saveInvoiceDraft,
   deleteInvoiceDraftTool,
   addMaterial,
-  createFollowUp, addNote, createJob, updateJob, addJobExpense, sendEmail, saveEmailDraft, createQuote, createInvoice, sendInvoice, recordPayment, markReplied, setEnquiryStatus,
+  createFollowUp, addNote, createJob, addJobExpense, sendEmail, saveEmailDraft, createQuote, createInvoice, sendInvoice, recordPayment, markReplied, setEnquiryStatus,
 ];
 
-export const TOOLS: Record<string, AnyTool> = Object.fromEntries([...readTools, ...workspaceReadTools, ...actionTools].map((t) => [t.name, t]));
+export const TOOLS: Record<string, AnyTool> = Object.fromEntries([...readTools, ...workspaceReadTools, ...actionTools, ...workspaceActionTools].map((t) => [t.name, t]));
 
 export function getTool(name: string): AnyTool | undefined {
   return TOOLS[name];

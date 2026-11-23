@@ -33,6 +33,7 @@ describe("UK phrasing for amounts", () => {
 describe("Sophie Mackay in Copthorne → the final balance → yeah, draft that", () => {
   it("settings unset: asks which job, the basis, then VAT and terms in one question; saves once", async () => {
     const ctx = ctxFor(N93_OWNER);
+    ctx.org.finance = { vatRegistered: null, vatRate: null, defaultPaymentTermsDays: null };
     const c = new Chat(ctx);
     await c.say("Prepare me an invoice for Sophie Mackay in Copthorne", "voice");
     expect(c.text).toMatch(/Sophie Mackay has 2 jobs\. Which one\?/);
@@ -242,11 +243,17 @@ describe("Claude tool use (simulated client)", () => {
     await c.say("the kitchen one");
     expect(billing.remaining_to_invoice).toBe(9940);
     await c.say("yeah, draft that");
+    // Drafts are previewed first: the card shows the amount and settings-based VAT/terms, then the user approves.
+    expect(drafts(ctx, KITCHEN)).toHaveLength(0);
+    const card = c.last.find((m) => m.action)!.action!;
+    expect(card.status).toBe("pending");
+    expect(card.lines.find((l) => l.label === "Amount")?.value).toBe("£9,940 (no VAT)");
+    const approved = await c.approve();
     const d = drafts(ctx, KITCHEN);
     expect(d).toHaveLength(1);
     expect(d[0].total).toBe(9940);
     // The executed action carries the Review invoice link (shown on the action card).
-    expect(c.last.find((m) => m.action)?.action?.links?.some((l) => l.kind === "invoice" && l.id === d[0].id)).toBe(true);
+    expect(approved.links?.some((l) => l.kind === "invoice" && l.id === d[0].id)).toBe(true);
     // Next turn, the system prompt carries the remembered job and draft.
     await c.say("what was that again?");
     expect(seen[seen.length - 1].system).toContain(d[0].draftRef);

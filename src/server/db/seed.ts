@@ -70,7 +70,8 @@ const NINETY3: Cast = {
     workingHours: { days: "Mon–Fri", start: "07:30", end: "17:00" },
     contact: {},
     assistant: { name: "Bob", signOff: "Thanks,\nNinety3", tone: "friendly", readAloudDefault: true },
-    finance: { vatRegistered: null, vatRate: null, defaultPaymentTermsDays: null },
+    // Fictional demo settings (the real Ninety3 workspace starts unset and asks).
+    finance: { vatRegistered: false, vatRate: null, defaultPaymentTermsDays: 14 },
     dataMode: "sample",
     isDemo: false,
     retention: { closedEnquiryMonths: 24, conversationDays: 90 },
@@ -121,7 +122,7 @@ const RIDGEWAY: Cast = {
     workingHours: { days: "Mon–Fri", start: "08:00", end: "17:30" },
     contact: { phone: "01632 960 418", email: "hello@ridgeway.example", website: "ridgeway.example" },
     assistant: { name: "Bob", signOff: "Thanks,\nAlex — Ridgeway Build & Joinery", tone: "friendly", readAloudDefault: true },
-    finance: { vatRegistered: true, vatRate: 20, defaultPaymentTermsDays: 14 },
+    finance: { vatRegistered: true, vatRate: 20, defaultPaymentTermsDays: 14, pricesAre: "exclusive" },
     dataMode: "sample",
     isDemo: true,
     retention: { closedEnquiryMonths: 24, conversationDays: 90 },

@@ -8,7 +8,8 @@ import "server-only";
  * like the LLM engine. Every figure comes from the reporting functions; every
  * change goes through requestAction (permissions, validation, approvals).
  */
-import type { ExpenseCategory, JobStatus, PaymentMethod, PaymentType } from "@/lib/types";
+import type { Customer, ExpenseCategory, JobStatus, PaymentMethod, PaymentType } from "@/lib/types";
+import { billingLookup } from "@/server/services/billing";
 import type { Card, Chip } from "@/lib/bob/types";
 import { can } from "@/lib/auth/permissions";
 import { ENQUIRY_STATUS_LABEL, JOB_STATUS_LABEL, SOURCE_LABEL, invoiceBalance, isActiveJob, isOpenEnquiry, jobFinance, needsReply, quoteNeedsFollowUp } from "@/lib/derive";
@@ -27,6 +28,7 @@ import { invoiceFollowUp, isInvoiceRequest, runInvoice, startInvoice, type Invoi
 import { requestAction } from "./actions";
 import { runReadTool } from "./tools";
 import { NEEDS_ORDERING, WHO_IS_ON, needsOrdering, whoIsOn } from "./schedule-answers";
+import { friendlyError } from "./friendly";
 import { HANDOVER_REQUEST, OUTSTANDING_ON, jobOutstanding, MERCHANTS_TO_CONTACT, NEEDS_QUOTING, ON_HOLIDAY, PRIORITISE, READY_TO_INVOICE, WHO_IS_AVAILABLE, handoverHelp, merchantsToContact, needsQuoting, onHoliday, personPriorities, readyToInvoice, whoIsAvailable } from "./extra-answers";
 import { mentionScore, resolveCustomers, resolveEnquiries, resolveJobs } from "./resolve";
 import {
@@ -113,7 +115,7 @@ const financeDenied = (t: Turn) => {
 async function act(t: Turn, tool: string, args: unknown, lead: string, flow?: Flow) {
   const out = await requestAction(t.ctx, tool, args, { conversationId: t.conversationId, origin: "bob" });
   if (out.kind !== "action") {
-    say(t, out.message);
+    say(t, friendlyError(out.message));
     return;
   }
   const v = out.view;
@@ -126,7 +128,7 @@ async function act(t: Turn, tool: string, args: unknown, lead: string, flow?: Fl
     if (v.status === "executed") {
       t.changed = true;
       say(t, `${lead ? `${lead} ` : ""}${v.resultMessage ?? "Done."}`, { actionId: v.id });
-    } else say(t, `I couldn't do that: ${v.error ?? "something went wrong"}. Nothing was changed.`, { actionId: v.id });
+    } else say(t, `${friendlyError(v.error, "That didn't work")} Nothing was changed.`, { actionId: v.id });
     return;
   }
   t.state.lastActionId = v.id;
@@ -197,6 +199,92 @@ function overlap(a: string, b: string) {
 
 const jobLabel = (j: { customerName: string; title: string; location: string }) => `${j.customerName} — ${j.title}, ${j.location}`;
 
+/* ------------------- Customer detail corrections (with another request) ------------------- */
+
+const CORRECTION = /(?:^|,?\s*(?:and|also|then|plus)\s+|^\s*(?:please\s+)?)(?:correct|change|update|fix|amend)\s+(?:(her|his|their|the customer'?s)|([a-z][a-z' -]{1,40}?)'s)\s+(surname|last name|first name|name|email(?: address)?|e-mail|phone(?: number)?|mobile(?: number)?|number|address)\s+to\s+(.+?)(?=\s*(?:,|\band\b\s+(?:prepare|draft|make|sort|put|invoice|send|book|add|create)|$))/i;
+
+/** Apply "surname to McKay" etc. to the customer's current details. */
+function correctedFields(c: Customer, field: string, value: string): Partial<Customer> | null {
+  const v = value.replace(/[.!?]+$/, "").trim();
+  if (!v) return null;
+  if (/surname|last name/i.test(field)) {
+    const parts = c.name.trim().split(/\s+/);
+    if (parts.length < 2) return { name: `${c.name} ${v}` };
+    parts[parts.length - 1] = v;
+    return { name: parts.join(" ") };
+  }
+  if (/first name/i.test(field)) {
+    const parts = c.name.trim().split(/\s+/);
+    parts[0] = v;
+    return { name: parts.join(" ") };
+  }
+  if (/^name$/i.test(field)) return { name: v };
+  if (/mail/i.test(field)) return { email: v };
+  if (/phone|mobile|number/i.test(field)) return { phone: v };
+  if (/address/i.test(field)) return { address: v };
+  return null;
+}
+
+/**
+ * "Prepare the final invoice for Sophie Mackay's Oak Road kitchen, and correct her surname to McKay"
+ * (either order). Both changes come back as previews to approve: the invoice draft (amount from
+ * Bob's billing, VAT and terms from the company settings) and the customer correction.
+ */
+async function combinedCorrection(t: Turn, text: string): Promise<boolean> {
+  const m = text.match(CORRECTION);
+  if (!m) return false;
+  const rest = (text.slice(0, m.index) + " " + text.slice((m.index ?? 0) + m[0].length)).replace(/^\s*(?:,|and|then|also)\s*/i, "").replace(/\s*,\s*$/, "").trim();
+  const [, pronoun, namedWho, field, value] = m;
+  const invoicePart = rest && isInvoiceRequest(rest) ? rest : "";
+  if (!invoicePart && rest.split(/\s+/).length > 2) return false; // another kind of second request: let the normal flow handle it
+  // Which customer: the job in the invoice request, a named customer, or the one in focus.
+  let customer: Customer | undefined;
+  let jobId: string | undefined;
+  if (invoicePart) {
+    const look = billingLookup(t.ctx, invoicePart);
+    if (look.candidates.length === 1) {
+      jobId = look.candidates[0].jobId;
+      customer = R.getCustomer(t.ctx, look.candidates[0].customerId);
+    } else if (look.candidates.length > 1) {
+      return false; // let the invoice flow ask which job first
+    }
+  }
+  if (!customer && namedWho) {
+    const r = resolveCustomers(t.ctx, namedWho);
+    if (r.items.length === 1) customer = r.items[0];
+    else if (r.items.length > 1) {
+      offerChoice(t, "customer", r.items.slice(0, 4).map((c) => ({ id: c.id, label: `${c.name}${c.town ? ` (${c.town})` : ""}` })), { type: "job_lookup", text: namedWho } as Flow, `Which ${namedWho}?`);
+      return true;
+    }
+  }
+  if (!customer && pronoun && t.state.focus?.customerId) customer = R.getCustomer(t.ctx, t.state.focus.customerId);
+  if (!customer) {
+    say(t, "Whose details should I correct?");
+    return true;
+  }
+  const patch = correctedFields(customer, field, value);
+  if (!patch) return false;
+  t.state.focus = { ...t.state.focus, customerId: customer.id, customerName: customer.name, ...(jobId ? { jobId } : {}) };
+  const ready: string[] = [];
+  if (invoicePart && jobId) {
+    const basis = /\bdeposit\b/i.test(invoicePart) ? "deposit" : "final_balance";
+    const inv = await requestAction(t.ctx, "save_invoice_draft", { jobId, basis }, { conversationId: t.conversationId, origin: "bob" });
+    if (inv.kind === "action") {
+      ready.push("the invoice draft");
+      say(t, "", { actionId: inv.view.id });
+    } else say(t, friendlyError(inv.message));
+  } else if (invoicePart) {
+    await startInvoice(invoiceIO(t), invoicePart);
+  }
+  const upd = await requestAction(t.ctx, "update_customer", { customerId: customer.id, ...patch }, { conversationId: t.conversationId, origin: "bob" });
+  if (upd.kind === "action") {
+    ready.push(`the name change to ${patch.name ?? Object.values(patch)[0]}`);
+    say(t, "", { actionId: upd.view.id });
+  } else say(t, friendlyError(upd.message));
+  if (ready.length) t.replies.unshift({ text: `I've prepared ${ready.join(" and ")} — check ${ready.length > 1 ? "them" : "it"} and approve. Nothing changes until you do.` });
+  return true;
+}
+
 /* ================================== Router ================================== */
 
 export async function rulesTurn(ctx: Ctx, raw: string, state: BobState, conversationId: string): Promise<TurnOutput> {
@@ -230,6 +318,9 @@ export async function rulesTurn(ctx: Ctx, raw: string, state: BobState, conversa
     }
     t.state.choice = undefined;
   }
+
+  // 1a) Two requests in one: "prepare the final invoice for X, and correct her surname to McKay".
+  if (await combinedCorrection(t, text)) return done(t);
 
   // 1b) The invoice in progress: amend, confirm, cancel, switch job, "what's left?", or a fresh request.
   if (await invoiceFollowUp(invoiceIO(t), text)) return done(t);
