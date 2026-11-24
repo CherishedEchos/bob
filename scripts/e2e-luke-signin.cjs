@@ -105,8 +105,8 @@ const json = (page, url, body) => page.evaluate(async ([url, body]) => { const r
   /* Sign out, sign back in; and a second device */
   await page.evaluate(() => fetch('/api/auth/logout', { method: 'POST' }));
   await page.goto(BASE + '/login');
-  await page.getByLabel('Email').fill(LUKE);
-  await page.getByLabel('Password').fill('luke-test-password-1');
+  await page.getByLabel('Email', { exact: true }).fill(LUKE);
+  await page.getByLabel('Password', { exact: true }).fill('luke-test-password-1');
   await page.getByRole('button', { name: /^Sign in/ }).click();
   await page.waitForURL(/\/week$/);
   const again = await json(page, '/api/data');

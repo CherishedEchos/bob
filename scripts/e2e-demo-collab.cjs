@@ -22,8 +22,8 @@ async function signIn(browser, who, opts) {
   const ctx = await browser.newContext(opts);
   const p = await ctx.newPage();
   await p.goto(BASE + '/login');
-  await p.getByLabel('Email').fill(who.email);
-  await p.getByLabel('Password').fill(who.password);
+  await p.getByLabel('Email', { exact: true }).fill(who.email);
+  await p.getByLabel('Password', { exact: true }).fill(who.password);
   await p.getByRole('button', { name: /^Sign in$/ }).click();
   await p.waitForURL('**/week', { timeout: 60000 });
   return p;

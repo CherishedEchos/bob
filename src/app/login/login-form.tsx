@@ -1,38 +1,65 @@
 "use client";
 
+/**
+ * Sign-in. Desktop: a full-height split — Bob's charcoal brand panel with the
+ * voice orb on the left, a warm off-white sign-in panel on the right. Phones:
+ * a compact brand header and the form straight away, no scrolling.
+ *
+ * Authentication is unchanged: POST /api/auth/login, then the workspace loads.
+ * Demo logins (fictional data) appear only when the server passes them
+ * (BOB_SHOW_DEMO_LOGINS), and never for Luke or Ryan once their own sign-ins
+ * are configured.
+ */
 import * as React from "react";
+import { ChevronDown, Eye, EyeOff, Loader2 } from "lucide-react";
 import { BobLogo } from "@/components/brand/logo";
-import { Check, FlaskConical, Hand, Keyboard, Loader2, LogIn, Mic, Users } from "lucide-react";
 import { Orb } from "@/components/assistant/orb";
-import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 interface DemoGroup {
   group: string;
   accounts: { email: string; label: string }[];
 }
 
+type FieldErrors = { email?: string; password?: string };
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validate(email: string, password: string): FieldErrors {
+  const errors: FieldErrors = {};
+  if (!email.trim()) errors.email = "Enter your email address.";
+  else if (!EMAIL_RE.test(email.trim())) errors.email = "That doesn't look like an email address. Check for typos.";
+  if (!password) errors.password = "Enter your password.";
+  return errors;
+}
+
+/** Plain-English messages for what the server says. */
+function friendly(status: number, serverMessage?: string): string {
+  if (status === 401) return "That email and password don't match. Check them and try again.";
+  if (status === 429) return serverMessage ?? "Too many attempts. Wait 15 minutes and try again.";
+  if (status === 403) return serverMessage ?? "This account can't sign in to a workspace yet. Ask the owner to check your access.";
+  if (status >= 500) return "Bob had a problem signing you in. Wait a few seconds and try again.";
+  return serverMessage ?? "Couldn't sign in. Try again.";
+}
+
 export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassword?: string }) {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [show, setShow] = React.useState(false);
+  const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState<string | null>(null);
+  const emailRef = React.useRef<HTMLInputElement>(null);
+  const passwordRef = React.useRef<HTMLInputElement>(null);
 
-  const signIn = async (e?: React.FormEvent, creds?: { email: string; password: string }) => {
-    e?.preventDefault();
-    const body = creds ?? { email, password };
+  const post = async (body: { email: string; password: string }, demoEntry: boolean) => {
     setBusy(body.email);
     setError(null);
-    const demoEntry = !!creds;
     let res: Response;
     try {
       res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     } catch {
-      setError(
-        demoEntry
-          ? "Couldn't open the demo — Bob didn't respond. Check your connection and tap Try the demo again. (The demo server can take up to a minute to wake up.)"
-          : "Couldn't reach Bob. Check your connection and try again.",
-      );
+      setError(demoEntry ? "Couldn't open the demo. Bob didn't respond — the demo server can take up to a minute to wake up, so try again shortly." : "Couldn't reach Bob. Check your connection and try again.");
       setBusy(null);
       return;
     }
@@ -42,181 +69,217 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
       return;
     }
     const json = (await res.json().catch(() => ({}))) as { error?: string };
-    setError(
-      demoEntry
-        ? res.status >= 500 || res.status === 0
-          ? "The demo workspace didn't open (the server had a problem). Wait a few seconds and tap Try the demo again."
-          : `${json.error ?? "Couldn't open the demo workspace"}. Tap Try the demo to try again.`
-        : json.error ?? "Couldn't sign in",
-    );
+    setError(demoEntry ? `${friendly(res.status, json.error)}` : friendly(res.status, json.error));
     setBusy(null);
+    if (!demoEntry) {
+      setPassword("");
+      passwordRef.current?.focus();
+    }
+  };
+
+  const signIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors = validate(email, password);
+    setFieldErrors(errors);
+    if (errors.email) return emailRef.current?.focus();
+    if (errors.password) return passwordRef.current?.focus();
+    await post({ email: email.trim(), password }, false);
   };
 
   const primary = demo[0]?.accounts[0];
+  const submitting = !!busy && busy === email.trim();
+
   return (
-    <main className="theme-dark bg-app relative min-h-dvh overflow-hidden">
-      {/* Warm workshop-light glow, like the brand hero */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -right-40 top-[-10%] size-[620px] rounded-full bg-[radial-gradient(circle,rgb(255_130_28/0.20),transparent_62%)] blur-2xl" />
-        <div className="absolute -bottom-48 right-[12%] size-[520px] rounded-full bg-[radial-gradient(circle,rgb(255_160_80/0.14),transparent_60%)] blur-3xl" />
-        <div className="absolute -left-32 bottom-[-20%] size-[460px] rounded-full bg-[radial-gradient(circle,rgb(255_130_28/0.07),transparent_60%)] blur-3xl" />
-      </div>
+    <main className="flex min-h-dvh flex-col bg-[#141416] lg:grid lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
+      {/* ------------------------------ Brand ------------------------------ */}
+      <section aria-label="Bob" className="theme-dark relative isolate flex shrink-0 flex-col overflow-hidden bg-[#141416] text-[#FAF9F6] lg:min-h-dvh">
+        {/* One restrained source of warm light behind the orb. */}
+        <div aria-hidden className="pointer-events-none absolute left-1/2 top-[44%] -z-10 hidden size-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgb(243_135_53/0.10),transparent_62%)] lg:block" />
 
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-5 pb-8 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-8 lg:px-12 lg:pt-10">
-        <header className="flex items-center justify-between">
-          <BobLogo height={30} title="Bob" />
-          {demoPassword ? <span className="rounded-md bg-white/[0.06] px-2.5 py-1 text-[12.5px] font-medium text-white/70 ring-1 ring-white/10">Demo available</span> : null}
-        </header>
-
-        <div className="grid flex-1 grid-cols-1 items-center gap-10 py-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-16 lg:py-12">
-          {/* Pitch + entry */}
-          <section className="max-w-2xl">
-            <p className="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-[#F38735]">Your AI trade assistant</p>
-            <h1 className="mt-3 text-[33px] font-bold leading-[1.04] tracking-[-0.035em] text-[#FAF9F6] min-[400px]:text-[36px] sm:text-[52px] lg:text-[58px]">
-              <span className="block whitespace-nowrap">You do the work.</span>
-              <span className="block whitespace-nowrap">
-                Bob does the <span className="text-[#F38735]">admin.</span>
-              </span>
-            </h1>
-            <p className="mt-5 max-w-md text-[17px] leading-relaxed text-white/70">
-              The AI assistant for tradespeople that keeps on top of enquiries, jobs, invoices and follow-ups — and everything in between.
+        {/* Phones: compact, app-like header */}
+        <div className="flex items-center gap-4 px-6 pb-7 pt-[max(1.75rem,env(safe-area-inset-top))] lg:hidden">
+          <div className="min-w-0 flex-1">
+            <BobLogo height={26} title="Bob" />
+            <p className="mt-4 text-[22px] font-semibold leading-[1.15] tracking-[-0.025em]">
+              You do the work.
+              <br />
+              Bob does the admin.
             </p>
-            <div className="mt-5 flex flex-wrap items-center gap-2 text-[14.5px] text-white/85">
-              <span className="w-full font-semibold text-[#FAF9F6] sm:w-auto sm:pr-1">Just talk, type or tap.</span>
-              {[
-                { Icon: Mic, label: "Talk" },
-                { Icon: Keyboard, label: "Type" },
-                { Icon: Hand, label: "Tap" },
-              ].map(({ Icon, label }) => (
-                <span key={label} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-white/[0.05] px-2.5 ring-1 ring-white/10">
-                  <Icon className="size-3.5 text-[#F8A15C]" /> {label}
-                </span>
-              ))}
-            </div>
-
-            {error ? (
-              <p role="alert" className="mt-4 max-w-md rounded-xl bg-red-500/10 px-4 py-3 text-[15px] leading-snug text-danger-fg ring-1 ring-red-400/30">
-                {error}
-              </p>
-            ) : null}
-
-            <div className="mt-7 space-y-2.5">
-              <details className="group panel px-4 py-3" open>
-                <summary className="cursor-pointer list-none text-[16px] font-semibold text-white marker:hidden">
-                  <span className="inline-flex items-center gap-2">
-                    <LogIn className="size-4 text-white/60" /> Sign in to your business
-                  </span>
-                </summary>
-                <form onSubmit={signIn} className="mt-4 space-y-4" noValidate>
-                  <Field label="Email" htmlFor="l-email">
-                    <Input id="l-email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                  </Field>
-                  <Field label="Password" htmlFor="l-pass">
-                    <Input id="l-pass" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                  </Field>
-                  <Button type="submit" className="w-full rounded-[12px]" disabled={!!busy}>
-                    {busy === email && busy ? <Loader2 className="animate-spin" /> : <LogIn />} Sign in
-                  </Button>
-                </form>
-              </details>
-            {primary && demoPassword ? (
-              <div className="mt-5">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="h-13 w-full text-[16px] sm:w-auto sm:px-6"
-                  disabled={!!busy}
-                  onClick={() => void signIn(undefined, { email: primary.email, password: demoPassword })}
-                >
-                  {busy === primary.email ? (
-                    <>
-                      <Loader2 className="animate-spin" /> Opening the demo workspace…
-                    </>
-                  ) : (
-                    <>
-                      <FlaskConical /> Try the demo (fictional data)
-                    </>
-                  )}
-                </Button>
-                <span className="sr-only" aria-live="polite">
-                  {busy === primary.email ? "Opening the demo workspace" : ""}
-                </span>
-                <p className="mt-3 flex items-start gap-1.5 text-[14px] leading-snug text-white/60">
-                  <FlaskConical className="mt-0.5 size-4 shrink-0 text-sky-300/80" />
-                  Opens a fictional Ninety3 workspace. Sample customers only — nothing is ever sent to anyone.
-                </p>
-              </div>
-            ) : null}
-
-
-              {demo.length && demoPassword ? (
-                <details className="panel px-4 py-3">
-                  <summary className="cursor-pointer list-none text-[15px] font-medium text-white/85 marker:hidden">
-                    <span className="inline-flex items-center gap-2">
-                      <Users className="size-4 text-white/50" /> Other demo logins
-                    </span>
-                  </summary>
-                  <p className="mt-2 text-[14px] text-muted-foreground">
-                    Fictional data only. Password for all: <code className="rounded bg-surface-3 px-1.5">{demoPassword}</code>
-                  </p>
-                  <div className="mt-4 space-y-4">
-                    {demo.map((g) => (
-                      <div key={g.group}>
-                        <div className="mb-2 text-[12.5px] font-medium uppercase tracking-wider text-subtle">{g.group}</div>
-                        <div className="space-y-1.5">
-                          {g.accounts.map((a) => (
-                            <button
-                              key={a.email}
-                              onClick={() => void signIn(undefined, { email: a.email, password: demoPassword })}
-                              disabled={!!busy}
-                              className="flex min-h-12 w-full items-center justify-between rounded-[10px] bg-surface-2 px-4 py-2.5 text-left text-[15px] ring-1 ring-line transition hover:bg-surface-3 disabled:opacity-50"
-                            >
-                              <span>{a.label}</span>
-                              {busy === a.email ? <Loader2 className="size-4 animate-spin" /> : <span className="hidden text-[13px] text-subtle sm:inline">{a.email}</span>}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              ) : null}
-            </div>
-          </section>
-
-          {/* Illustration: how Bob works — voice in, draft out, your OK */}
-          <section aria-hidden className="relative mx-auto w-full max-w-[460px] select-none">
-            <div className="relative flex aspect-square items-center justify-center">
-              <Orb state="idle" size={300} className="scale-[0.8] sm:scale-100" />
-              <div className="absolute left-0 top-[12%] max-w-[250px] rounded-[14px] bg-[#1a1816]/90 px-4 py-3 shadow-[0_20px_50px_-20px_rgb(0_0_0/0.8)] ring-1 ring-white/10 backdrop-blur">
-                <div className="flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-wider text-white/45">
-                  <Mic className="size-3 text-[#F8A15C]" /> You, from the van
-                </div>
-                <p className="mt-1 text-[15px] leading-snug text-[#FAF9F6]">“Chase Sarah about the loft deposit.”</p>
-              </div>
-              <div className="absolute bottom-[8%] right-0 w-[270px] rounded-[14px] bg-[#1a1816]/90 p-4 shadow-[0_20px_50px_-20px_rgb(0_0_0/0.8)] ring-1 ring-white/10 backdrop-blur">
-                <div className="flex items-center gap-2">
-                  <BobLogo height={13} />
-                  <span className="text-[11.5px] font-medium uppercase tracking-wider text-white/45">drafted it</span>
-                </div>
-                <p className="mt-2 text-[14px] leading-snug text-white/80">Hi Sarah, just a reminder the £5,600 deposit for the loft conversion is now due…</p>
-                <div className="mt-3 flex gap-2">
-                  <span className="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-[#F38735] text-[13px] font-semibold text-white">
-                    <Check className="size-3.5" /> Approve
-                  </span>
-                  <span className="inline-flex h-8 flex-1 items-center justify-center rounded-lg text-[13px] font-medium text-white/75 ring-1 ring-white/15">Edit</span>
-                </div>
-              </div>
-            </div>
-            <p className="mt-2 text-center text-[13px] text-white/45">Nothing goes out until you say so.</p>
-          </section>
+          </div>
+          <div aria-hidden className="-mr-2 shrink-0">
+            <Orb tone="soft" state="idle" size={92} />
+          </div>
         </div>
 
-        <footer className="flex flex-wrap items-end justify-between gap-3 border-t border-white/[0.07] pt-5 text-[12.5px] text-white/40">
-          <BobLogo height={16} byline />
-          <span>Built for UK tradespeople</span>
-        </footer>
-      </div>
+        {/* Desktop: logo, orb, message, footer */}
+        <div className="hidden min-h-dvh flex-col px-12 py-10 lg:flex xl:px-16">
+          <BobLogo height={32} title="Bob" />
+          <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
+            <div aria-hidden className="motion-safe:animate-[float_9s_ease-in-out_infinite]">
+              <Orb tone="soft" state="idle" size={280} />
+            </div>
+            <h1 className="mt-12 max-w-[560px] text-[44px] font-semibold leading-[1.06] tracking-[-0.035em] xl:text-[52px]">
+              You do the work.
+              <br />
+              <span className="text-[#F38735]">Bob</span> does the admin.
+            </h1>
+            <p className="mt-5 max-w-[480px] text-balance text-[17px] leading-relaxed text-white/60">Your jobs, your team and your business. All in one place.</p>
+          </div>
+          <p className="text-[13px] text-white/40">Built for the trades. Powered by Cresaro.</p>
+        </div>
+      </section>
+
+      {/* ------------------------------ Sign in ------------------------------ */}
+      <section className="relative z-10 flex flex-1 flex-col text-[#18181B] lg:min-h-dvh lg:bg-[#FAF9F6]">
+        <div className="-mt-4 flex flex-1 flex-col rounded-t-[22px] bg-[#FAF9F6] px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-7 sm:px-10 lg:mt-0 lg:justify-center lg:rounded-none lg:px-12">
+          <div className="mx-auto w-full max-w-[380px]">
+            <h2 className="text-[26px] font-semibold tracking-[-0.025em] text-[#18181B] lg:text-[30px]">Welcome to Bob</h2>
+            <p className="mt-1.5 text-[15.5px] text-[#6B6B70]">Sign in to your workspace.</p>
+
+            {error ? (
+              <div role="alert" className="mt-6 rounded-[10px] border border-[#F1C9C4] bg-[#FDF2F1] px-3.5 py-3 text-[14.5px] leading-snug text-[#9A2B22]">
+                {error}
+              </div>
+            ) : null}
+
+            <form onSubmit={signIn} noValidate className="mt-6 space-y-5" aria-label="Sign in">
+              <div>
+                <label htmlFor="l-email" className="block text-[14px] font-medium text-[#2A2A2E]">
+                  Email
+                </label>
+                <input
+                  ref={emailRef}
+                  id="l-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) setFieldErrors((f) => ({ ...f, email: undefined }));
+                  }}
+                  aria-invalid={!!fieldErrors.email}
+                  aria-describedby={fieldErrors.email ? "l-email-error" : undefined}
+                  placeholder="you@company.co.uk"
+                  className={cn(
+                    "mt-1.5 block h-12 w-full rounded-[10px] border bg-white px-3.5 text-[16px] text-[#18181B] outline-none transition placeholder:text-[#A1A1A6]",
+                    "focus:border-[#E4752F] focus:ring-[3px] focus:ring-[#E4752F]/15",
+                    fieldErrors.email ? "border-[#D6453D]" : "border-[#DCDAD4] hover:border-[#C7C4BC]",
+                  )}
+                />
+                {fieldErrors.email ? (
+                  <p id="l-email-error" className="mt-1.5 text-[13.5px] text-[#B4332A]">
+                    {fieldErrors.email}
+                  </p>
+                ) : null}
+              </div>
+
+              <div>
+                <label htmlFor="l-pass" className="block text-[14px] font-medium text-[#2A2A2E]">
+                  Password
+                </label>
+                <div className="relative mt-1.5">
+                  <input
+                    ref={passwordRef}
+                    id="l-pass"
+                    type={show ? "text" : "password"}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) setFieldErrors((f) => ({ ...f, password: undefined }));
+                    }}
+                    aria-invalid={!!fieldErrors.password}
+                    aria-describedby={fieldErrors.password ? "l-pass-error" : undefined}
+                    className={cn(
+                      "block h-12 w-full rounded-[10px] border bg-white pl-3.5 pr-12 text-[16px] text-[#18181B] outline-none transition",
+                      "focus:border-[#E4752F] focus:ring-[3px] focus:ring-[#E4752F]/15",
+                      fieldErrors.password ? "border-[#D6453D]" : "border-[#DCDAD4] hover:border-[#C7C4BC]",
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShow((s) => !s)}
+                    aria-label={show ? "Hide password" : "Show password"}
+                    aria-pressed={show}
+                    aria-controls="l-pass"
+                    className="absolute inset-y-0 right-0 grid w-12 place-items-center rounded-r-[10px] text-[#6B6B70] transition hover:text-[#18181B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E4752F]"
+                  >
+                    {show ? <EyeOff className="size-[18px]" aria-hidden /> : <Eye className="size-[18px]" aria-hidden />}
+                  </button>
+                </div>
+                {fieldErrors.password ? (
+                  <p id="l-pass-error" className="mt-1.5 text-[13.5px] text-[#B4332A]">
+                    {fieldErrors.password}
+                  </p>
+                ) : null}
+              </div>
+
+              <button
+                type="submit"
+                disabled={!!busy}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-[10px] bg-[#E4752F] text-[16px] font-semibold text-white shadow-[0_1px_2px_rgb(0_0_0/0.12),inset_0_1px_0_rgb(255_255_255/0.18)] transition hover:bg-[#D9682A] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#E4752F]/35 active:bg-[#C95E24] disabled:cursor-default disabled:opacity-70"
+              >
+                {submitting ? <Loader2 className="size-[18px] animate-spin" aria-hidden /> : null}
+                {submitting ? "Signing in…" : "Sign in"}
+              </button>
+              <span className="sr-only" aria-live="polite">
+                {submitting ? "Signing in" : ""}
+              </span>
+            </form>
+
+            <p className="mt-5 text-[13.5px] leading-relaxed text-[#8A8A8F]">Forgotten your password? Ask your workspace owner to reset it, or contact Cresaro.</p>
+
+            {/* Fictional demo access — only when the server allows it */}
+            {primary && demoPassword ? (
+              <div className="mt-8 border-t border-[#E7E4DE] pt-6">
+                <button
+                  type="button"
+                  disabled={!!busy}
+                  onClick={() => void post({ email: primary.email, password: demoPassword }, true)}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-[#DCDAD4] bg-white text-[15px] font-medium text-[#2A2A2E] transition hover:border-[#C7C4BC] hover:bg-[#F6F5F1] disabled:opacity-60"
+                >
+                  {busy === primary.email ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                  {busy === primary.email ? "Opening the demo workspace…" : "Try the demo"}
+                </button>
+                <p className="mt-2 text-center text-[13px] text-[#8A8A8F]">A fictional workspace. Nothing is sent to anyone.</p>
+                {demo.length ? (
+                  <details className="group mt-4">
+                    <summary className="flex cursor-pointer list-none items-center justify-center gap-1 text-[13.5px] font-medium text-[#6B6B70] hover:text-[#18181B] [&::-webkit-details-marker]:hidden">
+                      Other demo logins <ChevronDown className="size-4 transition group-open:rotate-180" aria-hidden />
+                    </summary>
+                    <div className="mt-3 space-y-4">
+                      {demo.map((g) => (
+                        <div key={g.group}>
+                          <div className="mb-1.5 text-[12px] font-medium text-[#8A8A8F]">{g.group}</div>
+                          <ul className="divide-y divide-[#ECEAE5] overflow-hidden rounded-[10px] border border-[#E7E4DE] bg-white">
+                            {g.accounts.map((a) => (
+                              <li key={a.email}>
+                                <button
+                                  type="button"
+                                  onClick={() => void post({ email: a.email, password: demoPassword }, true)}
+                                  disabled={!!busy}
+                                  className="flex min-h-11 w-full items-center justify-between gap-3 px-3.5 py-2 text-left text-[14px] text-[#2A2A2E] transition hover:bg-[#F6F5F1] disabled:opacity-50"
+                                >
+                                  <span>{a.label}</span>
+                                  {busy === a.email ? <Loader2 className="size-4 animate-spin text-[#8A8A8F]" aria-hidden /> : null}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <p className="mx-auto mt-auto w-full max-w-[380px] pt-8 text-[12.5px] text-[#A1A1A6] lg:hidden">Built for the trades. Powered by Cresaro.</p>
+        </div>
+      </section>
     </main>
   );
 }
