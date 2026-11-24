@@ -256,19 +256,19 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className={cn("mx-auto w-full px-4 py-4 sm:px-5", inline ? "max-w-[760px]" : "max-w-none")}>
           {write ? (
-            <div className="scrollbar-none -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 sm:-mx-5 sm:px-5" role="toolbar" aria-label="Enquiry actions">
-              <Button size="sm" variant="secondary" className="shrink-0" onClick={() => { editor.current?.focus(); editor.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap" role="toolbar" aria-label="Enquiry actions">
+              <Button size="sm" variant="secondary" className="justify-center" onClick={() => { editor.current?.focus(); editor.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>
                 <Reply /> Reply
               </Button>
               {can("quotes.write") ? (
-                <Button size="sm" variant="secondary" className="shrink-0" onClick={() => ui.openForm({ form: "quote", customerId: e.customerId, enquiryId: e.id })}>
+                <Button size="sm" variant="secondary" className="justify-center" onClick={() => ui.openForm({ form: "quote", customerId: e.customerId, enquiryId: e.id })}>
                   <FileText /> Create quote
                 </Button>
               ) : null}
               <Button
                 size="sm"
                 variant="secondary"
-                className="shrink-0"
+                className="justify-center"
                 onClick={() => {
                   if (e.status !== "site_visit") void actions.setEnquiryStatus(e.id, "site_visit");
                   ui.openForm({ form: "reminder", title: `Site visit: ${e.customerName}${e.location ? `, ${e.location}` : ""}`, dueDate: addDaysKey(2), customerId: e.customerId, relatedType: "enquiry", relatedId: e.id });
@@ -276,7 +276,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
               >
                 <MapPinned /> Book site visit
               </Button>
-              <Button size="sm" variant="secondary" className="shrink-0" onClick={() => ui.openForm({ form: "reminder", title: `Follow up with ${e.customerName} about the ${e.title.toLowerCase()}`, dueDate: e.followUpDate ?? addDaysKey(3), customerId: e.customerId, relatedType: "enquiry", relatedId: e.id })}>
+              <Button size="sm" variant="secondary" className="justify-center" onClick={() => ui.openForm({ form: "reminder", title: `Follow up with ${e.customerName} about the ${e.title.toLowerCase()}`, dueDate: e.followUpDate ?? addDaysKey(3), customerId: e.customerId, relatedType: "enquiry", relatedId: e.id })}>
                 <AlarmClock /> Follow up
               </Button>
             </div>

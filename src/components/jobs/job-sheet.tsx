@@ -11,7 +11,7 @@ import { VariationsPanel } from "@/components/jobs/variations";
 
 import * as React from "react";
 import { PackageCheck } from "lucide-react";
-import { AlarmClock, CalendarClock, CalendarPlus, Check, ChevronLeft, ChevronRight, ImagePlus, Lock, Hammer, Inbox, MapPin, MoreHorizontal, Navigation, Package, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
+import { AlarmClock, CalendarClock, CalendarPlus, Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, Lock, Hammer, Inbox, MapPin, MoreHorizontal, Navigation, Package, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
 import type { JobTab } from "@/lib/store/ui";
 import { formatTimeRange, relativeDayInline } from "@/lib/dates";
 import { nextBookingForJob, peopleOnJob } from "@/lib/schedule";
@@ -168,7 +168,8 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
     setTab("updates");
     setTimeout(() => document.getElementById("job-photos")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
   };
-  const quickBtn = "shrink-0";
+  // Phones: a 3-up grid of icon-over-label buttons (no sideways scrolling). Wider screens: one row.
+  const quickBtn = "h-auto min-h-[58px] flex-col gap-1 px-1.5 py-2 text-[12.5px] leading-tight sm:min-h-0 sm:h-9 sm:flex-row sm:gap-1.5 sm:px-3 sm:text-[13.5px]";
   const quick = [
     can("notes.write") ? <AddUpdateButton key="u" job={j} variant="secondary" size="sm" className={quickBtn} /> : null,
     can("notes.write") ? (
@@ -307,14 +308,33 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
           </div>
         </div>
         {quick.length ? (
-          <div className="scrollbar-none flex gap-2 overflow-x-auto border-t border-line px-4 py-3 sm:px-6" aria-label="Quick actions">
+          <div className="grid grid-cols-3 gap-2 border-t border-line px-4 py-3 sm:flex sm:flex-wrap sm:px-6" aria-label="Quick actions">
             {quick}
           </div>
         ) : null}
       </header>
 
       {/* Sections */}
-      <div role="tablist" aria-label="Job sections" className="scrollbar-none sticky top-0 z-10 -mx-4 mt-5 flex gap-0.5 overflow-x-auto border-b border-line bg-background/90 px-4 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
+      {/* Phones: one clear section picker instead of a sideways-scrolling tab strip. */}
+      <div className="sticky top-0 z-10 -mx-4 mt-4 bg-background/90 px-4 py-2 backdrop-blur-xl sm:hidden">
+        <label className="relative block">
+          <span className="sr-only">Job section</span>
+          <select
+            value={tab}
+            onChange={(e) => setTab(e.target.value as JobTab)}
+            className="h-12 w-full appearance-none rounded-xl bg-card pl-4 pr-10 text-[16px] font-semibold text-heading shadow-[var(--shadow-xs)] outline-none ring-1 ring-line-strong focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {tabs.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+                {t.count ? ` (${t.count})` : ""}
+              </option>
+            ))}
+          </select>
+          <ChevronDown aria-hidden className="pointer-events-none absolute right-3.5 top-1/2 size-5 -translate-y-1/2 text-subtle" />
+        </label>
+      </div>
+      <div role="tablist" aria-label="Job sections" className="scrollbar-none sticky top-0 z-10 -mx-4 mt-5 hidden gap-0.5 overflow-x-auto border-b border-line bg-background/90 px-4 backdrop-blur-xl sm:-mx-6 sm:flex sm:px-6 lg:mx-0 lg:px-0">
         {tabs.map((t) => (
           <button
             key={t.value}

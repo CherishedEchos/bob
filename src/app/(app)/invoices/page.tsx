@@ -118,7 +118,7 @@ function InvoicesInner() {
         onChange={setView}
         options={[
           { value: "invoices", label: "Invoices", count: outstandingCount },
-          { value: "bills", label: "Bills to pay", count: dueBills.length, highlight: true },
+          { value: "bills", label: "Bills", count: dueBills.length, highlight: true },
           { value: "deposits", label: "Deposits", count: deposits.length },
           { value: "overview", label: "Overview" },
         ]}

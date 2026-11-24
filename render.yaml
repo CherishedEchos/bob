@@ -46,6 +46,17 @@ services:
         sync: false
       - key: BOB_CLAUDE_CACHE_TTL
         sync: false
+      # Luke's and Ryan's own sign-ins to the Ninety3 demonstration workspace
+      # (fictional data). Set in the dashboard; passwords at least 10 characters.
+      # Re-applied on every start, so they survive the free plan's disk wipe.
+      - key: BOB_DEMO_LUKE_EMAIL
+        sync: false
+      - key: BOB_DEMO_LUKE_PASSWORD
+        sync: false
+      - key: BOB_DEMO_RYAN_EMAIL
+        sync: false
+      - key: BOB_DEMO_RYAN_PASSWORD
+        sync: false
       # Comma-separated Cresaro staff emails who can open the Cresaro admin area
       # (AI usage, costs, spending limits, connection test). Customers never see it.
       - key: BOB_PLATFORM_ADMINS

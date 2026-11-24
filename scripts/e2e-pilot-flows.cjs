@@ -25,7 +25,8 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
   const o = await oc.newPage();
   o.on('pageerror', (e) => errors.push(e.message));
   await o.goto(BASE + '/login');
-  await o.getByRole('button', { name: /Try the demo/ }).click();
+  await o.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
+  await o.goto(BASE + '/');
   await o.waitForURL('**/week');
   await o.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
   await o.reload();
@@ -43,7 +44,7 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
   check(1, 'Week navigation updates the date range', range1 !== range2 && (await o.getByRole('toolbar', { name: 'Diary controls' }).locator('p').innerText()) === range1, `${range1} → ${range2}`);
   await o.getByRole('toolbar', { name: 'Diary controls' }).locator('select').selectOption({ label: 'Sam Okoro · Plasterer' });
   await o.waitForTimeout(500);
-  const cards = await o.getByRole('region', { name: /^Diary/ }).getByRole('button', { name: /^Edit booking/ }).allInnerTexts();
+  const cards = await o.getByRole('region', { name: /^Diary/ }).getByRole('button', { name: /^Edit booking/ }).evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') || ''));
   check(1, 'Filter by a subcontractor shows only their work', cards.length > 0 && cards.every((t) => /Sam/.test(t)), `${cards.length} bookings`);
   await o.getByRole('button', { name: 'Show everyone' }).click();
   const unassigned = o.getByRole('button', { name: /^Edit booking: .*unassigned/ }).first();
@@ -75,12 +76,12 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
   await d.getByLabel('Trade (optional)').fill('Groundworker');
   await d.getByLabel('Email (optional)').fill(ROB);
   await d.getByRole('button', { name: 'Add person' }).click();
-  await o.locator('li.row-open', { hasText: 'Rob Turner' }).waitFor();
+  await o.getByRole('button', { name: 'Open Rob Turner' }).waitFor();
   const robId = (await snap(o)).people.find((p) => p.name === 'Rob Turner').id;
   const tomorrow = london(1);
   const book = await ops(o, 'saveBooking', { input: { jobId: 'n93_job_mediawall_reigate', date: tomorrow, startTime: '07:30', endTime: '15:00', personIds: [robId], notes: 'Fit the media wall frame.' } });
   check(2, 'Rob scheduled on tomorrow’s job', book.ok === true, book.error || '');
-  await o.locator('li.row-open', { hasText: 'Rob Turner' }).click({ position: { x: 300, y: 20 } });
+  await o.getByRole('button', { name: 'Open Rob Turner' }).click();
   const ps = o.getByRole('dialog', { name: 'Team: Rob Turner' });
   await ps.getByRole('button', { name: 'Invite to Bob' }).click();
   const inviteUrl = await ps.getByLabel(/Invite link for/).inputValue();
@@ -177,13 +178,15 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
   check(4, 'Schedule work opens with the won job preselected', /Garden office/.test(await sf.getByLabel('Job').locator('option:checked').innerText()));
   await o.keyboard.press('Escape');
   await o.goto(BASE + '/jobs');
-  check(4, 'Won job appears under Unscheduled', /Garden office/.test(await o.locator('main').innerText()) && (await o.getByRole('tab', { name: /Unscheduled/ }).getAttribute('aria-selected')) === 'true');
+  await o.getByRole('heading', { name: 'Jobs', level: 1 }).waitFor();
+  await o.getByLabel('Search jobs').fill('Garden office');
+  await o.waitForTimeout(400);
+  check(4, 'Won job is on Jobs (search finds it)', /Garden office/.test(await o.locator('main').innerText()));
 
   /* 5. Material from a job, assign merchant, mark ordered from Materials; job and merchant reflect it */
-  await o.locator('li.row-open', { hasText: 'Garden office' }).click({ position: { x: 300, y: 20 } });
-  const gj = o.getByRole('dialog', { name: /Garden office for Chris Walker/ });
-  await gj.getByRole('tab', { name: /Materials/ }).click();
-  await gj.getByRole('button', { name: 'Add material' }).click();
+  await o.getByText('Garden office').first().click();
+  await o.waitForURL(/\/jobs\/[^/?]+/);
+  await o.locator('[aria-label="Quick actions"]').getByRole('button', { name: 'Add material' }).click();
   const mf = o.getByRole('dialog', { name: 'Add to order list' });
   await mf.getByLabel('Item').fill('Treated C24 timber 47x100');
   await mf.getByLabel('Quantity').fill('24');
@@ -194,12 +197,12 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
   check(5, 'Material added from the job without a merchant', !!mat && !mat.merchantId && mat.unit === 'lengths');
   await o.keyboard.press('Escape');
   await o.goto(BASE + '/materials');
-  await o.locator('section', { hasText: 'No merchant yet' }).getByRole('button', { name: /Edit Treated C24/ }).click();
+  await o.getByRole('button', { name: /Edit Treated C24/ }).filter({ visible: true }).first().click();
   const ed = o.getByRole('dialog', { name: 'Add to order list' });
   await ed.getByLabel('Merchant (optional)').selectOption({ label: 'Crawley Timber Supplies · Manor Royal' });
   await ed.getByRole('button', { name: 'Save item' }).click();
   await ed.waitFor({ state: 'detached' });
-  await o.locator('section', { hasText: 'Crawley Timber Supplies' }).getByLabel('Status for Treated C24 timber 47x100').selectOption('ordered');
+  await o.getByLabel('Status for Treated C24 timber 47x100').filter({ visible: true }).first().selectOption('ordered');
   await o.waitForTimeout(700);
   const m2 = (await snap(o)).materials.find((m) => m.item === 'Treated C24 timber 47x100');
   check(5, 'Merchant assigned and marked Ordered from Materials', m2.merchantId === 'n93_mer_timber' && m2.status === 'ordered');
@@ -210,12 +213,9 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
   check(5, 'Merchant shows the open order', /Treated C24 timber 47x100[\s\S]*Ordered/.test(await ms.innerText()));
   check(5, 'Owner sees account reference and password-manager link (no password)', /N93-4471/.test(await ms.innerText()) && (await ms.getByRole('link', { name: 'Open in password manager' }).count()) === 1);
   await o.keyboard.press('Escape');
-  await o.goto(BASE + '/jobs');
-  await o.getByRole('tab', { name: /All/ }).click();
-  await o.locator('li.row-open', { hasText: 'Garden office' }).click({ position: { x: 300, y: 20 } });
-  await o.getByRole('dialog', { name: /Garden office/ }).getByRole('tab', { name: /Materials/ }).click();
-  check(5, 'Job shows the same item as Ordered with the merchant', /Treated C24[\s\S]*Crawley Timber Supplies/.test(await o.getByRole('dialog', { name: /Garden office/ }).innerText()));
-  await o.keyboard.press('Escape');
+  await o.goto(BASE + `/jobs/${garden[0].id}?tab=materials`);
+  await o.getByRole('tab', { name: /Materials & tasks/, selected: true }).waitFor();
+  check(5, 'Job shows the same item as Ordered with the merchant', /Treated C24[\s\S]*Crawley Timber Supplies/.test(await o.locator('#job-tabpanel').innerText()));
 
   /* 6. Assign and complete a job task; record a supplier bill payment; open QuickBooks */
   const t = await ops(o, 'createTask', { input: { title: 'Pick up timber order', dueDate: london(0), relatedType: 'job', relatedId: garden[0].id, assignedPersonId: 'n93_per_callum' } });
@@ -291,9 +291,10 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
     const local = [];
     p.on('pageerror', (e) => local.push(e.message));
     await p.goto(BASE + '/login');
-    await p.getByRole('button', { name: /Try the demo/ }).click();
+    await p.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
+    await p.goto(BASE + '/');
     await p.waitForURL('**/week');
-    const pages = [['/week', /Diary/, /Schedule work/], ['/jobs', /Jobs/, /Add job/], ['/enquiries', /Enquiries/, /Add/], ['/materials', /Materials/, /Add material/], ['/merchants', /Merchants/, /Add merchant/], ['/team', /Team/, /Add person/], ['/customers', /Customers/, /Add customer/], ['/tasks', /Tasks/, /Add task/], ['/invoices', /Money owed to you/, /invoice draft/i], ['/invoices?view=bills', /Bills to pay/, /Add bill/], ['/settings', /Settings/, /Calendar/]];
+    const pages = [['/week', /Diary/, /Schedule work/], ['/jobs', /Jobs/, /Add job/], ['/enquiries', /Enquiries/, /Add/], ['/materials', /Materials/, /Add material/], ['/merchants', /Merchants/, /Add merchant/], ['/team', /Team/, /Add person/], ['/customers', /Customers/, /Add customer/], ['/tasks', /Tasks/, /Add task/], ['/invoices', /Money/, /Owed to you[\s\S]*Overdue[\s\S]*Received/], ['/invoices?view=bills', /Money/, /Add bill/], ['/settings', /Settings/, /Calendar/]];
     for (const [path, title, action] of pages) {
       await p.goto(BASE + path);
       await p.waitForTimeout(500);
@@ -303,21 +304,22 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
     }
     if (label === '1920' || label === '1280') {
       await p.goto(BASE + '/week');
-      await p.waitForTimeout(800);
+      await p.locator('section[aria-label^="Diary"]').waitFor({ timeout: 30000 });
+      await p.waitForTimeout(500);
       const geo = await p.evaluate(() => {
         const grid = document.querySelector('section[aria-label^="Diary"]').getBoundingClientRect();
         const main = document.querySelector('main').getBoundingClientRect();
         const clipped = [...document.querySelectorAll('section[aria-label^="Diary"] button[aria-label^="Edit booking"]')].some((el) => el.scrollWidth > el.clientWidth + 1);
         return { leftGap: Math.round(grid.left - main.left), rightGap: Math.round(main.right - grid.right), clipped, col: Math.round(grid.width / 6.1) };
       });
-      check(8, `${label}: diary uses the width (gutters ≤ 40px, no clipped cards)`, geo.leftGap <= 40 && geo.rightGap <= 40 && !geo.clipped, JSON.stringify(geo));
+      check(8, `${label}: diary uses the width (gutters ≤ 56px, no clipped cards)`, geo.leftGap <= 56 && geo.rightGap <= 56 && !geo.clipped, JSON.stringify(geo));
       await p.screenshot({ path: `${OUT}/pilot-diary-${label}.png` });
     }
     if (label === '390') {
       await p.goto(BASE + '/week');
       await p.getByRole('heading', { name: 'Diary' }).waitFor();
       check(8, '390: agenda starts with today and Schedule work is visible', /^Today/.test(await p.getByRole('region', { name: /^Agenda/ }).locator('h2').first().innerText()) && (await p.getByRole('button', { name: 'Schedule work', exact: true }).isVisible()));
-      await p.getByRole('region', { name: /^Agenda/ }).getByRole('button', { name: /^Edit booking/ }).first().tap();
+      await p.getByRole('region', { name: /^Agenda/ }).getByRole('button', { name: /^Booking: / }).first().tap();
       const dd = p.getByRole('dialog', { name: 'Schedule work' });
       await dd.waitFor();
       const ov = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

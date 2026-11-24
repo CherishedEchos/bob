@@ -26,9 +26,10 @@ function london(offsetDays) {
   const o = await oc.newPage();
   watch(o, 'owner');
   await o.goto(BASE + '/login');
-  await o.getByRole('button', { name: /Try the demo/ }).click();
+  await o.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
+  await o.goto(BASE + '/');
   await o.waitForURL('**/week');
-  check(1, 'Try the demo lands on This week', await o.getByRole('heading', { name: 'This week' }).waitFor().then(() => true));
+  check(1, 'Signing in lands on the Diary', await o.getByRole('heading', { name: 'Diary', level: 1 }).waitFor().then(() => true));
   await o.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
   await o.reload();
   // Add a person (no login)
@@ -41,8 +42,8 @@ function london(offsetDays) {
   await dlg.getByLabel('Company (optional)').fill('Turner Groundworks');
   await dlg.getByLabel('Email (optional)').fill(ROB);
   await dlg.getByRole('button', { name: 'Add person' }).click();
-  await o.locator('li.row-open', { hasText: 'Rob Turner' }).waitFor();
-  check(1, 'Subcontractor added without an account (Not invited)', /Not invited/.test(await o.locator('li.row-open', { hasText: 'Rob Turner' }).innerText()));
+  await o.getByRole('listitem').filter({ has: o.getByRole('button', { name: 'Open Rob Turner' }) }).waitFor();
+  check(1, 'Subcontractor added without an account (Not invited)', /Not invited/.test(await o.getByRole('listitem').filter({ has: o.getByRole('button', { name: 'Open Rob Turner' }) }).innerText()));
   // Create the job
   await o.goto(BASE + '/jobs');
   await o.getByRole('button', { name: 'Add job' }).first().click();
@@ -53,10 +54,12 @@ function london(offsetDays) {
   await jd.getByLabel('Site address (optional)').fill('7 High Street, Lingfield, RH7 6AA');
   await jd.getByLabel('Price (£)').fill('4200');
   await jd.getByRole('button', { name: 'Add job' }).click();
-  const sheet = o.getByRole('dialog', { name: /Garden room base for Grace Fielding/ });
-  await sheet.waitFor();
-  check(1, 'New job opens its profile with Schedule work near the top', await sheet.getByRole('button', { name: 'Schedule work' }).first().isVisible());
-  await sheet.getByRole('button', { name: 'Schedule work' }).first().click();
+  await o.waitForURL(/\/jobs\/[^/?]+/);
+  const sheet = o.locator('main');
+  await sheet.getByRole('heading', { name: 'Garden room base' }).waitFor();
+  const quick = sheet.locator('[aria-label="Quick actions"]');
+  check(1, 'New job opens its page with Schedule work in the quick actions', await quick.getByRole('button', { name: 'Schedule work' }).isVisible());
+  await quick.getByRole('button', { name: 'Schedule work' }).click();
   const bf = o.getByRole('dialog', { name: 'Schedule work' });
   await bf.waitFor();
   const tomorrow = london(1);
@@ -69,12 +72,12 @@ function london(offsetDays) {
   await bf.waitFor({ state: 'detached', timeout: 8000 });
   await o.keyboard.press('Escape');
   await o.goto(BASE + `/week?w=${tomorrow}`);
-  const card = o.getByRole('button', { name: /Garden room base for Grace Fielding, 08:00–16:00, Rob Turner/ }).first();
+  const card = o.getByRole('button', { name: /Garden room base, Lingfield, 08:00–16:00, Rob Turner/ }).first();
   check(1, "Rob is booked on tomorrow's job in the planner", await card.waitFor({ timeout: 8000 }).then(() => true).catch(() => false));
   await o.screenshot({ path: `${OUT}/e2e-week-desk.png` });
   // Invite Rob
   await o.goto(BASE + '/team');
-  await o.locator('li.row-open', { hasText: 'Rob Turner' }).click({ position: { x: 300, y: 20 } });
+  await o.getByRole('button', { name: 'Open Rob Turner' }).click();
   const ps = o.getByRole('dialog', { name: 'Team: Rob Turner' });
   await ps.getByRole('button', { name: 'Invite to Bob' }).click();
   const linkBox = ps.getByLabel(/Invite link for/);
@@ -101,14 +104,14 @@ function london(offsetDays) {
   const nextText = await next.innerText();
   check(2, 'Next booking first: tomorrow, 08:00–16:00', /Tomorrow · 08:00–16:00/.test(nextText));
   check(2, 'Site address and instructions visible with no extra taps', /7 High Street, Lingfield/.test(nextText) && /Gate code 1290/.test(nextText));
-  const dir = await next.getByRole('link', { name: 'Directions' }).getAttribute('href');
+  const dir = await next.getByRole('link', { name: 'Open in maps' }).getAttribute('href');
   check(2, 'Directions opens maps to the site', dir && dir.includes('google.com/maps') && dir.includes('Lingfield'));
   check(2, 'No prices on My work', !/£|4,200|4200/.test(await w.locator('body').innerText()));
   await w.screenshot({ path: `${OUT}/e2e-mywork-phone.png` });
 
   /* -------- Flow 3 + 4: move and reassign; overlap warning; failed save keeps input -------- */
   await o.goto(BASE + `/week?w=${tomorrow}`);
-  await o.getByRole('button', { name: /Garden room base for Grace Fielding/ }).first().click();
+  await o.getByRole('button', { name: /Garden room base, Lingfield/ }).first().click();
   const ef = o.getByRole('dialog', { name: 'Schedule work' });
   await ef.waitFor();
   const dayAfter = london(2);
@@ -136,7 +139,7 @@ function london(offsetDays) {
   const robApi = await w.evaluate(async () => (await fetch('/api/my-work')).json());
   check(3, "Rob's API no longer returns the job, its tasks or materials", robApi.value.bookings.length === 0 && robApi.value.materials.length === 0);
   await o.goto(BASE + `/week?w=${dayAfter}&person=n93_per_callum`);
-  check(3, "Callum's schedule shows the moved booking", await o.getByRole('button', { name: /Garden room base for Grace Fielding, 08:00–16:00, Callum Price/ }).first().waitFor({ timeout: 8000 }).then(() => true).catch(() => false));
+  check(3, "Callum's schedule shows the moved booking", await o.getByRole('button', { name: /Garden room base, Lingfield, 08:00–16:00, Callum Price/ }).first().waitFor({ timeout: 8000 }).then(() => true).catch(() => false));
 
   /* -------- Flow 5: enquiry — read, edit, save, copy; saved draft ≠ replied -------- */
   await o.goto(BASE + '/enquiries');
@@ -183,19 +186,16 @@ function london(offsetDays) {
   await o.keyboard.press('Escape');
 
   /* -------- Flow 7: task, materials, bill to pay -------- */
-  await o.goto(BASE + '/jobs');
-  await o.getByRole('tab', { name: /All/ }).click();
-  await o.locator('li.row-open', { hasText: 'Kitchen renovation' }).filter({ hasText: 'The Patels' }).click({ position: { x: 300, y: 20 } });
-  const pj = o.getByRole('dialog', { name: /Kitchen renovation for The Patels/ });
-  await pj.getByRole('tab', { name: /Tasks/ }).click();
+  await o.goto(BASE + '/jobs/n93_job_kitchen_crawley?tab=materials');
+  const pj = o.locator('#job-tabpanel');
+  await o.getByRole('tab', { name: /Materials & tasks/, selected: true }).waitFor();
   await pj.getByRole('button', { name: 'Add task' }).click();
-  const tf = o.getByRole('dialog', { name: 'Set a reminder' });
+  const tf = o.getByRole('dialog', { name: 'Add task' });
   await tf.getByLabel(/What do you need/).fill('Collect island end panels');
   await tf.getByLabel('Assign to (optional)').selectOption({ label: 'Liam Carter · Lead carpenter' });
   await tf.getByRole('button', { name: 'Assign task' }).click();
   await tf.waitFor({ state: 'detached' });
   check(7, 'Task assigned to a person on the job', /Collect island end panels[\s\S]*For Liam Carter/.test(await pj.innerText()));
-  await pj.getByRole('tab', { name: /Materials/ }).click();
   await pj.getByLabel(/Status for Quartz worktop offcuts/).selectOption('ordered');
   await o.waitForTimeout(700);
   const mats = (await o.evaluate(async () => (await fetch('/api/data')).json())).materials;
@@ -203,7 +203,7 @@ function london(offsetDays) {
   await o.keyboard.press('Escape');
   await o.goto(BASE + '/invoices?view=bills');
   const billsText = await o.locator('main').innerText();
-  check(7, 'A supplier bill due for payment is easy to identify', /Bills to pay/.test(billsText) && /Davies Electrical[\s\S]*Overdue/.test(billsText));
+  check(7, 'A supplier bill due for payment is easy to identify', /Bills/.test(billsText) && /Davies Electrical[\s\S]*Overdue/.test(billsText));
 
   /* -------- Flow 8: subcontractor can't reach anything else; revoked invite unusable -------- */
   const sc = await b.newContext(PHONE);
@@ -262,19 +262,20 @@ function london(offsetDays) {
     const local = [];
     p.on('pageerror', (e) => local.push(e.message));
     await p.goto(BASE + '/login');
-    await p.getByRole('button', { name: /Try the demo/ }).click();
+    await p.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
+    await p.goto(BASE + '/');
     await p.waitForURL('**/week');
     const pages = [
-      ['/week', /This week/, /Schedule work/],
+      ['/week', /Diary/, /Schedule work/],
       ['/enquiries', /Enquiries/, /Add enquiry|Add/],
       ['/jobs', /Jobs/, /Add job/],
       ['/team', /Team/, /Add person/],
       ['/customers', /Customers/, /Add customer/],
-      ['/invoices', /Money owed to you/, /invoice draft/i],
-      ['/invoices?view=bills', /Bills to pay/, /Add bill/],
-      ['/materials', /Materials/, /Add item/],
-      ['/tasks', /Tasks/, /Add reminder/],
-      ['/settings', /Settings/, /Connected accounts/],
+      ['/invoices', /Money/, /Owed to you[\s\S]*Overdue[\s\S]*Received/],
+      ['/invoices?view=bills', /Money/, /Add bill/],
+      ['/materials', /Materials/, /Add material/],
+      ['/tasks', /Tasks/, /Add task/],
+      ['/settings', /Settings/, /Email & accounting/],
     ];
     for (const [path, title, action] of pages) {
       await p.goto(BASE + path);
@@ -289,9 +290,9 @@ function london(offsetDays) {
     check(9, `${label}: empty state on Team → Archived`, await p.getByText('No one archived').isVisible());
     if (label.startsWith('phone')) {
       await p.goto(BASE + '/week');
-      await p.getByRole('heading', { name: 'This week' }).waitFor();
+      await p.getByRole('heading', { name: 'Diary', level: 1 }).waitFor();
       const agendaFirst = await p.getByRole('region', { name: /^Agenda/ }).locator('h2').first().innerText();
-      check(9, 'phone: This week agenda starts with today', /^Today/.test(agendaFirst), agendaFirst);
+      check(9, 'phone: Diary agenda starts with today', /^Today/.test(agendaFirst), agendaFirst);
       check(9, 'phone: bottom navigation present', await p.getByRole('navigation', { name: 'Main' }).last().waitFor().then(() => true));
       await p.screenshot({ path: `${OUT}/e2e-week-phone.png` });
     }

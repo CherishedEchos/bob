@@ -10,9 +10,9 @@ const PREFIX = process.argv[2] || 'shot';
 fs.mkdirSync(OUT, { recursive: true });
 const PAGES = [
   ['diary', '/week'], ['ask-bob', '/assistant'], ['enquiries', '/enquiries'], ['jobs', '/jobs'], ['job', '/jobs/n93_job_mackay_kitchen'],
-  ['customers', '/customers'], ['tasks', '/tasks'], ['team', '/team'], ['materials', '/materials'], ['merchants', '/merchants'], ['money', '/invoices'], ['settings', '/settings'],
+  ['handover', '/jobs/n93_job_gardenroom_lingfield?tab=handover'], ['activity', '/activity'], ['customers', '/customers'], ['tasks', '/tasks'], ['team', '/team'], ['materials', '/materials'], ['merchants', '/merchants'], ['money', '/invoices'], ['settings', '/settings'],
 ];
-const SIZES = { phone: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, tablet: { viewport: { width: 820, height: 1180 }, deviceScaleFactor: 1 }, desktop: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } };
+const SIZES = { 'phone-375': { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, phone: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, tablet: { viewport: { width: 820, height: 1180 }, deviceScaleFactor: 1 }, desktop: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } };
 (async () => {
   const b = await chromium.launch();
   const only = process.env.ONLY ? process.env.ONLY.split(',') : null;
@@ -22,7 +22,7 @@ const SIZES = { phone: { viewport: { width: 390, height: 844 }, isMobile: true, 
     const p = await ctx.newPage();
     p.on('pageerror', (e) => console.log(`pageerror ${size}: ${e.message}`));
     await p.goto(BASE + '/login');
-    await p.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
+    await p.evaluate(async ([email, password]) => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }), [process.env.LUKE_EMAIL || 'owner@ninety3.example', process.env.LUKE_PASSWORD || 'bob-demo']);
     await ctx.addInitScript(() => { try { localStorage.setItem('bob.onboarding.done', '1'); localStorage.setItem('bob.tips.off', '1'); } catch { /* */ } });
     for (const [name, url] of PAGES) {
       if (only && !only.includes(name)) continue;

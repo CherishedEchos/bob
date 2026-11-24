@@ -10,6 +10,7 @@
  * statement. Nothing in the request body can choose the organisation.
  */
 import "server-only";
+import { applyDemoAccounts } from "./demo-accounts";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
@@ -307,6 +308,8 @@ export function getDb(): DatabaseSync {
   const db = new DatabaseSync(file);
   initDb(db);
   globalThis.__bobDb = db;
+  // The demo's finished handover report needs the database ready (it uses the normal report service).
+  if (!process.env.VITEST) void import("./demo-report").then((m) => m.ensureDemoHandoverReport(db)).catch((e) => console.error("[bob] Demo handover report:", e));
   return db;
 }
 
@@ -333,6 +336,7 @@ export function initDb(db: DatabaseSync) {
   migrateJobPhotos(db);
   provisionWorkspaces(db);
   addNinety3Wordmark(db);
+  applyDemoAccounts(db);
 }
 
 /**

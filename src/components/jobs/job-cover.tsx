@@ -39,7 +39,7 @@ export function useJobCovers(files: JobFile[]) {
 export function JobCover({ job, file, className, large, children }: { job: Pick<Job, "kind" | "title">; file?: JobFile; className?: string; large?: boolean; children?: React.ReactNode }) {
   const [broken, setBroken] = React.useState(false);
   const Icon = KIND_ICON[job.kind] ?? Hammer;
-  const illustrative = file?.description?.startsWith("Illustrative");
+  const label = file?.description?.startsWith("Illustrative") ? "Illustrative image" : file?.description?.startsWith("Demo photo") ? "Demo photo" : null;
   return (
     <div className={cn("relative overflow-hidden bg-[#efede8]", className)}>
       {file && !broken ? (
@@ -58,8 +58,8 @@ export function JobCover({ job, file, className, large, children }: { job: Pick<
           <Icon className={cn("relative text-[#b9b2a6]", large ? "size-14" : "size-9")} strokeWidth={1.4} />
         </div>
       )}
-      {illustrative && !broken ? (
-        <span className="absolute bottom-2 right-2 rounded-full bg-black/45 px-1.5 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">Illustrative image</span>
+      {label && !broken ? (
+        <span className="absolute bottom-2 right-2 rounded-full bg-black/45 px-1.5 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">{label}</span>
       ) : null}
       {children}
     </div>

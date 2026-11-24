@@ -73,5 +73,6 @@ export function resetSampleData(ctx: Ctx): Result<true> {
     seedOrgData(raw, insertRaw, ctx.orgId);
   });
   audit(ctx, "demo.reset", "Sample data reset");
+  if (!process.env.VITEST) void import("@/server/db/demo-report").then((m) => m.ensureDemoHandoverReport(raw)).catch(() => {});
   return ok(true);
 }

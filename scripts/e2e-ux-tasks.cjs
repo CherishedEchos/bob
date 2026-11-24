@@ -11,6 +11,7 @@ const OUT = process.env.OUT || '/tmp';
 const results = [];
 const check = (size, name, ok, extra = '') => { results.push(!!ok); console.log(`${ok ? 'PASS' : 'FAIL'} [${size}] ${name}${extra ? ' — ' + extra : ''}`); };
 const SIZES = {
+  'phone-375': { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
   phone: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
   tablet: { viewport: { width: 820, height: 1180 }, hasTouch: true, deviceScaleFactor: 1 },
   desktop: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
@@ -37,17 +38,17 @@ async function nav(p, size, label) {
     const errors = [];
     p.on('pageerror', (e) => errors.push(e.message));
     await p.goto(BASE + '/login');
-    await p.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
+    await p.evaluate(async ([email, password]) => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }), [process.env.LUKE_EMAIL || 'owner@ninety3.example', process.env.LUKE_PASSWORD || 'bob-demo']);
     await p.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
     await p.goto(BASE + '/');
-    await p.waitForURL('**/week');
+    await p.waitForURL('**/week', { timeout: 90000 });
 
     /* 1. Tomorrow's work: the Diary is the landing page and shows tomorrow's bookings */
     const tomorrow = london(1);
     const data = await snap(p);
     const tmrw = data.bookings.filter((bk) => bk.date <= tomorrow && (bk.endDate || bk.date) >= tomorrow);
     const jobTitle = (id) => data.jobs.find((j) => j.id === id)?.title;
-    if (size === 'phone') {
+    if (size.startsWith('phone')) {
       const day = String(Number(tomorrow.slice(8)));
       await p.locator('main button').filter({ hasText: new RegExp(`^\\s*[MTWFS]\\s*${day}\\s*$`) }).first().click();
       await p.waitForTimeout(400);
@@ -64,7 +65,7 @@ async function nav(p, size, label) {
     await jf.getByLabel('Job', { exact: true }).fill(`Porch build ${size}`);
     await jf.getByLabel('Town').fill('Crawley');
     await jf.getByRole('button', { name: /^Add job$/ }).click();
-    await p.waitForTimeout(1200);
+    await p.waitForURL(/\/jobs\/[^/?]+$/, { timeout: 60000 }).catch(() => {});
     check(size, 'Add a job from Jobs', (await snap(p)).jobs.some((j) => j.title === `Porch build ${size}`));
     await p.keyboard.press('Escape').catch(() => {});
 
@@ -143,6 +144,25 @@ async function nav(p, size, label) {
       const panelText = await p.getByRole('dialog').innerText();
       check(size, 'Desktop Ask Bob button opens Bob with the job as context', /About Sophie Mackay — Oak Road kitchen|looking at Sophie Mackay/.test(panelText));
       await p.screenshot({ path: path.join(OUT, `ux-task-desktop-ask-bob-panel.png`) });
+    }
+    // Nothing important hidden behind the floating nav: the last item on long pages can scroll clear of it.
+    if (size.startsWith('phone')) {
+      await p.goto(BASE + '/jobs/n93_job_mackay_kitchen');
+      await p.waitForTimeout(800);
+      const clear = await p.evaluate(() => {
+        const main = document.querySelector('main');
+        main.scrollTo(0, main.scrollHeight);
+        const nav = [...document.querySelectorAll('nav[aria-label="Main"]')].pop().getBoundingClientRect();
+        const items = [...main.querySelectorAll('button, a')].filter((el) => el.offsetParent);
+        const last = items[items.length - 1].getBoundingClientRect();
+        return last.bottom <= nav.top + 2;
+      });
+      check(size, 'Phone: the floating nav never covers the last control on a page', clear);
+      const ov = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      check(size, 'Phone: job page has no sideways scrolling', ov <= 1, String(ov));
+      const small = await p.evaluate(() => [...document.querySelectorAll('[aria-label="Quick actions"] button')].filter((b) => b.getBoundingClientRect().height < 44).length);
+      check(size, 'Phone: job quick actions are at least 44px tall', small === 0, `${small} small`);
+      await p.screenshot({ path: path.join(OUT, `ux-task-${size}-job.png`) });
     }
     check(size, 'No page errors', errors.length === 0, errors.slice(0, 2).join(' | '));
     await ctx.close();
