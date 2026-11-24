@@ -57,6 +57,8 @@ const COLLAPSE_KEY = "bob.sidebar.collapsed";
 function ShellLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const assistant = isAssistantRoute(pathname);
+  // Focused workspaces (the handover) have their own Back / Continue bar, so no tab bar or floating button.
+  const focus = /^\/jobs\/[^/]+\/handover/.test(pathname);
   const shellRef = React.useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = React.useState(false);
   React.useEffect(() => {
@@ -99,17 +101,17 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
       <div className="relative flex min-w-0 flex-1 flex-col">
         {/* Ask Bob shows demo mode in its own header; phones show it in the top bar. */}
         {!assistant ? <DemoBanner /> : null}
-        {!assistant ? <MobileHeader /> : null}
+        {!assistant && !focus ? <MobileHeader /> : null}
         <main className={cn("min-h-0 flex-1 overscroll-contain", assistant ? "overflow-hidden" : "overflow-y-auto bg-app")}>
           {assistant ? (
             children
           ) : (
-            <div className={cn("mx-auto w-full px-4 pb-[calc(112px+env(safe-area-inset-bottom))] pt-3 sm:px-6 lg:px-10 lg:pb-24 lg:pt-8 2xl:px-12", pageWidth(pathname))}>{children}</div>
+            <div className={cn("mx-auto w-full px-4 pt-3 sm:px-6 lg:px-10 lg:pt-8 2xl:px-12", focus ? "flex min-h-full flex-col pb-0 lg:pb-0" : "pb-[calc(112px+env(safe-area-inset-bottom))] lg:pb-24", pageWidth(pathname))}>{children}</div>
           )}
         </main>
         {/* Ask Bob has its own back button and bottom controls. */}
-        {!assistant ? <BottomNav /> : null}
-        {!assistant ? <DesktopAskBob /> : null}
+        {!assistant && !focus ? <BottomNav /> : null}
+        {!assistant && !focus ? <DesktopAskBob /> : null}
       </div>
     </div>
   );
@@ -380,6 +382,7 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
 
 /** Detail pages get a back link to their list on phones (the browser back button still works too). */
 function backTarget(p: string): { href: string; label: string } | null {
+  if (/^\/jobs\/[^/]+\/handover/.test(p)) return null; // the handover has its own back and Save & exit
   if (p.startsWith("/jobs/")) return { href: "/jobs", label: "Jobs" };
   if (p.startsWith("/cresaro")) return { href: "/settings", label: "Settings" };
   if (p.startsWith("/activity")) return { href: "/settings", label: "Settings" };

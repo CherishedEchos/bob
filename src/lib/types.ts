@@ -559,6 +559,8 @@ export interface HandoverReport {
   revision: number;
   aiStatus: "none" | "drafted" | "fallback";
   aiNote?: string;
+  /** Where the person left the handover workspace (1 Job details … 5 Review & finish), so they resume there. */
+  step?: number;
   createdBy: string;
   createdAt: string;
   updatedBy: string;

@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type { Job } from "@/lib/types";
 import { FilesPanel } from "@/components/files/files-panel";
-import { HandoverPanel } from "@/components/files/handover-panel";
 import { AddUpdateButton, UpdatesTimeline } from "@/components/updates/updates-timeline";
-import { ReportTab } from "@/components/reports/report-tab";
+import { HANDOVER_STATUS_LABEL, handoverStatus, type HandoverStatus } from "@/components/reports/handover-wizard";
 import { Tip } from "@/components/common/tip";
 import { VariationsPanel } from "@/components/jobs/variations";
 
@@ -127,9 +127,9 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
   const moneyAction =
     money && can("payments.record") && f.depositOutstanding > 0 && j.status !== "quoted"
       ? { label: "Record deposit", icon: PoundSterling, run: payment }
-      : money && can("invoices.draft") && f.balance > 0 && (j.status === "snagging" || j.status === "completed") && !invoices.some((i) => i.status !== "void")
+      : money && can("invoices.draft") && fin.outstanding > 0 && (j.status === "snagging" || j.status === "completed") && !invoices.some((i) => i.status !== "void")
         ? { label: "Create invoice draft", icon: ReceiptText, run: invoice }
-        : money && can("payments.record") && f.balance > 0 && j.status !== "quoted"
+        : money && can("payments.record") && fin.outstanding > 0 && j.status !== "quoted"
           ? { label: "Record payment", icon: PoundSterling, run: payment }
           : null;
   const paymentStatus = !money
@@ -139,22 +139,25 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
           tone: f.depositOverdue ? ("red" as const) : ("amber" as const),
           text: `${gbp(f.depositOutstanding)} deposit ${f.depositOverdue ? "overdue" : f.depositDaysUntilDue !== null ? (f.depositDaysUntilDue === 0 ? "due today" : `due in ${f.depositDaysUntilDue} day${f.depositDaysUntilDue === 1 ? "" : "s"}`) : "not yet paid"}`,
         }
-      : f.balance === 0 && j.quotedValue > 0
+      : fin.outstanding === 0 && fin.contractValue > 0
         ? { tone: "green" as const, text: "Paid in full" }
-        : { tone: "neutral" as const, text: j.depositRequired > 0 ? `Deposit paid · ${gbp(f.balance)} left to pay` : `${gbp(f.balance)} left to pay` };
+        : { tone: "neutral" as const, text: j.depositRequired > 0 ? `Deposit paid · ${gbp(fin.outstanding)} left to pay` : `${gbp(fin.outstanding)} left to pay` };
   const more: MenuItem[] = [
-    ...(money && can("payments.record") && f.balance > 0 && moneyAction?.run !== payment ? [{ label: "Record payment", icon: PoundSterling, onSelect: payment }] : []),
+    ...(money && can("payments.record") && fin.outstanding > 0 && moneyAction?.run !== payment ? [{ label: "Record payment", icon: PoundSterling, onSelect: payment }] : []),
     ...(money && can("invoices.draft") && moneyAction?.run !== invoice ? [{ label: "Create invoice draft", icon: ReceiptText, onSelect: invoice }] : []),
     ...(can("expenses.write") ? [{ label: "Add a cost", icon: Hammer, onSelect: () => ui.openForm({ form: "expense", jobId: j.id }) }] : []),
     { label: "Customer details", icon: UserRound, onSelect: () => ui.openCustomer(j.customerId) },
     ...(j.enquiryId ? [{ label: "Original enquiry", icon: Inbox, onSelect: () => ui.openEnquiry(j.enquiryId!) }] : []),
   ];
 
+  const hStatus = handoverStatus(data.reports.find((r) => r.jobId === j.id), data.reportVersions.filter((v) => v.jobId === j.id));
   // One clear primary action: finished jobs go to handover; otherwise schedule or edit the next booking.
   const primary =
     (j.status === "completed" || j.status === "snagging") && manager ? (
-      <Button className="w-full sm:w-auto" onClick={() => setTab("report")}>
-        <PackageCheck /> {data.reports.some((r) => r.jobId === j.id) ? "Handover report" : "Create handover report"}
+      <Button asChild className="w-full sm:w-auto">
+        <Link href={`/jobs/${encodeURIComponent(j.id)}/handover`}>
+          <PackageCheck /> {hStatus === "not_started" ? "Create handover report" : hStatus === "ready" ? "Handover report" : "Continue handover report"}
+        </Link>
       </Button>
     ) : j.status === "completed" || j.status === "lost" ? null : can("schedule.manage") ? (
       nextBooking ? (
@@ -598,15 +601,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
           </div>
         ) : null}
         {tab === "handover" ? (
-          <div className="flex flex-col gap-5">
-            <div className="panel px-4 py-4 sm:px-6 sm:py-5">
-              <ReportTab job={j} />
-            </div>
-            <div className="panel px-4 py-4 sm:px-6 sm:py-5">
-              <h2 className="t-section mb-3">Handover pack</h2>
-              <HandoverPanel job={j} />
-            </div>
-          </div>
+          <HandoverSummary job={j} status={hStatus} />
         ) : null}
         {tab === "schedule" ? (
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -830,4 +825,33 @@ function FinancialDetail({ fin, status }: { fin: JobFinancials; status: string }
 function jobActivity(data: ReturnType<typeof useStore>["data"], jobId: string) {
   const taskIds = new Set(data.tasks.filter((t) => t.relatedType === "job" && t.relatedId === jobId).map((t) => t.id));
   return data.activity.filter((a) => (a.entityType === "job" && a.entityId === jobId) || (a.entityType === "task" && a.entityId && taskIds.has(a.entityId)));
+}
+
+/** The handover on the job page: one status, one button. The work happens in the handover workspace. */
+function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) {
+  const { data } = useStore();
+  const report = data.reports.find((r) => r.jobId === job.id);
+  const versions = data.reportVersions.filter((v) => v.jobId === job.id).sort((a, b) => b.version - a.version);
+  const packs = data.handovers.filter((h) => h.jobId === job.id);
+  const href = `/jobs/${encodeURIComponent(job.id)}/handover`;
+  return (
+    <div className="panel max-w-2xl px-5 py-5 sm:px-6">
+      <div className="flex items-center gap-2.5">
+        <h2 className="t-section">Customer handover</h2>
+        <span className={cn("rounded-full px-2.5 py-0.5 text-[12.5px] font-semibold", status === "ready" ? "bg-emerald-500/12 text-good-fg" : status === "in_progress" ? "bg-copper-500/12 text-accent-fg" : "bg-surface-3 text-muted-foreground")}>{HANDOVER_STATUS_LABEL[status]}</span>
+      </div>
+      <p className="mt-1.5 text-[15px] text-muted-foreground">
+        {status === "not_started"
+          ? `A branded report for ${job.customerName} with photos, what was done and the documents — Bob does most of the writing.`
+          : status === "ready"
+            ? `Version ${versions[0]?.version} saved ${timeAgo(versions[0]!.createdAt)}${packs.length ? ` · ${packs.length} handover pack${packs.length === 1 ? "" : "s"} made` : ""}.`
+            : `Last changed by ${report?.updatedBy} ${report ? timeAgo(report.updatedAt) : ""}. Pick up where you left off.`}
+      </p>
+      <Button asChild className="mt-4 h-12 w-full text-[15.5px] sm:w-auto sm:px-6">
+        <Link href={href}>
+          <PackageCheck /> {status === "not_started" ? "Create handover report" : status === "ready" ? "Open handover" : "Continue handover"}
+        </Link>
+      </Button>
+    </div>
+  );
 }

@@ -65,13 +65,13 @@ Then **Save Changes** → **Manual Deploy → Deploy latest commit**.
    - Materials shows Ryan's item to order.
    - Open the **Oak Road kitchen** job, then use the **Ask Bob** button (bottom right).
    - Say or type *"Add another £450 for the shelving"*. Bob prepares a **Record variation** card for that job, because it knows which page you're on.
-6. **Handover report.** Jobs → **Garden room** (Completed) → **Handover report**.
-   - It's already written: summary, work completed, aftercare, chosen photos and costs, with v1 saved.
-   - Show **Upload photo** and **Add update** (a progress note with a photo).
-   - Then **Draft the report** (or **Redraft the text**), which uses AI with only the selected facts.
-   - Edit a sentence, tick **Include cost summary**, then **Preview & export**.
-   - Download the Ninety3-branded PDF.
-   - Internal notes, site access, costs and margins only appear if you include them; private files never do.
+6. **Handover report.** Jobs → **Garden room** (Completed) → **Handover report**. It opens its own five-step workspace:
+   - **Job details:** already filled in from the job.
+   - **Photos & documents:** tap photos to tick them, **Add photos** from the phone, **Make cover**, and tick the electrical certificate.
+   - **Your report:** **Let Bob write my report** (it uses the updates, photos, agreed extras and documents, and never invents work or certificates). Edit a line, or tap **Ask Bob to change this** and say "make it friendlier".
+   - **Costs:** one switch, **Include financial summary in customer report**. It shows agreed price, the cedar step extra, payments and the £650 balance; never your own costs.
+   - **Review & finish:** the PDF preview, then **Download PDF** (saves a numbered version), **Download full handover pack** (one ZIP with the report, photos and documents) and **Prepare email to customer** (opens in your own email app; Bob sends nothing).
+   - **Save & exit** at any point; the job page then shows *In progress*, and coming back carries on at the same step.
 7. **Money.**
    - The three headline figures: owed, overdue (part of owed) and received, with the dates shown.
    - Ask Bob: *"Prepare an invoice for the final balance on Sophie Mackay's Oak Road kitchen."* It saves a draft that hasn't been sent.

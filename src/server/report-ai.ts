@@ -22,6 +22,8 @@ export interface ReportFacts {
   photos: { ref: string; caption?: string; category: string; stage?: string; date: string }[];
   documents: { ref: string; title: string; kind: "drawing" | "document"; revision?: string; description?: string }[];
   completedTasks: string[];
+  /** Changes to the work the customer approved (no amounts). */
+  approvedVariations?: string[];
 }
 
 const draftSchema = z.object({
@@ -37,7 +39,8 @@ export type AiDraft = z.infer<typeof draftSchema>;
 const RULES = `Rules:
 - Write natural British English (colour, metres, "fitted"), plain and warm, as the business writing to its customer. No sales language, no superlatives, no emojis, no markdown.
 - Use specific details from the facts. Don't invent materials, measurements, brands, dates, warranties or aftercare that aren't stated.
-- Only say work was completed if an update, a finished/completion photo caption or a completed task says so. A drawing, a plan or a planned task is NOT evidence that work was done.
+- Only say work was completed if an update, a finished/completion photo caption or a completed task says so. Approved variations are extra work the customer agreed; list one as completed only when an update or finished photo confirms it, otherwise leave it out.
+- Never invent certificates, guarantees or warranties. Mention a certificate only if it's one of the documents listed. A drawing, a plan or a planned task is NOT evidence that work was done.
 - Describe drawings as drawings ("the agreed layout drawing, Rev B"), never as finished work.
 - Never mention prices, costs, payments or any £ amount — the business adds figures itself.
 - Captions: one short factual sentence per photo, based only on its existing caption, stage and the update it belongs to. If a photo has no caption and nothing says what it shows, return a neutral caption such as "Work in progress, 12 March" and add a question asking what it shows.

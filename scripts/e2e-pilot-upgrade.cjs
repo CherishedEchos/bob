@@ -131,19 +131,26 @@ void zlib;
 
   /* 5. Handover: exactly the selected files */
   const crawley = 'n93_job_kitchen_crawley';
-  await luke.goto(`${BASE}/jobs/${crawley}?tab=handover`);
-  await luke.getByRole('button', { name: 'Create handover', exact: true }).click();
+  await luke.goto(`${BASE}/jobs/${crawley}/handover`);
+  await luke.getByRole('button', { name: 'Start the handover' }).click();
+  await luke.getByRole('button', { name: 'Step 2: Photos & documents' }).click();
+  await luke.getByRole('heading', { name: 'Photos & documents' }).waitFor();
+  // Only the "Base units in" photo and the Rev B drawing go to the customer.
+  for (const name of await luke.getByRole('button', { name: /^Remove photo: / }).evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))) {
+    if (!/Base units in/.test(name)) await luke.getByRole('button', { name, exact: true }).click();
+  }
   await luke.getByRole('checkbox', { name: /Kitchen layout.*Rev B/ }).check();
-  await luke.getByRole('checkbox', { name: /Base units in/ }).check();
-  await luke.getByRole('button', { name: /Preview \(2\)/ }).click();
+  await luke.getByText('Saved', { exact: true }).waitFor({ timeout: 20000 });
+  await luke.getByRole('button', { name: 'Step 5: Review & finish' }).click();
+  await luke.getByRole('heading', { name: 'Review & finish' }).waitFor();
   const preview = await luke.locator('main').innerText();
-  check(5, 'Preview lists exactly what will be included', /Kitchen layout \(Rev B\)/.test(preview) && /Base units in/.test(preview) && !/Appliance spec/.test(preview.split('Not included')[0]));
-  check(5, 'Preview says what is NOT included', /Not included: internal notes, prices/.test(preview));
-  const [download] = await Promise.all([luke.waitForEvent('download'), luke.getByRole('button', { name: /Save & download ZIP/ }).click()]);
+  check(5, 'Finish step says what the pack holds', /this report, the 1 photo you chose at full size and 1 document/.test(preview));
+  check(5, 'Finish step says what is NOT included', /Not included: internal notes, site access details/.test(preview));
+  const [download] = await Promise.all([luke.waitForEvent('download', { predicate: (x) => /\.zip$/.test(x.suggestedFilename()) }), luke.getByRole('button', { name: 'Download full handover pack' }).click()]);
   const zipPath = path.join(OUT, 'handover.zip');
   await download.saveAs(zipPath);
   const names = unzipNames(fs.readFileSync(zipPath));
-  check(5, 'ZIP holds only the 2 selected files + index (+ logo)', names.filter((n) => !/index\.html|logo\./.test(n)).length === 2 && names.includes('Start here - index.html'), names.join(', '));
+  check(5, 'ZIP holds the report PDF, the 2 selected files and the index (+ logo)', names.filter((n) => !/index\.html|logo\./.test(n)).length === 3 && names.some((n) => /Handover v1\.pdf$/.test(n)) && names.includes('Start here - index.html'), names.join(', '));
   check(5, 'No private office file in the ZIP', !names.some((n) => /Appliance spec|IMG_4101/.test(n)));
   await shot(luke, 'desk-1440-handover');
 

@@ -65,54 +65,63 @@ const shot = (page, name, full = false) => page.screenshot({ path: path.join(OUT
   check('Note-only update shows in the timeline after refresh', true);
   await shot(luke, 'phone-390-job-timeline', true);
 
-  /* Ryan on desktop: create, choose content, draft (no AI key → known-details draft), edit, preview, export */
-  const rc = await b.newContext(DESK);
+  /* Ryan on desktop, in the handover workspace: start, choose photos, Bob drafts (no AI key → known details), edit, costs, export */
+  const rc = await b.newContext({ ...DESK, acceptDownloads: true });
   const ryan = await login(rc, 'office@ninety3.example');
   ryan.on('pageerror', (e) => errors.push('ryan: ' + e.message));
-  await ryan.goto(`${BASE}/jobs/${JOB}?tab=report`);
-  await ryan.getByRole('button', { name: 'Create handover report' }).click();
-  await ryan.getByRole('heading', { name: 'Updates', exact: true }).waitFor();
+  await ryan.goto(`${BASE}/jobs/${JOB}/handover`);
+  await ryan.getByRole('button', { name: 'Start the handover' }).click();
+  await ryan.getByRole('heading', { name: 'Job details' }).waitFor();
   s = await snap(ryan);
   const rep = s.reports.find((r) => r.jobId === JOB);
   check('Draft preselects the customer, title and site', rep.content.customerName === 'The Patels' && rep.content.title === 'Kitchen renovation' && /Ifield Avenue/.test(rep.content.siteAddress));
-  // Exclude one progress photo; include costs.
+  const saved = (p) => p.getByText('Saved', { exact: true }).waitFor({ timeout: 20000 });
+  // Step 2: leave one progress photo out.
+  await ryan.getByRole('button', { name: 'Continue' }).click();
+  await ryan.getByRole('heading', { name: 'Photos & documents' }).waitFor();
   const excluded = s.files.find((f) => f.jobId === JOB && f.filename === 'IMG_4101.png');
-  await ryan.getByRole('checkbox', { name: 'Back to bare walls, ready for first fix.', exact: true }).uncheck();
-  await ryan.getByRole('checkbox', { name: 'Include cost summary' }).check();
-  await shot(ryan, 'desk-1440-report-review', true);
-  await ryan.getByRole('button', { name: 'Draft the report' }).click();
+  await ryan.getByRole('button', { name: 'Remove photo: Old units stripped out' }).click();
+  await saved(ryan);
+  await shot(ryan, 'desk-1440-report-photos', true);
+  // Step 3: Bob writes it (no AI key here → it fills in what's known and says so), then edit.
+  await ryan.getByRole('button', { name: 'Continue' }).click();
+  await ryan.getByRole('button', { name: 'Let Bob write my report' }).click();
   await ryan.getByText(/Bob filled in what it knows/).first().waitFor({ timeout: 15000 });
   check('Without AI, an editable draft opens and says so', true);
   const overview = ryan.getByLabel('Overview text');
   await overview.fill('We refitted the kitchen at 41 Ifield Avenue with a new island and quartz worktops, and laid new flooring throughout.');
   await ryan.getByLabel('Work completed point 1').fill('Old units stripped out and walls made good');
-  await ryan.getByRole('button', { name: 'Save draft' }).click();
-  await ryan.getByText('Draft saved').waitFor();
+  await saved(ryan);
   // Rewrite is offered; with no AI it fails safely and leaves the text alone.
-  await ryan.getByRole('button', { name: 'Rewrite this section' }).first().click();
+  await ryan.getByRole('button', { name: 'Ask Bob to change this' }).first().click();
+  await ryan.getByRole('button', { name: 'Change it' }).click();
   await ryan.waitForTimeout(1500);
   check('Rewrite without AI leaves manual text unchanged', (await overview.inputValue()).startsWith('We refitted the kitchen'));
-  check('Missing-info prompts stay in the editor', await ryan.getByRole('heading', { name: 'Before you send' }).isVisible());
+  await ryan.getByRole('button', { name: 'Cancel', exact: true }).click();
   await ryan.waitForTimeout(5500); // let toasts clear
-  await ryan.evaluate(() => window.scrollTo(0, 0));
   await shot(ryan, 'desk-1440-report-editor');
-  // Luke edits the same draft in the meantime → Ryan's next save is protected.
+  // Luke edits the same draft meanwhile → Ryan's next change isn't saved over it.
   s = await snap(luke);
   const cur = s.reports.find((r) => r.jobId === JOB);
   const lukeSave = await luke.evaluate(async ([id, rev, content]) => (await fetch('/api/ops', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'saveReport', args: { id, baseRevision: rev, content: { ...content, title: 'Ifield Avenue kitchen' } } }) })).json(), [cur.id, cur.revision, cur.content]);
   check('Luke saves a change to the shared draft', lukeSave.ok);
-  await ryan.getByLabel('Report title').fill('Kitchen renovation, 41 Ifield Avenue');
-  await ryan.getByRole('button', { name: 'Save draft' }).click();
-  const seenConflict = await ryan.getByText(/saved this report/).first().waitFor({ timeout: 8000 }).then(() => true, async () => { console.log('DEBUG title now:', await ryan.getByLabel('Report title').inputValue(), '| status:', await ryan.locator('[aria-live=polite]').allInnerTexts()); return false; });
-  if (!seenConflict) throw new Error('no conflict shown');
-  check("Ryan's stale save is refused and Luke's version is offered", await ryan.getByRole('button', { name: 'Load their version' }).isVisible());
-  await ryan.getByRole('button', { name: 'Load their version' }).click();
+  await overview.fill('We refitted the kitchen at 41 Ifield Avenue with a new island, quartz worktops and new flooring.');
+  const seenConflict = await ryan.getByText(/changed this handover/).first().waitFor({ timeout: 15000 }).then(() => true, () => false);
+  check("Ryan's stale change is refused and Luke's version is offered", seenConflict && (await ryan.getByRole('button', { name: 'Load their version' }).isVisible()));
+  if (seenConflict) await ryan.getByRole('button', { name: 'Load their version' }).click();
+  await ryan.getByRole('button', { name: 'Step 1: Job details' }).click();
   check("Luke's title is kept", (await ryan.getByLabel('Report title').inputValue()) === 'Ifield Avenue kitchen');
-  await ryan.getByRole('button', { name: 'Preview PDF' }).click();
-  await ryan.locator('iframe[title^="Customer preview"]').waitFor();
+  // Step 4: include the cost summary.
+  await ryan.getByRole('button', { name: 'Step 4: Costs' }).click();
+  await ryan.getByText('Include financial summary in customer report').click();
+  await saved(ryan);
+  // Step 5: review, prompts, export.
+  await ryan.getByRole('button', { name: 'Continue' }).click();
+  await ryan.getByRole('heading', { name: 'Review & finish' }).waitFor();
+  check('Missing-info prompts shown before sending', await ryan.getByText('Worth a quick check').isVisible());
   await ryan.waitForTimeout(2500);
   await shot(ryan, 'desk-1440-report-preview');
-  const [dl] = await Promise.all([ryan.waitForEvent('download'), ryan.getByRole('button', { name: /Save version & download PDF/ }).click()]);
+  const [dl] = await Promise.all([ryan.waitForEvent('download', { predicate: (x) => /Handover v\d+\.pdf$/.test(x.suggestedFilename()) }), ryan.getByRole('button', { name: 'Download PDF' }).click()]);
   const pdfPath = path.join(OUT, dl.suggestedFilename());
   await dl.saveAs(pdfPath);
   check('Download is a recognisable versioned filename', dl.suggestedFilename() === 'Ninety3 - Ifield Avenue Kitchen - Handover v1.pdf', dl.suggestedFilename());

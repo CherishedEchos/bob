@@ -215,11 +215,17 @@ function cleanContent(raw: unknown, prev: ReportContent): ReportContent {
   };
 }
 
-export function saveReport(ctx: Ctx, input: { id?: unknown; baseRevision?: unknown; selection?: unknown; content?: unknown }): Result<HandoverReport> & { current?: HandoverReport } {
+export function saveReport(ctx: Ctx, input: { id?: unknown; baseRevision?: unknown; selection?: unknown; content?: unknown; step?: unknown }): Result<HandoverReport> & { current?: HandoverReport } {
   if (!isManager(ctx)) return deny();
   const db = scoped(ctx);
   const r = typeof input.id === "string" ? db.get<HandoverReport>("handover_reports", input.id) : undefined;
   if (!r) return fail("not_found", "Report not found");
+  const step = Number.isInteger(input.step) && (input.step as number) >= 1 && (input.step as number) <= 5 ? (input.step as number) : undefined;
+  // Moving between steps only remembers the place; it isn't an edit (no new revision, no conflict).
+  if (input.selection === undefined && input.content === undefined) {
+    if (step === undefined) return ok(r);
+    return ok(db.update<HandoverReport>("handover_reports", r.id, { step })!);
+  }
   if (Number(input.baseRevision) !== r.revision) {
     return { ...fail("conflict", `${r.updatedBy} saved changes to this report since you opened it. Your edits are still on screen — review their version, then reapply yours.`), current: r };
   }
@@ -231,7 +237,7 @@ export function saveReport(ctx: Ctx, input: { id?: unknown; baseRevision?: unkno
   content.photos = syncPhotos(content, selection, d.files);
   if (!content.coverFileId || !content.photos.some((p) => p.fileId === content.coverFileId && p.include)) content.coverFileId = pickCover(content.photos, d.files, d.updates);
   content.prompts = promptsFor(content, selection, d.files);
-  const out = db.update<HandoverReport>("handover_reports", r.id, { selection, content, revision: r.revision + 1, updatedBy: ctx.userName, updatedAt: now() })!;
+  const out = db.update<HandoverReport>("handover_reports", r.id, { selection, content, revision: r.revision + 1, updatedBy: ctx.userName, updatedAt: now(), ...(step ? { step } : {}) })!;
   return ok(out);
 }
 
@@ -259,6 +265,8 @@ export function reportFacts(ctx: Ctx, r: HandoverReport): ReportFacts {
     }),
     documents: sel.fileIds.map((id) => byId.get(id)).filter(Boolean).map((f, i) => ({ ref: `D${i + 1}`, title: f!.title ?? f!.filename, kind: f!.category === "drawing" ? ("drawing" as const) : ("document" as const), revision: f!.revision, description: f!.description })),
     completedTasks: tasks.map((t) => t.title),
+    // Extra work the customer agreed (descriptions only — the app supplies every figure).
+    approvedVariations: scoped(ctx).list<Variation>("variations", { where: "job_id = ? AND status = 'approved'", params: [r.jobId] }).map((v) => v.description),
   };
 }
 
