@@ -4,7 +4,7 @@
  * checked in the records the rest of the app reads.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Chat, ctxFor, freshDb, N93_OWNER, N93_STAFF, RDG_OWNER } from "./helpers";
+import { Chat, ctxFor, flatSystem, freshDb, N93_OWNER, N93_STAFF, RDG_OWNER } from "./helpers";
 import { approveAction, requestAction } from "@/server/bob/actions";
 import { setClaudeClientForTests } from "@/server/bob/claude";
 import { buildSnapshot as getSnapshot } from "@/server/services/snapshot";
@@ -268,7 +268,7 @@ describe("The Sophie Mackay scenario", () => {
 type Req = { system: string; messages: { role: string; content: unknown }[] };
 function fakeClaude(script: ((req: Req) => unknown)[], seen: Req[]) {
   process.env.ANTHROPIC_API_KEY = "test-key";
-  setClaudeClientForTests(() => ({ beta: { messages: { create: async (req: Req) => { seen.push(JSON.parse(JSON.stringify(req))); const n = script.shift(); if (!n) throw new Error("script exhausted"); return n(req); } } } }) as never);
+  setClaudeClientForTests(() => ({ beta: { messages: { create: async (req: Req) => { seen.push(flatSystem(JSON.parse(JSON.stringify(req)))); const n = script.shift(); if (!n) throw new Error("script exhausted"); return n(req); } } } }) as never);
 }
 const calls = (...uses: [string, unknown][]) => () => ({ stop_reason: "tool_use", content: uses.map(([name, input], i) => ({ type: "tool_use", id: `t${i}_${name}_${Math.random()}`, name, input })) });
 const say = (text: string) => () => ({ stop_reason: "end_turn", content: [{ type: "text", text }] });

@@ -10,6 +10,7 @@ import { getDb } from "@/server/db";
 import type { Ctx } from "@/server/context";
 import { getActionView } from "./actions";
 import { claudeConfigured, claudeTurn, noteClaudeFailure } from "./claude";
+import { spendStatus } from "@/server/services/ai-usage";
 import { rulesTurn, type BobState, type Reply } from "./rules";
 import { BRIEFING_REQUEST } from "./briefing";
 import { isBatchReplyRequest } from "@/server/services/batch-replies";
@@ -104,6 +105,11 @@ export async function handleTurn(ctx: Ctx, input: { conversationId?: string; tex
   let engine = isBatchReplyRequest(input.text) || (activeEngine() !== "claude" && (BRIEFING_REQUEST.test(input.text) || WHO_IS_ON.test(input.text) || NEEDS_ORDERING.test(input.text))) ? "rules" : activeEngine();
   let out: { replies: Reply[]; state: BobState; changed: boolean };
   let fallbackNote: string | undefined;
+  // Monthly AI spending limit (set by Cresaro admins): once reached, Bob's built-in assistant answers.
+  if (engine === "claude" && spendStatus(bobCtx).blocked) {
+    engine = "rules";
+    fallbackNote = "This month's AI allowance has been used, so Bob's built-in assistant answered this one.";
+  }
   try {
     out = engine === "claude" ? await claudeTurn(bobCtx, input.text, history, state, conv.id, input.via) : await rulesTurn(bobCtx, input.text, state, conv.id);
   } catch (e) {

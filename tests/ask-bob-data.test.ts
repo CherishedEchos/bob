@@ -5,7 +5,7 @@
  * client — no network).
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Chat, ctxFor, freshDb, N93_OFFICE, N93_OWNER, N93_STAFF } from "./helpers";
+import { Chat, ctxFor, flatSystem, freshDb, N93_OFFICE, N93_OWNER, N93_STAFF } from "./helpers";
 import { runReadTool } from "@/server/bob/tools";
 import { claudeHealth, setClaudeClientForTests } from "@/server/bob/claude";
 import { addDays, weekStart } from "@/lib/dates";
@@ -143,7 +143,7 @@ describe("Permissions", () => {
 type Req = { tools: { name: string }[]; system: string; messages: { role: string; content: unknown }[] };
 function fakeClaude(script: ((req: Req) => unknown)[], seen: Req[]) {
   process.env.ANTHROPIC_API_KEY = "test-key";
-  setClaudeClientForTests(() => ({ beta: { messages: { create: async (req: Req) => { seen.push(JSON.parse(JSON.stringify(req))); const n = script.shift(); if (!n) throw new Error("script exhausted"); return n(req); } } } }) as never);
+  setClaudeClientForTests(() => ({ beta: { messages: { create: async (req: Req) => { seen.push(flatSystem(JSON.parse(JSON.stringify(req)))); const n = script.shift(); if (!n) throw new Error("script exhausted"); return n(req); } } } }) as never);
 }
 const call = (name: string, input: unknown) => () => ({ stop_reason: "tool_use", content: [{ type: "tool_use", id: `t_${name}_${Math.random()}`, name, input }] });
 const say = (text: string) => () => ({ stop_reason: "end_turn", content: [{ type: "text", text }] });
@@ -172,9 +172,9 @@ describe("Claude engine", () => {
     const seen: Req[] = [];
     fakeClaude([say("Four things to order this week.\n\n• Plasterboard…"), say("ok")], seen);
     await new Chat(ctxFor(N93_OWNER)).say("What materials still need ordering this week?", "voice");
-    expect(seen[0].system).toMatch(/SPOKE this request/);
+    expect(seen[0].system).toMatch(/This request was SPOKEN/);
     await new Chat(ctxFor(N93_OWNER)).say("What materials still need ordering this week?");
-    expect(seen[1].system).not.toMatch(/SPOKE this request/);
+    expect(seen[1].system).not.toMatch(/This request was SPOKEN/);
   });
 
   it("remembers the job and person discussed for follow-ups", async () => {

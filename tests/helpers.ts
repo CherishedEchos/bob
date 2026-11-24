@@ -54,3 +54,9 @@ export class Chat {
     return approveAction(this.ctx, a.id, edits);
   }
 }
+
+/** Ask Bob sends its system prompt as cached + per-turn blocks; tests read it as one string. */
+export function flatSystem<T extends { system?: unknown }>(req: T): T {
+  const s = req.system;
+  return Array.isArray(s) ? { ...req, system: s.map((b: { text: string }) => b.text).join("\n\n") } : req;
+}

@@ -1,4 +1,5 @@
 import "server-only";
+import { isPlatformAdmin } from "@/server/auth/platform";
 import { listPhotos } from "@/server/services/photos";
 import type { Snapshot } from "@/lib/types";
 import { can } from "@/lib/auth/permissions";
@@ -59,7 +60,7 @@ export function buildSnapshot(ctx: Ctx): Snapshot {
     reportVersions: listReportVersions(ctx),
     activity: can(ctx.role, "activity.read") ? scoped(ctx).list("activity", { order: "at DESC", limit: 150 }) : [],
     connections: listConnections(ctx),
-    mode: { database: "local-sqlite", aiEngine: activeEngine() },
+    mode: { database: "local-sqlite", aiEngine: activeEngine(), platformAdmin: isPlatformAdmin(ctx) || undefined },
     generatedAt: new Date().toISOString(),
   };
 }

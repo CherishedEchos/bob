@@ -6,7 +6,7 @@
  * so nothing can be sent externally.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Chat, ctxFor, freshDb, N93_OWNER, N93_OFFICE, N93_STAFF } from "./helpers";
+import { Chat, ctxFor, flatSystem, freshDb, N93_OWNER, N93_OFFICE, N93_STAFF } from "./helpers";
 import { getDb } from "@/server/db";
 import * as F from "@/server/services/finance";
 import { setClaudeClientForTests } from "@/server/bob/claude";
@@ -199,7 +199,7 @@ function fakeClaude(script: ((req: Req) => unknown)[], seen: Req[]) {
     beta: {
       messages: {
         create: async (req: Req) => {
-          seen.push(JSON.parse(JSON.stringify(req)));
+          seen.push(flatSystem(JSON.parse(JSON.stringify(req))));
           const next = script.shift();
           if (!next) throw new Error("script exhausted");
           return next(req);

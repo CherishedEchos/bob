@@ -20,6 +20,7 @@ import type { Ctx } from "@/server/context";
 import { getJob } from "@/server/services/records";
 import { getInvoice } from "@/server/services/finance";
 import { requestAction } from "./actions";
+import { recordUsage } from "@/server/services/ai-usage";
 import { friendlyError } from "./friendly";
 import { TOOLS, runReadTool } from "./tools";
 import type { Reply, TurnOutput, BobState } from "./rules";
@@ -28,8 +29,21 @@ export function claudeConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY) && process.env.BOB_ENGINE !== "rules";
 }
 
+type Effort = "low" | "medium" | "high";
 const MODEL = () => process.env.BOB_CLAUDE_MODEL || "claude-opus-5-5";
-const EFFORT = () => (process.env.BOB_CLAUDE_EFFORT as "low" | "medium" | "high" | undefined) || "medium";
+const EFFORT = () => (process.env.BOB_CLAUDE_EFFORT as Effort | undefined) || "medium";
+/**
+ * Optional two-model routing (BOB_CLAUDE_ROUTING=auto): questions start on the
+ * faster model; changes, invoices, several requests in one message, or a
+ * conversation that has already needed the main model use BOB_CLAUDE_MODEL.
+ * Off by default until it's been checked against real questions.
+ */
+const ROUTING = () => process.env.BOB_CLAUDE_ROUTING === "auto";
+const FAST_MODEL = () => process.env.BOB_CLAUDE_FAST_MODEL || "claude-sonnet-5-5";
+const FAST_EFFORT = () => (process.env.BOB_CLAUDE_FAST_EFFORT as Effort | undefined) || "medium";
+/** "1h" keeps the cached prefix warm across gaps of 5–60 minutes (writes cost 2× instead of 1.25×). */
+const CACHE_TTL = () => (process.env.BOB_CLAUDE_CACHE_TTL === "1h" ? "1h" : undefined);
+const CACHE_ON = () => process.env.BOB_CLAUDE_CACHE !== "off";
 /** At most this many model calls (so at most this many rounds of tool use) per turn. */
 const MAX_STEPS = 6;
 /** Per request; the SDK retries once on connection errors. */
@@ -88,7 +102,27 @@ function calendarNote(): string {
   return `Calendar: ${days.join("; ")}. This week: ${ws} to ${addDays(ws, 6)}. Next week: ${addDays(ws, 7)} to ${addDays(ws, 13)}. "Next Thursday" means the Thursday of next week unless today is earlier in the week and they clearly mean this coming one — if unsure, say which date you used.`;
 }
 
-function systemPrompt(ctx: Ctx, state: BobState = {}, via: "voice" | "text" = "text"): string {
+/**
+ * The system prompt in two blocks: a stable one (same for this user all day —
+ * cached together with the tool definitions) and a small volatile one after
+ * the cache breakpoint (voice/text and this conversation's memory).
+ */
+export function systemBlocks(ctx: Ctx, state: BobState = {}, via: "voice" | "text" = "text"): Anthropic.Beta.BetaTextBlockParam[] {
+  const stable = stablePrompt(ctx);
+  const volatile = [
+    via === "voice"
+      ? "This request was SPOKEN and your first paragraph will be read aloud: make it one or two short sentences (under 35 words) that answer the question. Put any further detail after a blank line — that part is shown on screen, not spoken."
+      : "This request was typed; keep it brief and scannable.",
+    focusNote(ctx, state).trim(),
+  ].filter(Boolean).join("\n\n");
+  const ttl = CACHE_TTL();
+  return [
+    { type: "text", text: stable, ...(CACHE_ON() ? { cache_control: ttl ? { type: "ephemeral" as const, ttl } : { type: "ephemeral" as const } } : {}) },
+    { type: "text", text: volatile },
+  ];
+}
+
+function stablePrompt(ctx: Ctx): string {
   const o = ctx.org;
   const vat =
     o.finance.vatRegistered === null ? "VAT status NOT configured — ask the user whether an amount includes VAT, plus VAT, or no VAT." :
@@ -99,13 +133,13 @@ function systemPrompt(ctx: Ctx, state: BobState = {}, via: "voice" | "text" = "t
 How to answer:
 - Concise, practical British English, like a capable person in the office. No markdown headings, bold or tables; plain sentences, and "• " bullets only for short lists.
 - Lead with the answer in one or two sentences, most important thing first. Then, only if useful, a short list (at most 6 lines). Offer more detail ("Want the full list?") rather than dumping everything.
-${via === "voice" ? `- The user SPOKE this request and your first paragraph will be read aloud. Make the first paragraph one or two short sentences (under 35 words) that answer the question. Put any further detail after a blank line — that part is shown on screen, not spoken.` : "- The user typed this; keep it brief and scannable."}
+- Voice: when a request was spoken (see the note at the end), keep the first paragraph short enough to read aloud and put detail after a blank line.
 - Don't repeat what a card on screen already shows, and don't list every record when a count and the top few will do.
 
 Where to look (use tools; never guess):
 - Diary, who's working where, bookings, unassigned work → get_schedule. Who's free/available on a day → get_team_availability. Holidays and leave → list_holidays. Team members → list_team.
 - Materials and order status → list_materials ("this week" = needed by Sunday of this week, plus undated and late items). Which merchants to contact → list_merchants with only_with_items_to_order.
-- A job's full picture (crew, bookings, materials, tasks, updates, variations, money, handover) → search_jobs then get_job_profile. "What's outstanding on X" = what's left to do AND to pay: next step, open tasks, materials to order, upcoming bookings and the money left to pay/invoice.
+- A job's full picture (crew, bookings, materials, tasks, updates, variations, money, handover) → get_job_profile (pass job_id, or a query such as "Patels kitchen" to find it in one step). "What's outstanding on X" = what's left to do AND to pay: next step, open tasks, materials to order, upcoming bookings and the money left to pay/invoice.
 - Jobs by stage, incl. ready to invoice → list_jobs. Quotes → list_quotes; enquiries waiting for a quote → list_enquiries_to_quote.
 - Tasks and reminders → list_tasks_detailed. Someone's priorities ("what should Ryan do today") → get_person_priorities. Morning briefing → get_morning_briefing (keep it to the essentials; the diary and off-today lists are in the result).
 - Money owed → get_money_owed / list_outstanding_invoices. Site updates → list_job_updates. Handover reports → list_handover_reports.
@@ -127,7 +161,29 @@ Rules:
 - Follow-ups: "him/her/them", "that job", "when he gets back" refer to what was just discussed (see conversation memory and earlier results). "When he gets back" means the first working day after their leave ends.
 - Never invent ids, amounts, dates or names. If a tool asks a question (status "clarify"), ask the user exactly that, briefly.
 - After a change is approved you'll see status "executed": confirm in a few words. If something fails, explain simply what to do next — never quote error codes or technical messages.
-- If asked for something you have no tool for, say so in one sentence and offer the closest thing you can do.${focusNote(ctx, state)}`;
+- If asked for something you have no tool for, say so in one sentence and offer the closest thing you can do.`;
+}
+
+/**
+ * Earlier turns as text. The window slides in steps of 8 messages (keep 12–20)
+ * rather than by one each turn, so the start of the conversation stays the
+ * same between turns and stays cacheable.
+ */
+export function historyWindow<T>(history: T[]): T[] {
+  if (history.length <= 20) return history;
+  const drop = history.length - 12 - ((history.length - 12) % 8);
+  return history.slice(drop);
+}
+
+const CHANGE_WORDS = /\b(add|book|move|reschedule|change|update|correct|fix|cancel|delete|remove|create|make|set|put|assign|approve|decline|record|log|mark|send|draft|prepare|invoice|bill|quote|remind|amend|rename|convert|turn .* into|order)\b/i;
+
+/** Questions go to the fast model; changes, invoices, several requests, long or follow-up-heavy conversations to the main one. */
+export function pickTier(text: string, state: BobState): "fast" | "main" {
+  if (!ROUTING()) return "main";
+  if (state.aiTier === "main") return "main"; // once a conversation needs the main model it stays there (keeps its cache)
+  const multi = (text.match(/\band\b|\bthen\b|,/gi) ?? []).length >= 2;
+  if (CHANGE_WORDS.test(text) || multi || text.length > 220) return "main";
+  return "fast";
 }
 
 function toolDefs(ctx: Ctx): Anthropic.Beta.BetaTool[] {
@@ -154,8 +210,12 @@ export async function claudeTurn(
 ): Promise<TurnOutput> {
   const client = clientFactory();
   const tools = toolDefs(ctx);
+  const tier = pickTier(text, state);
+  const model = tier === "fast" ? FAST_MODEL() : MODEL();
+  const effort = tier === "fast" ? FAST_EFFORT() : EFFORT();
+  if (ROUTING()) state.aiTier = tier;
   const messages: Anthropic.Beta.BetaMessageParam[] = [
-    ...history.slice(-12).map((m) => ({ role: m.role, content: m.text })),
+    ...historyWindow(history).map((m) => ({ role: m.role, content: m.text })),
     { role: "user" as const, content: text },
   ];
   // History must start with a user turn.
@@ -170,18 +230,29 @@ export async function claudeTurn(
 
   let finished = false;
   for (let step = 0; step < MAX_STEPS; step++) {
-    const response = await client.beta.messages.create({
-      model: MODEL(),
-      max_tokens: 4000,
-      system: systemPrompt(ctx, state, via),
-      tools,
-      // Several requests in one message can each propose a card; after four cards, Claude just explains.
-      tool_choice: proposedCount >= 4 ? { type: "none" } : { type: "auto" },
-      messages,
-      output_config: { effort: EFFORT() },
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-    }, { timeout: REQUEST_TIMEOUT_MS, maxRetries: 1 });
+    const started = Date.now();
+    let response: Anthropic.Beta.BetaMessage;
+    try {
+      response = await client.beta.messages.create({
+        model,
+        max_tokens: 4000,
+        // Tools + the stable system block are cached by the breakpoint on that block; the
+        // top-level marker caches the growing conversation within the turn's tool loop.
+        system: systemBlocks(ctx, state, via),
+        tools,
+        ...(CACHE_ON() ? { cache_control: CACHE_TTL() ? { type: "ephemeral" as const, ttl: "1h" as const } : { type: "ephemeral" as const } } : {}),
+        // Several requests in one message can each propose a card; after four cards, Claude just explains.
+        tool_choice: proposedCount >= 4 ? { type: "none" } : { type: "auto" },
+        messages,
+        output_config: { effort },
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+      }, { timeout: REQUEST_TIMEOUT_MS, maxRetries: 1 });
+    } catch (e) {
+      recordUsage(ctx, { feature: "ask_bob", model, usage: null, ms: Date.now() - started, ok: false, conversationId });
+      throw e;
+    }
+    recordUsage(ctx, { feature: "ask_bob", model: response.model ?? model, usage: response.usage, ms: Date.now() - started, conversationId });
 
     if (response.stop_reason === "refusal") {
       finalText = "Sorry, I can't help with that one.";
@@ -208,7 +279,7 @@ export async function claudeTurn(
         const r = runReadTool(ctx, use.name, use.input);
         if (r.cards) roundCards.push(...r.cards);
         rememberFromRead(ctx, state, use.name, use.input, r.ok ? r.data : undefined);
-        results.push({ type: "tool_result", tool_use_id: use.id, content: JSON.stringify(r.ok ? r.data : { error: r.error }).slice(0, 20000), is_error: !r.ok });
+        results.push({ type: "tool_result", tool_use_id: use.id, content: JSON.stringify(r.ok ? r.data : { error: r.error }).slice(0, 12000), is_error: !r.ok });
         continue;
       }
       const out = await requestAction(ctx, use.name, use.input, { conversationId, origin: "bob" });
@@ -246,7 +317,7 @@ export async function claudeTurn(
   if (!finished && !finalText) finalText = actionReplies.length ? "That took more steps than I allow in one go — here's what I've done so far." : "That took more steps than I allow in one go, so I stopped. Try asking for one thing at a time.";
   claudeHealth.ok++;
   claudeHealth.lastOkAt = new Date().toISOString();
-  claudeHealth.lastModel = MODEL();
+  claudeHealth.lastModel = model;
   const replies: Reply[] = [];
   replies.push({ text: finalText || (actionReplies.length ? "Here you go." : "Sorry, I didn't catch that — could you say it another way?"), cards: dedupeCards(cards) });
   replies.push(...actionReplies);
@@ -260,8 +331,9 @@ function rememberFromRead(ctx: Ctx, state: BobState, tool: string, input: unknow
     const j = getJob(ctx, d.job_id);
     if (j) state.focus = { ...state.focus, customerId: j.customerId, customerName: j.customerName, jobId: j.id };
   }
-  if (["get_job_billing", "get_job_details", "get_job_profile", "get_payment_status"].includes(tool) && input && typeof (input as { job_id?: unknown }).job_id === "string") {
-    const j = getJob(ctx, (input as { job_id: string }).job_id);
+  const profileId = tool === "get_job_profile" ? (data as { job_id?: string } | undefined)?.job_id : undefined;
+  if (profileId || (["get_job_billing", "get_job_details", "get_job_profile", "get_payment_status"].includes(tool) && input && typeof (input as { job_id?: unknown }).job_id === "string")) {
+    const j = getJob(ctx, profileId ?? (input as { job_id: string }).job_id);
     if (j) state.focus = { ...state.focus, customerId: j.customerId, customerName: j.customerName, jobId: j.id };
   }
   if (tool === "search_jobs" && Array.isArray(data) && data.length === 1) {

@@ -32,6 +32,7 @@ import { listVariations } from "@/server/services/variations";
 import { listUpdates } from "@/server/services/updates";
 import { listReports, listReportVersions } from "@/server/services/handover-reports";
 import { morningBriefing } from "./briefing";
+import { resolveJobs } from "./resolve";
 import type { ReadTool } from "./tools";
 
 const id = z.string().min(1).max(80);
@@ -261,11 +262,17 @@ export const workspaceReadTools: ReadTool<unknown>[] = [
     kind: "read",
     name: "get_job_profile",
     description:
-      "Everything about one job: customer and site, status and next step, upcoming bookings and who's assigned, materials (to order / ordered / on site), open tasks, latest site updates, approved variations, money position (contract value, received, outstanding, invoices, recorded costs by type) and handover report status. Use for 'what's outstanding on the Patels' kitchen', 'how's the extension going'. Find the job_id with search_jobs first.",
+      "Everything about one job: customer and site, status and next step, upcoming bookings and who's assigned, materials (to order / ordered / on site), open tasks, latest site updates, approved variations, money position (contract value, received, outstanding, invoices, recorded costs by type) and handover report status. Use for 'what's outstanding on the Patels' kitchen', 'how's the extension going'. Pass job_id, or query (customer, street, town or type of work) to find and open the job in one step — if several jobs match you get the candidates instead.",
     permission: "records.read",
-    schema: z.object({ job_id: id }),
-    run(ctx, { job_id }: { job_id: string }) {
-      const j = R.getJob(ctx, job_id);
+    schema: z.object({ job_id: id.optional(), query: z.string().min(2).max(200).optional() }),
+    run(ctx, a: { job_id?: string; query?: string }) {
+      let job_id = a.job_id;
+      if (!job_id && a.query) {
+        const r = resolveJobs(ctx, a.query, { includeClosed: true });
+        if (r.jobs.length !== 1) return { data: r.jobs.length ? { several_match: r.jobs.slice(0, 5).map((x) => ({ job_id: x.id, customer: x.customerName, title: x.title, town: x.location, status: JOB_STATUS_LABEL[x.status] })) } : { error: `No job matches "${a.query}".` } };
+        job_id = r.jobs[0].id;
+      }
+      const j = job_id ? R.getJob(ctx, job_id) : undefined;
       if (!j) return { data: { error: "Job not found" } };
       const today = todayKey();
       const finance = can(ctx.role, "finance.read");

@@ -1,4 +1,6 @@
 import "server-only";
+import type { Ctx } from "@/server/context";
+import { recordUsage, spendStatus, type UsageMeters } from "@/server/services/ai-usage";
 /**
  * AI drafting for handover reports, through the same Claude client Bob uses.
  *
@@ -69,31 +71,39 @@ const stripMoney = (s: string) =>
 
 export class AiUnavailable extends Error {}
 
-async function callTool(system: string, user: string, tool: typeof TOOL | typeof REWRITE_TOOL): Promise<unknown> {
+async function callTool(system: string, user: string, tool: typeof TOOL | typeof REWRITE_TOOL, meter?: Meter): Promise<unknown> {
   if (!claudeConfigured()) throw new AiUnavailable("AI drafting isn't switched on for this workspace yet.");
+  if (meter && spendStatus(meter.ctx).blocked) throw new AiUnavailable("This month's AI budget has been used, so Bob made the draft from the job's details instead.");
   const client = anthropicClient();
-  let res: { stop_reason?: string; content: { type: string; name?: string; input?: unknown }[] };
+  const model = claudeModel();
+  let res: { stop_reason?: string; model?: string; usage?: UsageMeters; content: { type: string; name?: string; input?: unknown }[] };
+  const started = Date.now();
   try {
     res = (await client.beta.messages.create({
-      model: claudeModel(),
+      model,
       max_tokens: 2500,
-      system,
+      // Current models don't accept a forced tool_choice; ask for the tool explicitly instead.
+      system: `${system}\n\nReply only by calling the ${tool.name} tool.`,
       tools: [tool],
-      tool_choice: { type: "tool", name: tool.name },
+      tool_choice: { type: "auto" },
       messages: [{ role: "user", content: user }],
     } as never)) as never;
   } catch (e) {
+    if (meter) recordUsage(meter.ctx, { feature: meter.feature, model, usage: null, ms: Date.now() - started, ok: false });
     console.error("Report AI request failed:", e instanceof Error ? e.message : e);
     throw new AiUnavailable("The AI service didn't respond.");
   }
+  if (meter) recordUsage(meter.ctx, { feature: meter.feature, model: res.model ?? model, usage: res.usage, ms: Date.now() - started });
   const use = res.content.find((b) => b.type === "tool_use" && b.name === tool.name);
   if (!use) throw new AiUnavailable(res.stop_reason === "refusal" ? "The AI declined to write this draft." : "The AI didn't return a draft.");
   return use.input;
 }
 
-export async function draftReport(facts: ReportFacts): Promise<AiDraft> {
+type Meter = { ctx: Ctx; feature: "handover_report" | "report_rewrite" };
+
+export async function draftReport(facts: ReportFacts, ctx?: Ctx): Promise<AiDraft> {
   const system = `You draft customer handover reports for ${facts.business}, a UK trade business. ${RULES}`;
-  const raw = await callTool(system, `Facts selected for this report (JSON):\n${JSON.stringify(facts)}`, TOOL);
+  const raw = await callTool(system, `Facts selected for this report (JSON):\n${JSON.stringify(facts)}`, TOOL, ctx ? { ctx, feature: "handover_report" } : undefined);
   const parsed = draftSchema.safeParse(raw);
   if (!parsed.success) throw new AiUnavailable("The AI's draft wasn't in the expected shape.");
   const d = parsed.data;
@@ -117,10 +127,10 @@ const REWRITE_TOOL = {
   },
 };
 
-export async function rewriteSection(facts: ReportFacts, section: { heading: string; body?: string; items?: string[] }, instruction?: string): Promise<{ body?: string; items?: string[] }> {
+export async function rewriteSection(facts: ReportFacts, section: { heading: string; body?: string; items?: string[] }, instruction?: string, ctx?: Ctx): Promise<{ body?: string; items?: string[] }> {
   const system = `You revise one section of a customer handover report for ${facts.business}. ${RULES}\nReturn "text" for a paragraph section or "items" for a bullet list section, matching the current form.`;
   const user = `Facts (JSON):\n${JSON.stringify(facts)}\n\nSection "${section.heading}" currently reads:\n${section.items ? section.items.map((i) => `- ${i}`).join("\n") : section.body ?? ""}\n\n${instruction?.trim() ? `The business asks: ${instruction.trim().slice(0, 300)}` : "Make it clearer and more specific to this job, keeping the same facts."}`;
-  const raw = (await callTool(system, user, REWRITE_TOOL)) as { text?: unknown; items?: unknown };
+  const raw = (await callTool(system, user, REWRITE_TOOL, ctx ? { ctx, feature: "report_rewrite" } : undefined)) as { text?: unknown; items?: unknown };
   if (section.items) {
     const items = Array.isArray(raw.items) ? raw.items.filter((x): x is string => typeof x === "string").map(stripMoney).filter(Boolean).slice(0, 15) : [];
     if (!items.length) throw new AiUnavailable("The AI didn't return a rewritten list.");

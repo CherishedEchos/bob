@@ -234,6 +234,24 @@ CREATE TABLE IF NOT EXISTS bob_actions (
 CREATE INDEX IF NOT EXISTS bob_actions_org_idx ON bob_actions(org_id, created_at);
 CREATE UNIQUE INDEX IF NOT EXISTS bob_actions_idem_idx ON bob_actions(org_id, idempotency_key);
 CREATE INDEX IF NOT EXISTS bob_actions_hash_idx ON bob_actions(org_id, payload_hash, created_at);
+CREATE TABLE IF NOT EXISTS ai_usage (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  user_id TEXT,
+  conversation_id TEXT,
+  feature TEXT NOT NULL,
+  model TEXT NOT NULL,
+  input_tokens INTEGER NOT NULL DEFAULT 0,
+  cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+  cache_write_1h_tokens INTEGER NOT NULL DEFAULT 0,
+  cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+  output_tokens INTEGER NOT NULL DEFAULT 0,
+  cost_usd REAL NOT NULL DEFAULT 0,
+  duration_ms INTEGER NOT NULL DEFAULT 0,
+  ok INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ai_usage_org_idx ON ai_usage(org_id, created_at);
 CREATE TABLE IF NOT EXISTS connections (
   org_id TEXT NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
   provider TEXT NOT NULL,

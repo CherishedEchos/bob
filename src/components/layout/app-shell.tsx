@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   AudioLines, Building2, CalendarDays, Check, CheckSquare, ChevronsUpDown, FlaskConical, Package, Store, UsersRound, HardHat, History, Inbox, LogOut,
-  Mic, MoreHorizontal, PanelLeftClose, PanelLeftOpen, ReceiptText, Settings, Users,
+  Gauge, Mic, MoreHorizontal, PanelLeftClose, PanelLeftOpen, ReceiptText, Settings, Users,
 } from "lucide-react";
 import { StoreProvider, api, useStore } from "@/lib/store/store";
 import { UIProvider, useUI } from "@/lib/store/ui";
@@ -294,7 +294,7 @@ export function Avatar({ name, size = 32, className }: { name: string; size?: nu
 }
 
 function UserMenu({ collapsed }: { collapsed: boolean }) {
-  const { user, org } = useStore();
+  const { user, org, data } = useStore();
   const orgs = useWorkspaces();
   const [open, setOpen] = React.useState(false);
   const root = React.useRef<HTMLDivElement>(null);
@@ -361,6 +361,11 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
           <Link role="menuitem" href="/settings" onClick={() => setOpen(false)} className="flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] text-white/80 hover:bg-white/[0.07] hover:text-white">
             <Settings className="size-4 text-white/45" /> Settings
           </Link>
+          {data?.mode.platformAdmin ? (
+            <Link role="menuitem" href="/cresaro" onClick={() => setOpen(false)} className="flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] text-white/80 hover:bg-white/[0.07] hover:text-white">
+              <Gauge className="size-4 text-white/45" /> Cresaro admin
+            </Link>
+          ) : null}
           <button role="menuitem" onClick={() => void signOut()} className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13.5px] text-white/80 hover:bg-white/[0.07] hover:text-white">
             <LogOut className="size-4 text-white/45" /> Sign out
           </button>

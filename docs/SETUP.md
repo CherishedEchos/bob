@@ -20,6 +20,9 @@ Sign in with a demo account on `/login` (the password is shown there). The local
 | `BOB_CLAUDE_MODEL` | Optional. Which Claude model Ask Bob uses (default `claude-opus-5-5`) | — |
 | `BOB_CLAUDE_EFFORT` | Optional. `low`, `medium` or `high` — lower is faster for voice | — |
 | `BOB_CLAUDE_TIMEOUT_MS` | Optional. How long one Claude request may take before Bob's built-in engine answers instead (default `30000`) | — |
+| `BOB_CLAUDE_ROUTING` | Optional. `auto` sends simple questions to a cheaper model (`BOB_CLAUDE_FAST_MODEL`, default `claude-sonnet-5-5`, effort `BOB_CLAUDE_FAST_EFFORT`); changes, invoices and multi-part requests stay on the main model. Off by default; see `docs/AI-COSTS.md` | — |
+| `BOB_CLAUDE_CACHE_TTL` | Optional. `1h` keeps the prompt cache for an hour instead of 5 minutes (writes cost 2× instead of 1.25×; worth it when people ask Bob something every 5–60 minutes). `BOB_CLAUDE_CACHE=off` disables caching (for benchmarking only) | — |
+| `BOB_PLATFORM_ADMINS` | Comma-separated emails of Cresaro staff who can open the Cresaro admin area (AI usage and cost per workspace, spending limits, connection test). A customer's owner does not see it | — |
 | `BOB_ENGINE` | Optional. Set to `rules` to force the built-in engine even when a key is set | — |
 | `BOB_ENCRYPTION_KEY` | Storing any integration's OAuth tokens (required for every integration) | Generate locally: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 | `BOB_APP_URL` | OAuth redirect URIs | Your HTTPS domain |

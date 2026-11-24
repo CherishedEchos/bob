@@ -40,6 +40,8 @@ export interface OrgConfig {
    * Finance settings. `null` means "not configured" — Bob will ask rather than
    * guess (e.g. VAT treatment, payment terms).
    */
+  /** Claude API spending: monthly limit in USD (null = no limit) and when to warn. */
+  ai?: { monthlyLimitUsd: number | null; warnAtPercent?: number };
   finance: { vatRegistered: boolean | null; vatRate: number | null; defaultPaymentTermsDays: number | null; /** How job prices and amounts are quoted when VAT registered. */ pricesAre?: "exclusive" | "inclusive" | null };
   /** "sample" = fictional records, nothing is sent anywhere. */
   dataMode: "sample" | "live";
@@ -417,6 +419,8 @@ export interface ModeInfo {
   database: "local-sqlite" | "supabase";
   /** Which brain chooses Bob's tools. */
   aiEngine: "rules" | "claude";
+  /** A Cresaro platform administrator (sees the restricted admin area). */
+  platformAdmin?: boolean;
 }
 
 /** Everything the dashboard needs for one organisation, scoped server-side. */

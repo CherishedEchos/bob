@@ -75,6 +75,8 @@ export interface BobState {
   focus?: { customerId?: string; customerName?: string; jobId?: string; enquiryId?: string; personName?: string };
   /** The invoice being worked on in this conversation (draft id, VAT/terms answers). */
   invoice?: InvoiceMemory;
+  /** Which Claude model tier this conversation is on (two-model routing). */
+  aiTier?: "fast" | "main";
   /** The last list of enquiries Bob showed, for "reply to all of them". */
   lastList?: { kind: "needs_reply" | "new" | "follow_up" | "open"; label: string; ids: string[] };
 }

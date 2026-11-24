@@ -37,6 +37,19 @@ services:
         sync: false
       - key: BOB_CLAUDE_TIMEOUT_MS
         sync: false
+      # Optional cost controls (prompt caching is on by default):
+      #   BOB_CLAUDE_ROUTING=auto sends simple questions to BOB_CLAUDE_FAST_MODEL
+      #   (default claude-sonnet-5-5); BOB_CLAUDE_CACHE_TTL=1h keeps the cache for an hour.
+      - key: BOB_CLAUDE_ROUTING
+        sync: false
+      - key: BOB_CLAUDE_FAST_MODEL
+        sync: false
+      - key: BOB_CLAUDE_CACHE_TTL
+        sync: false
+      # Comma-separated Cresaro staff emails who can open the Cresaro admin area
+      # (AI usage, costs, spending limits, connection test). Customers never see it.
+      - key: BOB_PLATFORM_ADMINS
+        sync: false
       # Bob's spoken replies. Set in the Render dashboard (kept server-side).
       - key: ELEVENLABS_API_KEY
         sync: false

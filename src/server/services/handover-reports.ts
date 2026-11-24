@@ -274,7 +274,7 @@ export async function generateReport(ctx: Ctx, input: { id?: unknown; baseRevisi
   let usedAi = false;
   let aiError: string | undefined;
   try {
-    const draft = await draftReport(reportFacts(ctx, { ...r, content: base }));
+    const draft = await draftReport(reportFacts(ctx, { ...r, content: base }), ctx);
     const refs = new Map(base.photos.filter((p) => p.include).map((p, i) => [`P${i + 1}`, p.fileId]));
     const captions = new Map(draft.captions.map((c) => [refs.get(c.ref), c.caption]));
     content = {
@@ -315,7 +315,7 @@ export async function proposeRewrite(ctx: Ctx, input: { id?: unknown; sectionId?
   const cur = (input.current ?? {}) as { body?: unknown; items?: unknown; heading?: unknown };
   const onScreen = { heading: str(cur.heading ?? sec.heading, 80), body: sec.kind === "text" ? str(cur.body ?? sec.body, 4000) : undefined, items: sec.kind === "bullets" ? (Array.isArray(cur.items) ? cur.items.map((i) => str(i, 400)) : sec.items ?? []) : undefined };
   try {
-    const p = await rewriteSection(reportFacts(ctx, r), onScreen, typeof input.instruction === "string" ? input.instruction : undefined);
+    const p = await rewriteSection(reportFacts(ctx, r), onScreen, typeof input.instruction === "string" ? input.instruction : undefined, ctx);
     return ok({ sectionId: sec.id, ...p });
   } catch (e) {
     return fail("unavailable", e instanceof AiUnavailable ? `${e.message} Your text is unchanged.` : "Couldn't rewrite that section. Your text is unchanged.");
