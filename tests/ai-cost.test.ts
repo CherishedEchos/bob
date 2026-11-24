@@ -227,3 +227,41 @@ describe("handover drafting request", () => {
     expect(rows()[0]).toMatchObject({ feature: "handover_report" });
   });
 });
+
+describe("page context (Ask Bob knows the record on screen)", () => {
+  it("a job page's context reaches Claude, and 'add another £450 for the shelving' becomes a variation on that job", async () => {
+    const seen: Req[] = [];
+    setClaudeClientForTests(
+      fakeClient([toolUse("record_variation", { jobId: "n93_job_mackay_kitchen", description: "Extra shelving", amount: 450, approved: true }), say("I've prepared a £450 variation for the shelving — it needs your OK.")], seen),
+    );
+    const ctx = ctxFor(N93_OWNER);
+    const { handleTurn } = await import("@/server/bob/conversation");
+    const r = await handleTurn(ctx, { text: "Add another £450 for the shelving", via: "text", context: { type: "job", id: "n93_job_mackay_kitchen" } });
+    const sys = (seen[0].system as { text: string }[]).map((b) => b.text);
+    expect(sys[1]).toMatch(/looking at the job page for Sophie Mackay — Oak Road kitchen/);
+    expect(sys[0]).not.toMatch(/looking at the job page/); // stays out of the cached block
+    const action = r.messages.find((m) => m.action)?.action;
+    expect(action?.title).toBe("Record variation");
+    expect(action?.status).toBe("pending");
+  });
+
+  it("ignores a record from another workspace", async () => {
+    const { applyPageContext } = await import("@/server/bob/conversation");
+    const state: { focus?: { jobId?: string; onPage?: unknown } } = {};
+    applyPageContext(ctxFor("alex@ridgeway.example"), state as never, { type: "job", id: "n93_job_mackay_kitchen" });
+    expect(state.focus?.jobId).toBeUndefined();
+    expect(state.focus?.onPage).toBeUndefined();
+  });
+
+  it("a cancelled request can't be approved afterwards", async () => {
+    const { requestAction, cancelAction, approveAction } = await import("@/server/bob/actions");
+    const ctx = ctxFor(N93_OWNER);
+    const a = await requestAction(ctx, "create_task", { title: "Ring the plasterer", dueDate: new Date().toISOString().slice(0, 10) }, { origin: "bob" });
+    if (a.kind !== "action") throw new Error(JSON.stringify(a));
+    const id = a.view.id;
+    expect(a.view.status).toBe("pending");
+    cancelAction(ctx, id);
+    const v = await approveAction(ctx, id);
+    expect(v.status).toBe("cancelled");
+  });
+});

@@ -36,7 +36,11 @@ interface UIState {
   customerId: string | null;
   form: FormPrefill | null;
   assistantOpen: boolean;
+  /** The record on screen (a job, customer or enquiry page), so Ask Bob knows what "this job" means. */
+  pageContext: PageContext | null;
 }
+
+export type PageContext = { type: "job" | "customer" | "enquiry"; id: string; label: string };
 
 interface UIValue extends UIState {
   openEnquiry(id: string, opts?: { focus?: "reply" }): void;
@@ -50,13 +54,19 @@ interface UIValue extends UIState {
   closeCustomer(): void;
   closeForm(): void;
   setAssistantOpen(open: boolean): void;
+  setPageContext(ctx: PageContext | null): void;
 }
 
 const UIContext = React.createContext<UIValue | null>(null);
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [state, setState] = React.useState<UIState>({ enquiryId: null, enquiryFocus: null, jobId: null, jobTab: "overview", customerId: null, form: null, assistantOpen: false });
+  const [state, setState] = React.useState<UIState>({ enquiryId: null, enquiryFocus: null, jobId: null, jobTab: "overview", customerId: null, form: null, assistantOpen: false, pageContext: null });
+  // Stable identity: pages set this in effects, so it mustn't change when other UI state does.
+  const setPageContext = React.useCallback(
+    (pageContext: PageContext | null) => setState((s) => (s.pageContext?.id === pageContext?.id && s.pageContext?.label === pageContext?.label ? s : { ...s, pageContext })),
+    [],
+  );
   const value = React.useMemo<UIValue>(
     () => ({
       ...state,
@@ -74,8 +84,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       closeCustomer: () => setState((s) => ({ ...s, customerId: null })),
       closeForm: () => setState((s) => ({ ...s, form: null })),
       setAssistantOpen: (assistantOpen) => setState((s) => ({ ...s, assistantOpen })),
+      setPageContext,
     }),
-    [state, router],
+    [state, router, setPageContext],
   );
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 }

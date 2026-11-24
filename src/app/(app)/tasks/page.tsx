@@ -2,37 +2,47 @@
 
 import * as React from "react";
 import { AlarmClock, Check, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { NativeSelect } from "@/components/ui/input";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import type { Task } from "@/lib/types";
 import { addDaysKey, cn, daysFromToday, formatDateKey } from "@/lib/utils";
-import { tasksDue } from "@/lib/derive";
 import { EmptyState, ListPanel, pageActionClass } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
 
-/** What needs doing and when, grouped by urgency. Details and controls live inside each task. */
+type View = "today" | "upcoming" | "completed";
+
+/** Today (with anything overdue), Upcoming and Completed, filtered by who it's for. */
 export default function TasksPage() {
   const { data, can } = useStore();
   const ui = useUI();
-  const open = data.tasks.filter((t) => !t.done).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  const done = data.tasks.filter((t) => t.done).sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? "")).slice(0, 10);
-  const groups: [string, Task[]][] = [
-    ["Overdue", open.filter((t) => daysFromToday(t.dueDate) < 0)],
-    ["Today", open.filter((t) => daysFromToday(t.dueDate) === 0)],
-    ["This week", open.filter((t) => daysFromToday(t.dueDate) > 0 && daysFromToday(t.dueDate) <= 7)],
-    ["Later", open.filter((t) => daysFromToday(t.dueDate) > 7)],
+  const [view, setView] = React.useState<View>("today");
+  const [who, setWho] = React.useState("");
+  const forWho = (t: Task) => !who || (who === "office" ? !t.assignedPersonId && !t.assignedUserId : t.assignedPersonId === who || t.assignedUserId === who);
+  const open = data.tasks.filter((t) => !t.done && forWho(t)).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const overdue = open.filter((t) => daysFromToday(t.dueDate) < 0);
+  const today = open.filter((t) => daysFromToday(t.dueDate) === 0);
+  const upcoming = open.filter((t) => daysFromToday(t.dueDate) > 0);
+  const done = data.tasks.filter((t) => t.done && forWho(t)).sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? "")).slice(0, 30);
+  const groups: [string, Task[]][] =
+    view === "today"
+      ? [["Overdue", overdue], ["Today", today]]
+      : view === "upcoming"
+        ? [["Tomorrow", upcoming.filter((t) => daysFromToday(t.dueDate) === 1)], ["This week", upcoming.filter((t) => daysFromToday(t.dueDate) > 1 && daysFromToday(t.dueDate) <= 7)], ["Later", upcoming.filter((t) => daysFromToday(t.dueDate) > 7)]]
+        : [["Completed", done]];
+  const people = data.people.filter((p) => !p.archivedAt);
+  const tabs: { value: View; label: string; count: number }[] = [
+    { value: "today", label: "Today", count: overdue.length + today.length },
+    { value: "upcoming", label: "Upcoming", count: upcoming.length },
+    { value: "completed", label: "Completed", count: done.length },
   ];
-  const [showDone, setShowDone] = React.useState(false);
-  const due = tasksDue(data.tasks).length;
 
   return (
     <div className="max-w-[1100px]">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="t-page">Tasks</h1>
-          <p className="t-meta mt-0.5 lg:text-[15px]">
-            {open.length ? `${open.length} open · ${due} due today or overdue` : "Nothing to do — say “Bob, remind me to…” to add one"}
-          </p>
+          <p className="t-meta mt-0.5 lg:text-[15px]">{open.length ? `${open.length} to do · ${overdue.length + today.length} today or overdue` : "Nothing to do — say “Bob, remind me to…” to add one"}</p>
         </div>
         {can("tasks.write") ? (
           <button type="button" onClick={() => ui.openForm({ form: "reminder", dueDate: addDaysKey(1) })} className={pageActionClass}>
@@ -40,10 +50,42 @@ export default function TasksPage() {
           </button>
         ) : null}
       </div>
-      {open.length && due !== open.length ? (
-        <p className="-mt-2 mb-3 text-[13.5px] text-muted-foreground">The number beside Tasks in the menu counts only the {due} due today or overdue.</p>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div role="tablist" aria-label="Tasks" className="flex rounded-xl bg-surface-3 p-1">
+          {tabs.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              role="tab"
+              aria-selected={view === t.value}
+              onClick={() => setView(t.value)}
+              className={cn("flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-[14px] font-medium transition", view === t.value ? "bg-card text-heading shadow-[var(--shadow-xs)]" : "text-subtle hover:text-foreground")}
+            >
+              {t.label}
+              {t.count ? <span className="tabular text-[12px] text-subtle">{t.count}</span> : null}
+            </button>
+          ))}
+        </div>
+        <label className="ml-auto w-[180px]">
+          <span className="sr-only">For</span>
+          <NativeSelect value={who} onChange={(e) => setWho(e.target.value)}>
+            <option value="">Everyone</option>
+            <option value="office">Office</option>
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </NativeSelect>
+        </label>
+      </div>
+      {groups.every(([, l]) => !l.length) ? (
+        <EmptyState
+          icon={AlarmClock}
+          title={view === "completed" ? "Nothing completed yet" : view === "today" ? "Nothing due today" : "Nothing coming up"}
+          body={view === "completed" ? undefined : "Add a task for yourself or someone in the team, or link it to a job."}
+        />
       ) : null}
-      {open.length === 0 ? <EmptyState icon={AlarmClock} title="No tasks to do" body="Add a task for yourself or someone in the team, or link it to a job." /> : null}
       <div className="space-y-4">
         {groups
           .filter(([, list]) => list.length)
@@ -56,23 +98,6 @@ export default function TasksPage() {
               </ul>
             </ListPanel>
           ))}
-        {done.length ? (
-          <section className="panel overflow-hidden">
-            <button type="button" aria-expanded={showDone} onClick={() => setShowDone((v) => !v)} className="flex min-h-14 w-full items-center justify-between px-4 text-left transition hover:bg-surface-2 lg:px-5">
-              <span className="t-section">
-                Recently done <span className="ml-1 text-[14px] font-normal text-subtle">{done.length}</span>
-              </span>
-              <ChevronRight className={cn("size-5 text-subtle transition", showDone && "rotate-90")} />
-            </button>
-            {showDone ? (
-              <ul className="divide-y divide-line border-t border-line">
-                {done.map((t) => (
-                  <TaskRow key={t.id} task={t} />
-                ))}
-              </ul>
-            ) : null}
-          </section>
-        ) : null}
       </div>
     </div>
   );
@@ -124,7 +149,7 @@ function TaskRow({ task: t }: { task: Task }) {
         >
           <span
             className={cn(
-              "grid size-7 place-items-center rounded-full ring-2 transition",
+              "grid size-6 place-items-center rounded-[7px] ring-2 transition",
               t.done ? "bg-emerald-600 text-white ring-emerald-600" : "bg-card text-transparent ring-[rgb(16_24_40/0.25)] group-hover:text-subtle group-hover:ring-emerald-600",
             )}
           >

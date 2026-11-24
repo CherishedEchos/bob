@@ -11,7 +11,7 @@
  * sheet when opened from elsewhere (Today, Bob, a customer).
  */
 import * as React from "react";
-import { AlarmClock, AlertTriangle, ArrowLeft, CalendarCheck, Check, CheckCheck, ChevronDown, Copy, FileText, HardHat, Info, Mail, Phone, PhoneCall, Save, Send, UserRound } from "lucide-react";
+import { AlarmClock, AlertTriangle, ArrowLeft, CalendarCheck, Check, CheckCheck, ChevronDown, Copy, FileText, HardHat, Info, Mail, Phone, PhoneCall, MapPinned, Reply, Save, Send, UserRound } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { ENQUIRY_STATUS_LABEL, PRIORITY_LABEL, SOURCE_LABEL, followUpDue, needsReply, wantsCallback } from "@/lib/derive";
@@ -72,6 +72,14 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
   const ui = useUI();
   const write = can("enquiries.write");
   const replied = !needsReply(e);
+  // Ask Bob knows which enquiry is open ("draft a reply", "book a site visit"); the page's own context comes back on close.
+  const { setPageContext } = ui;
+  const prevContext = React.useRef(ui.pageContext);
+  React.useEffect(() => {
+    const prev = prevContext.current;
+    setPageContext({ type: "enquiry", id: e.id, label: `${e.customerName}'s enquiry` });
+    return () => setPageContext(prev?.type === "enquiry" ? null : prev);
+  }, [e.id, e.customerName, setPageContext]);
   const suggestion = React.useMemo(() => buildDraft(e), [e.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [reply, setReply] = React.useState(e.draftReply ?? suggestion.draft);
   const [saved, setSaved] = React.useState<"saved" | "unsaved" | "saving">(e.draftReply ? "saved" : "unsaved");
@@ -247,6 +255,32 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
       {/* ---------------- One scroll area: message → reply → more ---------------- */}
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className={cn("mx-auto w-full px-4 py-4 sm:px-5", inline ? "max-w-[760px]" : "max-w-none")}>
+          {write ? (
+            <div className="scrollbar-none -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 sm:-mx-5 sm:px-5" role="toolbar" aria-label="Enquiry actions">
+              <Button size="sm" variant="secondary" className="shrink-0" onClick={() => { editor.current?.focus(); editor.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>
+                <Reply /> Reply
+              </Button>
+              {can("quotes.write") ? (
+                <Button size="sm" variant="secondary" className="shrink-0" onClick={() => ui.openForm({ form: "quote", customerId: e.customerId, enquiryId: e.id })}>
+                  <FileText /> Create quote
+                </Button>
+              ) : null}
+              <Button
+                size="sm"
+                variant="secondary"
+                className="shrink-0"
+                onClick={() => {
+                  if (e.status !== "site_visit") void actions.setEnquiryStatus(e.id, "site_visit");
+                  ui.openForm({ form: "reminder", title: `Site visit: ${e.customerName}${e.location ? `, ${e.location}` : ""}`, dueDate: addDaysKey(2), customerId: e.customerId, relatedType: "enquiry", relatedId: e.id });
+                }}
+              >
+                <MapPinned /> Book site visit
+              </Button>
+              <Button size="sm" variant="secondary" className="shrink-0" onClick={() => ui.openForm({ form: "reminder", title: `Follow up with ${e.customerName} about the ${e.title.toLowerCase()}`, dueDate: e.followUpDate ?? addDaysKey(3), customerId: e.customerId, relatedType: "enquiry", relatedId: e.id })}>
+                <AlarmClock /> Follow up
+              </Button>
+            </div>
+          ) : null}
           <section aria-labelledby={`msg-${e.id}`}>
             <div className="mb-1.5 flex items-baseline justify-between gap-3">
               <h3 id={`msg-${e.id}`} className="text-[14px] font-semibold text-foreground">

@@ -72,7 +72,7 @@ export interface BobState {
   choice?: { kind: "customer" | "job" | "enquiry"; options: { id: string; label: string }[]; flow: Flow };
   lastFlow?: Flow;
   lastActionId?: string;
-  focus?: { customerId?: string; customerName?: string; jobId?: string; enquiryId?: string; personName?: string };
+  focus?: { customerId?: string; customerName?: string; jobId?: string; enquiryId?: string; personName?: string; onPage?: { type: "job" | "customer" | "enquiry"; id: string; label: string } };
   /** The invoice being worked on in this conversation (draft id, VAT/terms answers). */
   invoice?: InvoiceMemory;
   /** Which Claude model tier this conversation is on (two-model routing). */

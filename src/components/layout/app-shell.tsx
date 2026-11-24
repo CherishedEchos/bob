@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  AudioLines, Building2, CalendarDays, Check, CheckSquare, ChevronsUpDown, FlaskConical, Package, Store, UsersRound, HardHat, History, Inbox, LogOut,
+  AudioLines, Building2, CalendarDays, Check, CheckSquare, ChevronLeft, ChevronsUpDown, FlaskConical, Package, Store, UsersRound, HardHat, History, Inbox, LogOut,
   Gauge, Mic, MoreHorizontal, PanelLeftClose, PanelLeftOpen, ReceiptText, Settings, Users,
 } from "lucide-react";
 import { StoreProvider, api, useStore } from "@/lib/store/store";
@@ -104,11 +104,12 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
           {assistant ? (
             children
           ) : (
-            <div className={cn("mx-auto w-full px-4 pb-[calc(112px+env(safe-area-inset-bottom))] pt-3 sm:px-6 lg:px-10 lg:pb-12 lg:pt-8 2xl:px-12", pageWidth(pathname))}>{children}</div>
+            <div className={cn("mx-auto w-full px-4 pb-[calc(112px+env(safe-area-inset-bottom))] pt-3 sm:px-6 lg:px-10 lg:pb-24 lg:pt-8 2xl:px-12", pageWidth(pathname))}>{children}</div>
           )}
         </main>
         {/* Ask Bob has its own back button and bottom controls. */}
         {!assistant ? <BottomNav /> : null}
+        {!assistant ? <DesktopAskBob /> : null}
       </div>
     </div>
   );
@@ -377,12 +378,28 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
 
 /* ------------------------------ Mobile chrome ------------------------------ */
 
+/** Detail pages get a back link to their list on phones (the browser back button still works too). */
+function backTarget(p: string): { href: string; label: string } | null {
+  if (p.startsWith("/jobs/")) return { href: "/jobs", label: "Jobs" };
+  if (p.startsWith("/cresaro")) return { href: "/settings", label: "Settings" };
+  if (p.startsWith("/activity")) return { href: "/settings", label: "Settings" };
+  if (p.startsWith("/replies")) return { href: "/enquiries", label: "Enquiries" };
+  return null;
+}
+
 function MobileHeader() {
   const { org, user } = useStore();
   const sample = org.dataMode === "sample";
   const [moreOpen, setMoreOpen] = React.useState(false);
+  const pathname = usePathname();
+  const parent = backTarget(pathname);
   return (
     <header className="flex h-[calc(52px+env(safe-area-inset-top))] shrink-0 items-center justify-between gap-2 bg-background/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl sm:px-6 lg:hidden">
+      {parent ? (
+        <Link href={parent.href} className="-ml-2 flex h-11 min-w-0 items-center gap-1 rounded-lg pr-2 text-[15px] font-semibold text-heading">
+          <ChevronLeft className="size-5" aria-hidden /> {parent.label}
+        </Link>
+      ) : (
       <Link href="/week" aria-label="Diary" className="flex min-w-0 items-center gap-2.5">
         <OrgLogo org={org} size={30} />
         <span className="min-w-0 leading-tight">
@@ -392,6 +409,7 @@ function MobileHeader() {
           </span>
         </span>
       </Link>
+      )}
       <div className="flex items-center gap-1.5">
         {sample ? (
           <span role="note" title="Fictional sample data. Nothing is sent to anyone." className="inline-flex h-6 items-center gap-1 rounded-full bg-surface-3 px-2 text-[11.5px] font-medium text-muted-foreground">
@@ -413,12 +431,13 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
   const orgs = useWorkspaces();
   const pathname = usePathname();
   const links = [
+    { href: "/assistant", label: "Ask Bob", icon: AudioLines, count: 0 },
     { href: "/enquiries", label: "Enquiries", icon: Inbox, count: counts.unanswered },
     { href: "/customers", label: "Customers", icon: Users, count: 0 },
-    ...(can("finance.read") ? [{ href: "/invoices", label: "Money", icon: ReceiptText, count: 0 }] : []),
     ...(can("schedule.read") ? [{ href: "/team", label: "Team", icon: UsersRound, count: 0 }] : []),
     { href: "/materials", label: "Materials", icon: Package, count: 0 },
     { href: "/merchants", label: "Merchants", icon: Store, count: 0 },
+    ...(can("finance.read") ? [{ href: "/invoices", label: "Money", icon: ReceiptText, count: 0 }] : []),
     ...(can("activity.read") ? [{ href: "/activity", label: "Activity", icon: History, count: 0 }] : []),
     { href: "/settings", label: "Settings", icon: Settings, count: 0 },
   ];
@@ -519,9 +538,9 @@ function BottomNav() {
           <Link
             href="/assistant?listen=1"
             aria-label="Ask Bob — tap to talk"
-            className="relative -mt-7 grid size-[62px] place-items-center rounded-full bg-gradient-to-b from-[#f9a25c] to-[#ea7424] text-white shadow-[0_0_0_5px_#19191b,0_0_28px_rgb(243_135_53/0.55),0_8px_18px_rgb(243_135_53/0.35)] transition active:scale-95"
+            className="relative -mt-7 grid size-[62px] place-items-center rounded-full bg-gradient-to-b from-[#f9a25c] to-[#ea7424] text-white shadow-[0_0_0_5px_#19191b,0_0_18px_rgb(243_135_53/0.35),0_6px_14px_rgb(243_135_53/0.25)] transition active:scale-95"
           >
-            <span aria-hidden className="absolute inset-0 animate-breathe rounded-full ring-1 ring-white/30" />
+            <span aria-hidden className="absolute inset-0 rounded-full ring-1 ring-white/25 motion-safe:animate-breathe" />
             <Mic className="size-[26px]" strokeWidth={2} />
           </Link>
         </div>
@@ -538,6 +557,25 @@ function BottomNav() {
       </div>
       <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} />
     </nav>
+  );
+}
+
+/** Desktop: Ask Bob from any page, in a side panel that knows which record is on screen. */
+function DesktopAskBob() {
+  const ui = useUI();
+  if (ui.assistantOpen) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => ui.setAssistantOpen(true)}
+      aria-label={ui.pageContext ? `Ask Bob about ${ui.pageContext.label}` : "Ask Bob"}
+      className="absolute bottom-6 right-6 z-30 hidden h-12 items-center gap-2.5 rounded-full bg-sidebar pl-2 pr-5 text-[14.5px] font-semibold text-white shadow-[0_10px_28px_-8px_rgb(0_0_0/0.45),0_0_0_1px_rgb(255_255_255/0.06)_inset] transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none lg:flex"
+    >
+      <span className="grid size-8 place-items-center rounded-full bg-gradient-to-b from-[#f9a25c] to-[#ea7424]">
+        <Mic className="size-4" aria-hidden />
+      </span>
+      Ask Bob
+    </button>
   );
 }
 

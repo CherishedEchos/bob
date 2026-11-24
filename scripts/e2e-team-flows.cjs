@@ -2,7 +2,7 @@
 // Run against a local dev server: node scripts/e2e-team-flows.cjs (screenshots go to $OUT or /tmp).
 // End-to-end flows for the team/schedule brief. Fictional data, local dev server only.
 const { chromium } = require('playwright');
-const BASE = 'http://localhost:3000';
+const BASE = process.env.BASE || 'http://localhost:3000';
 const OUT = process.env.OUT || '/tmp';
 const results = [];
 const ROB = `rob+${Date.now()}@turner-groundworks.example`;

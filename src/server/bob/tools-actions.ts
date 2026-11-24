@@ -102,7 +102,7 @@ const createCustomer: ActionTool<{ name: string; email?: string; phone?: string;
     if (a.email) lines.push({ label: "Email", value: a.email });
     if (a.phone) lines.push({ label: "Phone", value: a.phone });
     if (a.address || a.town) lines.push({ label: "Address", value: [a.address, a.town].filter(Boolean).join(", ") });
-    return ready({ payload: a, title: "New customer", lines, notices: same ? [{ tone: "warning", text: `There's already a customer called ${same.name}${same.town ? ` in ${same.town}` : ""}.` }] : [], approveLabel: "Add customer" });
+    return ready({ payload: a, title: "Add customer", lines, notices: same ? [{ tone: "warning", text: `There's already a customer called ${same.name}${same.town ? ` in ${same.town}` : ""}.` }] : [], approveLabel: "Add customer" });
   },
   execute(ctx, a) {
     const r = R.createCustomer(ctx, a);
@@ -246,7 +246,7 @@ const updateBooking: ActionTool<BookingEdit, { next: Booking; previous: Booking 
     if (personIds.join() !== b.personIds.join()) lines.push({ label: "Who", value: arrow(crew(b.personIds), crew(personIds)), emphasis: true });
     if (job.id !== b.jobId) lines.push({ label: "Moved from", value: R.getJob(ctx, b.jobId)?.title ?? "another job" });
     if (lines.length === 1) return clarify("That booking already looks like that. What would you like to change?");
-    return ready({ payload: { next, previous: b }, title: "Change booking", lines, notices: clashNotices(ctx, { ...next, id: b.id }), approveLabel: "Save changes" });
+    return ready({ payload: { next, previous: b }, title: "Move booking", lines, notices: clashNotices(ctx, { ...next, id: b.id }), approveLabel: "Save changes" });
   },
   execute() {
     return { ok: false, error: "not set" };
@@ -589,7 +589,7 @@ const addProgressNote: ActionTool<{ jobId: string; note: string; stage?: "before
 
 /* --------------------------------- Materials --------------------------------- */
 
-const STATUS_WORD = { to_order: "To order", ordered: "Ordered", on_site: "On site" } as const;
+const STATUS_WORD = { to_order: "To order", ordered: "Ordered", on_site: "Delivered" } as const;
 
 const updateMaterial: ActionTool<{ materialId: string; quantity?: string; unit?: string; neededBy?: string; merchant?: string; status?: "to_order" | "ordered" | "on_site"; orderRef?: string; expectedDelivery?: string }, { materialId: string; next: Record<string, unknown>; previous: Record<string, unknown> }> = {
   kind: "action",
@@ -673,7 +673,7 @@ const createTask: ActionTool<{ title: string; dueDate: string; assignee?: string
     if (dup) return blocked(`That reminder is already set for ${formatDateInline(a.dueDate)}.`);
     return ready({
       payload: { title: a.title, dueDate: a.dueDate, assignedPersonId, assignedUserId, priority: a.priority, relatedType: j ? "job" : undefined, relatedId: j?.id, customerId: a.customerId ?? j?.customerId, who },
-      title: "New task",
+      title: "Add task",
       lines: [
         { label: "Task", value: a.title, emphasis: true },
         { label: "For", value: who },
@@ -774,7 +774,7 @@ const createEnquiry: ActionTool<{ customerName: string; title: string; descripti
   prepare(ctx, a) {
     const dup = R.listEnquiries(ctx).find((e) => e.customerName.toLowerCase() === a.customerName.toLowerCase() && e.title.toLowerCase() === a.title.toLowerCase() && !["won", "lost"].includes(e.status));
     if (dup) return blocked(`There's already an open enquiry from ${dup.customerName} for ${dup.title.toLowerCase()}.`);
-    return ready({ payload: a, title: "New enquiry", lines: [{ label: "Customer", value: a.customerName, emphasis: true }, { label: "Wants", value: `${a.title}, ${a.location}`, emphasis: true }, ...(a.phone ? [{ label: "Phone", value: a.phone }] : []), ...(a.email ? [{ label: "Email", value: a.email }] : [])], approveLabel: "Add enquiry" });
+    return ready({ payload: a, title: "Add enquiry", lines: [{ label: "Customer", value: a.customerName, emphasis: true }, { label: "Wants", value: `${a.title}, ${a.location}`, emphasis: true }, ...(a.phone ? [{ label: "Phone", value: a.phone }] : []), ...(a.email ? [{ label: "Email", value: a.email }] : [])], approveLabel: "Add enquiry" });
   },
   execute(ctx, a) {
     const r = R.createEnquiry(ctx, { customerName: a.customerName, title: a.title, description: a.description ?? a.title, location: a.location, source: a.source ?? "phone", phone: a.phone, email: a.email });

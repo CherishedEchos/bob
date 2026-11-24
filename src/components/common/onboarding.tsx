@@ -1,9 +1,10 @@
 "use client";
 
 /**
- * First steps for a new owner: add a job, add a person, schedule the job,
- * invite the person. Each step ticks itself off from real records; the whole
- * thing can be skipped and stays skipped on this device.
+ * Optional first steps for a new owner: business details, team, first job,
+ * the diary and talking to Bob. Each step ticks itself off from real records
+ * (or, for Bob, the first conversation on this device); the whole thing can
+ * be skipped and stays skipped on this device.
  */
 import * as React from "react";
 import { Check, X } from "lucide-react";
@@ -11,27 +12,34 @@ import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { cn } from "@/lib/utils";
 
+/** Set once someone has had an answer from Bob on this device (the last onboarding step). */
+export const TALKED_KEY = "bob.talked";
+
 export function Onboarding() {
   const { data, can, org } = useStore();
   const ui = useUI();
   const key = `bob.onboarding.skipped:${org.id}`;
   const [skipped, setSkipped] = React.useState(true);
+  const [talked, setTalked] = React.useState(false);
   React.useEffect(() => {
     try {
       setSkipped(localStorage.getItem(key) === "1");
+      setTalked(localStorage.getItem(TALKED_KEY) === "1");
     } catch {
       setSkipped(false);
     }
   }, [key]);
   if (!can("team.manage") || !can("schedule.manage") || skipped) return null;
   const steps = [
+    { label: "Your business", done: !!(org.contact.phone || org.contact.email) && org.services.length > 0, run: () => (window.location.href = "/settings") },
+    { label: "Add your team", done: data.people.length > 0, run: () => ui.openForm({ form: "person" }) },
     { label: "Add a job", done: data.jobs.length > 0, run: () => ui.openForm({ form: "job" }) },
-    { label: "Add a person", done: data.people.length > 0, run: () => ui.openForm({ form: "person" }) },
-    { label: "Schedule the job", done: data.bookings.some((b) => b.personIds.length > 0), run: () => ui.openForm({ form: "booking" }) },
-    { label: "Invite them to Bob", done: data.access.some((a) => a.state === "pending" || a.state === "accepted"), run: () => (window.location.href = "/team") },
+    { label: "Put it in the diary", done: data.bookings.some((b) => b.personIds.length > 0), run: () => ui.openForm({ form: "booking" }) },
+    { label: "Talk to Bob", done: talked, run: () => (window.location.href = "/assistant?listen=1") },
   ];
   const done = steps.filter((s) => s.done).length;
-  if (done === steps.length) return null;
+  // For new workspaces only: once the business is up and running (most steps done), it stays out of the way.
+  if (done >= 3) return null;
   const next = steps.findIndex((s) => !s.done);
   const skip = () => {
     try {
@@ -47,12 +55,12 @@ export function Onboarding() {
         Skip <X className="size-4" aria-hidden />
       </button>
       <h2 id="ob-title" className="t-section pr-20">
-        Get your first job on the board
+        Getting started
       </h2>
       <p className="t-meta mt-0.5">
-        {done} of {steps.length} done · takes about two minutes
+        {done} of {steps.length} done · optional — skip it any time
       </p>
-      <ol className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-4">
+      <ol className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-5">
         {steps.map((s, i) => (
           <li key={s.label}>
             <button

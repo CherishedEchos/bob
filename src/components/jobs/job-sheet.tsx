@@ -6,11 +6,12 @@ import { FilesPanel } from "@/components/files/files-panel";
 import { HandoverPanel } from "@/components/files/handover-panel";
 import { AddUpdateButton, UpdatesTimeline } from "@/components/updates/updates-timeline";
 import { ReportTab } from "@/components/reports/report-tab";
+import { Tip } from "@/components/common/tip";
 import { VariationsPanel } from "@/components/jobs/variations";
 
 import * as React from "react";
 import { PackageCheck } from "lucide-react";
-import { AlarmClock, CalendarClock, CalendarPlus, Check, ChevronLeft, ChevronRight, Lock, Hammer, Inbox, MapPin, MoreHorizontal, Navigation, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
+import { AlarmClock, CalendarClock, CalendarPlus, Check, ChevronLeft, ChevronRight, ImagePlus, Lock, Hammer, Inbox, MapPin, MoreHorizontal, Navigation, Package, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
 import type { JobTab } from "@/lib/store/ui";
 import { formatTimeRange, relativeDayInline } from "@/lib/dates";
 import { nextBookingForJob, peopleOnJob } from "@/lib/schedule";
@@ -82,7 +83,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
   const router = useRouter();
   const manager = user.role === "owner" || user.role === "office";
   const allowed = (t?: JobTab): JobTab => {
-    const v: JobTab | undefined = t === "money" ? "financials" : t === "report" ? "handover" : t === "files" ? "photos" : t;
+    const v: JobTab | undefined = t === "money" ? "financials" : t === "report" ? "handover" : t === "files" || t === "photos" ? "updates" : t === "tasks" ? "materials" : t;
     return !v || (v === "financials" && !money) || (v === "handover" && !manager) ? "overview" : v;
   };
   const [tab, setTabState] = React.useState<JobTab>(allowed(initialTab));
@@ -99,11 +100,9 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
   const tabs: { value: JobTab; label: string; count?: number }[] = [
     { value: "overview", label: "Overview" },
     { value: "schedule", label: "Schedule", count: data.bookings.filter((b) => b.jobId === j.id && (b.endDate ?? b.date) >= today).length },
-    { value: "updates", label: "Updates", count: data.updates.filter((u) => u.jobId === j.id).length },
-    { value: "photos", label: "Photos", count: photoCount },
+    { value: "updates", label: "Updates & photos", count: data.updates.filter((u) => u.jobId === j.id).length + photoCount },
     { value: "documents", label: "Documents", count: docCount },
-    { value: "materials", label: "Materials", count: data.materials.filter((m) => m.jobId === j.id && m.status === "to_order").length },
-    { value: "tasks", label: "Tasks", count: data.tasks.filter((t) => !t.done && t.relatedType === "job" && t.relatedId === j.id).length },
+    { value: "materials", label: "Materials & tasks", count: data.materials.filter((m) => m.jobId === j.id && m.status === "to_order").length + data.tasks.filter((t) => !t.done && t.relatedType === "job" && t.relatedId === j.id).length },
     ...(money ? [{ value: "financials" as const, label: "Financials" }] : []),
     ...(manager ? [{ value: "handover" as const, label: "Handover" }] : []),
   ];
@@ -162,12 +161,37 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
         <Button variant="secondary" className="w-full sm:w-auto" onClick={() => ui.openForm({ form: "booking", bookingId: nextBooking.id })}>
           <CalendarClock /> Edit booking
         </Button>
-      ) : (
-        <Button className="w-full sm:w-auto" onClick={() => ui.openForm({ form: "booking", jobId: j.id })}>
-          <CalendarPlus /> Schedule work
-        </Button>
-      )
+      ) : null
     ) : null;
+
+  const goPhotos = () => {
+    setTab("updates");
+    setTimeout(() => document.getElementById("job-photos")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+  };
+  const quickBtn = "shrink-0";
+  const quick = [
+    can("notes.write") ? <AddUpdateButton key="u" job={j} variant="secondary" size="sm" className={quickBtn} /> : null,
+    can("notes.write") ? (
+      <Button key="p" size="sm" variant="secondary" className={quickBtn} onClick={goPhotos}>
+        <ImagePlus /> Upload photo
+      </Button>
+    ) : null,
+    can("schedule.manage") && j.status !== "completed" && j.status !== "lost" ? (
+      <Button key="s" size="sm" variant="secondary" className={quickBtn} onClick={() => ui.openForm({ form: "booking", jobId: j.id })}>
+        <CalendarPlus /> Schedule work
+      </Button>
+    ) : null,
+    can("materials.write") ? (
+      <Button key="m" size="sm" variant="secondary" className={quickBtn} onClick={() => ui.openForm({ form: "material", jobId: j.id })}>
+        <Package /> Add material
+      </Button>
+    ) : null,
+    money && can("invoices.draft") ? (
+      <Button key="i" size="sm" variant="secondary" className={quickBtn} onClick={invoice}>
+        <ReceiptText /> Create invoice
+      </Button>
+    ) : null,
+  ].filter(Boolean);
 
   const upcoming = data.bookings.filter((b) => b.jobId === j.id && (b.endDate ?? b.date) >= today).sort((x, y) => x.date.localeCompare(y.date)).slice(0, 3);
   const openTasks = data.tasks.filter((t) => !t.done && t.relatedType === "job" && t.relatedId === j.id);
@@ -175,7 +199,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
 
   return (
     <div className="mx-auto w-full max-w-[1480px]">
-      <Link href="/jobs" className="mb-3 inline-flex h-9 items-center gap-1 rounded-lg pr-2 text-[13.5px] font-medium text-subtle hover:text-foreground">
+      <Link href="/jobs" className="mb-3 hidden h-9 items-center lg:inline-flex gap-1 rounded-lg pr-2 text-[13.5px] font-medium text-subtle hover:text-foreground">
         <ChevronLeft className="size-4" aria-hidden /> Jobs
       </Link>
 
@@ -212,7 +236,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
               </div>
             ) : null}
             <div>
-              <dt className="text-[12px] font-medium text-subtle">Next on site</dt>
+              <dt className="text-[12px] font-medium text-subtle">Next visit</dt>
               <dd className="text-[14.5px] font-medium text-heading">
                 {nextBooking ? (
                   <>
@@ -225,9 +249,25 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
               </dd>
             </div>
             <div>
-              <dt className="text-[12px] font-medium text-subtle">Team</dt>
+              <dt className="text-[12px] font-medium text-subtle">People</dt>
               <dd className="mt-0.5 flex h-7 items-center">{crew.length ? <PeopleStack people={crew} size={28} max={4} /> : <span className="text-[14px] text-subtle">{nextBooking ? "Unassigned" : "—"}</span>}</dd>
             </div>
+            {j.customerPhone || j.customerEmail ? (
+              <div>
+                <dt className="text-[12px] font-medium text-subtle">Contact</dt>
+                <dd className="text-[14.5px] font-medium text-heading">
+                  {j.customerPhone ? (
+                    <a href={`tel:${j.customerPhone.replace(/\s/g, "")}`} className="hover:text-accent-fg hover:underline">
+                      {j.customerPhone}
+                    </a>
+                  ) : (
+                    <a href={`mailto:${j.customerEmail}`} className="hover:text-accent-fg hover:underline">
+                      {j.customerEmail}
+                    </a>
+                  )}
+                </dd>
+              </div>
+            ) : null}
             {j.what3words ? (
               <div>
                 <dt className="text-[12px] font-medium text-subtle">what3words</dt>
@@ -266,6 +306,11 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             />
           </div>
         </div>
+        {quick.length ? (
+          <div className="scrollbar-none flex gap-2 overflow-x-auto border-t border-line px-4 py-3 sm:px-6" aria-label="Quick actions">
+            {quick}
+          </div>
+        ) : null}
       </header>
 
       {/* Sections */}
@@ -290,6 +335,9 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
         ))}
       </div>
 
+      <div className="mt-4 empty:hidden">
+        <Tip id="job-page">On this page, Bob knows which job you mean — try “add another £450 for the shelving”.</Tip>
+      </div>
       <div id="job-tabpanel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="mt-5">
         {tab === "overview" ? (
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -501,11 +549,9 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
               <AddUpdateButton job={j} />
             </div>
             <UpdatesTimeline job={j} />
-          </div>
-        ) : null}
-        {tab === "photos" ? (
-          <div className="panel px-4 py-4 sm:px-6 sm:py-5">
-            <FilesPanel jobId={j.id} only={["progress", "completion"]} />
+            <div id="job-photos" className="mt-6 scroll-mt-16 border-t border-line pt-5">
+              <FilesPanel jobId={j.id} only={["progress", "completion"]} />
+            </div>
           </div>
         ) : null}
         {tab === "documents" ? (
@@ -552,14 +598,14 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             </div>
           </div>
         ) : null}
-        {tab === "tasks" ? (
-          <div className="panel overflow-hidden">
-            <JobTasks job={j} />
-          </div>
-        ) : null}
         {tab === "materials" ? (
-          <div className="panel overflow-hidden">
-            <JobMaterials job={j} />
+          <div className="grid gap-5 xl:grid-cols-2">
+            <div className="panel overflow-hidden">
+              <JobMaterials job={j} />
+            </div>
+            <div className="panel overflow-hidden">
+              <JobTasks job={j} />
+            </div>
           </div>
         ) : null}
 

@@ -56,12 +56,13 @@ void zlib;
   await luke.goto(BASE + '/assistant');
   await luke.getByRole('heading', { name: 'How can I help?' }).waitFor();
   check(1, 'Greets Luke by first name', /Good (morning|afternoon|evening), Luke/.test(await luke.locator('main').innerText()));
-  for (const name of ['Open diary', 'View jobs', 'Jobs to quote', 'Materials to order']) check(1, `Shortcut: ${name}`, await luke.getByRole('link', { name: new RegExp(name) }).isVisible());
+  // Simplified home: greeting, mic, text box and three suggestions — no shortcut cards.
+  check(1, 'Ask Bob home has no shortcut cards', (await luke.getByRole('navigation', { name: 'Shortcuts' }).count()) === 0);
+  check(1, 'Ask Bob home offers three suggestions', (await luke.locator('main ul li button').count()) === 3);
   check(1, 'Typing and speaking are both offered', (await luke.getByPlaceholder(/Type to Bob/).isVisible()) && (await luke.getByRole('button', { name: /talk to Bob|Tap to talk|Talk to Bob/ }).first().isVisible()));
   await shot(luke, 'desk-1440-ask-bob');
-  await luke.getByRole('link', { name: /Jobs to quote/ }).click();
-  await luke.waitForURL('**/enquiries?tab=quote');
-  check(1, 'Jobs to quote opens the To quote view', await luke.getByRole('tab', { name: /To quote/, selected: true }).isVisible());
+  await luke.goto(BASE + '/enquiries?tab=quote');
+  check(1, 'Jobs to quote opens the To quote view', await luke.getByRole('tab', { name: /To quote/, selected: true }).first().waitFor({ timeout: 15000 }).then(() => true, () => false));
   await luke.goto(BASE + '/week');
   check(1, 'Direct link /week opens the Diary', await luke.getByRole('heading', { name: 'Diary', level: 1 }).waitFor().then(() => true, () => false));
   const diaryText = await luke.locator('main').innerText();

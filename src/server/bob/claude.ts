@@ -81,6 +81,8 @@ export function setClaudeClientForTests(f: (() => Pick<Anthropic, "beta">) | nul
 
 function focusNote(ctx: Ctx, state: BobState): string {
   const bits: string[] = [];
+  const page = state.focus?.onPage;
+  if (page) bits.push(`The user is looking at the ${page.type} page for ${page.label} (${page.type}_id ${page.id}). A request that doesn't name another record is about this ${page.type} — e.g. "add another £450 for the shelving" on a job page is a variation on this job.`);
   const job = state.focus?.jobId ? getJob(ctx, state.focus.jobId) : undefined;
   if (job) bits.push(`Job in focus: ${job.customerName} — ${job.title}, ${job.siteAddress || job.location} (job_id ${job.id}). "That job", "it", "there" mean this job.`);
   if (state.focus?.personName) bits.push(`Person last discussed: ${state.focus.personName}. "He", "she", "them" probably mean this person.`);

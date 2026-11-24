@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { Bot, Building2, CalendarDays, ChevronRight, Copy, Smartphone, Download, ExternalLink, Globe, Link2, PoundSterling, RotateCcw, ShieldCheck, Unlink, Users } from "lucide-react";
+import { Bot, Building2, CalendarDays, CreditCard, UserRound, ChevronRight, Copy, Smartphone, Download, ExternalLink, Globe, Link2, PoundSterling, RotateCcw, ShieldCheck, Unlink, Users } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import type { Connection, OrgConfig, Snapshot } from "@/lib/types";
 import { ROLE_LABEL } from "@/lib/auth/permissions";
@@ -98,7 +98,7 @@ function Section({ icon: Icon, title, subtitle, children, defaultOpen = false }:
 }
 
 function SettingsInner() {
-  const { data, org, can, setSnapshot } = useStore();
+  const { data, org, can, setSnapshot, user } = useStore();
   const owner = can("settings.manage");
   const params = useSearchParams();
 
@@ -117,15 +117,28 @@ function SettingsInner() {
     toast(r.body.ok ? "Saved" : r.body.error ?? "Couldn't save", r.body.ok ? "success" : "error");
   };
 
+  const Group = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <section className="mt-6 first:mt-0" aria-label={title}>
+      <h2 className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-subtle">{title}</h2>
+      <ul className="panel divide-y divide-line overflow-hidden">{children}</ul>
+    </section>
+  );
+
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-4">
+      <div className="mb-5">
         <h1 className="t-page">Settings</h1>
         <p className="t-meta mt-0.5 lg:text-[15px]">{`${org.name}${owner ? "" : " · only the owner can change these"}`}</p>
       </div>
-      <ul className="panel divide-y divide-line overflow-hidden">
-        <Section icon={Link2} title="Connected accounts" subtitle={connectedSummary} defaultOpen>
-          <p className="mb-3 text-[14.5px] text-muted-foreground">Bob uses each service&apos;s official sign-in page. He never asks for your passwords.</p>
+
+      <Group title="Your business">
+        <BusinessSection org={org} owner={owner} save={save} />
+        <FinanceSection org={org} owner={owner} save={save} />
+      </Group>
+
+      <Group title="Connections">
+        <Section icon={Link2} title="Email & accounting" subtitle={connectedSummary}>
+          <p className="mb-3 text-[14.5px] text-muted-foreground">Connecting uses each service&apos;s own sign-in page — Bob never sees your password. You can disconnect at any time, and Bob deletes its access straight away.</p>
           <div className="space-y-2">
             {data.connections.map((c) => (
               <ConnectionRow key={c.provider} c={c} owner={can("integrations.manage")} />
@@ -134,28 +147,22 @@ function SettingsInner() {
             <div className="rounded-xl bg-card px-3.5 py-3 ring-1 ring-line">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[15px] font-medium">
-                    Instagram <span className="text-[13px] font-normal text-subtle">· Messages</span>
-                  </div>
-                  <div className="text-[13.5px] text-muted-foreground">Not connected. In this demo, Instagram enquiries are logged manually and you paste Bob&apos;s reply into Instagram yourself.</div>
+                  <div className="text-[15px] font-medium">Instagram</div>
+                  <div className="text-[13.5px] text-muted-foreground">Log Instagram enquiries in Bob and paste Bob&apos;s reply into Instagram yourself.</div>
                 </div>
                 <StatusChip tone="neutral">Coming soon</StatusChip>
               </div>
             </div>
           </div>
         </Section>
-        <Section icon={CalendarDays} title="Calendar" subtitle="Show Bob's diary in Google, Apple or Outlook calendar (one way, read-only).">
+        <Section icon={CalendarDays} title="Calendar" subtitle="Show Bob's diary in Google, Apple or Outlook calendar (read-only).">
           <CalendarSettings />
         </Section>
-        <Section icon={Smartphone} title="Install Bob on your phone" subtitle="Add Bob to your home screen so it opens like an app.">
-          <InstallBob />
-          <p className="text-[14px] text-muted-foreground">Already installed? Bob opens full-screen from your home screen icon.</p>
-        </Section>
-        <BusinessSection org={org} owner={owner} save={save} />
-        <FinanceSection org={org} owner={owner} save={save} />
         <WebsiteFormSection slug={org.slug} />
-        <BobSection org={org} owner={owner} save={save} />
-        <Section icon={Users} title="Team" subtitle="Who can use Bob for this business.">
+      </Group>
+
+      <Group title="People & access">
+        <Section icon={Users} title="User accounts & roles" subtitle={`${data.members.length} ${data.members.length === 1 ? "person" : "people"} can sign in`}>
           <ul className="divide-y divide-line">
             {data.members.map((m) => (
               <li key={m.id} className="flex items-center justify-between py-2.5">
@@ -167,11 +174,43 @@ function SettingsInner() {
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-[13.5px] text-subtle">Owner: everything. Admin: planning, jobs, enquiries, tasks, materials, merchants, team and money — not Settings or connected accounts. Site team: jobs, tasks, notes and costs — no financial records. My work only: their own bookings.</p>
+          <dl className="mt-3 space-y-1 text-[13.5px] text-subtle">
+            <div><dt className="inline font-medium text-foreground">Owner</dt> <dd className="inline">— everything.</dd></div>
+            <div><dt className="inline font-medium text-foreground">Admin</dt> <dd className="inline">— planning, jobs, enquiries, tasks, materials, merchants, team and money. Not Settings or connections.</dd></div>
+            <div><dt className="inline font-medium text-foreground">Site team</dt> <dd className="inline">— jobs, tasks, notes and costs. No money.</dd></div>
+            <div><dt className="inline font-medium text-foreground">My work only</dt> <dd className="inline">— their own bookings.</dd></div>
+          </dl>
+          <p className="mt-3 text-[13.5px] text-subtle">Invite someone from Team → their name → Invite.</p>
         </Section>
         <LeavePolicySection org={org} owner={owner} save={save} />
+      </Group>
+
+      <Group title="Bob preferences">
+        <BobSection org={org} owner={owner} save={save} />
+        <Section icon={Smartphone} title="Bob on your phone" subtitle="Add Bob to your home screen so it opens like an app.">
+          <InstallBob />
+          <p className="text-[14px] text-muted-foreground">Already installed? Bob opens full-screen from your home screen icon.</p>
+        </Section>
+      </Group>
+
+      <Group title="Account">
+        <Section icon={UserRound} title="Your details" subtitle={`${user.name} · ${ROLE_LABEL[user.role]}`}>
+          <dl className="grid grid-cols-[110px_1fr] gap-y-2 text-[14.5px]">
+            <dt className="text-subtle">Name</dt>
+            <dd>{user.name}</dd>
+            <dt className="text-subtle">Email</dt>
+            <dd className="break-all">{user.email}</dd>
+            <dt className="text-subtle">Role</dt>
+            <dd>{ROLE_LABEL[user.role]}</dd>
+          </dl>
+        </Section>
+        <Section icon={CreditCard} title="Subscription" subtitle={org.dataMode === "sample" ? "Demo workspace" : "Pilot — managed by Cresaro"}>
+          <p className="text-[14.5px] text-muted-foreground">
+            {org.dataMode === "sample" ? "This is a demo workspace with fictional data. Nothing here is billed." : "Your business is on the Bob pilot. Cresaro looks after billing — get in touch with them for anything about your plan."}
+          </p>
+        </Section>
         <PrivacySection org={org} owner={can("data.delete")} save={save} />
-      </ul>
+      </Group>
     </div>
   );
 }
@@ -467,14 +506,15 @@ function ConnectionRow({ c, owner }: { c: Connection; owner: boolean }) {
   const live = c.status === "connected" || c.status === "demo";
   const chip: { tone: "good" | "info" | "bad" | "neutral"; label: string } =
     c.status === "connected" ? { tone: "good", label: "Connected" } :
-    c.status === "demo" ? { tone: "info", label: "Demo (simulated)" } :
-    c.status === "error" ? { tone: "bad", label: "Needs reconnecting" } : { tone: "neutral", label: "Not connected" };
+    c.status === "demo" ? { tone: "info", label: "Demo" } :
+    c.status === "error" ? { tone: "bad", label: "Needs reconnecting" } :
+    c.status === "not_configured" ? { tone: "neutral", label: "Coming soon" } : { tone: "neutral", label: "Not connected" };
   const statusText =
     c.status === "connected" ? (c.accountLabel ?? "Working") :
     c.status === "demo" ? "Simulated — nothing real is sent" :
     c.status === "error" ? (c.error ?? "Sign in again to reconnect") :
-    c.status === "not_configured" ? "Not set up on this server yet — Cresaro needs to add it before you can connect" :
-    c.kind === "email" ? "Connect to send approved replies from your own mailbox" : "Connect to send invoices from your accounts";
+    c.status === "not_configured" ? "Available soon — Cresaro will switch this on for you" :
+    c.kind === "email" ? "Tap Connect, sign in to your mailbox, and allow Bob to read enquiries and send replies you approve" : "Tap Connect and sign in — Bob can then send invoices you approve from your accounts";
   return (
     <div className="rounded-xl bg-card px-3.5 py-3 ring-1 ring-line">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -523,7 +563,7 @@ function ConnectionRow({ c, owner }: { c: Connection; owner: boolean }) {
       </div>
       {missing ? (
         <p className="mt-2 text-[13px] text-warn-fg">
-          To enable this, the server needs: {missing.join(", ")}. See docs/SETUP.md.
+          Cresaro needs to finish setting this up before it can connect. We&apos;ve kept your place — try again later.
         </p>
       ) : null}
     </div>

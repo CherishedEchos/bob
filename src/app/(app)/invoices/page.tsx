@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Tip } from "@/components/common/tip";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ExternalLink, Plus, ReceiptText, Send, Trash2, CheckCheck, Ban, PoundSterling } from "lucide-react";
 import { Input, NativeSelect } from "@/components/ui/input";
@@ -26,6 +27,7 @@ function InvoicesInner() {
   const initialFilter = params.get("filter") as Filter | null;
   const [filter, setFilter] = React.useState<Filter>(initialFilter && ["outstanding", "overdue", "draft", "paid", "all"].includes(initialFilter) ? initialFilter : "outstanding");
   const [open, setOpen] = React.useState<string | null>(params.get("open"));
+  const [period, setPeriod] = React.useState<"7" | "30" | "90" | "month">("30");
   const accounting = data.connections.find((c) => c.kind === "accounting" && (c.status === "connected" || c.status === "demo"));
 
   React.useEffect(() => {
@@ -48,16 +50,20 @@ function InvoicesInner() {
   const deposits = jobsAwaitingDeposit(data);
   const depositTotal = deposits.reduce((s, d) => s + d.finance.depositOutstanding, 0);
 
-  const view = params.get("view") === "bills" ? "bills" : "owed";
-  const setView = (v: string) => router.replace(v === "bills" ? "/invoices?view=bills" : "/invoices", { scroll: false });
+  type View = "invoices" | "bills" | "deposits" | "overview";
+  const rawView = params.get("view");
+  const view: View = rawView === "bills" || rawView === "deposits" || rawView === "overview" ? rawView : "invoices";
+  const setView = (v: string) => router.replace(v === "invoices" ? "/invoices" : `/invoices?view=${v}`, { scroll: false });
   const dueBills = data.bills.filter((b) => b.status === "due");
 
   const qbLink = org.quickbooksUrl || (data.connections.some((c) => c.provider === "quickbooks" && c.status === "connected") ? "https://qbo.intuit.com/app/homepage" : undefined);
 
   const drafts = data.invoices.filter((i) => i.status === "draft");
   const draftTotal = drafts.reduce((s, i) => s + i.total, 0);
-  const since30 = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
-  const received30 = data.payments.filter((p) => p.receivedAt >= since30).reduce((s, p) => s + p.amount, 0);
+  const today = todayKey();
+  const periodStart = period === "month" ? `${today.slice(0, 8)}01` : new Date(Date.now() - (period === "7" ? 6 : period === "90" ? 89 : 29) * 864e5).toISOString().slice(0, 10);
+  const received = data.payments.filter((p) => p.receivedAt >= periodStart && p.receivedAt <= today).reduce((s, p) => s + p.amount, 0);
+  const rangeLabel = `${new Date(`${periodStart}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${new Date(`${today}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
   const outstandingCount = data.invoices.filter(isInvoiceOutstanding).length;
   const overdueCount = data.invoices.filter(isInvoiceOverdue).length;
 
@@ -73,36 +79,66 @@ function InvoicesInner() {
                 <ExternalLink className="size-4 text-subtle" aria-hidden /> <span className="hidden sm:inline">Open QuickBooks</span>
               </a>
             ) : null}
-            {view === "owed" && can("invoices.draft") ? (
+            {can("payments.record") ? (
+              <button type="button" onClick={() => ui.openForm({ form: "payment" })} className={cn(pageSecondaryClass, "px-3")}>
+                <PoundSterling className="size-4 text-subtle" aria-hidden /> <span className="hidden sm:inline">Record payment</span>
+              </button>
+            ) : null}
+            {view !== "bills" && can("invoices.draft") ? (
               <button type="button" onClick={() => ui.openForm({ form: "invoice" })} className={pageActionClass}>
-                <Plus className="size-[17px]" aria-hidden /> <span className="hidden sm:inline">Create invoice draft</span>
+                <Plus className="size-[17px]" aria-hidden /> <span className="hidden sm:inline">Create invoice</span>
                 <span className="sm:hidden">Invoice</span>
               </button>
             ) : null}
           </>
         }
       />
+      {/* Three headline figures: what you're owed (overdue is part of it) and what came in over a stated period */}
+      <Tip id="money">Invoices you create are saved as drafts — nothing goes to a customer until you send it. Ask Bob to “invoice Sophie for the final balance”.</Tip>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard accent label="Owed to you" value={gbp(owed)} sub={`${outstandingCount} unpaid invoice${outstandingCount === 1 ? "" : "s"}`} onClick={() => { setView("invoices"); setFilter("outstanding"); }} />
+        <StatCard label="Overdue" value={gbp(overdue)} tone={overdue ? "danger" : "muted"} sub={overdue ? `Part of the ${gbp(owed)} owed · ${overdueCount} past due` : "Nothing overdue"} onClick={() => { setView("invoices"); setFilter("overdue"); }} active={view === "invoices" && filter === "overdue"} />
+        <div className="relative">
+          <StatCard label="Received" value={gbp(received)} tone="good" sub={rangeLabel} />
+          <label className="absolute right-3 top-3">
+            <span className="sr-only">Period</span>
+            <select value={period} onChange={(e) => setPeriod(e.target.value as typeof period)} className="h-8 rounded-lg bg-surface-2 px-2 text-[12.5px] font-medium text-foreground ring-1 ring-line outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <option value="7">7 days</option>
+              <option value="30">30 days</option>
+              <option value="month">This month</option>
+              <option value="90">90 days</option>
+            </select>
+          </label>
+        </div>
+      </div>
       <Tabs
-        label="Money"
+        label="Money sections"
         className="self-start"
         value={view}
         onChange={setView}
         options={[
-          { value: "owed", label: "Owed to you" },
+          { value: "invoices", label: "Invoices", count: outstandingCount },
           { value: "bills", label: "Bills to pay", count: dueBills.length, highlight: true },
+          { value: "deposits", label: "Deposits", count: deposits.length },
+          { value: "overview", label: "Overview" },
         ]}
       />
-      {view === "bills" ? <BillsView /> : (
-      <>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatCard accent label="Outstanding" value={gbp(owed)} sub={`${outstandingCount} invoice${outstandingCount === 1 ? "" : "s"}`} onClick={() => setFilter("outstanding")} />
-          <StatCard label="Overdue" value={gbp(overdue)} tone={overdue ? "danger" : "muted"} sub={overdueCount ? `${overdueCount} past due date` : "Nothing overdue"} onClick={() => setFilter("overdue")} active={filter === "overdue"} />
-          <StatCard label="Drafts" value={gbp(draftTotal)} tone={drafts.length ? undefined : "muted"} sub={`${drafts.length} not sent yet`} onClick={() => setFilter("draft")} active={filter === "draft"} />
-          <StatCard label="Received · 30 days" value={gbp(received30)} tone="good" sub={depositTotal ? `${gbp(depositTotal)} in deposits due` : "Payments recorded"} />
+      {view === "bills" ? <BillsView /> : view === "overview" ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ReceivedChart payments={data.payments} />
+          <section className="rounded-2xl bg-card px-5 py-4 ring-1 ring-line">
+            <h2 className="text-[12.5px] font-medium text-subtle">At a glance</h2>
+            <MoneyRow label="Owed on sent invoices" value={gbp(owed)} />
+            <MoneyRow label="Overdue (part of that)" value={gbp(overdue)} />
+            <MoneyRow label={`Drafts not sent yet (${drafts.length})`} value={gbp(draftTotal)} />
+            <MoneyRow label="Deposits due" value={gbp(depositTotal)} />
+            <MoneyRow label="Bills to pay" value={gbp(dueBills.reduce((t, b) => t + b.amount, 0))} />
+          </section>
         </div>
-        <ReceivedChart payments={data.payments} />
-      </div>
+      ) : view === "deposits" ? (
+        deposits.length ? <DepositsList deposits={deposits} /> : <EmptyState icon={PoundSterling} title="No deposits due" body="Deposits you ask for on a job appear here until they're paid." />
+      ) : (
+      <>
       {org.dataMode === "sample" ? (
         <DemoNote>
           The sent invoices here are sample records. An invoice you create is saved as a draft in Bob — it isn&apos;t sent to anyone{accounting ? " until you approve sending it" : ", and stays a draft until you mark it as sent yourself or connect Xero or QuickBooks"}.
@@ -145,29 +181,33 @@ function InvoicesInner() {
         )}
       </div>
 
-      {deposits.length ? (
-        <ListPanel id="deposits" title="Deposits due" count={deposits.length}>
-          <ul className="divide-y divide-line">
-            {deposits.map(({ job, finance }) => (
-              <ListRow
-                key={job.id}
-                onOpen={() => ui.openJob(job.id)}
-                openLabel={`Open ${job.title} for ${job.customerName}`}
-                title={`${job.customerName} · ${job.title}`}
-                aside={<span className="text-[15px] font-semibold text-foreground">{gbp(finance.depositOutstanding)}</span>}
-                meta={
-                  <StatusText tone={finance.depositOverdue ? "red" : "amber"}>
-                    {finance.depositOverdue ? "Overdue" : job.depositDueDate ? `Due ${formatDateInline(job.depositDueDate)}` : "No due date"}
-                  </StatusText>
-                }
-              />
-            ))}
-          </ul>
-        </ListPanel>
-      ) : null}
       </>
       )}
     </div>
+  );
+}
+
+function DepositsList({ deposits }: { deposits: ReturnType<typeof jobsAwaitingDeposit> }) {
+  const ui = useUI();
+  return (
+    <ListPanel id="deposits" title="Deposits due" count={deposits.length}>
+      <ul className="divide-y divide-line">
+        {deposits.map(({ job, finance }) => (
+          <ListRow
+            key={job.id}
+            onOpen={() => ui.openJob(job.id)}
+            openLabel={`Open ${job.title} for ${job.customerName}`}
+            title={`${job.customerName} · ${job.title}`}
+            aside={<span className="text-[15px] font-semibold text-foreground">{gbp(finance.depositOutstanding)}</span>}
+            meta={
+              <StatusText tone={finance.depositOverdue ? "red" : "amber"}>
+                {finance.depositOverdue ? "Overdue" : job.depositDueDate ? `Due ${formatDateInline(job.depositDueDate)}` : "No due date"}
+              </StatusText>
+            }
+          />
+        ))}
+      </ul>
+    </ListPanel>
   );
 }
 

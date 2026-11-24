@@ -11,6 +11,7 @@ import type { Ctx } from "@/server/context";
 import { getActionView } from "./actions";
 import { claudeConfigured, claudeTurn, noteClaudeFailure } from "./claude";
 import { spendStatus } from "@/server/services/ai-usage";
+import { getCustomer, getEnquiry, getJob } from "@/server/services/records";
 import { rulesTurn, type BobState, type Reply } from "./rules";
 import { BRIEFING_REQUEST } from "./briefing";
 import { isBatchReplyRequest } from "@/server/services/batch-replies";
@@ -87,12 +88,39 @@ export function activeEngine(): "rules" | "claude" {
   return claudeConfigured() ? "claude" : "rules";
 }
 
-export async function handleTurn(ctx: Ctx, input: { conversationId?: string; text: string; via: "voice" | "text" }): Promise<BobTurnResponse> {
+export type PageRef = { type: "job" | "customer" | "enquiry"; id: string };
+
+/**
+ * The record on the user's screen becomes the conversation's focus, so "add
+ * another £450 for the shelving" on a job page is about that job. The id is
+ * looked up in this workspace (the client can't point Bob at anything else).
+ */
+export function applyPageContext(ctx: Ctx, state: BobState, page?: PageRef) {
+  const focus = { ...(state.focus ?? {}) };
+  delete focus.onPage;
+  if (page?.type === "job") {
+    const j = getJob(ctx, page.id);
+    if (j) Object.assign(focus, { jobId: j.id, customerId: j.customerId, customerName: j.customerName, onPage: { type: "job", id: j.id, label: `${j.customerName} — ${j.title}` } });
+  } else if (page?.type === "customer") {
+    const c = getCustomer(ctx, page.id);
+    if (c) {
+      if (focus.customerId !== c.id) delete focus.jobId;
+      Object.assign(focus, { customerId: c.id, customerName: c.name, onPage: { type: "customer", id: c.id, label: c.name } });
+    }
+  } else if (page?.type === "enquiry") {
+    const e = getEnquiry(ctx, page.id) as { id: string; customerName?: string; customerId?: string; summary?: string } | undefined;
+    if (e) Object.assign(focus, { enquiryId: e.id, ...(e.customerId ? { customerId: e.customerId } : {}), ...(e.customerName ? { customerName: e.customerName } : {}), onPage: { type: "enquiry", id: e.id, label: e.customerName ?? "this enquiry" } });
+  }
+  state.focus = focus;
+}
+
+export async function handleTurn(ctx: Ctx, input: { conversationId?: string; text: string; via: "voice" | "text"; context?: PageRef }): Promise<BobTurnResponse> {
   const bobCtx: Ctx = { ...ctx, via: "bob" };
   // An unknown or someone else's conversation id simply starts a fresh conversation.
   let conv = input.conversationId ? getConversation(bobCtx, input.conversationId) : undefined;
   if (!conv) conv = { id: startConversation(bobCtx), state: "{}" };
   const state = JSON.parse(conv.state || "{}") as BobState;
+  applyPageContext(bobCtx, state, input.context);
   const history = loadConversation(bobCtx, conv.id).messages.map((m) => ({ role: m.role, text: m.text })).filter((m) => m.text);
 
   const userMsg = appendMessage(bobCtx, conv.id, "user", { text: input.text, via: input.via });

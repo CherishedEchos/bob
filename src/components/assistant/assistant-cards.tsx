@@ -337,24 +337,17 @@ export function ActionCard({
         action.status === "pending" ? (external ? "ring-copper-500/60" : "ring-copper-500/35") : "ring-line",
       )}
     >
-      <div className="flex items-center justify-between gap-2 border-b border-line px-3.5 py-2.5">
-        <span className="text-[14px] font-semibold">{action.title}</span>
-        <span
-          className={cn(
-            "rounded-full px-2 py-0.5 text-[12px] font-medium ring-1",
-            external ? "bg-copper-500/15 text-accent-fg ring-copper-500/40" : "bg-surface-2 text-muted-foreground ring-line",
-          )}
-        >
-          {external ? "Needs your approval" : action.status === "pending" ? "Check & confirm" : "Internal change"}
-        </span>
+      <div className="flex items-center justify-between gap-2 px-3.5 pt-3">
+        <span className="text-[15px] font-semibold text-heading">{action.title}</span>
+        {external && action.status === "pending" ? <span className="text-[12.5px] font-medium text-accent-fg">Needs your OK</span> : null}
       </div>
-      <div className="px-3.5 pb-3.5 pt-1.5">
+      <div className="px-3.5 pb-3 pt-1">
         {action.lines.length ? (
           <dl>
             {action.lines.map((l) => (
-              <div key={l.label} className="flex items-start justify-between gap-4 border-b border-line py-2 last:border-0">
-                <dt className="text-[14.5px] text-muted-foreground">{l.label}</dt>
-                <dd className={cn("tabular text-right text-[15px]", l.emphasis ? "font-semibold" : "font-medium")}>{l.value}</dd>
+              <div key={l.label} className="flex items-start justify-between gap-4 py-1">
+                <dt className="text-[13.5px] text-muted-foreground">{l.label}</dt>
+                <dd className={cn("tabular text-right text-[14px]", l.emphasis ? "font-semibold" : "font-medium")}>{l.value}</dd>
               </div>
             ))}
           </dl>

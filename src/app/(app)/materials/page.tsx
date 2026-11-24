@@ -94,7 +94,7 @@ export default function MaterialsPage() {
             [
               ["to_order", "To order"],
               ["ordered", "Ordered"],
-              ["on_site", "On site"],
+              ["on_site", "Delivered"],
               ["all", "All"],
             ] as [StatusFilter, string][]
           ).map(([v, label]) => (

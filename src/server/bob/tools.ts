@@ -507,7 +507,7 @@ const createJob: ActionTool<CreateJobArgs> = {
     if (!a.depositRequired) notices.push({ tone: "info", text: "No deposit set — you can add one on the job later." });
     return ready({
       payload: { ...a, depositRequired: deposit, status },
-      title: "New job",
+      title: "Save job",
       lines: [
         { label: "Customer", value: customer?.name ?? `${a.newCustomerName} (new)`, emphasis: true },
         { label: "Job", value: a.title },
@@ -851,7 +851,7 @@ const createInvoice: ActionTool<InvoiceArgs, InvoiceArgs & { vatRate: number }> 
     if (a.send && provider && !can(ctx.role, "invoices.send")) notices.push({ tone: "info", text: "Your account can prepare invoices but not send them, so this will be saved as a draft." });
     return ready({
       payload: { ...a, vatRate: rate.value, send: wantsSend },
-      title: wantsSend ? "Send invoice" : "Invoice draft",
+      title: wantsSend ? "Send invoice" : "Create invoice draft",
       category: wantsSend ? "external" : "internal",
       lines: [
         { label: "Customer", value: customer.name, emphasis: true },
@@ -1105,7 +1105,7 @@ function previewDraft(ctx: Ctx, a: DraftArgs, job: Job): PrepareResult<DraftArgs
   const notices: ActionNotice[] = plan.notes.map((t) => ({ tone: "info", text: t }));
   if (plan.usedDefaults.vat) notices.push({ tone: "info", text: `VAT: ${VAT_WORDS[d.amountsAre]}, from your invoice settings.` });
   notices.push({ tone: "info", text: "Saved as a draft in Bob — nothing is sent." });
-  return { ok: true, value: { payload: a, title: a.invoiceId ? "Change invoice draft" : "Invoice draft", category: "internal", lines, notices, approveLabel: a.invoiceId ? "Save changes" : "Save draft", simulated: false } };
+  return { ok: true, value: { payload: a, title: a.invoiceId ? "Change invoice draft" : "Create invoice draft", category: "internal", lines, notices, approveLabel: a.invoiceId ? "Save changes" : "Save draft", simulated: false } };
 }
 
 const saveInvoiceDraft: ActionTool<DraftArgs, DraftArgs & { outcomeHint?: string }> = {

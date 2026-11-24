@@ -8,6 +8,7 @@
 import * as React from "react";
 import type { ActionView, BobMessage, BobTurnResponse } from "@/lib/bob/types";
 import { api, useStore } from "@/lib/store/store";
+import { useUI } from "@/lib/store/ui";
 import { clearPendingReply, speakReply, spokenSummary, stopSpeaking } from "@/lib/voice/speech-output";
 
 interface BobValue {
@@ -30,6 +31,9 @@ const SPEAK_KEY = "bob.speakVoiceReplies";
 
 export function BobProvider({ children }: { children: React.ReactNode }) {
   const { refresh, decide: storeDecide, org } = useStore();
+  const { pageContext } = useUI();
+  const pageRef = React.useRef(pageContext);
+  pageRef.current = pageContext;
   const [messages, setMessages] = React.useState<BobMessage[]>([]);
   const [thinking, setThinking] = React.useState(false);
   const [ready, setReady] = React.useState(false);
@@ -80,10 +84,15 @@ export function BobProvider({ children }: { children: React.ReactNode }) {
       setThinking(true);
       try {
         const r = await api<BobTurnResponse & { error?: string }>("/api/bob/message", {
-          json: { text: trimmed, via, conversationId: convRef.current ?? undefined },
+          json: { text: trimmed, via, conversationId: convRef.current ?? undefined, ...(pageRef.current ? { context: { type: pageRef.current.type, id: pageRef.current.id } } : {}) },
         });
         if (r.status !== 200) throw new Error(r.body?.error ?? "Bob couldn't answer");
         convRef.current = r.body.conversationId;
+        try {
+          window.localStorage.setItem("bob.talked", "1");
+        } catch {
+          /* storage unavailable */
+        }
         setMessages((m) => [...m.filter((x) => x.id !== tempId), ...r.body.messages]);
         if (r.body.changed) void refresh();
         // Spoken replies for voice requests (when switched on), or when explicitly asked (Hear today's briefing).

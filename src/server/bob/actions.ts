@@ -237,7 +237,7 @@ export async function approveAction(ctx: Ctx, id: string, edits?: Record<string,
       const prep = await tool.prepare(ctx, parsed.data);
       if (prep.ok)
         db.prepare("UPDATE bob_actions SET args = ?, view = ? WHERE id = ? AND org_id = ? AND status = 'pending'").run(
-          JSON.stringify(prep.value.payload),
+          JSON.stringify(parsed.data), // args, not payload: approval re-runs prepare on them
           JSON.stringify(toStoredView(prep.value, tool)),
           id,
           ctx.orgId,

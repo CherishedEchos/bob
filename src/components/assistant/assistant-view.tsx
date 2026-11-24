@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AudioLines, CalendarDays, ClipboardList, PoundSterling, ReceiptText, HardHat, ListChecks, Play, ChevronLeft, ChevronRight, Keyboard, Package, Users, Loader2, MessageCircle, Mic, MoreHorizontal, Pencil, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
+import { AudioLines, CalendarDays, ClipboardList, PoundSterling, ReceiptText, Play, ChevronLeft, Keyboard, Package, Users, Loader2, MessageCircle, Mic, MoreHorizontal, Pencil, PlusCircle, SendHorizontal, Square, Volume2, VolumeX, X } from "lucide-react";
 import { flushSync } from "react-dom";
 import { useBob } from "@/lib/bob/provider";
 import type { BobMessage, Chip } from "@/lib/bob/types";
@@ -12,9 +12,7 @@ import { useVoiceComposer, type ComposerPhase } from "@/lib/voice/use-voice-comp
 import { ComposerStatus, ReadAloudButton, SpeakRepliesToggle, useTtsStatus } from "./voice-bits";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
-import { todaysPriorities } from "@/lib/derive";
 import { cn, firstName } from "@/lib/utils";
-import { PriorityCard } from "@/components/common/priority-card";
 import { BobLogo, BobWordmark, OrgLogo, OrgWordmark } from "@/components/brand/logo";
 import { Orb, OrbAvatar, type OrbState } from "./orb";
 import { ActionCard, AssistantCard } from "./assistant-cards";
@@ -41,7 +39,6 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
   const { speech, draft, setDraft, phase } = c;
   const inConversation = !home && messages.length > 0;
   const orbState: OrbState = speech.listening ? "listening" : thinking || phase === "sending" ? "thinking" : "idle";
-  const priorities = React.useMemo(() => todaysPriorities(data, { includeFinance: can("finance.read") }), [data, can]);
   const name = /^(owner|office|site team)$/i.test(user.name) ? "" : `, ${firstName(user.name)}`;
 
   // A request sent from anywhere (Today, Enquiries, a priority action) opens the conversation.
@@ -99,27 +96,6 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
   const lastAssistantId = [...messages].reverse().find((m) => m.role === "assistant")?.id;
   const lastUserId = [...messages].reverse().find((m) => m.role === "user")?.id;
 
-  // Navigation shortcuts: owners/admins plan the business; the site team sees their work.
-  const today = new Date().toISOString().slice(0, 10);
-  const toQuote = data.enquiries.filter((e) => e.status === "quote_required").length;
-  const toOrder = data.materials.filter((m) => m.status === "to_order").length;
-  const activeJobs = data.jobs.filter((j) => !["completed", "lost"].includes(j.status)).length;
-  const myPerson = data.people.find((p) => p.userId === user.id);
-  const myTasks = data.tasks.filter((t) => !t.done && (t.assignedUserId === user.id || (myPerson && t.assignedPersonId === myPerson.id))).length;
-  const links: QuickLink[] = can("schedule.manage")
-    ? [
-        { label: "Open diary", href: "/week", icon: CalendarDays, meta: `${data.bookings.filter((b) => b.date <= today && (b.endDate ?? b.date) >= today).length} booked today` },
-        { label: "View jobs", href: "/jobs", icon: HardHat, meta: `${activeJobs} active` },
-        { label: "Jobs to quote", href: "/enquiries?tab=quote", icon: ClipboardList, meta: toQuote ? `${toQuote} waiting` : "None waiting" },
-        { label: "Materials to order", href: "/materials", icon: Package, meta: toOrder ? `${toOrder} to order` : "All ordered" },
-      ]
-    : [
-        { label: "Open diary", href: "/week", icon: CalendarDays, meta: "Who's on what" },
-        { label: "View jobs", href: "/jobs", icon: HardHat, meta: `${activeJobs} active` },
-        { label: "My tasks", href: "/tasks", icon: ListChecks, meta: myTasks ? `${myTasks} open` : "Nothing open" },
-        { label: "Materials", href: "/materials", icon: Package, meta: toOrder ? `${toOrder} to order` : "All ordered" },
-      ];
-
   const shortcuts: Shortcut[] = [
     { label: "What needs my attention today?", icon: MessageCircle, run: () => ask("What needs my attention today?") },
     {
@@ -143,6 +119,15 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
     ...(can("finance.read") ? [{ label: "How much money are we owed?", icon: PoundSterling, run: () => ask("How much money are we owed?") }] : []),
   ];
 
+  // On a job/customer/enquiry page, suggestions are about that record (Bob is told which one it is).
+  const pc = ui.pageContext;
+  const contextual: string[] = !pc
+    ? []
+    : pc.type === "job"
+      ? ["What's outstanding on this job?", ...(can("jobs.write") ? ["Add a £450 variation for extra shelving"] : []), ...(can("schedule.manage") ? ["Book the team in for next Monday"] : []), "Add a progress note"]
+      : pc.type === "customer"
+        ? ["What jobs do they have with us?", ...(can("finance.read") ? ["Do they owe us anything?"] : []), "Remind me to call them tomorrow"]
+        : ["Draft a reply", "Book a site visit", "Remind me to follow up on Friday"];
   const suggestions = [
     "What needs sorting today?",
     "How many enquiries have I had in the last month?",
@@ -201,12 +186,12 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
                 >
                   <PlusCircle className="size-4" /> New conversation
                 </MenuItem>
-                <div className="px-3 pb-1.5 pt-2 text-[12.5px] leading-snug text-subtle">
+                {data.mode.platformAdmin ? <div className="px-3 pb-1.5 pt-2 text-[12.5px] leading-snug text-subtle">
                   Engine: {data.mode.aiEngine === "claude" ? "Claude (live AI)" : "Bob rules engine (demo — no AI key configured)"}.
                   Voice input: {speech.supported ? "your browser's speech recognition" : "not available in this browser"}.
                   <br />
                   Spoken replies: {tts?.configured ? `ElevenLabs (voice …${tts.voiceId?.slice(-4)})` : "this device's voice (ElevenLabs not set up)"}.
-                </div>
+                </div> : null}
               </div>
             ) : null}
           </div>
@@ -262,10 +247,11 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
               >
                 <PlusCircle className="size-4" /> New conversation
               </MenuItem>
-              <div className="px-3 pb-1.5 pt-2 text-[12.5px] leading-snug text-subtle">
-                Engine: {data.mode.aiEngine === "claude" ? "Claude (live AI)" : "Bob rules engine (demo — no AI key configured)"}.
-                Voice: {speech.supported ? "your browser's speech recognition" : "not available in this browser"}.
-              </div>
+              {data.mode.platformAdmin ? (
+                <div className="px-3 pb-1.5 pt-2 text-[12.5px] leading-snug text-subtle">
+                  Engine: {data.mode.aiEngine === "claude" ? "Claude (live AI)" : "Bob rules engine (demo — no AI key configured)"}.
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -278,8 +264,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
           inputRef={inputRef}
           orbState={orbState}
           thinking={thinking}
-          shortcuts={[...shortcuts.slice(0, 2), ...examples].slice(0, 6)}
-          links={links}
+          shortcuts={[...shortcuts.slice(0, 2), ...examples].slice(0, 3)}
           greeting={`${greetingNow()}${name}`}
           hasConversation={messages.length > 0}
           onContinue={() => setHome(false)}
@@ -326,26 +311,10 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
               </button>
             ) : null}
 
-            {priorities.length ? (
-              <section className="mt-6">
-                <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-[14px] font-semibold uppercase tracking-wider text-subtle">Sort these first</h2>
-                  <button onClick={() => ask("What needs sorting today?")} className="h-10 px-1 text-[15px] font-medium text-accent-fg">
-                    Ask Bob
-                  </button>
-                </div>
-                <div className="space-y-2.5">
-                  {priorities.slice(0, 3).map((p) => (
-                    <PriorityCard key={p.key} item={p} onAskBob={ask} onNavigate={onClose} />
-                  ))}
-                </div>
-              </section>
-            ) : null}
-
             <section className="mt-6">
-              <h2 className="mb-2 text-[14px] font-semibold uppercase tracking-wider text-subtle">Try saying</h2>
+              <h2 className="mb-2 text-[13px] font-medium text-subtle">{pc ? `About ${pc.label}` : "Try saying"}</h2>
               <div className="flex flex-wrap gap-2">
-                {suggestions.slice(0, variant === "panel" ? 4 : 5).map((x) => (
+                {(pc ? contextual : suggestions).slice(0, 3).map((x) => (
                   <button
                     key={x}
                     onClick={() => ask(x)}
@@ -418,6 +387,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
               </div>
             ) : null}
             {phase === "idle" ? <ComposerStatus phase="idle" interim="" error={speech.error} notice={c.notice} supported={speech.supported} /> : null}
+            {pc && variant === "panel" ? <p className="mt-1 truncate text-[12.5px] text-subtle">Bob knows you&apos;re looking at {pc.label}.</p> : null}
             <div className="mt-2">
               <Composer
                 inputRef={inputRef}
@@ -444,7 +414,6 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
 /* ------------------------------ Ask Bob home (page) ------------------------------ */
 
 type Shortcut = { label: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; run: () => void };
-type QuickLink = { label: string; href: string; meta: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }> };
 
 /** The workspace's own logo and name, "with bob." — works for any trades business. */
 function WorkspaceLockup({ org }: { org: { name: string; shortName: string; logoUrl?: string; dataMode?: string; wordmark?: { onDark?: string; onLight?: string } } }) {
@@ -491,7 +460,6 @@ function AskBobHome({
   orbState,
   thinking,
   shortcuts,
-  links,
   greeting,
   hasConversation,
   onContinue,
@@ -502,7 +470,6 @@ function AskBobHome({
   orbState: OrbState;
   thinking: boolean;
   shortcuts: Shortcut[];
-  links: QuickLink[];
   greeting: string;
   hasConversation: boolean;
   onContinue: () => void;
@@ -564,25 +531,9 @@ function AskBobHome({
             )}
           </div>
 
-          <nav aria-label="Shortcuts" className="mt-4 grid w-full grid-cols-2 gap-2">
-            {links.map((l) => (
-              <Link
-                key={l.href + l.label}
-                href={l.href}
-                className="group flex min-h-[64px] items-center gap-3 rounded-xl bg-raised px-3 py-2.5 ring-1 ring-line-strong transition hover:ring-copper-500/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-copper-300"
-              >
-                <l.icon className="size-[22px] shrink-0 text-accent-icon" strokeWidth={1.7} />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-semibold leading-tight text-[#FAF9F6]">{l.label}</span>
-                  <span className="block truncate text-[13px] text-white/65">{l.meta}</span>
-                </span>
-                <ChevronRight className="hidden size-4 shrink-0 text-white/40 transition group-hover:text-white/80 min-[400px]:block" aria-hidden />
-              </Link>
-            ))}
-          </nav>
-          <h2 className="mt-5 w-full text-left text-[12px] font-semibold uppercase tracking-[0.08em] text-white/45">Try asking</h2>
-          <ul className="mt-2 grid w-full grid-cols-1 gap-2 min-[400px]:grid-cols-2">
-            {shortcuts.map((s) => (
+          <h2 className="sr-only">Suggestions</h2>
+          <ul className="mt-6 flex w-full flex-col gap-2">
+            {shortcuts.slice(0, 3).map((s) => (
               <li key={s.label}>
                 <button
                   type="button"

@@ -351,7 +351,7 @@ export function PersonForm({ prefill }: { prefill: Extract<FormPrefill, { form: 
 
 /* ------------------------------- Order list ------------------------------- */
 
-export const MATERIAL_STATUS_LABEL: Record<MaterialStatus, string> = { to_order: "To order", ordered: "Ordered", on_site: "On site" };
+export const MATERIAL_STATUS_LABEL: Record<MaterialStatus, string> = { to_order: "To order", ordered: "Ordered", on_site: "Delivered" };
 
 export function MaterialForm({ prefill }: { prefill: Extract<FormPrefill, { form: "material" }> }) {
   const { data, actions } = useStore();

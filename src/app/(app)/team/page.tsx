@@ -13,7 +13,7 @@ import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { addDays, formatDayShort, formatTimeRange, relativeDay, weekStart } from "@/lib/dates";
 import { absencesOnDay } from "@/lib/leave";
-import { PersonAvatar, jobTone } from "@/components/common/people";
+import { PersonAvatar } from "@/components/common/people";
 import { bookingEndDate, bookingsOnDay, initials } from "@/lib/schedule";
 import type { Booking, Person, PersonAccess } from "@/lib/types";
 import { cn, copyToClipboard, todayKey } from "@/lib/utils";
@@ -127,6 +127,9 @@ function TeamInner() {
             const leave = data.absences.filter((x) => x.personId === p.id && ["approved", "pending"].includes(x.status));
             const nextLeave = leave.filter((x) => x.endDate >= today).sort((x, y) => x.startDate.localeCompare(y.startDate))[0];
             const jobIds = [...new Set(mine.filter((b) => bookingEndDate(b) >= today).map((b) => b.jobId))];
+            const nextBk = mine.filter((b) => b.date > today).sort((x, y) => x.date.localeCompare(y.date))[0];
+            const workDays = week.slice(0, 5).filter((d) => d >= today);
+            const freeDays = workDays.filter((d) => !bookingsOnDay(mine, d).length && !absencesOnDay(leave.filter((x) => x.status === "approved"), d).length);
             return (
               <li key={p.id} className="relative flex flex-col rounded-2xl bg-card p-4 shadow-[var(--shadow-sm)] ring-1 ring-line transition hover:shadow-[var(--shadow-md)] sm:p-5">
                 <div className="flex items-start gap-3">
@@ -164,36 +167,32 @@ function TeamInner() {
                   )}
                 </div>
 
-                {/* This week */}
-                <div className="mt-3 grid grid-cols-7 gap-1" aria-label="This week">
-                  {week.map((d) => {
-                    const bk = bookingsOnDay(mine, d);
-                    const off = absencesOnDay(leave, d)[0];
-                    const tone = bk[0] ? jobTone(bk[0].jobId) : null;
-                    return (
-                      <div
-                        key={d}
-                        title={`${formatDayShort(d)}: ${off ? (off.status === "pending" ? "leave requested" : "off") : bk.length ? bk.map((b) => jobs.get(b.jobId)?.title ?? "Job").join(", ") : "free"}`}
-                        className="flex flex-col items-center gap-1"
-                      >
-                        <span className={cn("text-[10.5px] font-medium uppercase", d === today ? "text-accent-fg" : "text-subtle")}>{new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { weekday: "narrow" })}</span>
-                        <span
-                          className={cn(
-                            "h-6 w-full rounded-md",
-                            off ? (off.status === "pending" ? "border border-dashed border-violet-300 bg-violet-50" : "bg-violet-200/70") : tone ? tone.bar : "bg-surface-3",
-                            d === today && "ring-2 ring-copper-500/40 ring-offset-1 ring-offset-card",
-                          )}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
+                {/* Plain facts instead of colour bars: next booking, free days, holiday */}
+                <dl className="mt-3 space-y-1.5 text-[13.5px]">
+                  <div className="flex gap-2">
+                    <dt className="w-[92px] shrink-0 text-subtle">Next booking</dt>
+                    <dd className="min-w-0 truncate text-heading">
+                      {nextBk ? `${relativeDay(nextBk.date, today)} · ${jobs.get(nextBk.jobId)?.title ?? "Job"}${jobs.get(nextBk.jobId)?.location ? `, ${jobs.get(nextBk.jobId)?.location}` : ""}` : <span className="text-subtle">Nothing booked</span>}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-[92px] shrink-0 text-subtle">This week</dt>
+                    <dd className="min-w-0 truncate text-heading">{workDays.length === 0 ? "Week finished" : freeDays.length === 0 ? "Fully booked" : freeDays.length === workDays.length ? "Free all week" : `Free ${freeDays.map((d) => formatDayShort(d).split(" ")[0]).join(", ")}`}</dd>
+                  </div>
+                  {nextLeave ? (
+                    <div className="flex gap-2">
+                      <dt className="w-[92px] shrink-0 text-subtle">Holiday</dt>
+                      <dd className="min-w-0 truncate text-violet-800 dark:text-violet-300">
+                        {formatDayShort(nextLeave.startDate)}
+                        {nextLeave.endDate !== nextLeave.startDate ? ` – ${formatDayShort(nextLeave.endDate)}` : ""}
+                        {nextLeave.status === "pending" ? " (requested)" : ""}
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-[12.5px] text-subtle">
-                  <span>
-                    {jobIds.length ? `${jobIds.length} job${jobIds.length === 1 ? "" : "s"} booked` : "No upcoming work"}
-                    {nextLeave ? ` · ${nextLeave.status === "pending" ? "leave requested" : "off"} ${formatDayShort(nextLeave.startDate)}` : ""}
-                  </span>
+                  <span>{jobIds.length ? `${jobIds.length} job${jobIds.length === 1 ? "" : "s"} booked` : "No upcoming work"} · tap to see their schedule</span>
                   {manage ? <StatusText tone={ACCESS_LABEL[a.state].tone} className="text-[12px]">{ACCESS_LABEL[a.state].label}</StatusText> : null}
                 </div>
               </li>

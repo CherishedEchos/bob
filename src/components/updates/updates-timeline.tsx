@@ -15,13 +15,13 @@ import { toast } from "@/components/ui/toaster";
 import { FileViewer } from "@/components/files/files-panel";
 import { AddUpdateDialog, STAGE_LABEL } from "./add-update";
 
-export function AddUpdateButton({ job, className, label = "Add update" }: { job: Job; className?: string; label?: string }) {
+export function AddUpdateButton({ job, className, label = "Add update", variant, size }: { job: Job; className?: string; label?: string; variant?: "secondary" | "ghost"; size?: "sm" }) {
   const { refresh, can } = useStore();
   const [open, setOpen] = React.useState(false);
   if (!can("notes.write")) return null;
   return (
     <>
-      <Button className={className} onClick={() => setOpen(true)}>
+      <Button className={className} variant={variant} size={size} onClick={() => setOpen(true)}>
         <Camera /> {label}
       </Button>
       {open ? <AddUpdateDialog jobId={job.id} jobTitle={job.title} onClose={() => setOpen(false)} onSaved={refresh} /> : null}

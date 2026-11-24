@@ -10,6 +10,8 @@ const schema = z.object({
   text: z.string().trim().min(1).max(2000),
   via: z.enum(["voice", "text"]).default("text"),
   conversationId: z.string().max(80).optional(),
+  /** The record the user is looking at (job, customer or enquiry page). Checked server-side. */
+  context: z.object({ type: z.enum(["job", "customer", "enquiry"]), id: z.string().min(1).max(80) }).optional(),
 });
 
 /** One turn with Bob. Voice transcripts and typed text use this same endpoint. */

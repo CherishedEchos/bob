@@ -6,8 +6,9 @@
  * or an aligned list, search across every job and a person filter.
  */
 import * as React from "react";
+import { Tip } from "@/components/common/tip";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarDays, CalendarPlus, ClipboardList, HardHat, LayoutGrid, List, MapPin, Plus, Search, User } from "lucide-react";
+import { CalendarDays, CalendarPlus, ChevronDown, ClipboardList, HardHat, LayoutGrid, List, MapPin, Plus, Search, User } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { jobNextStep } from "@/lib/derive";
@@ -22,6 +23,9 @@ import { Input, NativeSelect } from "@/components/ui/input";
 
 type View = "active" | "to_quote" | "quoted" | "won" | "unscheduled" | "in_progress" | "completed" | "all";
 const VIEWS: View[] = ["active", "to_quote", "quoted", "won", "unscheduled", "in_progress", "completed", "all"];
+/** The four everyday filters; the finer stages sit under "More stages". */
+const PRIMARY: View[] = ["to_quote", "quoted", "active", "completed"];
+const MORE: View[] = ["won", "unscheduled", "in_progress", "all"];
 const VIEW_LABEL: Record<View, string> = { active: "Active", to_quote: "To quote", quoted: "Quoted", won: "Won", unscheduled: "Unscheduled", in_progress: "In progress", completed: "Completed", all: "All" };
 
 const STAGE_TONE: Record<JobStage, "neutral" | "amber" | "green" | "blue" | "violet" | "red"> = {
@@ -140,7 +144,7 @@ function Jobs() {
         {/* Pipeline filters */}
         <div className="scrollbar-none -mx-4 overflow-x-auto px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
           <div role="tablist" aria-label="Pipeline" className="flex w-max gap-1.5">
-            {VIEWS.map((v) => {
+            {PRIMARY.map((v) => {
               const on = (q ? "all" : view) === v;
               const n = count(v);
               return (
@@ -160,6 +164,25 @@ function Jobs() {
                 </button>
               );
             })}
+            <label className="relative">
+              <span className="sr-only">More stages</span>
+              <select
+                value={MORE.includes(q ? "all" : view) ? (q ? "all" : view) : ""}
+                onChange={(e) => setView((e.target.value || "active") as View)}
+                className={cn(
+                  "h-9 appearance-none rounded-full pl-3.5 pr-8 text-[13.5px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-ring",
+                  MORE.includes(q ? "all" : view) ? "bg-sidebar text-white" : "bg-card text-muted-foreground ring-1 ring-line hover:text-foreground",
+                )}
+              >
+                <option value="">More stages</option>
+                {MORE.map((v) => (
+                  <option key={v} value={v}>
+                    {VIEW_LABEL[v]} ({count(v)})
+                  </option>
+                ))}
+              </select>
+              <ChevronDown aria-hidden className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 opacity-60" />
+            </label>
           </div>
         </div>
 
@@ -205,6 +228,7 @@ function Jobs() {
           </div>
         </div>
         {q ? <p className="text-[13.5px] text-subtle">Searching every job, including completed ones.</p> : null}
+        <Tip id="jobs">Ask Bob about any job in plain words — “what&apos;s left to pay on the Patels&apos; kitchen?”</Tip>
       </div>
 
       {showEnquiries ? (

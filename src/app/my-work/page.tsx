@@ -25,7 +25,7 @@ import { ABSENCE_LABEL, PART_LABEL } from "@/lib/leave";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/sheet";
 
-const MAT_LABEL = { to_order: "To order", ordered: "Ordered", on_site: "On site" } as const;
+const MAT_LABEL = { to_order: "To order", ordered: "Ordered", on_site: "Delivered" } as const;
 
 export default function MyWorkPage() {
   const [data, setData] = React.useState<MyWork | null>(null);

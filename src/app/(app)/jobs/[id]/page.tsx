@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { HardHat } from "lucide-react";
 import { useStore } from "@/lib/store/store";
-import type { JobTab } from "@/lib/store/ui";
+import { useUI, type JobTab } from "@/lib/store/ui";
 import { JobWorkspace } from "@/components/jobs/job-sheet";
 import { EmptyState } from "@/components/common/bits";
 
@@ -25,6 +25,13 @@ function JobPageInner() {
   const { data } = useStore();
   const tab = params.get("tab") as JobTab | null;
   const job = data.jobs.find((j) => j.id === id);
+  const { setPageContext } = useUI();
+  const label = job ? `${job.customerName} — ${job.title}` : "";
+  React.useEffect(() => {
+    if (!job) return;
+    setPageContext({ type: "job", id: job.id, label });
+    return () => setPageContext(null);
+  }, [job?.id, label, setPageContext]); // eslint-disable-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     if (job) document.title = `${job.title} · ${job.customerName} — Bob`;
   }, [job]);
