@@ -80,6 +80,9 @@ const OPS: Record<string, (ctx: Ctx, a: Record<string, any>) => Result<unknown> 
   generateReport: (c, a) => Rep.generateReport(c, a),
   proposeRewrite: (c, a) => Rep.proposeRewrite(c, a),
   exportReport: (c, a) => Rep.exportReport(c, a),
+  finishReport: (c, a) => Rep.finishReport(c, a),
+  markReportSent: (c, a) => Rep.markReportSent(c, a),
+  reportPack: (c, a) => Rep.reportPack(c, a),
 };
 
 export const POST = authed(async (req, ctx) => {

@@ -30,15 +30,31 @@ import { toast } from "@/components/ui/toaster";
 export const STEPS = ["Job details", "Photos & documents", "Your report", "Costs", "Review & finish"] as const;
 type StepNo = 1 | 2 | 3 | 4 | 5;
 
-export type HandoverStatus = "not_started" | "in_progress" | "ready";
+export type HandoverStatus = "not_started" | "in_progress" | "completed" | "sent" | "changes";
 
-/** Not started (no report) · In progress (being written, or edited since the last PDF) · Ready (a PDF matches the report). */
+/** The PDF that was published when the handover was last finished. */
+export function publishedVersion(report: HandoverReport | undefined, versions: ReportVersion[]): ReportVersion | undefined {
+  if (!report?.completedAt) return undefined;
+  const sorted = [...versions].filter((v) => v.reportId === report.id).sort((a, b) => b.version - a.version);
+  return sorted.find((v) => v.revision === report.completedRevision) ?? sorted[0];
+}
+
+/**
+ * Not started · In progress (not finished yet) · Completed (finished; the PDF matches) ·
+ * Sent to customer (marked as sent, and nothing changed since) · Unpublished changes (edited after finishing).
+ */
 export function handoverStatus(report: HandoverReport | undefined, versions: ReportVersion[]): HandoverStatus {
   if (!report) return "not_started";
-  const latest = [...versions].sort((a, b) => b.version - a.version)[0];
-  return latest && latest.createdAt >= report.updatedAt ? "ready" : "in_progress";
+  if (!report.completedAt) return "in_progress";
+  if (report.completedRevision !== report.revision) return "changes";
+  const pub = publishedVersion(report, versions);
+  if (report.sentAt && (report.sentVersion === undefined || report.sentVersion === null || report.sentVersion === pub?.version)) return "sent";
+  return "completed";
 }
-export const HANDOVER_STATUS_LABEL: Record<HandoverStatus, string> = { not_started: "Not started", in_progress: "In progress", ready: "Ready" };
+export const HANDOVER_STATUS_LABEL: Record<HandoverStatus, string> = { not_started: "Not started", in_progress: "In progress", completed: "Completed", sent: "Sent to customer", changes: "Unpublished changes" };
+export const isFinished = (s: HandoverStatus) => s === "completed" || s === "sent" || s === "changes";
+
+export const longDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "");
 
 /* ------------------------------ Shared bits ------------------------------ */
 
@@ -89,7 +105,7 @@ function Fold({ title, hint, children, defaultOpen = false }: { title: string; h
   );
 }
 
-async function downloadFile(url: string, fallbackName: string) {
+export async function downloadFile(url: string, fallbackName: string) {
   const res = await fetch(url, { credentials: "same-origin" });
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -108,7 +124,7 @@ async function downloadFile(url: string, fallbackName: string) {
 
 /* ------------------------------ Entry ------------------------------ */
 
-export function HandoverWorkspace({ job }: { job: Job }) {
+export function HandoverWorkspace({ job, askedStep }: { job: Job; askedStep?: number }) {
   const { data, actions, user, org } = useStore();
   const report = data.reports.find((r) => r.jobId === job.id);
   const [busy, setBusy] = React.useState(false);
@@ -142,7 +158,7 @@ export function HandoverWorkspace({ job }: { job: Job }) {
         </div>
       </div>
     );
-  return <Wizard key={report.id} job={job} report={report} />;
+  return <Wizard key={`${report.id}:${askedStep ?? ""}`} job={job} report={report} askedStep={askedStep} />;
 }
 
 function JobStrip({ job, right }: { job: Job; right?: React.ReactNode }) {
@@ -164,10 +180,12 @@ function JobStrip({ job, right }: { job: Job; right?: React.ReactNode }) {
 
 /* ------------------------------ Wizard ------------------------------ */
 
-function Wizard({ job, report }: { job: Job; report: HandoverReport }) {
+function Wizard({ job, report, askedStep }: { job: Job; report: HandoverReport; askedStep?: number }) {
   const { data, actions } = useStore();
   const router = useRouter();
-  const initialStep = (report.step && report.step >= 1 && report.step <= 5 ? report.step : 1) as StepNo;
+  // A link can ask for a step (?step=3 for Edit report); a finished handover opens on Review & finish.
+  const asked = askedStep ?? NaN;
+  const initialStep = (asked >= 1 && asked <= 5 ? asked : report.completedAt ? 5 : report.step && report.step >= 1 && report.step <= 5 ? report.step : 1) as StepNo;
   const [step, setStep] = React.useState<StepNo>(initialStep);
   const [sel, setSel] = React.useState<ReportSelection>(report.selection);
   const [content, setContent] = React.useState<ReportContent>(report.content);
@@ -258,6 +276,19 @@ function Wizard({ job, report }: { job: Job; report: HandoverReport }) {
 
   const files = data.files.filter((f) => f.jobId === job.id && !f.deletedAt && !f.reportId);
   const versions = data.reportVersions.filter((v) => v.reportId === report.id).sort((a, b) => b.version - a.version);
+  const status = handoverStatus(report, versions);
+  // Not finished yet, edited since finishing, or edits still on their way to the server.
+  const needsFinish = dirty || status === "in_progress" || status === "changes";
+  const [finishing, setFinishing] = React.useState(false);
+  const finish = async () => {
+    if (!(await save())) return toast("Couldn't save your changes. Check your connection and try again.", "error");
+    setFinishing(true);
+    const r = await actions.run<{ version: ReportVersion }>("finishReport", { id: report.id });
+    setFinishing(false);
+    if (!r.ok) return toast(r.errors._ || "Couldn't finish the handover. Try again.", "error");
+    toast(`Handover completed — version ${r.value.version.version} is ready to download and send`, "success");
+    document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <div ref={top} className="mx-auto flex min-h-full w-full max-w-3xl flex-col">
@@ -304,7 +335,7 @@ function Wizard({ job, report }: { job: Job; report: HandoverReport }) {
         {step === 2 ? <StepPhotos job={job} files={files} sel={sel} content={content} editSel={editSel} edit={edit} /> : null}
         {step === 3 ? <StepReport report={report} job={job} files={files} sel={sel} content={content} edit={edit} editSel={editSel} save={save} base={base} onDrafted={(r) => { setContent(r.content); setBase(r.revision); setDirty(false); }} /> : null}
         {step === 4 ? <StepCosts job={job} sel={sel} content={content} editSel={editSel} edit={edit} /> : null}
-        {step === 5 ? <StepFinish job={job} report={report} sel={sel} content={content} versions={versions} base={base} dirty={dirty} save={save} onEdit={() => void go(3)} /> : null}
+        {step === 5 ? <StepFinish job={job} report={report} sel={sel} content={content} versions={versions} base={base} dirty={dirty} save={save} onEdit={() => void go(3)} status={status} /> : null}
       </div>
 
       <footer className="sticky bottom-0 z-20 -mx-4 border-t border-line bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
@@ -318,9 +349,13 @@ function Wizard({ job, report }: { job: Job; report: HandoverReport }) {
             <BigButton className="flex-[2] sm:ml-auto sm:flex-none sm:px-10" onClick={() => void go((step + 1) as StepNo)}>
               Continue
             </BigButton>
+          ) : needsFinish ? (
+            <BigButton className="flex-[2] sm:ml-auto sm:flex-none sm:px-10" disabled={finishing} onClick={() => void finish()}>
+              {finishing ? <Loader2 className="animate-spin" /> : <Check />} {report.completedAt ? "Finish again" : "Finish handover"}
+            </BigButton>
           ) : (
             <BigButton className="flex-[2] sm:ml-auto sm:flex-none sm:px-10" onClick={() => void exit()}>
-              Done
+              Back to the job
             </BigButton>
           )}
         </div>
@@ -789,12 +824,21 @@ function StepCosts({ job, sel, content, editSel, edit }: { job: Job; sel: Report
 
 /* ------------------------------ 5. Review & finish ------------------------------ */
 
-function StepFinish({ job, report, sel, content, versions, base, dirty, save, onEdit }: { job: Job; report: HandoverReport; sel: ReportSelection; content: ReportContent; versions: ReportVersion[]; base: number; dirty: boolean; save: () => Promise<boolean>; onEdit: () => void }) {
+function StepFinish({ job, report, sel, content, versions, base, dirty, save, onEdit, status }: { job: Job; report: HandoverReport; sel: ReportSelection; content: ReportContent; versions: ReportVersion[]; base: number; dirty: boolean; save: () => Promise<boolean>; onEdit: () => void; status: HandoverStatus }) {
   const { data, actions, refresh } = useStore();
-  const [busy, setBusy] = React.useState<null | "pdf" | "pack">(null);
+  const [busy, setBusy] = React.useState<null | "pdf" | "pack" | "sent">(null);
   const [emailOpen, setEmailOpen] = React.useState(false);
   const latest = versions[0];
-  const upToDate = !!latest && !dirty && latest.createdAt >= report.updatedAt;
+  // The newest PDF matches the report if it was made from this revision (older PDFs: compare times).
+  const upToDate = !!latest && !dirty && (latest.revision !== undefined && latest.revision !== null ? latest.revision === report.revision : latest.createdAt >= report.updatedAt);
+  const pub = publishedVersion(report, versions);
+  const markSent = async (sent: boolean) => {
+    setBusy("sent");
+    const r = await actions.run("markReportSent", { id: report.id, sent });
+    setBusy(null);
+    if (!r.ok) toast(r.errors._ || "Couldn't update it", "error");
+    else toast(sent ? "Marked as sent to the customer" : "No longer marked as sent", "success");
+  };
   const packs = data.handovers.filter((h) => h.jobId === job.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   /** A PDF version that matches the report as it is now (made if needed). */
@@ -848,7 +892,35 @@ function StepFinish({ job, report, sel, content, versions, base, dirty, save, on
 
   return (
     <section>
-      <StepTitle title="Review & finish" sub="This is exactly what the customer will get. Change anything, then download or share it." />
+      <StepTitle title="Review & finish" sub={isFinished(status) ? "Your finished handover. Download it, send it, or edit and finish again." : "Check it's right, then press Finish handover. You can still edit it afterwards."} />
+
+      {isFinished(status) ? (
+        <div role="status" className={cn("mb-5 rounded-2xl px-4 py-3.5 ring-1", status === "changes" ? "bg-amber-500/10 ring-amber-500/25" : "bg-emerald-500/10 ring-emerald-500/25")}>
+          <p className="flex flex-wrap items-center gap-2 text-[15px] font-semibold text-heading">
+            <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-[12.5px] font-semibold text-white">Completed</span>
+            {longDate(report.completedAt)} by {report.completedBy}
+            {pub ? <span className="font-normal text-muted-foreground">· version {pub.version}</span> : null}
+          </p>
+          {status === "changes" ? (
+            <p className="mt-1.5 text-[14.5px] text-warn-fg">
+              <strong>Unpublished changes.</strong> You&apos;ve edited the report since version {pub?.version} was finished. Press Finish again to publish them as a new version — version {pub?.version} is kept.
+            </p>
+          ) : report.sentAt ? (
+            <p className="mt-1.5 text-[14.5px] text-good-fg">
+              Sent to the customer {longDate(report.sentAt)} by {report.sentBy}
+              {report.sentVersion ? ` (version ${report.sentVersion})` : ""}.{" "}
+              <button type="button" disabled={!!busy} onClick={() => void markSent(false)} className="font-semibold underline">Undo</button>
+            </p>
+          ) : (
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <span className="text-[14.5px] text-muted-foreground">Not sent to the customer yet. Bob doesn&apos;t send it — once you have, record it here.</span>
+              <BigButton variant="secondary" className="min-h-11 text-[15px]" disabled={!!busy} onClick={() => void markSent(true)}>
+                <Check /> I&apos;ve sent it to the customer
+              </BigButton>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {content.prompts.length ? (
         <div className="mb-5 rounded-2xl bg-amber-500/10 px-4 py-3 ring-1 ring-amber-500/25">

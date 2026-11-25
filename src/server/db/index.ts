@@ -101,10 +101,11 @@ export const TABLES = {
   handover_reports: {
     jobId: "text", selection: "json", content: "json", revision: "real", aiStatus: "text", aiNote: "text", createdBy: "text",
     createdAt: "text", updatedBy: "text", updatedAt: "text", step: "real",
+    completedAt: "text", completedBy: "text", completedRevision: "real", sentAt: "text", sentBy: "text", sentVersion: "real",
   },
   report_versions: {
     reportId: "text", jobId: "text", version: "real", fileId: "text", filename: "text", pages: "real", createdBy: "text", createdAt: "text",
-    content: "json",
+    content: "json", revision: "real", selection: "json",
   },
   handovers: {
     jobId: "text", title: "text", jobTitle: "text", siteAddress: "text", completionDate: "text", message: "text",

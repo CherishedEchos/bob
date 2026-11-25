@@ -2,14 +2,23 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { HandoverWorkspace } from "@/components/reports/handover-wizard";
 
 /** The customer handover for one job, as its own focused page (no job profile underneath). */
 export default function HandoverPage() {
+  return (
+    <React.Suspense>
+      <HandoverPageInner />
+    </React.Suspense>
+  );
+}
+
+function HandoverPageInner() {
   const { id } = useParams<{ id: string }>();
+  const askedStep = Number(useSearchParams().get("step")) || undefined;
   const { data } = useStore();
   const { setPageContext } = useUI();
   const job = data.jobs.find((j) => j.id === id);
@@ -25,5 +34,5 @@ export default function HandoverPage() {
         Job not found. <Link href="/jobs" className="font-semibold text-accent-fg">Back to Jobs</Link>
       </p>
     );
-  return <HandoverWorkspace job={job} />;
+  return <HandoverWorkspace job={job} askedStep={askedStep} />;
 }

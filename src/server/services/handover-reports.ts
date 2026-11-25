@@ -42,8 +42,9 @@ export function listReports(ctx: Ctx): HandoverReport[] {
 
 export function listReportVersions(ctx: Ctx): ReportVersion[] {
   if (!isManager(ctx)) return [];
-  return scoped(ctx).list<ReportVersion & { content?: unknown }>("report_versions", { order: "created_at DESC" }).map(({ content: _c, ...v }) => {
+  return scoped(ctx).list<ReportVersion & { content?: unknown; selection?: unknown }>("report_versions", { order: "created_at DESC" }).map(({ content: _c, selection: _s, ...v }) => {
     void _c;
+    void _s;
     return v;
   });
 }
@@ -393,7 +394,7 @@ export async function exportReport(ctx: Ctx, input: { id?: unknown; baseRevision
   const filename = `${fileSafe(ctx.org.shortName)} - ${fileSafe(titleCase(r.content.title))} - Handover v${version}.pdf`;
   const fileId = uid("fil");
   const at = now();
-  const v: ReportVersion = { id: uid("rv"), reportId: r.id, jobId: r.jobId, version, fileId, filename, pages: pdf.pages, createdBy: ctx.userName, createdAt: at };
+  const v: ReportVersion = { id: uid("rv"), reportId: r.id, jobId: r.jobId, version, fileId, filename, pages: pdf.pages, createdBy: ctx.userName, createdAt: at, revision: r.revision };
   tx(() => {
     db.insert("job_files", {
       id: fileId, jobId: r.jobId, category: "other", title: `Handover report v${version}`, filename, mimeType: "application/pdf", bytes: pdf.data.length,
@@ -401,8 +402,80 @@ export async function exportReport(ctx: Ctx, input: { id?: unknown; baseRevision
       uploadedBy: ctx.userName, uploadedByUserId: ctx.userId, createdAt: at, checksum: createHash("sha256").update(pdf.data).digest("hex"), reportId: r.id,
     } as JobFile & { id: string });
     getDb().prepare("INSERT INTO file_blobs (file_id, org_id, kind, data, created_at) VALUES (?, ?, 'original', ?, ?)").run(fileId, ctx.orgId, pdf.data, at);
-    db.insert("report_versions", { ...v, content: r.content } as ReportVersion & { content: ReportContent });
+    db.insert("report_versions", { ...v, content: r.content, selection: r.selection } as ReportVersion & { content: ReportContent; selection: ReportSelection });
     audit(ctx, "report.exported", `Handover report v${version} saved for ${r.content.title} (${pdf.pages} page${pdf.pages === 1 ? "" : "s"})`, "job", r.jobId);
   });
   return ok(v);
+}
+
+/* ------------------------------ Finish, sent, pack ------------------------------ */
+
+/** The exported PDF that matches the report as it is now, if there is one. */
+function versionForRevision(ctx: Ctx, r: HandoverReport): (ReportVersion & { selection?: ReportSelection }) | undefined {
+  return scoped(ctx).list<ReportVersion & { selection?: ReportSelection }>("report_versions", { where: "report_id = ? AND revision = ?", params: [r.id, r.revision], order: "version DESC" })[0];
+}
+
+/**
+ * Finish the handover: make sure there's a PDF of the report exactly as it is
+ * now (exporting one if needed), and record it as the published version —
+ * when, and by whom. Finishing again after changes publishes a new version;
+ * earlier versions are kept.
+ */
+export async function finishReport(ctx: Ctx, input: { id?: unknown }): Promise<Result<{ report: HandoverReport; version: ReportVersion }>> {
+  if (!isManager(ctx)) return deny();
+  const db = scoped(ctx);
+  const r = typeof input.id === "string" ? db.get<HandoverReport>("handover_reports", input.id) : undefined;
+  if (!r) return fail("not_found", "Report not found");
+  let version: ReportVersion | undefined = versionForRevision(ctx, r);
+  if (!version) {
+    const ex = await exportReport(ctx, { id: r.id });
+    if (!ex.ok) return ex;
+    version = ex.value;
+  }
+  const at = now();
+  const report = tx(() => {
+    const u = db.update<HandoverReport>("handover_reports", r.id, { completedAt: at, completedBy: ctx.userName, completedRevision: r.revision, step: 5 })!;
+    audit(ctx, "report.completed", `Handover finished for ${r.content.title} (version ${version!.version})`, "job", r.jobId);
+    return u;
+  });
+  const { selection: _s, content: _c, ...clean } = version as ReportVersion & { selection?: unknown; content?: unknown };
+  void _s;
+  void _c;
+  return ok({ report, version: clean });
+}
+
+/** Record that the person has sent the finished handover to the customer themselves. Bob doesn't send it. */
+export function markReportSent(ctx: Ctx, input: { id?: unknown; sent?: unknown }): Result<HandoverReport> {
+  if (!isManager(ctx)) return deny();
+  const db = scoped(ctx);
+  const r = typeof input.id === "string" ? db.get<HandoverReport>("handover_reports", input.id) : undefined;
+  if (!r) return fail("not_found", "Report not found");
+  if (input.sent === false) return ok(db.update<HandoverReport>("handover_reports", r.id, { sentAt: null as unknown as undefined, sentBy: null as unknown as undefined, sentVersion: null as unknown as undefined })!);
+  if (!r.completedAt) return fail("invalid", "Finish the handover first, then mark it as sent.");
+  if (r.completedRevision !== r.revision) return fail("invalid", "You've changed the report since it was finished. Finish it again first, so the customer gets the latest version.");
+  const v = versionForRevision(ctx, r);
+  const out = tx(() => {
+    const u = db.update<HandoverReport>("handover_reports", r.id, { sentAt: now(), sentBy: ctx.userName, sentVersion: v?.version })!;
+    audit(ctx, "report.sent", `Handover for ${r.content.title} marked as sent to the customer${v ? ` (version ${v.version})` : ""}`, "job", r.jobId);
+    return u;
+  });
+  return ok(out);
+}
+
+/**
+ * The handover pack (ZIP) for the published version: its PDF first, then the
+ * photos and documents chosen when it was made. Falls back to the latest PDF
+ * and the current choices for older versions.
+ */
+export async function reportPack(ctx: Ctx, input: { id?: unknown }) {
+  if (!isManager(ctx)) return deny();
+  const db = scoped(ctx);
+  const r = typeof input.id === "string" ? db.get<HandoverReport>("handover_reports", input.id) : undefined;
+  if (!r) return fail("not_found", "Report not found");
+  const all = db.list<ReportVersion & { selection?: ReportSelection }>("report_versions", { where: "report_id = ?", params: [r.id], order: "version DESC" });
+  const v = (r.completedRevision !== undefined ? all.find((x) => x.revision === r.completedRevision) : undefined) ?? all[0];
+  if (!v) return fail("invalid", "Make the PDF first (Review & finish → Download PDF), then the pack.");
+  const sel = v.selection ?? r.selection;
+  const { createHandover } = await import("./handover");
+  return createHandover(ctx, { jobId: r.jobId, fileIds: [v.fileId, ...sel.photoIds, ...sel.fileIds], completionDate: r.content.completionDate, title: `${r.content.title} — handover` });
 }

@@ -142,8 +142,9 @@ function Jobs() {
 
       <div className="flex flex-col gap-3">
         {/* Pipeline filters */}
-        <div className="scrollbar-none -mx-4 overflow-x-auto px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
-          <div role="tablist" aria-label="Pipeline" className="flex w-max gap-1.5">
+        {/* Wraps onto a second line on narrow screens instead of scrolling (nothing is cut off). */}
+        <div>
+          <div role="tablist" aria-label="Pipeline" className="flex flex-wrap items-center gap-2">
             {PRIMARY.map((v) => {
               const on = (q ? "all" : view) === v;
               const n = count(v);
@@ -155,7 +156,7 @@ function Jobs() {
                   aria-selected={on}
                   onClick={() => setView(v)}
                   className={cn(
-                    "flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[13.5px] font-medium transition",
+                    "flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-[14px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                     on ? "bg-sidebar text-white shadow-[var(--shadow-sm)]" : "bg-card text-muted-foreground ring-1 ring-line hover:text-foreground hover:ring-line-strong",
                   )}
                 >
@@ -170,7 +171,7 @@ function Jobs() {
                 value={MORE.includes(q ? "all" : view) ? (q ? "all" : view) : ""}
                 onChange={(e) => setView((e.target.value || "active") as View)}
                 className={cn(
-                  "h-9 appearance-none rounded-full pl-3.5 pr-8 text-[13.5px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-ring",
+                  "h-10 appearance-none rounded-full pl-4 pr-9 text-[14px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   MORE.includes(q ? "all" : view) ? "bg-sidebar text-white" : "bg-card text-muted-foreground ring-1 ring-line hover:text-foreground",
                 )}
               >
@@ -181,7 +182,7 @@ function Jobs() {
                   </option>
                 ))}
               </select>
-              <ChevronDown aria-hidden className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 opacity-60" />
+              <ChevronDown aria-hidden className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 opacity-60" />
             </label>
           </div>
         </div>

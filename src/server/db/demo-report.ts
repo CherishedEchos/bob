@@ -2,12 +2,12 @@ import "server-only";
 import type { DatabaseSync } from "node:sqlite";
 import type { Ctx } from "@/server/context";
 import type { OrgConfig } from "@/lib/types";
-import { createReport, exportReport, saveReport } from "@/server/services/handover-reports";
+import { createReport, finishReport, saveReport } from "@/server/services/handover-reports";
 
 /**
  * A finished customer handover report in the Ninety3 demonstration workspace:
  * Claire Dawson's garden room (fictional), written up, with selected photos
- * and the cost summary, and exported once as a Ninety3-branded PDF (v1). Runs
+ * and the cost summary, finished and published as a Ninety3-branded PDF (v1). Runs
  * once per database (and again after "Reset sample data"), so it comes back
  * after the free plan wipes the disk.
  */
@@ -62,5 +62,6 @@ export async function ensureDemoHandoverReport(db: DatabaseSync): Promise<void> 
     content: { ...r.content, sections, photos: r.content.photos.map((p) => ({ ...p, caption: p.caption || "Finished garden studio" })) },
   });
   if (!saved.ok) return;
-  await exportReport(ctx, { id: saved.value.id });
+  // Finished: the PDF is published (version 1) and the handover shows as Completed.
+  await finishReport(ctx, { id: saved.value.id });
 }

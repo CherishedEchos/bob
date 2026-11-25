@@ -19,6 +19,8 @@ describe("demo handover report", () => {
     expect(r.content.sections.find((s) => s.id === "overview")?.body).toMatch(/garden studio/);
     expect(r.content.sections.find((s) => s.id === "aftercare")?.hidden).toBe(false);
     expect(r.selection.includeCosts).toBe(true);
+    expect(r.completedAt).toBeTruthy(); // finished: shows as Completed
+    expect(r.completedRevision).toBe(r.revision);
     expect(r.content.photos.filter((p) => p.include).length).toBeGreaterThan(1);
     const versions = listReportVersions(ctx);
     expect(versions).toHaveLength(1);

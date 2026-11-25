@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import type { Job } from "@/lib/types";
 import { FilesPanel } from "@/components/files/files-panel";
 import { AddUpdateButton, UpdatesTimeline } from "@/components/updates/updates-timeline";
-import { HANDOVER_STATUS_LABEL, handoverStatus, type HandoverStatus } from "@/components/reports/handover-wizard";
+import { HANDOVER_STATUS_LABEL, downloadFile, handoverStatus, isFinished, longDate, publishedVersion, type HandoverStatus } from "@/components/reports/handover-wizard";
+import { fileUrl } from "@/lib/files/upload";
 import { Tip } from "@/components/common/tip";
 import { VariationsPanel } from "@/components/jobs/variations";
 
 import * as React from "react";
 import { PackageCheck } from "lucide-react";
-import { AlarmClock, CalendarClock, CalendarPlus, Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, Lock, Hammer, Inbox, MapPin, MoreHorizontal, Navigation, Package, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
+import { AlarmClock, CalendarClock, Download, FileArchive, Loader2, CalendarPlus, Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, Lock, Hammer, Inbox, MapPin, MoreHorizontal, Navigation, Package, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
 import type { JobTab } from "@/lib/store/ui";
 import { formatTimeRange, relativeDayInline } from "@/lib/dates";
 import { nextBookingForJob, peopleOnJob } from "@/lib/schedule";
@@ -88,6 +89,12 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
   };
   const [tab, setTabState] = React.useState<JobTab>(allowed(initialTab));
   React.useEffect(() => setTabState(allowed(initialTab)), [initialTab, id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Arriving on a particular section (e.g. back from the handover): bring it into view.
+  React.useEffect(() => {
+    if (!initialTab || initialTab === "overview") return;
+    const t = setTimeout(() => document.getElementById("job-tabpanel")?.scrollIntoView({ block: "start", behavior: "smooth" }), 150);
+    return () => clearTimeout(t);
+  }, [initialTab, id]);
   const setTab = (t: JobTab) => {
     setTabState(t);
     router.replace(`/jobs/${encodeURIComponent(id)}${t === "overview" ? "" : `?tab=${t}`}`, { scroll: false });
@@ -155,8 +162,8 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
   const primary =
     (j.status === "completed" || j.status === "snagging") && manager ? (
       <Button asChild className="w-full sm:w-auto">
-        <Link href={`/jobs/${encodeURIComponent(j.id)}/handover`}>
-          <PackageCheck /> {hStatus === "not_started" ? "Create handover report" : hStatus === "ready" ? "Handover report" : "Continue handover report"}
+        <Link href={`/jobs/${encodeURIComponent(j.id)}/handover${isFinished(hStatus) ? "?step=5" : ""}`}>
+          <PackageCheck /> {hStatus === "not_started" ? "Create handover report" : isFinished(hStatus) ? "View handover" : "Continue handover report"}
         </Link>
       </Button>
     ) : j.status === "completed" || j.status === "lost" ? null : can("schedule.manage") ? (
@@ -361,7 +368,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
       <div className="mt-4 empty:hidden">
         <Tip id="job-page">On this page, Bob knows which job you mean — try “add another £450 for the shelving”.</Tip>
       </div>
-      <div id="job-tabpanel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="mt-5">
+      <div id="job-tabpanel" role="tabpanel" style={{ scrollMarginTop: 72 }} aria-labelledby={`tab-${tab}`} className="mt-5">
         {tab === "overview" ? (
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
             <div className="flex min-w-0 flex-col gap-5">
@@ -827,31 +834,114 @@ function jobActivity(data: ReturnType<typeof useStore>["data"], jobId: string) {
   return data.activity.filter((a) => (a.entityType === "job" && a.entityId === jobId) || (a.entityType === "task" && a.entityId && taskIds.has(a.entityId)));
 }
 
-/** The handover on the job page: one status, one button. The work happens in the handover workspace. */
+/** The handover on the job page: its status, one main button, and — once finished — the PDF, the pack and Edit. */
 function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) {
-  const { data } = useStore();
+  const { data, actions, refresh } = useStore();
+  const [busy, setBusy] = React.useState<null | "pdf" | "pack" | "sent">(null);
   const report = data.reports.find((r) => r.jobId === job.id);
   const versions = data.reportVersions.filter((v) => v.jobId === job.id).sort((a, b) => b.version - a.version);
-  const packs = data.handovers.filter((h) => h.jobId === job.id);
+  const pub = publishedVersion(report, versions);
   const href = `/jobs/${encodeURIComponent(job.id)}/handover`;
+  const finished = isFinished(status);
+  const tone = status === "completed" || status === "sent" || status === "changes" ? "bg-emerald-500/12 text-good-fg" : status === "in_progress" ? "bg-copper-500/12 text-accent-fg" : "bg-surface-3 text-muted-foreground";
+
+  const pdf = async () => {
+    if (!pub) return;
+    setBusy("pdf");
+    await downloadFile(fileUrl(pub.fileId, { download: true }), pub.filename).then(() => toast(`Version ${pub.version} downloaded`, "success"), (e) => toast(e.message, "error"));
+    setBusy(null);
+  };
+  const pack = async () => {
+    if (!report) return;
+    setBusy("pack");
+    const r = await actions.run<{ id: string }>("reportPack", { id: report.id });
+    if (!r.ok) {
+      toast(r.errors._ || "Couldn't make the handover pack", "error");
+      return setBusy(null);
+    }
+    await downloadFile(`/api/handovers/${r.value.id}`, `${job.title} handover.zip`).then(() => toast("Handover pack downloaded", "success"), (e) => toast(e.message, "error"));
+    void refresh();
+    setBusy(null);
+  };
+  const markSent = async (sent: boolean) => {
+    if (!report) return;
+    setBusy("sent");
+    const r = await actions.run("markReportSent", { id: report.id, sent });
+    setBusy(null);
+    if (!r.ok) toast(r.errors._ || "Couldn't update it", "error");
+  };
+
   return (
     <div className="panel max-w-2xl px-5 py-5 sm:px-6">
-      <div className="flex items-center gap-2.5">
+      <div className="flex flex-wrap items-center gap-2.5">
         <h2 className="t-section">Customer handover</h2>
-        <span className={cn("rounded-full px-2.5 py-0.5 text-[12.5px] font-semibold", status === "ready" ? "bg-emerald-500/12 text-good-fg" : status === "in_progress" ? "bg-copper-500/12 text-accent-fg" : "bg-surface-3 text-muted-foreground")}>{HANDOVER_STATUS_LABEL[status]}</span>
+        <span data-testid="handover-status" className={cn("rounded-full px-2.5 py-0.5 text-[12.5px] font-semibold", tone)}>{status === "changes" ? "Completed" : HANDOVER_STATUS_LABEL[status]}</span>
+        {status === "changes" ? <span className="rounded-full bg-amber-500/12 px-2.5 py-0.5 text-[12.5px] font-semibold text-warn-fg">Unpublished changes</span> : null}
       </div>
-      <p className="mt-1.5 text-[15px] text-muted-foreground">
-        {status === "not_started"
-          ? `A branded report for ${job.customerName} with photos, what was done and the documents — Bob does most of the writing.`
-          : status === "ready"
-            ? `Version ${versions[0]?.version} saved ${timeAgo(versions[0]!.createdAt)}${packs.length ? ` · ${packs.length} handover pack${packs.length === 1 ? "" : "s"} made` : ""}.`
-            : `Last changed by ${report?.updatedBy} ${report ? timeAgo(report.updatedAt) : ""}. Pick up where you left off.`}
-      </p>
-      <Button asChild className="mt-4 h-12 w-full text-[15.5px] sm:w-auto sm:px-6">
-        <Link href={href}>
-          <PackageCheck /> {status === "not_started" ? "Create handover report" : status === "ready" ? "Open handover" : "Continue handover"}
-        </Link>
-      </Button>
+
+      {finished && report ? (
+        <dl className="mt-3 space-y-1.5 text-[14.5px]">
+          <div className="flex flex-wrap gap-x-2">
+            <dt className="text-muted-foreground">Completed</dt>
+            <dd className="font-medium text-heading">
+              {longDate(report.completedAt)} by {report.completedBy}
+              {pub ? <span className="font-normal text-muted-foreground"> · version {pub.version}</span> : null}
+            </dd>
+          </div>
+          <div className="flex flex-wrap gap-x-2">
+            <dt className="text-muted-foreground">Customer</dt>
+            <dd className="text-heading">
+              {report.sentAt ? (
+                <>
+                  Sent {longDate(report.sentAt)} by {report.sentBy}
+                  {report.sentVersion ? <span className="text-muted-foreground"> (version {report.sentVersion})</span> : null}
+                </>
+              ) : (
+                <span className="text-muted-foreground">Not marked as sent yet</span>
+              )}
+            </dd>
+          </div>
+        </dl>
+      ) : (
+        <p className="mt-1.5 text-[15px] text-muted-foreground">
+          {status === "not_started" ? `A branded report for ${job.customerName} with photos, what was done and the documents — Bob does most of the writing.` : `Last changed by ${report?.updatedBy} ${report ? timeAgo(report.updatedAt) : ""}. Pick up where you left off, then Finish handover.`}
+        </p>
+      )}
+
+      {status === "changes" ? (
+        <p role="status" className="mt-3 rounded-xl bg-amber-500/10 px-3.5 py-2.5 text-[14px] text-warn-fg ring-1 ring-amber-500/25">
+          The report has been edited since version {pub?.version} was finished. Those changes aren&apos;t in the PDF yet — open the handover and Finish it again to publish them.
+        </p>
+      ) : null}
+
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <Button asChild className="h-12 text-[15.5px] sm:px-6">
+          <Link href={finished ? `${href}?step=5` : href}>
+            <PackageCheck /> {status === "not_started" ? "Create handover report" : finished ? "View handover" : "Continue handover"}
+          </Link>
+        </Button>
+        {finished ? (
+          <>
+            <Button variant="secondary" className="h-12 text-[15px]" disabled={!!busy || !pub} onClick={() => void pdf()}>
+              {busy === "pdf" ? <Loader2 className="animate-spin" /> : <Download />} Download PDF
+            </Button>
+            <Button variant="secondary" className="h-12 text-[15px]" disabled={!!busy} onClick={() => void pack()}>
+              {busy === "pack" ? <Loader2 className="animate-spin" /> : <FileArchive />} Download handover pack
+            </Button>
+            <Button asChild variant="secondary" className="h-12 text-[15px]">
+              <Link href={`${href}?step=3`}>
+                <Pencil /> Edit report
+              </Link>
+            </Button>
+          </>
+        ) : null}
+      </div>
+      {finished && status !== "changes" ? (
+        <button type="button" disabled={!!busy} onClick={() => void markSent(!report?.sentAt)} className="mt-3 h-10 text-[14px] font-semibold text-accent-fg hover:underline disabled:opacity-60">
+          {report?.sentAt ? "Undo “sent to customer”" : "I've sent it to the customer"}
+        </button>
+      ) : null}
+      {versions.length > 1 ? <p className="mt-2 text-[13px] text-subtle">{versions.length} versions kept — all are listed in the handover.</p> : null}
     </div>
   );
 }

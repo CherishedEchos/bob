@@ -561,6 +561,14 @@ export interface HandoverReport {
   aiNote?: string;
   /** Where the person left the handover workspace (1 Job details … 5 Review & finish), so they resume there. */
   step?: number;
+  /** Finished (published): when, by whom, and which revision the published PDF matches. Later edits = unpublished changes. */
+  completedAt?: string;
+  completedBy?: string;
+  completedRevision?: number;
+  /** Recorded by the person once they've sent it to the customer themselves (Bob doesn't send it). */
+  sentAt?: string;
+  sentBy?: string;
+  sentVersion?: number;
   createdBy: string;
   createdAt: string;
   updatedBy: string;
@@ -578,6 +586,8 @@ export interface ReportVersion {
   pages: number;
   createdBy: string;
   createdAt: string;
+  /** The report revision this PDF was made from (older versions don't have it). */
+  revision?: number;
 }
 
 /** A line of the customer cost summary. Amounts come only from Bob's records (or labelled report figures). */

@@ -133,25 +133,72 @@ const shot = (p, n) => p.screenshot({ path: path.join(OUT, `handover-${n}.png`) 
   const mail = await p.getByRole('link', { name: 'Open in my email app' }).getAttribute('href');
   check('Email draft prepared for the customer (opened in their own email app; nothing sent by Bob)', /^mailto:/.test(mail) && /handover/i.test(decodeURIComponent(mail)));
   await shot(p, 'phone-6-email');
-  await p.getByRole('button', { name: 'Done' }).click();
+  /* Finish handover → Completed */
+  check('Before finishing, the main button is Finish handover', await p.getByRole('button', { name: 'Finish handover' }).isVisible());
+  await p.getByRole('button', { name: 'Finish handover' }).click();
+  await p.getByRole('status').filter({ hasText: 'Completed' }).first().waitFor({ timeout: 30000 });
+  const banner = await p.getByRole('status').filter({ hasText: 'Completed' }).first().innerText();
+  check('Completed banner shows the date and who finished it', /Completed[\s\S]*\d{4} by Luke/.test(banner) && /version 1/.test(banner), banner.replace(/\s+/g, ' ').slice(0, 90));
+  check('Finishing reused the downloaded PDF (still one version)', (await snap(p)).reportVersions.filter((v) => v.jobId === JOB).length === 1);
+  check('Completed and sent are separate: not marked as sent yet', /Not sent to the customer yet/.test(banner));
+  await shot(p, 'phone-7-completed');
+  await p.getByRole('button', { name: 'Back to the job' }).click();
   await p.waitForURL(`**/jobs/${JOB}?tab=handover`);
-  check('Job page now says Ready', await p.getByText('Ready', { exact: true }).first().waitFor({ timeout: 15000 }).then(() => true, () => false));
+  const status = p.getByTestId('handover-status');
+  await status.waitFor();
+  check('Job page: green Completed badge', (await status.innerText()) === 'Completed' && /emerald/.test(await status.getAttribute('class')));
+  const panel = await p.locator('#job-tabpanel').innerText();
+  check('Job page: completion date and who completed it', /Completed\s+\d{1,2} \w+ \d{4} by Luke/.test(panel), panel.replace(/\s+/g, ' ').slice(0, 120));
+  check('Job page: primary button is View handover', await p.locator('#job-tabpanel').getByRole('link', { name: /View handover/ }).isVisible());
+  for (const n of ['Download PDF', 'Download handover pack']) check(`Job page: ${n}`, await p.locator('#job-tabpanel').getByRole('button', { name: n }).isVisible());
+  check('Job page: Edit report', await p.locator('#job-tabpanel').getByRole('link', { name: /Edit report/ }).isVisible());
+  await shot(p, 'phone-8-job-completed');
+  dl = p.waitForEvent('download', { timeout: 60000, predicate: (x) => /Handover v1\.pdf$/.test(x.suggestedFilename()) });
+  await p.locator('#job-tabpanel').getByRole('button', { name: 'Download PDF' }).click();
+  check('Job page Download PDF gives the published version', !!(await dl));
+  dl = p.waitForEvent('download', { timeout: 60000, predicate: (x) => /\.zip$/.test(x.suggestedFilename()) });
+  await p.locator('#job-tabpanel').getByRole('button', { name: 'Download handover pack' }).click();
+  check('Job page Download handover pack gives a ZIP', !!(await dl));
+  await p.reload();
+  await p.getByTestId('handover-status').waitFor({ timeout: 60000 });
+  check('Completed status survives a refresh', (await p.getByTestId('handover-status').innerText()) === 'Completed');
 
-  /* Edit after export → new version, old one kept */
-  await p.goto(BASE + `/jobs/${JOB}/handover`);
-  await p.getByRole('heading', { name: 'Review & finish' }).waitFor({ timeout: 60000 });
-  await p.getByRole('button', { name: 'Edit report' }).click();
+  /* Ryan, in his own session, sees the same status and marks it sent */
+  const r = await b.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
+  const ryan = await r.newPage();
+  await ryan.goto(BASE + '/login');
+  await ryan.evaluate(async ([email, password]) => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }), [process.env.RYAN_EMAIL || 'office@ninety3.example', process.env.RYAN_PASSWORD || 'bob-demo']);
+  await ryan.goto(BASE + `/jobs/${JOB}?tab=handover`);
+  await ryan.getByTestId('handover-status').waitFor({ timeout: 60000 });
+  check("Ryan's account shows the same Completed status and Luke's name", (await ryan.getByTestId('handover-status').innerText()) === 'Completed' && /by Luke/.test(await ryan.locator('#job-tabpanel').innerText()));
+  await ryan.getByRole('button', { name: "I've sent it to the customer" }).click();
+  await ryan.getByText(/Sent \d{1,2} \w+ \d{4} by Ryan/).waitFor({ timeout: 15000 });
+  check('Ryan marks it sent: "Sent to customer" with date and name', (await ryan.getByTestId('handover-status').innerText()) === 'Sent to customer');
+  await p.reload();
+  await p.getByTestId('handover-status').waitFor({ timeout: 60000 });
+  check("Luke sees Ryan's 'sent' after refresh", (await p.getByTestId('handover-status').innerText()) === 'Sent to customer');
+
+  /* Edit after finishing → unpublished changes → finish again → version 2, version 1 kept */
+  await p.locator('#job-tabpanel').getByRole('link', { name: /Edit report/ }).click();
+  await p.getByRole('heading', { name: 'Your report' }).waitFor({ timeout: 60000 });
   await p.getByLabel('Overview text').fill('We replaced the staircase with solid oak treads, oiled them, and fitted a frameless glass balustrade.');
   await saved(p);
-  await p.getByRole('button', { name: 'Continue' }).click();
-  await p.getByRole('button', { name: 'Continue' }).click();
-  await p.getByRole('heading', { name: 'Review & finish' }).waitFor();
-  dl = p.waitForEvent('download', { timeout: 60000, predicate: (x) => /Handover v\d+\.pdf$/.test(x.suggestedFilename()) });
-  await p.getByRole('button', { name: 'Download PDF' }).click();
-  const v2 = (await dl).suggestedFilename();
-  check('Editing after export makes version 2', /Handover v2\.pdf$/.test(v2), v2);
+  await p.getByRole('button', { name: 'Save & exit' }).click();
+  await p.waitForURL(`**/jobs/${JOB}?tab=handover`);
+  await p.getByTestId('handover-status').waitFor();
+  const changed = await p.locator('#job-tabpanel').innerText();
+  check('Job page: Completed with "Unpublished changes" after an edit', /Unpublished changes/.test(changed) && /aren.t in the PDF yet/.test(changed));
+  await shot(p, 'phone-9-unpublished');
+  await p.locator('#job-tabpanel').getByRole('link', { name: /View handover/ }).click();
+  await p.getByRole('heading', { name: 'Review & finish' }).waitFor({ timeout: 60000 });
+  check('Handover shows the unpublished-changes warning', /Unpublished changes/.test(await p.locator('main').innerText()));
+  await p.getByRole('button', { name: 'Finish again' }).click();
+  await p.getByText(/version 2/).first().waitFor({ timeout: 30000 });
   const vs = (await snap(p)).reportVersions.filter((v) => v.jobId === JOB).map((v) => v.version).sort();
-  check('Version 1 is kept', JSON.stringify(vs) === '[1,2]', JSON.stringify(vs));
+  check('Finishing again publishes version 2 and keeps version 1', JSON.stringify(vs) === '[1,2]', JSON.stringify(vs));
+  await p.getByRole('button', { name: 'Back to the job' }).click();
+  await p.getByTestId('handover-status').waitFor();
+  check('Back to Completed (version 2 not yet marked as sent)', (await p.getByTestId('handover-status').innerText()) === 'Completed' && /version 2/.test(await p.locator('#job-tabpanel').innerText()));
   check('No page errors on the phone', errors.length === 0, errors.slice(0, 2).join(' | '));
 
   /* Desktop: the demo garden room (finished report) and the money badge */
@@ -162,8 +209,15 @@ const shot = (p, n) => p.screenshot({ path: path.join(OUT, `handover-${n}.png`) 
   check('Garden room: no "Paid in full" while £650 is outstanding', !/Paid in full/.test(header), header.replace(/\s+/g, ' ').slice(0, 80));
   await d.goto(BASE + '/jobs/n93_job_gardenroom_lingfield?tab=financials');
   check('Garden room financials show £650 left to pay', await d.getByText('£650 left to pay').first().waitFor({ timeout: 20000 }).then(() => true, () => false));
-  await d.goto(BASE + '/jobs/n93_job_gardenroom_lingfield/handover');
-  await d.getByRole('heading', { name: 'Job details' }).waitFor({ timeout: 60000 });
+  await d.goto(BASE + '/jobs/n93_job_gardenroom_lingfield?tab=handover');
+  await d.getByTestId('handover-status').waitFor({ timeout: 60000 });
+  check('Desktop: the demo garden room handover shows Completed', (await d.getByTestId('handover-status').innerText()) === 'Completed');
+  await shot(d, 'desktop-0-job-completed');
+  await d.getByRole('link', { name: /View handover/ }).first().click();
+  await d.getByRole('heading', { name: 'Review & finish' }).waitFor({ timeout: 60000 });
+  check('Desktop: a finished handover opens on Review & finish with the Completed banner', /Completed[\s\S]*by Luke/.test(await d.getByRole('status').filter({ hasText: 'Completed' }).first().innerText()));
+  await d.getByRole('button', { name: 'Step 1: Job details' }).click();
+  await d.getByRole('heading', { name: 'Job details' }).waitFor();
   await shot(d, 'desktop-1-details');
   await d.getByRole('button', { name: 'Step 4: Costs' }).click();
   await d.getByRole('heading', { name: 'Costs' }).waitFor();
