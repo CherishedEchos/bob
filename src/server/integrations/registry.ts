@@ -89,8 +89,10 @@ function connected(ctx: Ctx, kind: "email" | "accounting") {
 export function getEmailProvider(ctx: Ctx): EmailProvider | null {
   if (emailOverride !== undefined) return emailOverride;
   const live = connected(ctx, "email");
-  if (live.some((r) => r.provider === "gmail" && r.status === "connected")) return gmailProvider;
-  if (live.some((r) => r.provider === "outlook" && r.status === "connected")) return outlookProvider;
+  const real = live.some((r) => r.provider === "gmail" && r.status === "connected") ? gmailProvider : live.some((r) => r.provider === "outlook" && r.status === "connected") ? outlookProvider : null;
+  // Demo (sample) workspaces never send real email, even if a real mailbox has been connected: it's simulated instead.
+  if (real && ctx.org.dataMode === "sample") return demoInboxProvider;
+  if (real) return real;
   if (live.some((r) => r.provider === "demo_inbox")) return demoInboxProvider;
   return null;
 }

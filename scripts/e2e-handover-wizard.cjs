@@ -113,7 +113,7 @@ const shot = (p, n) => p.screenshot({ path: path.join(OUT, `handover-${n}.png`) 
   await p.getByRole('button', { name: 'Continue' }).click();
   await p.getByRole('heading', { name: 'Review & finish' }).waitFor();
   check('PDF preview shown', (await p.locator('iframe[title^="Preview"]').count()) === 1);
-  for (const n of ['Download PDF', 'Download full handover pack', 'Prepare email to customer', 'Edit report']) check(`Action: ${n}`, await p.getByRole('button', { name: n }).isVisible());
+  for (const n of ['Download PDF', 'Download full handover pack', 'Edit report']) check(`Action: ${n}`, await p.getByRole('button', { name: n }).isVisible());
   const prev = await p.evaluate(async (src) => { const r = await fetch(src); return { status: r.status, type: r.headers.get('content-type') }; }, await p.locator('iframe[title^="Preview"]').getAttribute('src'));
   check('Preview is a real PDF', prev.status === 200 && /pdf/.test(prev.type || ''), JSON.stringify(prev));
   await shot(p, 'phone-5-review');
@@ -129,10 +129,7 @@ const shot = (p, n) => p.screenshot({ path: path.join(OUT, `handover-${n}.png`) 
   const pack = s1.handovers.filter((h) => h.jobId === JOB)[0];
   check('Pack starts with the report PDF, then the chosen photos', pack && /Handover v1\.pdf$/.test(pack.items[0].filename) && pack.items.length >= 2, pack ? pack.items.map((i) => i.filename).join(', ') : 'none');
   check('No new PDF version for the pack (report unchanged)', s1.reportVersions.filter((v) => v.jobId === JOB).length === 1);
-  await p.getByRole('button', { name: 'Prepare email to customer' }).click();
-  const mail = await p.getByRole('link', { name: 'Open in my email app' }).getAttribute('href');
-  check('Email draft prepared for the customer (opened in their own email app; nothing sent by Bob)', /^mailto:/.test(mail) && /handover/i.test(decodeURIComponent(mail)));
-  await shot(p, 'phone-6-email');
+  check('Send to customer only appears once the handover is finished', !(await p.getByRole('button', { name: 'Send to customer' }).count()));
   /* Finish handover → Completed */
   check('Before finishing, the main button is Finish handover', await p.getByRole('button', { name: 'Finish handover' }).isVisible());
   await p.getByRole('button', { name: 'Finish handover' }).click();
@@ -140,7 +137,7 @@ const shot = (p, n) => p.screenshot({ path: path.join(OUT, `handover-${n}.png`) 
   const banner = await p.getByRole('status').filter({ hasText: 'Completed' }).first().innerText();
   check('Completed banner shows the date and who finished it', /Completed[\s\S]*\d{4} by Luke/.test(banner) && /version 1/.test(banner), banner.replace(/\s+/g, ' ').slice(0, 90));
   check('Finishing reused the downloaded PDF (still one version)', (await snap(p)).reportVersions.filter((v) => v.jobId === JOB).length === 1);
-  check('Completed and sent are separate: not marked as sent yet', /Not sent to the customer yet/.test(banner));
+  check('Completed and sent are separate: Send to customer is the next step', await p.getByRole('button', { name: 'Send to customer' }).isVisible());
   await shot(p, 'phone-7-completed');
   await p.getByRole('button', { name: 'Back to the job' }).click();
   await p.waitForURL(`**/jobs/${JOB}?tab=handover`);
@@ -171,9 +168,13 @@ const shot = (p, n) => p.screenshot({ path: path.join(OUT, `handover-${n}.png`) 
   await ryan.goto(BASE + `/jobs/${JOB}?tab=handover`);
   await ryan.getByTestId('handover-status').waitFor({ timeout: 60000 });
   check("Ryan's account shows the same Completed status and Luke's name", (await ryan.getByTestId('handover-status').innerText()) === 'Completed' && /by Luke/.test(await ryan.locator('#job-tabpanel').innerText()));
-  await ryan.getByRole('button', { name: "I've sent it to the customer" }).click();
-  await ryan.getByText(/Sent \d{1,2} \w+ \d{4} by Ryan/).waitFor({ timeout: 15000 });
-  check('Ryan marks it sent: "Sent to customer" with date and name', (await ryan.getByTestId('handover-status').innerText()) === 'Sent to customer');
+  // No mailbox in the demo: Ryan saves the thank-you draft, sends it from his own email, and records it.
+  await ryan.locator('#job-tabpanel').getByRole('button', { name: 'Send to customer' }).click();
+  const rbox = ryan.getByRole('region', { name: 'Send to customer' });
+  await rbox.getByRole('button', { name: 'Save draft' }).click();
+  await rbox.getByRole('button', { name: "I've sent it myself" }).click();
+  await ryan.getByText(/approved by Ryan, sent from their own email/).waitFor({ timeout: 15000 });
+  check('Ryan sends it: "Sent to customer", approved by Ryan', (await ryan.getByTestId('handover-status').innerText()) === 'Sent to customer');
   await p.reload();
   await p.getByTestId('handover-status').waitFor({ timeout: 60000 });
   check("Luke sees Ryan's 'sent' after refresh", (await p.getByTestId('handover-status').innerText()) === 'Sent to customer');

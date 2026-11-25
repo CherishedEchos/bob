@@ -13,9 +13,21 @@ import type { AccountingProvider, EmailProvider, InboundEmail, InvoiceSendOutcom
 
 const b64url = (s: string) => Buffer.from(s, "utf8").toString("base64url");
 
-function rfc2822(msg: OutboundEmail): string {
+export function rfc2822(msg: OutboundEmail): string {
   const subject = `=?UTF-8?B?${Buffer.from(msg.subject).toString("base64")}?=`;
-  return [`To: ${msg.to}`, `Subject: ${subject}`, "MIME-Version: 1.0", "Content-Type: text/plain; charset=UTF-8", "", msg.body].join("\r\n");
+  if (!msg.attachments?.length) return [`To: ${msg.to}`, `Subject: ${subject}`, "MIME-Version: 1.0", "Content-Type: text/plain; charset=UTF-8", "", msg.body].join("\r\n");
+  // multipart/mixed: the text, then each file base64-encoded in 76-character lines.
+  const boundary = `bob-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  const wrap = (b64: string) => b64.replace(/.{1,76}/g, "$&\r\n").trimEnd();
+  const parts = [
+    `--${boundary}`, "Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: base64", "", wrap(Buffer.from(msg.body).toString("base64")),
+    ...msg.attachments.flatMap((a) => {
+      const name = `=?UTF-8?B?${Buffer.from(a.filename).toString("base64")}?=`;
+      return [`--${boundary}`, `Content-Type: ${a.mimeType}; name="${name}"`, "Content-Transfer-Encoding: base64", `Content-Disposition: attachment; filename="${name}"`, "", wrap(a.data.toString("base64"))];
+    }),
+    `--${boundary}--`,
+  ];
+  return [`To: ${msg.to}`, `Subject: ${subject}`, "MIME-Version: 1.0", `Content-Type: multipart/mixed; boundary="${boundary}"`, "", ...parts].join("\r\n");
 }
 
 function failure(res: Response, label: string): { ok: false; error: string; retryable: boolean } {
@@ -125,7 +137,12 @@ export const outlookProvider: EmailProvider = {
       method: "POST",
       headers: { Authorization: `Bearer ${access_token}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: { subject: msg.subject, body: { contentType: "Text", content: msg.body }, toRecipients: [{ emailAddress: { address: msg.to } }] },
+        message: {
+          subject: msg.subject,
+          body: { contentType: "Text", content: msg.body },
+          toRecipients: [{ emailAddress: { address: msg.to } }],
+          attachments: (msg.attachments ?? []).map((a) => ({ "@odata.type": "#microsoft.graph.fileAttachment", name: a.filename, contentType: a.mimeType, contentBytes: a.data.toString("base64") })),
+        },
         saveToSentItems: true,
       }),
     });

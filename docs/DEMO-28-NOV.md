@@ -72,6 +72,11 @@ Then **Save Changes** → **Manual Deploy → Deploy latest commit**.
    - **Costs:** one switch, **Include financial summary in customer report**. It shows agreed price, the cedar step extra, payments and the £650 balance; never your own costs.
    - **Review & finish:** the PDF preview, then **Download PDF** (saves a numbered version), **Download full handover pack** (one ZIP with the report, photos and documents) and **Prepare email to customer** (opens in your own email app; Bob sends nothing).
    - **Save & exit** at any point; the job page then shows *In progress*, and coming back carries on at the same step.
+6b. **Thank-you email and review request.** On the finished garden room handover, press **Send to customer**:
+   - Bob writes "Hi Claire… Please find your project handover report attached… an honest Google review…", signed Luke & Ryan, Ninety3 Carpentry & Build, with the PDF attached.
+   - Edit a line, then **Save draft** (the demo has no email account, so nothing is sent) and **I've sent it myself**.
+   - The job now shows: handover completed, customer email sent (approved by you), review requested, and a reminder in seven days, which you can cancel.
+   - Settings → Customer follow-ups holds the review link, manual or automatic sending, the reminder and the email wording.
 7. **Money.**
    - The three headline figures: owed, overdue (part of owed) and received, with the dates shown.
    - Ask Bob: *"Prepare an invoice for the final balance on Sophie Mackay's Oak Road kitchen."* It saves a draft that hasn't been sent.

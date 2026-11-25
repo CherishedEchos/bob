@@ -26,6 +26,7 @@ import { saveVariation, deleteVariation } from "@/server/services/variations";
 import { createUpdate, deleteUpdate } from "@/server/services/updates";
 import { listMerchants } from "@/server/services/merchants";
 import * as Rep from "@/server/services/handover-reports";
+import * as FU from "@/server/services/followups";
 import type { ActionTool, PrepareResult } from "./tools";
 
 const id = z.string().min(1).max(80);
@@ -900,6 +901,74 @@ const amendHandoverSummary: ActionTool<{ jobId: string; summary: string }> = {
   },
 };
 
+
+/* ------------------------------ Customer follow-ups ------------------------------ */
+
+const sendHandoverEmail: ActionTool<
+  { jobId: string; to?: string; subject?: string; body?: string; includeReview?: boolean; draftOnly?: boolean },
+  { jobId: string; to: string; subject: string; body: string; includeReview: boolean; draftOnly: boolean; customer: string }
+> = {
+  kind: "action",
+  name: "send_handover_email",
+  description:
+    "Email a customer their finished handover report (PDF attached) with a thank-you message from the business's template and, if review requests are switched on, a link to leave an honest Google review. Pass the job_id (find it with search_jobs). includeReview defaults to on when available; Bob only asks once per job. draftOnly saves an editable draft without sending (use for 'draft a thank-you email'). With no email account connected it always saves a draft. Never ask only for positive reviews.",
+  category: "external",
+  permission: "email.send",
+  confirmation: "always",
+  editable: ["to", "subject", "body"],
+  schema: z.object({ jobId: id, to: z.string().trim().max(200).optional(), subject: z.string().trim().max(200).optional(), body: z.string().trim().max(8000).optional(), includeReview: z.boolean().optional(), draftOnly: z.boolean().optional() }),
+  prepare(ctx, a) {
+    const c = FU.composeFollowUp(ctx, { jobId: a.jobId, includeReview: a.includeReview });
+    if (!c.ok) return blocked(c.error);
+    const v = c.value;
+    const payload = { jobId: a.jobId, to: a.to || v.to, subject: a.subject || v.subject, body: a.body || v.body, includeReview: a.includeReview === false ? false : v.includeReview, draftOnly: !!a.draftOnly || !v.mailbox.connected, customer: R.getJob(ctx, a.jobId)?.customerName ?? "the customer" };
+    // If the customer asked for a review but the body came from elsewhere, make sure the link is actually in it.
+    if (payload.includeReview && !/https:\/\//.test(payload.body)) payload.includeReview = false;
+    if (!payload.draftOnly) {
+      const problem = FU.checkSend(ctx, payload);
+      if (problem) return blocked(problem);
+    } else if (!payload.to && !a.draftOnly) {
+      return clarify(`What's ${payload.customer.split(" ")[0]}'s email address?`);
+    }
+    const notices: ActionNotice[] = [];
+    if (payload.draftOnly && !v.mailbox.connected) notices.push({ tone: "info", text: "No email account is connected, so Bob saves this as a draft — nothing is sent. Copy it into your own email with the PDF attached." });
+    if (v.mailbox.simulated && !payload.draftOnly) notices.push({ tone: "demo", text: "Demo workspace — nothing will actually be sent. The send is simulated and recorded." });
+    if (v.reviewAlreadyRequested) notices.push({ tone: "info", text: `A review was already requested on ${v.reviewAlreadyRequested.slice(0, 10)}, so this email doesn't ask again.` });
+    return {
+      ok: true,
+      value: {
+        payload,
+        title: payload.draftOnly ? "Save thank-you email draft" : "Send handover email",
+        lines: [
+          { label: "To", value: payload.to || "(add their email)", emphasis: true },
+          { label: "Attachment", value: v.attachment?.filename ?? "Handover report PDF" },
+          { label: "Review request", value: payload.includeReview ? "Yes — Google review link included" : "No" },
+          ...(payload.draftOnly ? [] : [{ label: "Via", value: v.mailbox.label ?? "Email" }]),
+        ],
+        preview: { kind: "email", to: payload.to, subject: payload.subject, body: payload.body },
+        notices,
+        approveLabel: payload.draftOnly ? "Save draft" : v.mailbox.simulated ? "Send (demo)" : "Send email",
+        simulated: v.mailbox.simulated,
+      },
+    };
+  },
+  async execute(ctx, a, meta) {
+    if (a.draftOnly) {
+      const r = FU.saveFollowUpDraft(ctx, a);
+      if (!r.ok) return { ok: false, error: r.error };
+      return { ok: true, message: `Thank-you email for ${a.customer} saved as a draft — nothing has been sent. Send it from your own email with the PDF attached, then tap “I've sent it myself” on the job.`, links: [{ label: "Open handover", kind: "page", id: `/jobs/${a.jobId}?tab=handover` }] };
+    }
+    const r = await FU.sendFollowUp(ctx, a, meta.idempotencyKey);
+    if (!r.ok) return { ok: false, error: r.error };
+    const f = r.value;
+    return {
+      ok: true,
+      message: `${f.sentVia === "demo" ? "Demo: simulated sending" : "Sent"} the handover report to ${a.customer}${f.reviewRequested ? " with a review request" : ""}.${f.reminderStatus === "scheduled" ? ` A reminder is set for ${formatDateInline(f.reminderDueAt!)}.` : ""}`,
+      links: [{ label: "Open handover", kind: "page", id: `/jobs/${a.jobId}?tab=handover` }],
+    };
+  },
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const workspaceActionTools: ActionTool<any, any>[] = [
   createCustomer, updateCustomer,
@@ -910,6 +979,7 @@ export const workspaceActionTools: ActionTool<any, any>[] = [
   createTask, updateTask, completeTask,
   createEnquiry, updateQuote, convertToJob,
   createHandover, amendHandoverSummary,
+  sendHandoverEmail,
 ];
 
 export const _forTests = { resolvePeople, resolveAssignee, todayKey };

@@ -16,15 +16,16 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  AlertTriangle, ArrowLeft, Camera, Check, ChevronDown, Copy, Download, ExternalLink, FileArchive, FileText, Loader2, Mail, Mic, Pencil, Plus, Sparkles, Square, Star, Wand2, X,
+  AlertTriangle, ArrowLeft, Camera, Check, ChevronDown, Download, ExternalLink, FileArchive, FileText, Loader2, Mail, Mic, Pencil, Plus, Sparkles, Square, Star, Wand2, X,
 } from "lucide-react";
 import type { Handover, HandoverReport, Job, JobFile, ReportContent, ReportSection, ReportSelection, ReportVersion } from "@/lib/types";
 import { api, useStore } from "@/lib/store/store";
 import { fileUrl } from "@/lib/files/upload";
 import { MANUAL_COST_NOTE, manualCostLines, reportCostSummary } from "@/lib/report-costs";
-import { cn, copyToClipboard, formatDateKey, gbp, timeAgo } from "@/lib/utils";
+import { cn, formatDateKey, gbp, timeAgo } from "@/lib/utils";
 import { useSpeechRecognition } from "@/lib/voice/use-speech";
 import { UploadButtons, UploadQueue } from "@/components/files/upload-queue";
+import { SendToCustomer } from "@/components/reports/send-to-customer";
 import { toast } from "@/components/ui/toaster";
 
 export const STEPS = ["Job details", "Photos & documents", "Your report", "Costs", "Review & finish"] as const;
@@ -283,10 +284,14 @@ function Wizard({ job, report, askedStep }: { job: Job; report: HandoverReport; 
   const finish = async () => {
     if (!(await save())) return toast("Couldn't save your changes. Check your connection and try again.", "error");
     setFinishing(true);
-    const r = await actions.run<{ version: ReportVersion }>("finishReport", { id: report.id });
+    const r = await actions.run<{ version: ReportVersion; autoEmail?: { sent?: { sentVia?: string }; note?: string } }>("finishReport", { id: report.id });
     setFinishing(false);
     if (!r.ok) return toast(r.errors._ || "Couldn't finish the handover. Try again.", "error");
-    toast(`Handover completed — version ${r.value.version.version} is ready to download and send`, "success");
+    const auto = r.value.autoEmail;
+    toast(
+      auto?.sent ? `Handover completed and emailed to the customer${auto.sent.sentVia === "demo" ? " (demo — simulated)" : ""}` : auto?.note ? `Handover completed. ${auto.note}` : `Handover completed — version ${r.value.version.version} is ready. Next: Send to customer.`,
+      auto?.note ? "error" : "success",
+    );
     document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -826,19 +831,14 @@ function StepCosts({ job, sel, content, editSel, edit }: { job: Job; sel: Report
 
 function StepFinish({ job, report, sel, content, versions, base, dirty, save, onEdit, status }: { job: Job; report: HandoverReport; sel: ReportSelection; content: ReportContent; versions: ReportVersion[]; base: number; dirty: boolean; save: () => Promise<boolean>; onEdit: () => void; status: HandoverStatus }) {
   const { data, actions, refresh } = useStore();
-  const [busy, setBusy] = React.useState<null | "pdf" | "pack" | "sent">(null);
+  const [busy, setBusy] = React.useState<null | "pdf" | "pack">(null);
   const [emailOpen, setEmailOpen] = React.useState(false);
   const latest = versions[0];
   // The newest PDF matches the report if it was made from this revision (older PDFs: compare times).
   const upToDate = !!latest && !dirty && (latest.revision !== undefined && latest.revision !== null ? latest.revision === report.revision : latest.createdAt >= report.updatedAt);
   const pub = publishedVersion(report, versions);
-  const markSent = async (sent: boolean) => {
-    setBusy("sent");
-    const r = await actions.run("markReportSent", { id: report.id, sent });
-    setBusy(null);
-    if (!r.ok) toast(r.errors._ || "Couldn't update it", "error");
-    else toast(sent ? "Marked as sent to the customer" : "No longer marked as sent", "success");
-  };
+  const sentEmail = data.followUps.filter((f) => f.jobId === job.id && f.status === "sent").sort((x, y) => (y.sentAt ?? "").localeCompare(x.sentAt ?? ""))[0];
+  const draftEmail = data.followUps.find((f) => f.jobId === job.id && f.status === "draft");
   const packs = data.handovers.filter((h) => h.jobId === job.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   /** A PDF version that matches the report as it is now (made if needed). */
@@ -905,22 +905,23 @@ function StepFinish({ job, report, sel, content, versions, base, dirty, save, on
             <p className="mt-1.5 text-[14.5px] text-warn-fg">
               <strong>Unpublished changes.</strong> You&apos;ve edited the report since version {pub?.version} was finished. Press Finish again to publish them as a new version — version {pub?.version} is kept.
             </p>
-          ) : report.sentAt ? (
+          ) : sentEmail ? (
             <p className="mt-1.5 text-[14.5px] text-good-fg">
-              Sent to the customer {longDate(report.sentAt)} by {report.sentBy}
-              {report.sentVersion ? ` (version ${report.sentVersion})` : ""}.{" "}
-              <button type="button" disabled={!!busy} onClick={() => void markSent(false)} className="font-semibold underline">Undo</button>
+              Emailed to the customer {longDate(sentEmail.sentAt)} — approved by {sentEmail.approvedBy}
+              {sentEmail.sentVia === "demo" ? " (demo: simulated, nothing really sent)" : sentEmail.sentVia === "manual" ? " (sent from their own email)" : ""}
+              {sentEmail.reviewRequested ? " · review requested" : ""}.
             </p>
           ) : (
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <span className="text-[14.5px] text-muted-foreground">Not sent to the customer yet. Bob doesn&apos;t send it — once you have, record it here.</span>
-              <BigButton variant="secondary" className="min-h-11 text-[15px]" disabled={!!busy} onClick={() => void markSent(true)}>
-                <Check /> I&apos;ve sent it to the customer
+            <div className="mt-3">
+              <BigButton className="w-full sm:w-auto" onClick={() => setEmailOpen(true)}>
+                <Mail /> Send to customer
               </BigButton>
+              <p className="mt-2 text-[13.5px] text-muted-foreground">{draftEmail ? "A draft is saved — open it to finish and send." : "Bob prepares a thank-you email with the report attached; you check it before it goes."}</p>
             </div>
           )}
         </div>
       ) : null}
+      {emailOpen ? <SendToCustomer job={job} onClose={() => setEmailOpen(false)} /> : null}
 
       {content.prompts.length ? (
         <div className="mb-5 rounded-2xl bg-amber-500/10 px-4 py-3 ring-1 ring-amber-500/25">
@@ -949,9 +950,6 @@ function StepFinish({ job, report, sel, content, versions, base, dirty, save, on
         <BigButton variant="secondary" disabled={!!busy} onClick={() => void downloadPack()}>
           {busy === "pack" ? <Loader2 className="animate-spin" /> : <FileArchive />} Download full handover pack
         </BigButton>
-        <BigButton variant="secondary" disabled={!!busy} onClick={() => setEmailOpen(true)}>
-          <Mail /> Prepare email to customer
-        </BigButton>
         <BigButton variant="secondary" disabled={!!busy} onClick={onEdit}>
           <Pencil /> Edit report
         </BigButton>
@@ -960,7 +958,6 @@ function StepFinish({ job, report, sel, content, versions, base, dirty, save, on
         The pack is one ZIP: this report, the {sel.photoIds.length} photo{sel.photoIds.length === 1 ? "" : "s"} you chose at full size{sel.fileIds.length ? ` and ${sel.fileIds.length} document${sel.fileIds.length === 1 ? "" : "s"}` : ""}. Not included: internal notes, site access details, anything you didn&apos;t tick, and your own costs.
       </p>
 
-      {emailOpen ? <EmailDraft job={job} content={content} onClose={() => setEmailOpen(false)} /> : null}
 
       <div className="mt-7 space-y-3">
         <Fold title="Previous versions" hint={versions.length ? `${versions.length} saved · latest v${latest!.version}${upToDate ? " (matches the report)" : " (report changed since)"}` : "None yet — downloading the PDF saves version 1"}>
@@ -1001,67 +998,5 @@ function StepFinish({ job, report, sel, content, versions, base, dirty, save, on
         ) : null}
       </div>
     </section>
-  );
-}
-
-/**
- * A ready-to-send email. Bob doesn't send it or attach anything: it's copied
- * or opened in the person's own email app, with the PDF/pack they downloaded.
- */
-function EmailDraft({ job, content, onClose }: { job: Job; content: ReportContent; onClose: () => void }) {
-  const { data, org } = useStore();
-  const customer = data.customers.find((c) => c.id === job.customerId);
-  const first = content.customerName.split(/\s+/)[0] || "there";
-  const [to, setTo] = React.useState(customer?.email ?? "");
-  const [subject, setSubject] = React.useState(`Your ${content.title.toLowerCase()} — handover pack`);
-  const [body, setBody] = React.useState(
-    `Hi ${first},\n\nThank you for choosing us for your ${content.title.toLowerCase()}. I've attached your handover pack: a short report of the work with photos${content.sections.some((s) => s.id === "aftercare" && !s.hidden) ? ", care advice" : ""} and the relevant documents.\n\nIf you have any questions, just reply to this email.\n\n${org.assistant.signOff}`,
-  );
-  const emailConnected = data.connections.some((c) => c.kind === "email" && c.status === "connected");
-  return (
-    <div className="mt-5 rounded-2xl bg-card p-5 ring-1 ring-copper-500/30" role="region" aria-label="Email to the customer">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[16px] font-semibold text-heading">Email to {content.customerName}</p>
-          <p className="text-[14px] text-muted-foreground">Download the PDF or pack first, then attach it in your email app.</p>
-        </div>
-        <button type="button" onClick={onClose} aria-label="Close email" className="grid size-11 shrink-0 place-items-center rounded-xl text-subtle hover:bg-surface-2">
-          <X className="size-5" />
-        </button>
-      </div>
-      <div className="mt-4 space-y-3">
-        <label className="block">
-          <span className="mb-1 block text-[14px] font-medium">To</span>
-          <input className={field} type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="customer@example.com" />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-[14px] font-medium">Subject</span>
-          <input className={field} value={subject} onChange={(e) => setSubject(e.target.value)} />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-[14px] font-medium">Message</span>
-          <textarea rows={8} className={area} value={body} onChange={(e) => setBody(e.target.value)} />
-        </label>
-      </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <a href={`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`} className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-xl bg-copper-500 px-5 text-[16px] font-semibold text-white hover:bg-copper-600 [&_svg]:size-5">
-          <Mail /> Open in my email app
-        </a>
-        <BigButton
-          variant="secondary"
-          onClick={async () => {
-            const ok = await copyToClipboard(`To: ${to}\nSubject: ${subject}\n\n${body}`);
-            toast(ok ? "Email copied" : "Couldn't copy — select the text instead", ok ? "success" : "error");
-          }}
-        >
-          <Copy /> Copy email
-        </BigButton>
-      </div>
-      <p className="mt-3 text-[13px] text-subtle">
-        {emailConnected
-          ? "Bob doesn't send handover packs itself yet, so nothing goes out until you send it from your email."
-          : "No email account is connected to Bob, so nothing is sent from here — you send it yourself."}
-      </p>
-    </div>
   );
 }

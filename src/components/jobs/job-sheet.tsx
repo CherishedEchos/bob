@@ -7,12 +7,13 @@ import { FilesPanel } from "@/components/files/files-panel";
 import { AddUpdateButton, UpdatesTimeline } from "@/components/updates/updates-timeline";
 import { HANDOVER_STATUS_LABEL, downloadFile, handoverStatus, isFinished, longDate, publishedVersion, type HandoverStatus } from "@/components/reports/handover-wizard";
 import { fileUrl } from "@/lib/files/upload";
+import { FollowUpTrail, SendToCustomer } from "@/components/reports/send-to-customer";
 import { Tip } from "@/components/common/tip";
 import { VariationsPanel } from "@/components/jobs/variations";
 
 import * as React from "react";
 import { PackageCheck } from "lucide-react";
-import { AlarmClock, CalendarClock, Download, FileArchive, Loader2, CalendarPlus, Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, Lock, Hammer, Inbox, MapPin, MoreHorizontal, Navigation, Package, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
+import { AlarmClock, CalendarClock, Download, FileArchive, Loader2, Mail, CalendarPlus, Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, Lock, Hammer, Inbox, MapPin, MoreHorizontal, Navigation, Package, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
 import type { JobTab } from "@/lib/store/ui";
 import { formatTimeRange, relativeDayInline } from "@/lib/dates";
 import { nextBookingForJob, peopleOnJob } from "@/lib/schedule";
@@ -837,7 +838,7 @@ function jobActivity(data: ReturnType<typeof useStore>["data"], jobId: string) {
 /** The handover on the job page: its status, one main button, and — once finished — the PDF, the pack and Edit. */
 function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) {
   const { data, actions, refresh } = useStore();
-  const [busy, setBusy] = React.useState<null | "pdf" | "pack" | "sent">(null);
+  const [busy, setBusy] = React.useState<null | "pdf" | "pack">(null);
   const report = data.reports.find((r) => r.jobId === job.id);
   const versions = data.reportVersions.filter((v) => v.jobId === job.id).sort((a, b) => b.version - a.version);
   const pub = publishedVersion(report, versions);
@@ -863,13 +864,8 @@ function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) 
     void refresh();
     setBusy(null);
   };
-  const markSent = async (sent: boolean) => {
-    if (!report) return;
-    setBusy("sent");
-    const r = await actions.run("markReportSent", { id: report.id, sent });
-    setBusy(null);
-    if (!r.ok) toast(r.errors._ || "Couldn't update it", "error");
-  };
+  const [sending, setSending] = React.useState(false);
+  const emailed = data.followUps.some((f) => f.jobId === job.id && f.status === "sent");
 
   return (
     <div className="panel max-w-2xl px-5 py-5 sm:px-6">
@@ -897,7 +893,7 @@ function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) 
                   {report.sentVersion ? <span className="text-muted-foreground"> (version {report.sentVersion})</span> : null}
                 </>
               ) : (
-                <span className="text-muted-foreground">Not marked as sent yet</span>
+                <span className="text-muted-foreground">Not sent yet</span>
               )}
             </dd>
           </div>
@@ -936,11 +932,13 @@ function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) 
           </>
         ) : null}
       </div>
-      {finished && status !== "changes" ? (
-        <button type="button" disabled={!!busy} onClick={() => void markSent(!report?.sentAt)} className="mt-3 h-10 text-[14px] font-semibold text-accent-fg hover:underline disabled:opacity-60">
-          {report?.sentAt ? "Undo “sent to customer”" : "I've sent it to the customer"}
-        </button>
+      {finished && status !== "changes" && !emailed ? (
+        <Button className="mt-3 h-12 w-full text-[15.5px] sm:w-auto sm:px-6" variant={sending ? "secondary" : "default"} onClick={() => setSending((v) => !v)}>
+          <Mail /> Send to customer
+        </Button>
       ) : null}
+      {sending ? <SendToCustomer job={job} onClose={() => setSending(false)} /> : null}
+      <FollowUpTrail job={job} />
       {versions.length > 1 ? <p className="mt-2 text-[13px] text-subtle">{versions.length} versions kept — all are listed in the handover.</p> : null}
     </div>
   );

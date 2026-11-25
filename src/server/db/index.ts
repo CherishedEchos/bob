@@ -107,6 +107,11 @@ export const TABLES = {
     reportId: "text", jobId: "text", version: "real", fileId: "text", filename: "text", pages: "real", createdBy: "text", createdAt: "text",
     content: "json", revision: "real", selection: "json",
   },
+  customer_followups: {
+    jobId: "text", reportId: "text", version: "real", toAddress: "text", subject: "text", body: "text", reviewRequested: "bool", reviewUrl: "text",
+    status: "text", sentVia: "text", approvedBy: "text", approvedAt: "text", sentAt: "text", error: "text",
+    reminderStatus: "text", reminderDueAt: "text", reminderSentAt: "text", reminderTaskId: "text", createdBy: "text", createdAt: "text", updatedAt: "text",
+  },
   handovers: {
     jobId: "text", title: "text", jobTitle: "text", siteAddress: "text", completionDate: "text", message: "text",
     items: "json", createdAt: "text", createdBy: "text", downloads: "real",

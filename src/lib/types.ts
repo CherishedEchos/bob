@@ -42,6 +42,8 @@ export interface OrgConfig {
    */
   /** Claude API spending: monthly limit in USD (null = no limit) and when to warn. */
   ai?: { monthlyLimitUsd: number | null; warnAtPercent?: number };
+  /** Thank-you email and Google review request after a handover (Settings → Customer follow-ups). */
+  followUps?: FollowUpSettings;
   finance: { vatRegistered: boolean | null; vatRate: number | null; defaultPaymentTermsDays: number | null; /** How job prices and amounts are quoted when VAT registered. */ pricesAre?: "exclusive" | "inclusive" | null };
   /** "sample" = fictional records, nothing is sent anywhere. */
   dataMode: "sample" | "live";
@@ -683,6 +685,7 @@ export interface Snapshot {
   variations: Variation[];
   reports: HandoverReport[];
   reportVersions: ReportVersion[];
+  followUps: CustomerFollowUp[];
   activity: ActivityEntry[];
   connections: Connection[];
   mode: ModeInfo;
@@ -691,3 +694,46 @@ export interface Snapshot {
 
 /** Back-compat alias: much of the UI was written against `AppData`. */
 export type AppData = Snapshot;
+
+export interface FollowUpSettings {
+  /** The business's own Google review link (e.g. https://g.page/r/…/review). */
+  reviewUrl?: string;
+  reviewsEnabled: boolean;
+  /** "manual": every email is shown for approval. "auto": sent when the handover is finished (needs a connected mailbox). */
+  mode: "manual" | "auto";
+  /** One reminder seven days later, only if a review was asked for. */
+  reminder: boolean;
+  template: { subject: string; body: string };
+}
+
+/**
+ * One thank-you / handover email to a customer, and its optional review
+ * reminder. Bob never records that a review was received — it can't verify it.
+ */
+export interface CustomerFollowUp {
+  id: ID;
+  jobId: ID;
+  reportId: ID;
+  /** The published PDF version that was attached. */
+  version?: number;
+  toAddress: string;
+  subject: string;
+  body: string;
+  reviewRequested: boolean;
+  reviewUrl?: string;
+  /** draft (no mailbox, or saved for later) · sent · failed */
+  status: "draft" | "sent" | "failed";
+  /** gmail / outlook / demo (simulated, nothing left Bob) / manual (sent by the person from their own email) */
+  sentVia?: "gmail" | "outlook" | "demo" | "manual";
+  approvedBy?: string;
+  approvedAt?: string;
+  sentAt?: string;
+  error?: string;
+  reminderStatus: "none" | "scheduled" | "sent" | "cancelled";
+  reminderDueAt?: string;
+  reminderSentAt?: string;
+  reminderTaskId?: ID;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}

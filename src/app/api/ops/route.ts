@@ -12,6 +12,7 @@ import * as Abs from "@/server/services/absences";
 import * as Files from "@/server/services/files";
 import * as Var from "@/server/services/variations";
 import * as Rep from "@/server/services/handover-reports";
+import * as FU from "@/server/services/followups";
 
 export const runtime = "nodejs";
 
@@ -80,7 +81,17 @@ const OPS: Record<string, (ctx: Ctx, a: Record<string, any>) => Result<unknown> 
   generateReport: (c, a) => Rep.generateReport(c, a),
   proposeRewrite: (c, a) => Rep.proposeRewrite(c, a),
   exportReport: (c, a) => Rep.exportReport(c, a),
-  finishReport: (c, a) => Rep.finishReport(c, a),
+  // Finishing can send the thank-you email straight away in automatic mode (Settings → Customer follow-ups).
+  finishReport: async (c, a) => {
+    const r = await Rep.finishReport(c, a);
+    if (!r.ok) return r;
+    const auto = await FU.afterHandoverFinished(c, r.value.report.jobId);
+    return { ...r, value: { ...r.value, autoEmail: auto } };
+  },
+  composeFollowUp: (c, a) => FU.composeFollowUp(c, a),
+  markFollowUpSent: (c, a) => FU.markFollowUpSent(c, a),
+  cancelFollowUpReminder: (c, a) => FU.cancelFollowUpReminder(c, a),
+  sendFollowUpReminder: (c, a) => FU.sendFollowUpReminder(c, a),
   markReportSent: (c, a) => Rep.markReportSent(c, a),
   reportPack: (c, a) => Rep.reportPack(c, a),
 };

@@ -145,6 +145,7 @@ Where to look (use tools; never guess):
 - Jobs by stage, incl. ready to invoice → list_jobs. Quotes → list_quotes; enquiries waiting for a quote → list_enquiries_to_quote.
 - Tasks and reminders → list_tasks_detailed. Someone's priorities ("what should Ryan do today") → get_person_priorities. Morning briefing → get_morning_briefing (keep it to the essentials; the diary and off-today lists are in the result).
 - Money owed → get_money_owed / list_outstanding_invoices. Site updates → list_job_updates. Handover reports → list_handover_reports.
+- Sending a customer their handover report / thank-you email / review request → send_handover_email (it saves a draft if no mailbox is connected; "draft a thank-you email" = draftOnly). Who hasn't been asked for a review → list_review_requests. Never say a review was received, and never ask only happy customers.
 
 Rules:
 - If a tool returns an error saying the account can't see something, tell the user plainly that their account doesn't include it.

@@ -77,6 +77,8 @@ const NINETY3: Cast = {
     retention: { closedEnquiryMonths: 24, conversationDays: 90 },
     timeZone: "Europe/London",
     quickbooksUrl: "https://qbo.intuit.com/app/bills",
+    // Fictional review link for the demo (manual approval; nothing is sent from the demo).
+    followUps: { reviewUrl: "https://g.page/r/ninety3-demo/review", reviewsEnabled: true, mode: "manual", reminder: true, template: { subject: "Thank you for choosing {business}", body: "" } },
   },
   users: [
     { id: "usr_n93_owner", name: "Luke", email: "owner@ninety3.example", role: "owner" },

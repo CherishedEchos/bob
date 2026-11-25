@@ -19,6 +19,7 @@ import { listAbsences } from "./absences";
 import { listUpdates } from "./updates";
 import { listVariations } from "./variations";
 import { listReportVersions, listReports } from "./handover-reports";
+import { listFollowUps } from "./followups";
 import { HttpError } from "@/server/context";
 
 /**
@@ -58,6 +59,7 @@ export function buildSnapshot(ctx: Ctx): Snapshot {
     variations: listVariations(ctx),
     reports: listReports(ctx),
     reportVersions: listReportVersions(ctx),
+    followUps: listFollowUps(ctx),
     activity: can(ctx.role, "activity.read") ? scoped(ctx).list("activity", { order: "at DESC", limit: 150 }) : [],
     connections: listConnections(ctx),
     mode: { database: "local-sqlite", aiEngine: activeEngine(), platformAdmin: isPlatformAdmin(ctx) || undefined },

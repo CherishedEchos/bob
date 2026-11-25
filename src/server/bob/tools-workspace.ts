@@ -32,6 +32,7 @@ import { listVariations } from "@/server/services/variations";
 import { listUpdates } from "@/server/services/updates";
 import { listReports, listReportVersions } from "@/server/services/handover-reports";
 import { morningBriefing } from "./briefing";
+import { reviewRequestStatus } from "@/server/services/followups";
 import { resolveJobs } from "./resolve";
 import type { ReadTool } from "./tools";
 
@@ -82,6 +83,17 @@ function absencesIn(ctx: Ctx, from: string, to: string) {
 }
 
 export const workspaceReadTools: ReadTool<unknown>[] = [
+  {
+    kind: "read",
+    name: "list_review_requests",
+    description: "Finished handovers and, for each customer, whether the thank-you email was sent, whether a Google review was requested, and the reminder status. Use for 'which customers haven't been asked for a review?'. Bob can't see whether a review was actually left — never say one was.",
+    permission: "email.send",
+    schema: z.object({}),
+    run(ctx) {
+      const rows = reviewRequestStatus(ctx);
+      return { data: { finished_handovers: rows, not_yet_asked: rows.filter((r) => !r.review_requested).map((r) => r.job), note: "Review requests are recorded when sent; whether a customer actually left a review isn't known to Bob." } };
+    },
+  },
   {
     kind: "read",
     name: "draft_payment_reminder",

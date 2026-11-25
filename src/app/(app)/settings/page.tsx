@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { Bot, Building2, CalendarDays, CreditCard, UserRound, ChevronRight, Copy, Smartphone, Download, ExternalLink, Globe, Link2, PoundSterling, RotateCcw, ShieldCheck, Unlink, Users } from "lucide-react";
+import { Bot, Building2, CalendarDays, Star, CreditCard, UserRound, ChevronRight, Copy, Smartphone, Download, ExternalLink, Globe, Link2, PoundSterling, RotateCcw, ShieldCheck, Unlink, Users } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import type { Connection, OrgConfig, Snapshot } from "@/lib/types";
 import { ROLE_LABEL } from "@/lib/auth/permissions";
+import { DEFAULT_TEMPLATE, contactLine, fillTemplate, followUpSettings, isGoogleReviewUrl } from "@/lib/followups";
 import { cn, timeAgo } from "@/lib/utils";
 import { InstallBob } from "@/components/common/install-bob";
 import { CalendarLink } from "@/components/settings/calendar-links";
@@ -134,6 +135,7 @@ function SettingsInner() {
       <Group title="Your business">
         <BusinessSection org={org} owner={owner} save={save} />
         <FinanceSection org={org} owner={owner} save={save} />
+        <FollowUpSection org={org} owner={owner} save={save} />
       </Group>
 
       <Group title="Connections">
@@ -218,7 +220,7 @@ function SettingsInner() {
 function LeavePolicySection({ org, owner, save }: { org: OrgConfig; owner: boolean; save: (p: Record<string, unknown>) => Promise<void> }) {
   const on = org.leavePolicy?.managersSelfApprove ?? true;
   return (
-    <Section icon={CalendarDays} title="Team & holidays" subtitle={on ? "Luke and Ryan can record their own leave and approve crew requests." : "A main user's own leave needs the other main user's approval."}>
+    <Section icon={CalendarDays} title="Team & holidays" subtitle={on ? "Owners and admins can record their own leave and approve crew requests." : "A main user's own leave needs the other main user's approval."}>
       <label className="flex items-start gap-3">
         <input
           type="checkbox"
@@ -326,6 +328,94 @@ function BusinessSection({ org, owner, save }: { org: OrgConfig; owner: boolean;
           </div>
         </fieldset>
         {owner ? <Button type="submit">Save profile</Button> : null}
+      </form>
+    </Section>
+  );
+}
+
+
+/** Thank-you email and Google review request after a handover. */
+function FollowUpSection({ org, owner, save }: { org: OrgConfig; owner: boolean; save: (p: Record<string, unknown>) => Promise<void> }) {
+  const { data } = useStore();
+  const f = followUpSettings(org);
+  const [url, setUrl] = React.useState(f.reviewUrl ?? "");
+  const [enabled, setEnabled] = React.useState(f.reviewsEnabled);
+  const [mode, setMode] = React.useState(f.mode);
+  const [reminder, setReminder] = React.useState(f.reminder);
+  const [subject, setSubject] = React.useState(f.template.subject);
+  const [body, setBody] = React.useState(f.template.body);
+  const mailbox = data.connections.some((c) => c.kind === "email" && (c.status === "connected" || c.status === "demo"));
+  const urlOk = !url || isGoogleReviewUrl(url);
+  const team = data.members.filter((m) => m.role === "owner" || m.role === "office").map((m) => m.name.split(/\s+/)[0]);
+  const example = { firstName: "Claire", customerName: "Claire Dawson", job: "garden room", business: org.shortName || org.name, businessName: org.name, team: team.length > 1 ? `${team.slice(0, -1).join(", ")} & ${team.at(-1)}` : team[0] ?? org.name, signOff: org.assistant.signOff, contact: contactLine(org), reviewLink: url || "https://g.page/r/your-business/review" };
+  return (
+    <Section icon={Star} title="Customer follow-ups" subtitle={enabled && f.reviewUrl ? `Thank-you email with a review request · ${f.mode === "auto" ? "sent automatically" : "you approve each one"}` : "Thank-you email after each handover"}>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!urlOk) return;
+          void save({ followUps: { reviewUrl: url.trim(), reviewsEnabled: enabled, mode, reminder, template: { subject, body } } });
+        }}
+      >
+        <Field label="Google review link" htmlFor="fu-url" hint="From your Google Business Profile → Ask for reviews → copy the link." error={urlOk ? undefined : "That doesn't look like a Google review link. It should start https:// and be on g.page or google.com."}>
+          <Input id="fu-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://g.page/r/…/review" disabled={!owner} inputMode="url" />
+        </Field>
+        <label className="flex items-start gap-3">
+          <input type="checkbox" className="mt-1 size-5 accent-[var(--color-copper-500)]" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} disabled={!owner} />
+          <span className="text-[14.5px]">
+            <span className="block font-semibold">Ask customers for a Google review</span>
+            <span className="block text-muted-foreground">The same honest request to every customer, once per job. Bob never asks only happy customers and never says a review was left.</span>
+          </span>
+        </label>
+        <fieldset>
+          <legend className="mb-1.5 text-[14px] font-medium">Sending</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {([["manual", "I approve each email", "Bob prepares it; you check and press send."], ["auto", "Send automatically", "Sent as soon as you finish a handover. Needs a connected email account."]] as const).map(([v, label, hint]) => (
+              <label key={v} className={cn("flex cursor-pointer items-start gap-3 rounded-xl px-3.5 py-3 ring-1", mode === v ? "bg-selected ring-copper-500/50" : "ring-line-strong", (!owner || (v === "auto" && !mailbox)) && "cursor-not-allowed opacity-60")}>
+                <input type="radio" name="fu-mode" className="mt-1 accent-[var(--color-copper-500)]" checked={mode === v} onChange={() => setMode(v)} disabled={!owner || (v === "auto" && !mailbox)} />
+                <span className="text-[14.5px]">
+                  <span className="block font-semibold">{label}</span>
+                  <span className="block text-muted-foreground">{v === "auto" && !mailbox ? "Connect an email account first (Connections)." : hint}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <label className="flex items-start gap-3">
+          <input type="checkbox" className="mt-1 size-5 accent-[var(--color-copper-500)]" checked={reminder} onChange={(e) => setReminder(e.target.checked)} disabled={!owner} />
+          <span className="text-[14.5px]">
+            <span className="block font-semibold">One reminder after seven days</span>
+            <span className="block text-muted-foreground">Only if a review was asked for. It can be cancelled on the job.</span>
+          </span>
+        </label>
+        <details className="rounded-xl ring-1 ring-line">
+          <summary className="flex min-h-12 cursor-pointer items-center px-3.5 text-[14.5px] font-semibold">Email template</summary>
+          <div className="space-y-3 border-t border-line px-3.5 pb-3.5 pt-3">
+            <p className="text-[13px] text-muted-foreground">Bob fills in {"{firstName}"}, {"{job}"}, {"{business}"}, {"{team}"}, {"{businessName}"} and {"{reviewBlock}"} (the review paragraph, only when asking). Your contact details are added at the end.</p>
+            <Field label="Subject" htmlFor="fu-subject">
+              <Input id="fu-subject" value={subject} onChange={(e) => setSubject(e.target.value)} disabled={!owner} />
+            </Field>
+            <Field label="Message" htmlFor="fu-body">
+              <Textarea id="fu-body" rows={9} value={body} onChange={(e) => setBody(e.target.value)} disabled={!owner} />
+            </Field>
+            {owner ? (
+              <button type="button" onClick={() => { setSubject(DEFAULT_TEMPLATE.subject); setBody(DEFAULT_TEMPLATE.body); }} className="h-9 text-[14px] font-semibold text-accent-fg">
+                Reset to Bob&apos;s wording
+              </button>
+            ) : null}
+            <div className="rounded-xl bg-surface-2 p-3.5">
+              <p className="text-[12.5px] font-semibold uppercase tracking-wide text-subtle">Preview (example customer)</p>
+              <p className="mt-1.5 text-[14.5px] font-semibold">{fillTemplate(subject, example, false)}</p>
+              <p className="mt-1.5 whitespace-pre-wrap text-[14.5px] leading-relaxed">{fillTemplate(body, example, enabled)}</p>
+            </div>
+          </div>
+        </details>
+        {owner ? (
+          <Button type="submit" disabled={!urlOk}>
+            Save follow-up settings
+          </Button>
+        ) : null}
       </form>
     </Section>
   );

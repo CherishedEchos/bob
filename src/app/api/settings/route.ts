@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { followUpSettings, isGoogleReviewUrl } from "@/lib/followups";
 import { z } from "zod";
 import { authed, readJson } from "@/server/http";
 import { HttpError } from "@/server/context";
@@ -34,6 +35,15 @@ const schema = z.object({
     .partial()
     .optional(),
   leavePolicy: z.object({ managersSelfApprove: z.boolean() }).optional(),
+  followUps: z
+    .object({
+      reviewUrl: z.union([z.literal(""), z.string().trim().max(500).refine(isGoogleReviewUrl, "That doesn't look like a Google review link. It should start https:// and be on g.page or google.com (copy it from your Google Business Profile → Ask for reviews).")]).optional(),
+      reviewsEnabled: z.boolean().optional(),
+      mode: z.enum(["manual", "auto"]).optional(),
+      reminder: z.boolean().optional(),
+      template: z.object({ subject: z.string().trim().min(2).max(200), body: z.string().trim().min(10).max(4000) }).optional(),
+    })
+    .optional(),
   retention: z.object({ closedEnquiryMonths: z.number().int().min(1).max(120), conversationDays: z.number().int().min(1).max(730) }).partial().optional(),
 });
 
@@ -60,6 +70,7 @@ export const POST = authed(async (req, ctx) => {
     finance: { ...ctx.org.finance, ...(p.finance ?? {}) },
     retention: { ...ctx.org.retention, ...(p.retention ?? {}) },
     ...(p.leavePolicy ? { leavePolicy: p.leavePolicy } : {}),
+    ...(p.followUps ? { followUps: { ...followUpSettings(ctx.org), ...p.followUps, reviewUrl: p.followUps.reviewUrl === "" ? undefined : (p.followUps.reviewUrl ?? ctx.org.followUps?.reviewUrl) } } : {}),
   };
   if (next.finance.vatRegistered === false) next.finance.vatRate = null;
   getDb().prepare("UPDATE orgs SET config = ? WHERE id = ?").run(JSON.stringify(next), ctx.orgId);

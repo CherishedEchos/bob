@@ -18,6 +18,8 @@ export interface OutboundEmail {
   body: string;
   /** Reply threading where the provider supports it. */
   threadId?: string;
+  /** Files sent with the email (e.g. the handover report PDF). */
+  attachments?: { filename: string; mimeType: string; data: Buffer }[];
 }
 
 export type SendOutcome =
