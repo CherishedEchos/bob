@@ -79,11 +79,12 @@ function Diary() {
   const subs = activePeople.filter((p) => p.kind === "subcontractor");
 
   const start = weekStart(anchor);
-  const weekDays = rangeKeys(start, addDays(start, 6)).filter((d) => prefs.weekends || weekday(d) < 5);
+  const visible = data.bookings.filter((b) => (personFilter === "unassigned" ? !b.personIds.length : !personFilter || b.personIds.includes(personFilter)));
+  // Weekends stay hidden unless switched on, but a weekend day with work booked (or the day asked for) always shows.
+  const weekDays = rangeKeys(start, addDays(start, 6)).filter((d) => prefs.weekends || weekday(d) < 5 || d === anchor || visible.some((b) => coversDay(b, d)));
   const month = monthOf(anchor);
   const rangeDays = view === "month" ? monthGrid(month).filter((d) => d.slice(0, 7) === month.slice(0, 7)) : weekDays;
 
-  const visible = data.bookings.filter((b) => (personFilter === "unassigned" ? !b.personIds.length : !personFilter || b.personIds.includes(personFilter)));
   const leave = data.absences.filter((a) => !personFilter || personFilter === "unassigned" || a.personId === personFilter);
   const inRange = (list: Booking[], days: string[]) => list.filter((b) => b.date <= days[days.length - 1] && (b.endDate ?? b.date) >= days[0]);
   const rangeBookings = inRange(visible, rangeDays);
@@ -168,6 +169,11 @@ function Diary() {
 
         <div className="ml-auto flex items-center gap-2">
           {view !== "team" ? <PersonFilter value={personFilter} onChange={(v) => setParams({ person: v || null })} staff={staff} subs={subs} /> : null}
+          {view !== "team" && personFilter ? (
+            <button type="button" onClick={() => setParams({ person: null })} className="h-9 rounded-md px-2 text-[14px] font-medium text-muted-foreground hover:bg-surface-3 hover:text-foreground">
+              Show everyone
+            </button>
+          ) : null}
           <label className="flex h-9 cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 text-[13.5px] font-medium text-muted-foreground hover:bg-surface-3">
             <input type="checkbox" checked={prefs.weekends} onChange={(e) => prefs.setWeekends(e.target.checked)} className="size-4 rounded accent-[#18181b]" />
             Weekends
@@ -348,7 +354,7 @@ function PhoneAgenda({
         <PersonFilter value={personFilter} onChange={onFilter} staff={staff} subs={subs} className="w-auto min-w-0 flex-1" />
         {manage ? (
           <button type="button" onClick={() => onAdd(selected)} className={cn(pageActionClass, "px-3.5")}>
-            <CalendarPlus className="size-[17px]" aria-hidden /> Schedule
+            <CalendarPlus className="size-[17px]" aria-hidden /> Schedule work
           </button>
         ) : null}
       </div>

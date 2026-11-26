@@ -80,7 +80,7 @@ async function signIn(browser, who, opts) {
   check("Luke's booking is in Ryan's workspace data", !!bk);
   await ryan.goto(BASE + `/week?w=${day}`);
   const dayNum = String(Number(day.slice(8)));
-  await ryan.locator('main button').filter({ hasText: new RegExp(`^\\s*[MTWFS]\\s*${dayNum}\\s*$`) }).first().click();
+  await ryan.locator('main button').filter({ hasText: new RegExp(`^\\s*[MTWFS][a-z]?\\s*${dayNum}\\s*$`) }).first().click();
   await ryan.waitForTimeout(500);
   check("Ryan sees Luke's booking on his phone's Diary", /Media wall/.test(await ryan.locator('main').innerText()));
   await ryan.screenshot({ path: path.join(OUT, 'collab-ryan-diary.png') });

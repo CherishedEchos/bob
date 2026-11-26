@@ -34,7 +34,7 @@ export function MonthView({ month, weekends, today, bookings, absences, jobs, pe
   const n = weekends ? 7 : 5;
   const heads = (weekends ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] : ["Mon", "Tue", "Wed", "Thu", "Fri"]);
   return (
-    <section aria-label="Month" className="panel overflow-hidden">
+    <section aria-label="Diary, month" className="panel overflow-hidden">
       <div className="grid border-b border-line" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
         {heads.map((h) => (
           <div key={h} className="px-3 py-2 text-[12.5px] font-medium text-subtle">

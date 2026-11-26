@@ -35,13 +35,13 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
   const main = await o.locator('main').innerText();
   check(1, 'No panels below the diary', !/Needs attention|Not scheduled yet|Needs someone/.test(main));
   check(1, 'No permanent drag tip', !/Tip: drag/.test(main));
-  const range1 = await o.getByRole('toolbar', { name: 'Diary controls' }).locator('p').innerText();
+  const range1 = await o.getByRole('toolbar', { name: 'Diary controls' }).locator('button[aria-haspopup="dialog"]').innerText();
   await o.getByRole('button', { name: 'Next week' }).click();
   await o.waitForTimeout(400);
-  const range2 = await o.getByRole('toolbar', { name: 'Diary controls' }).locator('p').innerText();
+  const range2 = await o.getByRole('toolbar', { name: 'Diary controls' }).locator('button[aria-haspopup="dialog"]').innerText();
   await o.getByRole('button', { name: 'Today', exact: true }).click();
   await o.waitForTimeout(400);
-  check(1, 'Week navigation updates the date range', range1 !== range2 && (await o.getByRole('toolbar', { name: 'Diary controls' }).locator('p').innerText()) === range1, `${range1} → ${range2}`);
+  check(1, 'Week navigation updates the date range', range1 !== range2 && (await o.getByRole('toolbar', { name: 'Diary controls' }).locator('button[aria-haspopup="dialog"]').innerText()) === range1, `${range1} → ${range2}`);
   await o.getByRole('toolbar', { name: 'Diary controls' }).locator('select').selectOption({ label: 'Sam Okoro · Plasterer' });
   await o.waitForTimeout(500);
   const cards = await o.getByRole('region', { name: /^Diary/ }).getByRole('button', { name: /^Edit booking/ }).evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') || ''));

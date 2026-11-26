@@ -50,7 +50,7 @@ async function nav(p, size, label) {
     const jobTitle = (id) => data.jobs.find((j) => j.id === id)?.title;
     if (size.startsWith('phone')) {
       const day = String(Number(tomorrow.slice(8)));
-      await p.locator('main button').filter({ hasText: new RegExp(`^\\s*[MTWFS]\\s*${day}\\s*$`) }).first().click();
+      await p.locator('main button').filter({ hasText: new RegExp(`^\\s*[MTWFS][a-z]?\\s*${day}\\s*$`) }).first().click();
       await p.waitForTimeout(400);
     }
     const diary = await p.locator('main').innerText();

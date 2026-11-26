@@ -156,7 +156,7 @@ export function TeamView({ days, today, bookings, absences, jobs, staff, subs, m
     ) : null;
 
   return (
-    <section aria-label="Team schedule" className="panel overflow-x-auto">
+    <section aria-label="Diary, team" className="panel overflow-x-auto">
       <div role="grid" className={days.length > 5 ? "min-w-[980px]" : "min-w-[700px]"}>
         <div role="row" className="sticky top-0 z-20 grid border-b border-line bg-card" style={cols}>
           <div className="sticky left-0 z-10 flex items-center border-r border-line bg-card px-3 text-[12.5px] font-medium text-subtle">Team</div>
@@ -222,7 +222,7 @@ function Chip({ booking: b, day, job, clash, draggable, onOpen, onDragStart }: {
       onClick={onOpen}
       draggable={draggable}
       onDragStart={onDragStart}
-      aria-label={`${job?.title ?? "Job"}, ${job?.location ?? ""}, ${formatTimeRange(b.startTime, b.endTime)}${clash ? ", double-booked" : ""}`}
+      aria-label={`Edit booking: ${job?.title ?? "Job"}, ${job?.location ?? ""}, ${formatTimeRange(b.startTime, b.endTime)}${clash ? ", double-booked" : ""}`}
       className={cn(
         "relative block w-full min-w-0 overflow-hidden rounded-md py-1 pl-2.5 pr-1.5 text-left ring-1 transition hover:shadow-[var(--shadow-md)]",
         tone.card,

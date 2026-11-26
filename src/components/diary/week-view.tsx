@@ -85,7 +85,7 @@ export function WeekView({ days, today, bookings, absences, jobs, people, active
     : {};
 
   return (
-    <section aria-label="Week" className="panel overflow-hidden">
+    <section aria-label="Diary, week" className="panel overflow-hidden">
       <div ref={grid} className="relative" {...dragProps}>
         {/* Column backgrounds: today, weekends, drop target */}
         <div aria-hidden className="pointer-events-none absolute inset-0 grid divide-x divide-line" style={cols}>
@@ -212,7 +212,7 @@ function SpanBar({
       draggable={draggable}
       onDragStart={onDragStart}
       style={style}
-      aria-label={`${job?.title ?? "Job"}, ${job?.customerName ?? ""}, ${job?.location ?? ""}, ${n} days, ${formatTimeRange(b.startTime, b.endTime)}, ${who.length ? who.map((p) => p.name).join(", ") : "nobody assigned"}`}
+      aria-label={`Edit booking: ${job?.title ?? "Job"}, ${job?.location ?? ""}, ${n} days, ${formatTimeRange(b.startTime, b.endTime)}, ${who.length ? who.map((p) => p.name).join(", ") : "unassigned"}${job?.customerName ? `, for ${job.customerName}` : ""}`}
       className={cn(
         "relative mx-1.5 flex min-w-0 items-center gap-3 overflow-hidden rounded-md py-1.5 pl-3 pr-2 text-left ring-1 transition hover:shadow-[var(--shadow-md)]",
         tone.card,
@@ -244,7 +244,7 @@ function SpanBar({
           <PeopleStack people={who} size={22} max={3} />
         </span>
       ) : (
-        <span className="shrink-0 rounded-sm bg-warning/15 px-1.5 py-0.5 text-[11.5px] font-semibold text-warn-fg">Needs people</span>
+        <span className="shrink-0 rounded-sm bg-warning/15 px-1.5 py-0.5 text-[11.5px] font-semibold text-warn-fg">Unassigned</span>
       )}
     </button>
   );
@@ -259,7 +259,7 @@ function BookingCard({ booking: b, job, people, draggable, onOpen, onDragStart }
       onClick={onOpen}
       draggable={draggable}
       onDragStart={onDragStart}
-      aria-label={`${job?.title ?? "Job"}, ${job?.customerName ?? ""}, ${job?.location ?? ""}, ${formatTimeRange(b.startTime, b.endTime)}, ${who.length ? who.map((p) => p.name).join(", ") : "nobody assigned"}`}
+      aria-label={`Edit booking: ${job?.title ?? "Job"}, ${job?.location ?? ""}, ${formatTimeRange(b.startTime, b.endTime)}, ${who.length ? who.map((p) => p.name).join(", ") : "unassigned"}${job?.customerName ? `, for ${job.customerName}` : ""}`}
       className={cn("relative block w-full overflow-hidden rounded-md py-2 pl-3 pr-2 text-left ring-1 transition hover:shadow-[var(--shadow-md)]", tone.card, draggable && "cursor-grab active:cursor-grabbing")}
     >
       <span aria-hidden className={cn("absolute inset-y-0 left-0 w-[3px]", who.length ? tone.bar : "bg-warning")} />
@@ -276,7 +276,7 @@ function BookingCard({ booking: b, job, people, draggable, onOpen, onDragStart }
             <span className="truncate text-[12px] font-medium text-foreground/75">{namesLine(who, 2)}</span>
           </>
         ) : (
-          <span className="rounded-sm bg-warning/15 px-1.5 py-0.5 text-[11.5px] font-semibold text-warn-fg">Needs people</span>
+          <span className="rounded-sm bg-warning/15 px-1.5 py-0.5 text-[11.5px] font-semibold text-warn-fg">Unassigned</span>
         )}
       </span>
     </button>

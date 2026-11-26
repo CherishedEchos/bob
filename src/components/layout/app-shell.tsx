@@ -13,7 +13,7 @@ import { BobProvider } from "@/lib/bob/provider";
 import { ROLE_LABEL } from "@/lib/auth/permissions";
 import { needsReply, tasksDue } from "@/lib/derive";
 import { cn } from "@/lib/utils";
-import { BobLogo, OrgLogo, OrgWordmark } from "@/components/brand/logo";
+import { BobLogo, OrgLogo } from "@/components/brand/logo";
 import { InstallBob } from "@/components/common/install-bob";
 import { Toaster } from "@/components/ui/toaster";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
