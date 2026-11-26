@@ -257,7 +257,7 @@ function TeamTable({ people, today, week, manage, onOpen }: { people: Person[]; 
           return (
             <li key={p.id} className={cn("row-open grid items-center gap-4 px-5 py-3", cols)}>
               <button type="button" onClick={() => onOpen(p.id)} aria-label={`Open ${p.name}`} className="row-target flex min-w-0 items-center gap-3 text-left after:absolute after:inset-0 after:content-['']">
-                <PersonAvatar person={p} size={32} />
+                <PersonAvatar person={p} size={40} />
                 <span className="min-w-0">
                   <span className="block truncate text-[15px] font-semibold text-heading">{p.name}</span>
                   <span className="block truncate text-[13.5px] text-subtle">

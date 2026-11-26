@@ -19,7 +19,7 @@ import { ActionCard, AssistantCard } from "./assistant-cards";
 
 function greetingNow() {
   const h = new Date().getHours();
-  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  return h < 12 ? "Morning" : h < 18 ? "Afternoon" : "Evening";
 }
 
 export function AssistantView({ variant = "page", onClose }: { variant?: "page" | "panel"; onClose?: () => void }) {
@@ -287,7 +287,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
                 >
                   <Orb state={orbState} size={variant === "panel" ? 120 : 140} />
                 </button>
-                <VoiceStatus phase={phase} thinking={thinking} interim={speech.interim} idleTitle="Hey, how can I help?" idleSub={`${greetingNow()}${name}`} />
+                <VoiceStatus phase={phase} thinking={thinking} interim={speech.interim} idleTitle="What do you need a hand with?" idleSub={`${greetingNow()}${name}`} />
               </div>
               <Composer
                 dark
@@ -524,8 +524,8 @@ function AskBobHome({
               <p className="text-[22px] font-semibold tracking-tight">Sending to Bob…</p>
             ) : (
               <>
-                <p className="text-[15px] font-medium text-white/70">{greeting}</p>
-                <h1 className="mt-0.5 text-[27px] font-bold leading-tight tracking-[-0.02em] text-[#FAF9F6] min-[400px]:text-[30px]">How can I help?</h1>
+                <p className="text-[17px] font-medium text-white/75">{greeting}.</p>
+                <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-[-0.02em] text-[#FAF9F6] min-[400px]:text-[32px]">{new Date().getHours() < 12 ? "What are we sorting today?" : "What do you need a hand with?"}</h1>
                 <p className="mt-1 hidden text-[15px] text-white/50 sm:block">Your building and carpentry business assistant</p>
               </>
             )}

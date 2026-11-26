@@ -376,16 +376,16 @@ function JobCard({
 
 /**
  * The preferred desktop view: a readable table with subtle row separation.
- * Laptop shows the essentials; wide screens add location, team and the next action.
+ * Laptop shows the essentials; wide screens add location and team.
  */
-const LIST_COLS = "lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.3fr)_96px] xl:grid-cols-[minmax(0,1.9fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_92px_minmax(0,1.45fr)_minmax(0,0.85fr)_minmax(0,1.4fr)]";
+const LIST_COLS = "lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.3fr)_104px] xl:grid-cols-[minmax(0,2.2fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_104px_minmax(0,1.5fr)_minmax(0,0.9fr)]";
 
 function JobList({ jobs, stages, covers, today, finance, onOpen, onSchedule }: { jobs: Job[]; stages: Map<string, JobStage>; covers: Map<string, JobFile>; today: string; finance: boolean; onOpen: (j: Job) => void; onSchedule?: (j: Job) => void }) {
   const { data } = useStore();
   const head = "text-[13px] font-medium text-subtle";
   return (
     <div className="panel overflow-hidden">
-      <div role="row" className={cn("hidden items-center gap-4 border-b border-line bg-[#faf9f6] px-4 py-2 lg:grid", LIST_COLS)}>
+      <div role="row" className={cn("hidden items-center gap-4 border-b border-line bg-[#faf7f2] px-5 py-2.5 lg:grid", LIST_COLS)}>
         <span className={head}>Job</span>
         <span className={head}>Customer</span>
         <span className={cn(head, "hidden xl:block")}>Location</span>
@@ -393,7 +393,6 @@ function JobList({ jobs, stages, covers, today, finance, onOpen, onSchedule }: {
         <span className={cn(head, "text-right")}>{finance ? "Value" : ""}</span>
         <span className={head}>Next visit</span>
         <span className={cn(head, "hidden xl:block")}>Team</span>
-        <span className={cn(head, "hidden xl:block")}>Next action</span>
       </div>
       <ul className="divide-y divide-line">
         {jobs.map((j) => {
@@ -401,21 +400,20 @@ function JobList({ jobs, stages, covers, today, finance, onOpen, onSchedule }: {
           const next = nextBookingForJob(data.bookings, j.id, today);
           const who = peopleOnJob(data.bookings, data.people, j.id, today);
           const town = (j.siteAddress ? j.siteAddress.split(",").map((x) => x.trim()).filter((x) => !/^[A-Z]{1,2}\d/.test(x)).at(-1) : "") || j.location;
-          const action = stage === "ready" && j.status !== "quoted" && onSchedule ? null : stage === "complete" ? "Completed" : jobNextStep(j, data, finance);
           return (
-            <li key={j.id} className={cn("row-open relative grid grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5 lg:gap-4", LIST_COLS)}>
+            <li key={j.id} className={cn("row-open relative grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 lg:gap-4 lg:px-5", LIST_COLS)}>
               <div className="contents lg:flex lg:min-w-0 lg:items-center lg:gap-3">
-                <JobCover job={j} file={covers.get(j.id)} small className="h-9 w-12 shrink-0 rounded-md ring-1 ring-line" />
+                <JobCover job={j} file={covers.get(j.id)} small className="h-11 w-14 shrink-0 rounded-md ring-1 ring-line" />
                 <div className="min-w-0">
-                  <button type="button" onClick={() => onOpen(j)} className="row-target block w-full truncate text-left text-[15px] font-semibold text-heading after:absolute after:inset-0 after:content-['']">
+                  <button type="button" onClick={() => onOpen(j)} className="row-target block w-full truncate text-left text-[16px] font-bold tracking-[-0.01em] text-heading after:absolute after:inset-0 after:content-['']">
                     {j.title}
                   </button>
                   <div className="truncate text-[13.5px] text-subtle lg:hidden">
                     {j.customerName} · {town}
                   </div>
-                  <div className="mt-1 flex items-center gap-2 lg:hidden">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 lg:hidden">
                     <StatusText tone={STAGE_TONE[stage]}>{stageLabel(j, stage)}</StatusText>
-                    {next ? <span className="text-[13.5px] text-subtle">· {nextLabel(next, today)}</span> : null}
+                    {next ? <span className="whitespace-nowrap text-[13.5px] text-subtle">{nextLabel(next, today)}</span> : null}
                   </div>
                 </div>
               </div>
@@ -439,10 +437,7 @@ function JobList({ jobs, stages, covers, today, finance, onOpen, onSchedule }: {
                   <span className="text-subtle">—</span>
                 )}
               </div>
-              <div className="hidden xl:block">{who.length ? <PeopleStack people={who} size={24} max={4} /> : <span className="text-[14px] text-subtle">—</span>}</div>
-              <div className="hidden min-w-0 truncate text-[14px] text-muted-foreground xl:block" title={action ?? undefined}>
-                {action ?? <span className="text-warn-fg">Needs scheduling</span>}
-              </div>
+              <div className="hidden xl:block">{who.length ? <PeopleStack people={who} size={28} max={4} /> : <span className="text-[14px] text-subtle">—</span>}</div>
             </li>
           );
         })}

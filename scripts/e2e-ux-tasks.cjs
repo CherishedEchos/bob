@@ -125,7 +125,7 @@ async function nav(p, size, label) {
 
     /* 8. Invoice through Bob (built-in engine here; no AI key) */
     await p.goto(BASE + '/assistant');
-    await p.getByRole('heading', { name: 'How can I help?' }).waitFor();
+    await p.getByRole('heading', { name: /What are we sorting today\?|What do you need a hand with\?/ }).waitFor();
     const box = p.getByPlaceholder(/Type to Bob/);
     if (!(await box.isVisible())) await p.getByRole('button', { name: /^Type$/ }).click();
     await box.fill("Prepare an invoice for the final balance on Sophie Mackay's Oak Road kitchen");

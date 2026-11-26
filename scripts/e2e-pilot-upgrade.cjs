@@ -54,8 +54,8 @@ void zlib;
   await luke.waitForURL('**/week');
   check(1, 'Root opens the Diary after login', new URL(luke.url()).pathname === '/week');
   await luke.goto(BASE + '/assistant');
-  await luke.getByRole('heading', { name: 'How can I help?' }).waitFor();
-  check(1, 'Greets Luke by first name', /Good (morning|afternoon|evening), Luke/.test(await luke.locator('main').innerText()));
+  await luke.getByRole('heading', { name: /What are we sorting today\?|What do you need a hand with\?/ }).waitFor();
+  check(1, 'Greets Luke by first name', /(Morning|Afternoon|Evening), Luke/.test(await luke.locator('main').innerText()));
   // Simplified home: greeting, mic, text box and three suggestions — no shortcut cards.
   check(1, 'Ask Bob home has no shortcut cards', (await luke.getByRole('navigation', { name: 'Shortcuts' }).count()) === 0);
   check(1, 'Ask Bob home offers three suggestions', (await luke.locator('main ul li button').count()) === 3);

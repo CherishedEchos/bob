@@ -60,8 +60,8 @@ async function signIn(browser, who, opts) {
   await ryan.goto(BASE + '/assistant');
   const lg = await luke.locator('main').innerText();
   const rg = await ryan.locator('main').innerText();
-  check('Bob greets Luke by name', /Good (morning|afternoon|evening), Luke/.test(lg));
-  check('Bob greets Ryan by name', /Good (morning|afternoon|evening), Ryan/.test(rg));
+  check('Bob greets Luke by name', /(Morning|Afternoon|Evening), Luke/.test(lg));
+  check('Bob greets Ryan by name', /(Morning|Afternoon|Evening), Ryan/.test(rg));
 
   /* 1. Luke books work; Ryan sees it */
   const day = london(3);

@@ -149,7 +149,7 @@ function TaskRow({ task: t }: { task: Task }) {
         >
           <span
             className={cn(
-              "grid size-6 place-items-center rounded-[7px] ring-2 transition",
+              "grid size-7 place-items-center rounded-md ring-2 transition",
               t.done ? "bg-emerald-600 text-white ring-emerald-600" : "bg-card text-transparent ring-[rgb(16_24_40/0.25)] group-hover:text-subtle group-hover:ring-emerald-600",
             )}
           >

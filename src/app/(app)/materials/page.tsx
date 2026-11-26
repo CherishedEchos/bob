@@ -104,7 +104,7 @@ export default function MaterialsPage() {
               role="tab"
               aria-selected={status === v}
               onClick={() => setStatus(v)}
-              className={cn("flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[15px] font-semibold transition lg:flex-none", status === v ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground")}
+              className={cn("flex h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-[15px] font-semibold transition lg:flex-none lg:px-3.5", status === v ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground")}
             >
               {label}
               {v !== "all" ? <span className={cn("tabular text-[13.5px]", status === v ? "text-accent-fg" : "text-subtle")}>{count(v)}</span> : null}
