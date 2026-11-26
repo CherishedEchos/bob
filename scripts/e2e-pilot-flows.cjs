@@ -37,10 +37,10 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
   check(1, 'No permanent drag tip', !/Tip: drag/.test(main));
   const range1 = await o.getByRole('toolbar', { name: 'Diary controls' }).locator('[aria-live="polite"]').innerText();
   await o.getByRole('button', { name: 'Next week' }).click();
-  await o.waitForTimeout(400);
+  await o.waitForFunction((r) => document.querySelector('[role=toolbar] [aria-live="polite"]')?.textContent !== r, range1, { timeout: 10000 }).catch(() => {});
   const range2 = await o.getByRole('toolbar', { name: 'Diary controls' }).locator('[aria-live="polite"]').innerText();
-  await o.getByRole('button', { name: 'Today', exact: true }).click();
-  await o.waitForTimeout(400);
+  await o.getByRole('toolbar', { name: 'Diary controls' }).getByRole('button', { name: 'Today', exact: true }).click();
+  await o.waitForFunction((r) => document.querySelector('[role=toolbar] [aria-live="polite"]')?.textContent === r, range1, { timeout: 10000 }).catch(() => {});
   check(1, 'Week navigation updates the date range', range1 !== range2 && (await o.getByRole('toolbar', { name: 'Diary controls' }).locator('[aria-live="polite"]').innerText()) === range1, `${range1} → ${range2}`);
   await o.getByRole('toolbar', { name: 'Diary controls' }).locator('select').selectOption({ label: 'Sam Okoro · Plasterer' });
   await o.waitForTimeout(500);

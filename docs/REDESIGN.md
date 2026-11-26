@@ -85,3 +85,70 @@ Every change still goes through a preview and approval, and the diary updates as
 The Ninety3 demo now schedules work two to four weeks ahead. It includes one double booking on each of this week and next, plus a visit that still needs someone, so the planner has something to show.
 
 Luke and Ryan are bookable people, linked to their own accounts. The live workspace (`ninety3ltd`) is not touched.
+
+---
+
+# Round 2: premium, approachable and unmistakably Bob
+
+The first redesign leaned too corporate. This pass brings back warmth, contrast and Bob's character, and keeps the improved structure. Before and after screenshots at five widths are in `docs/screenshots/redesign-2/`. The "before" set is round 1's "after" set.
+
+## Type and colour
+
+**Type sizes**
+
+| Element | Size |
+|---|---|
+| Page titles | 32px (28px on phones) |
+| Section headings | 18px |
+| Body and list text | 15–16px |
+| Supporting text | 13.5–14.5px |
+| Headline money figures | 32px |
+
+- Small text was lifted across every screen (11–14.5px became 12–15px). The Diary was tuned by hand.
+
+**Controls**
+
+- Primary buttons are solid orange, 44px high and semibold.
+- Inputs and dropdowns are 44px high.
+- Segmented tabs are 40px high and wrap onto a second line instead of being cut off.
+
+**Colour**
+
+- Warm greys with stronger contrast and warmer borders.
+- Selected chips, tabs and the date picker use a soft orange tint instead of black.
+
+## Sidebar
+
+- 244px wide, with the full Ninety3 wordmark and "with bob." underneath.
+- Navigation labels are 15px with 20px icons.
+- The selected page has a warm orange background and a strong orange marker. Enquiries and Tasks show orange counts.
+- **Ask Bob** is a dark charcoal button with Bob's orange microphone. It opens Bob beside the page, so Bob knows which job or enquiry is on screen. It replaces the floating button, which covered page actions.
+- The signed-in person shows their name, role and business at the bottom.
+
+## Diary
+
+- **Ask Bob strip:** a dark strip with Bob's microphone, examples to try ("Move Liam onto the Copthorne kitchen tomorrow", "Book Ryan in for a site visit on Friday") and one-tap questions.
+  - Changes still come back as previews with clash checks.
+  - On phones it's a compact strip that opens the microphone.
+- **Toolbar controls** are 44px: Today, Previous and Next, date picker, Week, Month and Team, person filter and Weekends. Schedule work stays the orange page action, with Holidays beside it.
+- **Bookings:** larger names (14.5px), customer and town at 13px, and clearer times.
+  - Today's date is an orange circle.
+  - Day headers say "3 on site".
+  - Team rows show bigger names and roles, and "Free" in green.
+- **Phone:** today is an orange pill, the person chips use the warm selected style, and the cards are larger.
+
+## Enquiries
+
+- **Clipping:** the heading and filter tabs are no longer clipped. Tabs wrap as rounded chips instead of scrolling sideways.
+- **Layout:** side by side only from 1280px, with a 340–400px list and a reading pane capped at about 1000px. Below that width it's inbox first, then the message, which fixes the cramped 1024px layout.
+- **Reading pane:** the message column is left-aligned with a sensible width, so it no longer floats in empty space.
+- **Reply actions:** Copy reply, Save draft and I've replied are full-size buttons in the sticky reply bar, with nothing covering them.
+
+## Other screens
+
+- **Jobs:** the job name is the strongest element (16px bold) with a larger photo thumbnail. The table shows customer, location, stage, value, next visit and team; the dense "Next action" column was dropped. The Add job button is prominent and the filter chips are warm.
+- **Money:** the tab is now **Bills to pay**, so it can't be confused with money owed to you. Headline figures are 32px.
+- **Team:** larger avatars.
+- **Tasks:** larger checkboxes.
+- **Materials:** the status tabs fit on a 375px phone.
+- **Ask Bob:** a warm, personal greeting, for example "Morning, Luke. What are we sorting today?" or "Evening, Ryan. What do you need a hand with?"
