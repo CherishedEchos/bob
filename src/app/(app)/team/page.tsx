@@ -96,8 +96,8 @@ function TeamInner() {
       />
       {view === "holidays" ? <HolidaysView /> : (
       <>
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard accent label="On site today" value={onSiteToday} sub={`of ${active.length} people`} />
+      <div className="stat-strip grid grid-cols-3">
+        <StatCard label="On site today" value={onSiteToday} sub={`of ${active.length} people`} />
         <StatCard label="Off today" value={offToday} tone={offToday ? "warn" : "muted"} sub="holiday or unavailable" />
         <StatCard label="Free today" value={Math.max(0, active.length - onSiteToday - offToday)} tone="good" sub="not booked" />
       </div>

@@ -42,7 +42,7 @@ export function SharedInstructions({ job: j }: { job: Job }) {
   return (
     <section className="border-t border-line px-5 py-5 sm:px-6">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-[14px] font-semibold uppercase tracking-wider text-subtle">Site & access</h3>
+        <h3 className="text-[13px] font-semibold text-heading">Site & access</h3>
         <span className="inline-flex items-center gap-1 rounded-md bg-sky-500/10 px-2 py-0.5 text-[12.5px] font-medium text-info-fg">
           <Eye className="size-3.5" aria-hidden /> Shared with people booked
         </span>
@@ -161,7 +161,7 @@ export function JobCrew({ job: j }: { job: Job }) {
   const crew = ids.map((id) => data.people.find((p) => p.id === id)).filter(Boolean) as typeof data.people;
   return (
     <section className="border-t border-line px-5 py-5 sm:px-6">
-      <h3 className="mb-2 text-[14px] font-semibold uppercase tracking-wider text-subtle">Crew</h3>
+      <h3 className="mb-2 text-[13px] font-semibold text-heading">Crew</h3>
       {crew.length ? (
         <ul className="divide-y divide-line">
           {crew.map((p) => {
@@ -229,11 +229,11 @@ export function JobSchedule({ job: j }: { job: Job }) {
           <CalendarPlus /> Schedule work
         </Button>
       ) : null}
-      <h3 className="mt-5 text-[14px] font-semibold uppercase tracking-wider text-subtle">Booked</h3>
+      <h3 className="mt-5 text-[13px] font-semibold text-heading">Booked</h3>
       {upcoming.length ? <ul className="mt-1 divide-y divide-line">{upcoming.map((b) => <Row key={b.id} b={b} />)}</ul> : <p className="mt-2 text-[15px] text-muted-foreground">Nothing booked yet.</p>}
       {past.length ? (
         <>
-          <h3 className="mt-6 text-[14px] font-semibold uppercase tracking-wider text-subtle">Done</h3>
+          <h3 className="mt-6 text-[13px] font-semibold text-heading">Done</h3>
           <ul className="mt-1 divide-y divide-line">{past.map((b) => <Row key={b.id} b={b} />)}</ul>
         </>
       ) : null}

@@ -199,11 +199,11 @@ function EnquiriesInner() {
           ) : null}
 
           {tab === "reply" && toDraft > 0 && can("enquiries.write") ? (
-            <Link href="/replies" className="mb-3 flex min-h-[48px] items-center justify-between gap-3 rounded-xl bg-copper-500/10 px-4 text-[14.5px] font-semibold text-accent-fg ring-1 ring-copper-500/25 transition hover:bg-copper-500/15">
+            <Link href="/replies" className="mb-3 flex min-h-[44px] items-center justify-between gap-3 rounded-lg bg-card px-4 text-[14px] font-medium text-foreground ring-1 ring-line-strong transition hover:bg-surface-2">
               <span className="flex items-center gap-2">
-                <Sparkles className="size-4" aria-hidden /> Draft {toDraft} {toDraft === 1 ? "reply" : "replies"}
+                <Sparkles className="size-4 text-copper-600" aria-hidden /> Let Bob draft {toDraft} {toDraft === 1 ? "reply" : "replies"}
               </span>
-              <ChevronRight className="size-4" aria-hidden />
+              <ChevronRight className="size-4 text-subtle" aria-hidden />
             </Link>
           ) : null}
 
@@ -252,7 +252,7 @@ function InboxRow({ e, tab, selected, onOpen }: { e: Enquiry; tab: Tab; selected
   const showState = tab !== "reply" || drafted;
   return (
     <li className="row-open flex items-start gap-3 px-4 py-3.5" data-selected={selected || undefined}>
-      <SourceIcon source={e.source} provider={e.provider} className="mt-0.5" />
+      <SourceIcon source={e.source} provider={e.provider} name={e.customerName} className="mt-0.5" />
       <button
         type="button"
         onClick={() => onOpen(waiting ? "reply" : undefined)}

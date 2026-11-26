@@ -84,7 +84,7 @@ export function DatePicker({ value, today, label, onChange, highlight }: { value
                   aria-current={isToday ? "date" : undefined}
                   className={cn(
                     "relative mx-auto grid size-9 place-items-center rounded-md text-[13px] tabular transition",
-                    sel ? "bg-heading font-semibold text-white" : isToday ? "font-semibold text-accent-fg hover:bg-surface-3" : inMonth ? "text-foreground hover:bg-surface-3" : "text-subtle/60 hover:bg-surface-3",
+                    sel ? "bg-heading font-semibold text-white" : isToday ? "font-semibold text-brand-fg hover:bg-surface-3" : inMonth ? "text-foreground hover:bg-surface-3" : "text-subtle/60 hover:bg-surface-3",
                   )}
                 >
                   {Number(d.slice(8))}
@@ -94,7 +94,7 @@ export function DatePicker({ value, today, label, onChange, highlight }: { value
             })}
           </div>
           <div className="mt-2 flex justify-between border-t border-line pt-2">
-            <button type="button" onClick={() => { onChange(today); setOpen(false); }} className="h-8 rounded-md px-2 text-[13px] font-semibold text-accent-fg hover:bg-surface-3">
+            <button type="button" onClick={() => { onChange(today); setOpen(false); }} className="h-8 rounded-md px-2 text-[13px] font-semibold text-brand-fg hover:bg-surface-3">
               Today
             </button>
             <button type="button" onClick={() => { onChange(addDays(today, 1)); setOpen(false); }} className="h-8 rounded-md px-2 text-[13px] font-medium text-muted-foreground hover:bg-surface-3">

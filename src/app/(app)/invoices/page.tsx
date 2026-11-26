@@ -95,14 +95,14 @@ function InvoicesInner() {
       />
       {/* Three headline figures: what you're owed (overdue is part of it) and what came in over a stated period */}
       <Tip id="money">Invoices you create are saved as drafts — nothing goes to a customer until you send it. Ask Bob to “invoice Sophie for the final balance”.</Tip>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard accent label="Owed to you" value={gbp(owed)} sub={`${outstandingCount} unpaid invoice${outstandingCount === 1 ? "" : "s"}`} onClick={() => { setView("invoices"); setFilter("outstanding"); }} />
+      <div className="stat-strip grid sm:grid-cols-3">
+        <StatCard label="Owed to you" value={gbp(owed)} sub={`${outstandingCount} unpaid invoice${outstandingCount === 1 ? "" : "s"}`} onClick={() => { setView("invoices"); setFilter("outstanding"); }} />
         <StatCard label="Overdue" value={gbp(overdue)} tone={overdue ? "danger" : "muted"} sub={overdue ? `Part of the ${gbp(owed)} owed · ${overdueCount} past due` : "Nothing overdue"} onClick={() => { setView("invoices"); setFilter("overdue"); }} active={view === "invoices" && filter === "overdue"} />
         <div className="relative">
           <StatCard label="Received" value={gbp(received)} tone="good" sub={rangeLabel} />
           <label className="absolute right-3 top-3">
             <span className="sr-only">Period</span>
-            <select value={period} onChange={(e) => setPeriod(e.target.value as typeof period)} className="h-8 rounded-lg bg-surface-2 px-2 text-[12.5px] font-medium text-foreground ring-1 ring-line outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <select value={period} onChange={(e) => setPeriod(e.target.value as typeof period)} className="h-7 rounded-md bg-card px-1.5 text-[12.5px] font-medium text-foreground ring-1 ring-line-strong outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <option value="7">7 days</option>
               <option value="30">30 days</option>
               <option value="month">This month</option>
@@ -162,7 +162,7 @@ function InvoicesInner() {
 
         {list.length ? (
           <div className="panel overflow-hidden shadow-[var(--shadow-sm)]">
-            <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_140px_120px_130px_24px] gap-4 border-b border-line px-5 py-2.5 text-[12px] font-medium uppercase tracking-[0.06em] text-subtle lg:grid">
+            <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_140px_120px_130px_24px] gap-4 border-b border-line px-5 py-2.5 text-[12px] font-medium text-subtle lg:grid">
               <span>Customer</span>
               <span>Job</span>
               <span>Status</span>
@@ -268,8 +268,8 @@ function BillsView() {
           </button>
         ) : null}
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard accent label="Due" value={total(due)} sub={`${due.length} bill${due.length === 1 ? "" : "s"}`} />
+      <div className="stat-strip grid grid-cols-3">
+        <StatCard label="Due" value={total(due)} sub={`${due.length} bill${due.length === 1 ? "" : "s"}`} />
         <StatCard label="Overdue" value={total(overdue)} tone={overdue.length ? "danger" : "muted"} sub={overdue.length ? `${overdue.length} late` : "Nothing late"} />
         <StatCard label="Due in 7 days" value={total(week)} tone={week.length ? "warn" : "muted"} sub={`${week.length} coming up`} />
       </div>
@@ -518,18 +518,23 @@ function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expa
 
 /** Draft, awaiting payment, overdue and paid look clearly different. */
 function InvoiceStatusPill({ label }: { label: string }) {
-  const cls =
+  const [cls, dot] =
     label === "Overdue"
-      ? "bg-destructive/10 text-danger-fg"
+      ? ["text-danger-fg", "bg-destructive"]
       : label === "Paid"
-        ? "bg-success/12 text-good-fg"
+        ? ["text-good-fg", "bg-success"]
         : label === "Draft"
-          ? "border border-dashed border-black/20 text-muted-foreground"
+          ? ["text-muted-foreground", "border border-dashed border-foreground/40"]
           : label === "Void"
-            ? "bg-surface-3 text-subtle line-through"
-            : "bg-info/10 text-info-fg";
+            ? ["text-subtle line-through", "bg-subtle"]
+            : ["text-foreground/80", "bg-info"];
   const text = label === "Sent" ? "Awaiting payment" : label;
-  return <span className={cn("inline-flex h-[22px] items-center rounded-full px-2 text-[12px] font-medium", cls)}>{text}</span>;
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-medium", cls)}>
+      <span aria-hidden className={cn("size-1.5 rounded-full", dot)} />
+      {text}
+    </span>
+  );
 }
 
 export default function InvoicesPage() {

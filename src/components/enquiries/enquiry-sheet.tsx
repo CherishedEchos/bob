@@ -160,7 +160,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
               <ArrowLeft className="size-5" />
             </button>
           ) : null}
-          <SourceIcon source={e.source} provider={e.provider} className={cn("hidden shrink-0 sm:grid", onBack ? "mt-1" : "mt-0.5")} />
+          <SourceIcon source={e.source} provider={e.provider} name={e.customerName} className={cn("hidden shrink-0 sm:grid", onBack ? "mt-1" : "mt-0.5")} />
           <div className="min-w-0 flex-1">
             <h2 className="line-clamp-2 break-words text-[19px] font-semibold leading-tight tracking-tight">{e.customerName}</h2>
             <p className="mt-0.5 truncate text-[14.5px] text-muted-foreground">

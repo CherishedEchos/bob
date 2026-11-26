@@ -90,15 +90,30 @@ function GmailMark({ className }: { className?: string }) {
   );
 }
 
-/** Channel mark: a white glyph on the channel's colour, recognisable at a glance. */
-export function SourceIcon({ source, provider, className }: { source: EnquirySource; provider?: string; className?: string }) {
+/**
+ * Who it's from and how it came in: the customer's initials, with a small
+ * channel mark (email, Instagram, phone, website). Without a name, a quiet
+ * neutral tile with the channel glyph.
+ */
+export function SourceIcon({ source, provider, name, className }: { source: EnquirySource; provider?: string; name?: string; className?: string }) {
   const gmail = source === "email" && provider === "gmail";
   const Icon = SOURCE_ICON[source];
   const label = gmail ? "Gmail" : SOURCE_LABEL[source];
+  if (name) {
+    const initials = name.replace(/^the\s+/i, "").split(/[\s&]+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
+    return (
+      <span title={`${name} · came in by ${label}`} className={cn("relative grid size-9 shrink-0 place-items-center rounded-full bg-[#ecebe6] text-[13px] font-semibold text-foreground/75", className)}>
+        {initials}
+        <span aria-hidden className="absolute -bottom-0.5 -right-0.5 grid size-[18px] place-items-center rounded-full bg-card ring-1 ring-line-strong">
+          {gmail ? <GmailMark className="size-[11px]" /> : <Icon className="size-[10px] text-foreground/70" />}
+        </span>
+        <span className="sr-only">Came in by {label}</span>
+      </span>
+    );
+  }
   return (
-    <span title={`Came in by ${label}`} className={cn("relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-ink-700", className)}>
-      <span aria-hidden className="absolute inset-0 opacity-[0.9]" style={{ background: SOURCE_STYLE[source].bg }} />
-      {gmail ? <GmailMark className="relative size-[55%] rounded-sm bg-white p-[1px]" /> : <Icon className="relative size-[50%] text-white/90" aria-hidden />}
+    <span title={`Came in by ${label}`} className={cn("relative grid size-9 shrink-0 place-items-center rounded-lg bg-surface-3 text-foreground/70", className)}>
+      {gmail ? <GmailMark className="size-[55%]" /> : <Icon className="size-[45%]" aria-hidden />}
       <span className="sr-only">{label}</span>
     </span>
   );
@@ -136,7 +151,7 @@ export function enquiryState(e: { status: EnquiryStatus; draftReply?: string; pr
 export function HighPriority({ className }: { className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-1 whitespace-nowrap text-[13.5px] font-medium text-foreground", className)}>
-      <Flag className="size-3.5 fill-current text-accent-icon" aria-hidden /> High priority
+      <Flag className="size-3.5 fill-current text-copper-500" aria-hidden /> High priority
     </span>
   );
 }

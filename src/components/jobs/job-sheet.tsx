@@ -60,7 +60,7 @@ export function Fold({ title, summary, children, defaultOpen = false, last = fal
 export function Section({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
     <section className={cn("border-t border-line px-5 py-5 sm:px-6", className)}>
-      <h3 className="mb-3 text-[14px] font-semibold uppercase tracking-wider text-subtle">{title}</h3>
+      <h3 className="mb-3 text-[13px] font-semibold text-heading">{title}</h3>
       {children}
     </section>
   );
@@ -71,6 +71,16 @@ export function Section({ title, children, className }: { title: string; childre
  * booking; the primary action beside it; then Overview, Schedule & team,
  * Tasks, Materials, Files & photos, Handover and Money.
  */
+const STATUS_DOT: Record<Job["status"], string> = {
+  quoted: "bg-subtle",
+  awaiting_deposit: "bg-warning",
+  scheduled: "bg-info",
+  in_progress: "bg-success",
+  snagging: "bg-violet-500",
+  completed: "bg-subtle",
+  lost: "bg-subtle",
+};
+
 export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobTab }) {
   const { data, actions, can, user } = useStore();
   const ui = useUI();
@@ -180,7 +190,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
     setTimeout(() => document.getElementById("job-photos")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
   };
   // Phones: a 3-up grid of icon-over-label buttons (no sideways scrolling). Wider screens: one row.
-  const quickBtn = "h-auto min-h-[58px] flex-col gap-1 px-1.5 py-2 text-[12.5px] leading-tight sm:min-h-0 sm:h-9 sm:flex-row sm:gap-1.5 sm:px-3 sm:text-[13.5px]";
+  const quickBtn = "h-auto min-h-[58px] flex-col gap-1 px-1.5 py-2 text-[12.5px] leading-tight sm:min-h-0 sm:h-8 sm:flex-row sm:gap-1.5 sm:px-3 sm:text-[13px]";
   const quick = [
     can("notes.write") ? <AddUpdateButton key="u" job={j} variant="secondary" size="sm" className={quickBtn} /> : null,
     can("notes.write") ? (
@@ -215,85 +225,39 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
         <ChevronLeft className="size-4" aria-hidden /> Jobs
       </Link>
 
-      {/* Project header: cover photo, name, customer, site and status */}
-      <header className="overflow-hidden rounded-2xl bg-card shadow-[var(--shadow-sm)] ring-1 ring-line">
-        <JobCover job={j} file={covers.get(j.id)} large className="h-[190px] w-full sm:h-[230px] lg:h-[260px]">
-          <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/5" />
-          <div className="absolute left-4 top-4 flex flex-wrap gap-1.5 sm:left-6 sm:top-5">
-            <span className="inline-flex h-6 items-center rounded-full bg-white/92 px-2.5 text-[12px] font-semibold text-[#18181b] shadow-sm backdrop-blur">{JOB_STATUS_LABEL[j.status]}</span>
-            {paymentStatus && paymentStatus.tone !== "neutral" ? (
-              <span className={cn("inline-flex h-6 items-center rounded-full px-2.5 text-[12px] font-semibold shadow-sm", paymentStatus.tone === "red" ? "bg-[#d6453d] text-white" : paymentStatus.tone === "green" ? "bg-[#2f9e6e] text-white" : "bg-[#fff4dd] text-[#8a5a00]")}>{paymentStatus.text}</span>
-            ) : null}
-          </div>
-          <div className="absolute inset-x-0 bottom-0 px-4 pb-4 sm:px-6 sm:pb-5">
-            <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.025em] text-white [text-shadow:0_1px_12px_rgb(0_0_0/0.35)] sm:text-[32px]">{j.title}</h1>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px] text-white/85">
-              <button className="flex items-center gap-1.5 font-medium hover:text-white hover:underline" onClick={() => ui.openCustomer(j.customerId)}>
-                <UserRound className="size-4" aria-hidden /> {j.customerName}
-              </button>
-              <span className="flex min-w-0 items-center gap-1.5">
-                <MapPin className="size-4 shrink-0" aria-hidden /> <span className="truncate">{j.siteAddress || j.location}</span>
-              </span>
-            </div>
-          </div>
-        </JobCover>
-
-        {/* Key facts + actions */}
-        <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:flex sm:flex-wrap sm:items-center sm:gap-x-8">
-            {money ? (
-              <div>
-                <dt className="text-[12px] font-medium text-subtle">Contract value</dt>
-                <dd className="text-[18px] font-semibold tabular tracking-[-0.02em] text-heading">{gbp(fin.contractValue)}</dd>
+      {/* Compact project header: photo, name, customer, site, status, key facts and actions */}
+      <header className="panel overflow-hidden">
+        <div className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 gap-4">
+            <JobCover job={j} file={covers.get(j.id)} small className="size-16 shrink-0 rounded-lg ring-1 ring-line sm:h-[84px] sm:w-[112px]" />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-foreground/80">
+                  <span aria-hidden className={cn("size-1.5 rounded-full", STATUS_DOT[j.status])} />
+                  {JOB_STATUS_LABEL[j.status]}
+                </span>
+                {paymentStatus && paymentStatus.tone !== "neutral" ? (
+                  <span className={cn("text-[12.5px] font-medium", paymentStatus.tone === "red" ? "text-danger-fg" : paymentStatus.tone === "green" ? "text-good-fg" : "text-warn-fg")}>{paymentStatus.text}</span>
+                ) : null}
               </div>
-            ) : null}
-            <div>
-              <dt className="text-[12px] font-medium text-subtle">Next visit</dt>
-              <dd className="text-[14.5px] font-medium text-heading">
-                {nextBooking ? (
-                  <>
-                    {nextBooking.date <= today ? "Today" : relativeDayInline(nextBooking.date, today).replace(/^./, (c) => c.toUpperCase())}
-                    <span className="font-normal text-subtle"> · {formatTimeRange(nextBooking.startTime, nextBooking.endTime)}</span>
-                  </>
-                ) : (
-                  <span className="font-normal text-subtle">Not scheduled</span>
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[12px] font-medium text-subtle">People</dt>
-              <dd className="mt-0.5 flex h-7 items-center">{crew.length ? <PeopleStack people={crew} size={28} max={4} /> : <span className="text-[14px] text-subtle">{nextBooking ? "Unassigned" : "—"}</span>}</dd>
-            </div>
-            {j.customerPhone || j.customerEmail ? (
-              <div>
-                <dt className="text-[12px] font-medium text-subtle">Contact</dt>
-                <dd className="text-[14.5px] font-medium text-heading">
-                  {j.customerPhone ? (
-                    <a href={`tel:${j.customerPhone.replace(/\s/g, "")}`} className="hover:text-accent-fg hover:underline">
-                      {j.customerPhone}
-                    </a>
-                  ) : (
-                    <a href={`mailto:${j.customerEmail}`} className="hover:text-accent-fg hover:underline">
-                      {j.customerEmail}
-                    </a>
-                  )}
-                </dd>
-              </div>
-            ) : null}
-            {j.what3words ? (
-              <div>
-                <dt className="text-[12px] font-medium text-subtle">what3words</dt>
-                <dd>
-                  <a href={`https://what3words.com/${encodeURIComponent(j.what3words)}`} target="_blank" rel="noopener noreferrer" className="text-[14px] font-medium text-[#e11f26] hover:underline">
+              <h1 className="mt-0.5 text-[22px] font-semibold leading-tight tracking-[-0.022em] text-heading sm:text-[24px]">{j.title}</h1>
+              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px] text-muted-foreground">
+                <button className="flex items-center gap-1.5 font-medium text-foreground hover:underline" onClick={() => ui.openCustomer(j.customerId)}>
+                  <UserRound className="size-3.5 text-subtle" aria-hidden /> {j.customerName}
+                </button>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <MapPin className="size-3.5 shrink-0 text-subtle" aria-hidden /> <span className="truncate">{j.siteAddress || j.location}</span>
+                </span>
+                {j.what3words ? (
+                  <a href={`https://what3words.com/${encodeURIComponent(j.what3words)}`} target="_blank" rel="noopener noreferrer" className="font-medium text-[#c8171e] hover:underline">
                     {"///"}
                     {j.what3words}
                   </a>
-                </dd>
+                ) : null}
               </div>
-            ) : null}
-          </dl>
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center [&>*]:min-w-0">
-            {primary ? <div className="col-span-3 sm:order-last [&>*]:w-full">{primary}</div> : null}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center lg:shrink-0 lg:justify-end [&>*]:min-w-0">
             <Button asChild variant="secondary" size="sm">
               <a href={mapsHref} target="_blank" rel="noopener noreferrer">
                 <Navigation /> Directions
@@ -309,17 +273,59 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             <Menu
               label="More actions"
               items={[{ label: "Add task", icon: AlarmClock, onSelect: reminder }, ...more]}
-              triggerClassName="flex h-10 w-full items-center justify-center sm:w-auto gap-1.5 rounded-lg bg-card px-3 text-[14px] font-semibold text-foreground shadow-[var(--shadow-xs)] ring-1 ring-line-strong transition hover:bg-raised-hover lg:h-9 lg:text-[13.5px]"
+              triggerClassName="flex h-10 w-full items-center justify-center sm:w-auto gap-1.5 rounded-lg bg-card px-3 text-[14px] font-medium text-foreground shadow-[var(--shadow-xs)] ring-1 ring-line-strong transition hover:bg-raised-hover lg:h-8 lg:text-[13px]"
               trigger={
                 <>
                   <MoreHorizontal className="size-4" aria-hidden /> More
                 </>
               }
             />
+            {primary ? <div className="col-span-3 [&>*]:w-full">{primary}</div> : null}
           </div>
         </div>
+
+        {/* Key facts */}
+        <dl className="grid grid-cols-2 border-t border-line sm:grid-cols-4 [&>div]:border-line [&>div]:px-4 [&>div]:py-3 sm:[&>div]:px-5 [&>div:nth-child(even)]:border-l sm:[&>div:not(:first-child)]:border-l [&>div:nth-child(n+3)]:border-t sm:[&>div:nth-child(n+3)]:border-t-0">
+          {money ? (
+            <div>
+              <dt className="text-[12px] font-medium text-subtle">Contract value</dt>
+              <dd className="mt-0.5 text-[17px] font-semibold tabular tracking-[-0.02em] text-heading">{gbp(fin.contractValue)}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt className="text-[12px] font-medium text-subtle">Next visit</dt>
+            <dd className="mt-0.5 text-[14px] font-medium text-heading">
+              {nextBooking ? (
+                <>
+                  {nextBooking.date <= today ? "Today" : relativeDayInline(nextBooking.date, today).replace(/^./, (c) => c.toUpperCase())}
+                  <span className="block text-[12.5px] font-normal tabular text-subtle">{formatTimeRange(nextBooking.startTime, nextBooking.endTime)}</span>
+                </>
+              ) : (
+                <span className="font-normal text-subtle">Not scheduled</span>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[12px] font-medium text-subtle">Assigned team</dt>
+            <dd className="mt-1 flex min-h-6 items-center gap-2">
+              {crew.length ? (
+                <>
+                  <PeopleStack people={crew} size={24} max={4} />
+                  <span className="truncate text-[13px] text-foreground/80">{crew.map((p) => firstName(p.name)).slice(0, 3).join(", ")}</span>
+                </>
+              ) : (
+                <span className="text-[14px] text-subtle">{nextBooking ? "Needs people" : "Nobody booked"}</span>
+              )}
+            </dd>
+          </div>
+          <div className={cn(!money && "col-span-2 sm:col-span-1")}>
+            <dt className="text-[12px] font-medium text-subtle">Next action</dt>
+            <dd className="mt-0.5 line-clamp-2 text-[13.5px] font-medium leading-snug text-heading">{j.status === "completed" ? "Completed" : jobNextStep(j, data, money)}</dd>
+          </div>
+        </dl>
+
         {quick.length ? (
-          <div className="grid grid-cols-3 gap-2 border-t border-line px-4 py-3 sm:flex sm:flex-wrap sm:px-6" aria-label="Quick actions">
+          <div className="grid grid-cols-3 gap-2 border-t border-line bg-surface-2 px-4 py-2.5 sm:flex sm:flex-wrap sm:px-5" aria-label="Quick actions">
             {quick}
           </div>
         ) : null}
@@ -356,12 +362,12 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             aria-controls="job-tabpanel"
             onClick={() => setTab(t.value)}
             className={cn(
-              "relative flex h-11 shrink-0 items-center gap-1.5 px-3 text-[14px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-              tab === t.value ? "font-semibold text-heading after:absolute after:inset-x-3 after:bottom-[-1px] after:h-[2px] after:rounded-full after:bg-copper-500" : "text-subtle hover:text-foreground",
+              "relative flex h-10 shrink-0 items-center gap-1.5 px-3 text-[13.5px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+              tab === t.value ? "font-semibold text-heading after:absolute after:inset-x-3 after:bottom-[-1px] after:h-[2px] after:rounded-full after:bg-heading" : "text-subtle hover:text-foreground",
             )}
           >
             {t.label}
-            {t.count ? <span className={cn("tabular rounded-full px-1.5 text-[11.5px]", tab === t.value ? "bg-copper-500/12 text-accent-fg" : "bg-surface-3 text-subtle")}>{t.count}</span> : null}
+            {t.count ? <span className="tabular text-[12px] text-subtle">{t.count}</span> : null}
           </button>
         ))}
       </div>
@@ -374,7 +380,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
             <div className="flex min-w-0 flex-col gap-5">
               <section aria-labelledby={`next-${j.id}`} className="panel px-5 py-4 sm:px-6">
-                <h2 id={`next-${j.id}`} className="text-[12px] font-semibold uppercase tracking-[0.08em] text-accent-fg">
+                <h2 id={`next-${j.id}`} className="text-[12.5px] font-medium text-subtle">
                   Next step
                 </h2>
                 {editingNext ? (
@@ -401,7 +407,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                   </form>
                 ) : (
                   <div className="mt-1 flex flex-wrap items-start justify-between gap-2">
-                    <p className="min-w-0 text-[17px] font-semibold leading-snug tracking-[-0.01em] text-heading">{jobNextStep(j, data, money)}</p>
+                    <p className="min-w-0 text-[16px] font-semibold leading-snug tracking-[-0.012em] text-heading">{jobNextStep(j, data, money)}</p>
                     {can("jobs.write") ? (
                       <Button size="sm" variant="ghost" className="-mr-2" onClick={() => setEditingNext(true)}>
                         <Pencil /> Update
@@ -746,14 +752,14 @@ function FinancialSummary({ fin, onOpen }: { fin: JobFinancials; onOpen: () => v
     },
   ];
   return (
-    <section className="panel px-5 py-4 sm:px-6" aria-label="Financial position">
-      <div className="mb-3 flex items-center justify-between">
+    <section className="panel overflow-hidden" aria-label="Financial position">
+      <div className="flex items-center justify-between px-5 pb-1 pt-3.5 sm:px-6">
         <h2 className="t-section">Financial position</h2>
         <Button size="sm" variant="ghost" className="-mr-2" onClick={onOpen}>
           Financials
         </Button>
       </div>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 [&>div]:px-5 [&>div]:py-3 sm:[&>div]:px-6 [&>div:nth-child(even)]:border-l [&>div:nth-child(n+3)]:border-t lg:[&>div:nth-child(n+3)]:border-t-0 lg:[&>div:not(:first-child)]:border-l [&>div]:border-line">
         {cells.map((c) => (
           <div key={c.label}>
             <div className="text-[12.5px] font-medium text-subtle">{c.label}</div>
@@ -762,8 +768,11 @@ function FinancialSummary({ fin, onOpen }: { fin: JobFinancials; onOpen: () => v
           </div>
         ))}
       </div>
-      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-surface-3" title={`${fin.paidPercent}% paid`}>
-        <div className="h-full rounded-full bg-success" style={{ width: `${fin.paidPercent}%` }} />
+      <div className="flex items-center gap-3 border-t border-line px-5 py-3 sm:px-6">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-3" title={`${fin.paidPercent}% paid`}>
+          <div className="h-full rounded-full bg-success" style={{ width: `${fin.paidPercent}%` }} />
+        </div>
+        <span className="shrink-0 text-[12px] tabular text-subtle">{fin.paidPercent}% received</span>
       </div>
     </section>
   );
@@ -779,8 +788,12 @@ function FinancialDetail({ fin, status }: { fin: JobFinancials; status: string }
     ["Other (plant, skips)", fin.costs.other, false],
   ];
   return (
-    <div className="grid gap-5 lg:grid-cols-3">
-      <section className="panel px-5 py-5 sm:px-6">
+    <div className="panel overflow-hidden">
+      <p className="flex items-center gap-2 border-b border-line bg-surface-2 px-5 py-2.5 text-[12.5px] text-muted-foreground sm:px-6">
+        <Lock className="size-3.5 shrink-0 text-subtle" aria-hidden /> Internal figures. Costs and margins never appear on quotes, invoices or handover reports.
+      </p>
+      <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+      <section className="px-5 py-5 sm:px-6">
         <h2 className="text-[12.5px] font-medium text-subtle">Agreed contract value</h2>
         <div className="t-figure mt-1">{gbp(fin.contractValue)}</div>
         <dl className="mt-4 space-y-2 text-[14px]">
@@ -792,19 +805,19 @@ function FinancialDetail({ fin, status }: { fin: JobFinancials; status: string }
         <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-surface-3"><div className="h-full rounded-full bg-success" style={{ width: `${fin.paidPercent}%` }} /></div>
         <p className="mt-1.5 text-[12px] text-subtle">{fin.paidPercent}% of the contract value received</p>
       </section>
-      <section className="panel px-5 py-5 sm:px-6">
+      <section className="px-5 py-5 sm:px-6">
         <h2 className="text-[12.5px] font-medium text-subtle">Recorded costs</h2>
         <div className="t-figure mt-1">{gbp(fin.costs.total)}</div>
         <dl className="mt-4 space-y-2 text-[14px]">
           {costRows.map(([label, v, gap]) => (
             <div key={label} className="flex items-center justify-between gap-2">
               <dt className="text-subtle">{label}</dt>
-              <dd className="tabular">{gap ? <span className="rounded-full bg-warning/14 px-2 py-0.5 text-[12px] font-medium text-warn-fg">Not recorded</span> : gbp(v)}</dd>
+              <dd className="tabular">{gap ? <span className="text-[12.5px] font-medium text-warn-fg">Not recorded</span> : gbp(v)}</dd>
             </div>
           ))}
         </dl>
       </section>
-      <section className="panel px-5 py-5 sm:px-6">
+      <section className="px-5 py-5 sm:px-6">
         <h2 className="text-[12.5px] font-medium text-subtle">{fin.basis === "actual" ? "Actual profit" : "Estimated profit"}</h2>
         {fin.profit === null ? (
           <>
@@ -825,6 +838,7 @@ function FinancialDetail({ fin, status }: { fin: JobFinancials; status: string }
           </>
         )}
       </section>
+      </div>
     </div>
   );
 }

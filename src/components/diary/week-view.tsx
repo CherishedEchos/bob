@@ -101,9 +101,9 @@ export function WeekView({ days, today, bookings, absences, jobs, people, active
             const count = bookings.filter((b) => coversDay(b, d)).length;
             return (
               <h3 key={d} title={formatDayLong(d)} className="flex h-11 items-center gap-1.5 px-3">
-                <span className={cn("text-[12.5px] font-medium", isToday ? "text-accent-fg" : "text-subtle")}>{dow(d)}</span>
-                <span className={cn("tabular text-[15px] font-semibold", isToday ? "text-accent-fg" : "text-heading")}>{Number(d.slice(8))}</span>
-                {isToday ? <span className="ml-0.5 rounded-sm bg-copper-500/12 px-1 text-[11px] font-semibold text-accent-fg">Today</span> : null}
+                <span className={cn("text-[12.5px] font-medium", isToday ? "text-brand-fg" : "text-subtle")}>{dow(d)}</span>
+                <span className={cn("tabular text-[15px] font-semibold", isToday ? "text-brand-fg" : "text-heading")}>{Number(d.slice(8))}</span>
+                {isToday ? <span className="ml-0.5 rounded-sm bg-copper-500/12 px-1 text-[11px] font-semibold text-brand-fg">Today</span> : null}
                 {count ? <span className="ml-auto text-[12px] tabular text-subtle" aria-label={`${count} booked`}>{count}</span> : null}
               </h3>
             );

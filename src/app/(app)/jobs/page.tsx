@@ -42,7 +42,7 @@ const STAGE_PILL: Record<JobStage, string> = {
   ready: "bg-[#fff4dd] text-[#8a5a00]",
   awaiting_deposit: "bg-[#fff4dd] text-[#8a5a00]",
   booked: "bg-[#e6eeff] text-[#2f4fa8]",
-  in_progress: "bg-[#f38735] text-white",
+  in_progress: "bg-white text-[#1f7a54]",
   snagging: "bg-[#efe9ff] text-[#5b3fc4]",
   complete: "bg-white text-[#3f3f46]",
   lost: "bg-white text-[#71717a]",
@@ -85,7 +85,7 @@ function Jobs() {
   const view: View = VIEWS.includes(params.get("view") as View) ? (params.get("view") as View) : "active";
   const [query, setQuery] = React.useState("");
   const [person, setPerson] = React.useState("");
-  const [layout, setLayout] = React.useState<"grid" | "list">("grid");
+  const [layout, setLayout] = React.useState<"grid" | "list">("list");
   React.useEffect(() => {
     try {
       const v = localStorage.getItem(VIEW_KEY);
@@ -156,8 +156,8 @@ function Jobs() {
                   aria-selected={on}
                   onClick={() => setView(v)}
                   className={cn(
-                    "flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-[14px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                    on ? "bg-sidebar text-white shadow-[var(--shadow-sm)]" : "bg-card text-muted-foreground ring-1 ring-line hover:text-foreground hover:ring-line-strong",
+                    "flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 text-[14px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:h-8 lg:px-3 lg:text-[13px]",
+                    on ? "bg-heading text-white" : "bg-card text-muted-foreground ring-1 ring-line-strong hover:text-foreground",
                   )}
                 >
                   {VIEW_LABEL[v]}
@@ -171,8 +171,8 @@ function Jobs() {
                 value={MORE.includes(q ? "all" : view) ? (q ? "all" : view) : ""}
                 onChange={(e) => setView((e.target.value || "active") as View)}
                 className={cn(
-                  "h-10 appearance-none rounded-full pl-4 pr-9 text-[14px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  MORE.includes(q ? "all" : view) ? "bg-sidebar text-white" : "bg-card text-muted-foreground ring-1 ring-line hover:text-foreground",
+                  "h-10 appearance-none rounded-lg pl-3.5 pr-9 text-[14px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:h-8 lg:pl-3 lg:text-[13px]",
+                  MORE.includes(q ? "all" : view) ? "bg-heading text-white" : "bg-card text-muted-foreground ring-1 ring-line-strong hover:text-foreground",
                 )}
               >
                 <option value="">More stages</option>
@@ -207,11 +207,11 @@ function Jobs() {
               </NativeSelect>
             </label>
           ) : null}
-          <div className="ml-auto flex rounded-lg bg-card p-[3px] shadow-[var(--shadow-xs)] ring-1 ring-line-strong" role="group" aria-label="Layout">
+          <div className="ml-auto flex rounded-lg bg-card p-[3px] ring-1 ring-line-strong" role="group" aria-label="Layout">
             {(
               [
-                ["grid", LayoutGrid, "Cards"],
                 ["list", List, "List"],
+                ["grid", LayoutGrid, "Photo cards"],
               ] as const
             ).map(([l, Icon, label]) => (
               <button
@@ -221,7 +221,7 @@ function Jobs() {
                 aria-label={label}
                 title={label}
                 onClick={() => chooseLayout(l)}
-                className={cn("grid size-9 place-items-center rounded-[8px] transition lg:size-8", layout === l ? "bg-sidebar text-white" : "text-subtle hover:text-foreground")}
+                className={cn("grid size-9 place-items-center rounded-md transition lg:size-7", layout === l ? "bg-surface-3 text-heading" : "text-subtle hover:text-foreground")}
               >
                 <Icon className="size-4" />
               </button>
@@ -306,9 +306,9 @@ function JobCard({
   const next = nextBookingForJob(bookings, j.id, today);
   const progress = ["in_progress", "booked", "snagging"].includes(stage) ? siteProgress(bookings, j.id, today) : null;
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-card shadow-[var(--shadow-sm)] ring-1 ring-line transition duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)]">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-xl bg-card ring-1 ring-line transition duration-150 hover:shadow-[var(--shadow-md)] hover:ring-line-strong">
       <JobCover job={j} file={cover} className="aspect-[16/10] w-full">
-        <span className={cn("absolute left-3 top-3 inline-flex h-6 items-center rounded-full px-2.5 text-[12px] font-semibold shadow-[0_1px_3px_rgb(0_0_0/0.18)]", STAGE_PILL[stage], j.status === "quoted" && "bg-[#f4f4f5] text-[#3f3f46]")}>
+        <span className={cn("absolute left-3 top-3 inline-flex h-6 items-center rounded-md px-2 text-[12px] font-semibold shadow-[0_1px_2px_rgb(0_0_0/0.12)]", STAGE_PILL[stage], j.status === "quoted" && "bg-[#f4f4f5] text-[#3f3f46]")}>
           {stageLabel(j, stage)}
         </span>
       </JobCover>
@@ -339,7 +339,7 @@ function JobCard({
         {progress ? (
           <div className="mt-3" title={`${progress.done} of ${progress.total} booked days done`}>
             <div className="h-1 overflow-hidden rounded-full bg-surface-3">
-              <div className="h-full rounded-full bg-copper-500" style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }} />
+              <div className="h-full rounded-full bg-foreground/50" style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }} />
             </div>
             <div className="mt-1 text-[11.5px] tabular text-subtle">
               {progress.done} of {progress.total} days on site
@@ -374,16 +374,19 @@ function JobCard({
   );
 }
 
+const LIST_COLS = "lg:grid-cols-[minmax(0,2.3fr)_minmax(0,1.3fr)_minmax(0,0.95fr)_minmax(0,1.15fr)_minmax(0,0.85fr)_minmax(0,1.6fr)_96px]";
+
 function JobList({ jobs, stages, covers, today, finance, onOpen, onSchedule }: { jobs: Job[]; stages: Map<string, JobStage>; covers: Map<string, JobFile>; today: string; finance: boolean; onOpen: (j: Job) => void; onSchedule?: (j: Job) => void }) {
   const { data } = useStore();
   return (
-    <div className="panel overflow-hidden shadow-[var(--shadow-sm)]">
-      <div className="hidden grid-cols-[minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)_100px] gap-4 border-b border-line px-5 py-2.5 text-[12px] font-medium uppercase tracking-[0.06em] text-subtle lg:grid">
+    <div className="panel overflow-hidden">
+      <div className={cn("hidden gap-4 border-b border-line bg-surface-2 px-5 py-2 text-[12px] font-medium text-subtle lg:grid", LIST_COLS)}>
         <span>Job</span>
         <span>Customer</span>
-        <span>Status</span>
-        <span>Next on site</span>
+        <span>Stage</span>
+        <span>Next visit</span>
         <span>Team</span>
+        <span>Next action</span>
         <span className="text-right">{finance ? "Value" : ""}</span>
       </div>
       <ul className="divide-y divide-line">
@@ -391,26 +394,28 @@ function JobList({ jobs, stages, covers, today, finance, onOpen, onSchedule }: {
           const stage = stages.get(j.id)!;
           const next = nextBookingForJob(data.bookings, j.id, today);
           const who = peopleOnJob(data.bookings, data.people, j.id, today);
+          const step = stage === "complete" ? "Completed" : jobNextStep(j, data, finance);
           return (
-            <li key={j.id} className="row-open relative grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 lg:grid-cols-[minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)_100px] lg:gap-4 lg:px-5">
+            <li key={j.id} className={cn("row-open relative grid grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 lg:gap-4 lg:px-5 lg:py-2.5", LIST_COLS)}>
               <div className="contents lg:flex lg:min-w-0 lg:items-center lg:gap-3">
-                <JobCover job={j} file={covers.get(j.id)} className="h-11 w-14 shrink-0 rounded-lg ring-1 ring-line" />
+                <JobCover job={j} file={covers.get(j.id)} small className="h-10 w-12 shrink-0 rounded-md ring-1 ring-line" />
                 <div className="min-w-0">
-                  <button type="button" onClick={() => onOpen(j)} className="row-target block w-full truncate text-left text-[14.5px] font-semibold text-heading after:absolute after:inset-0 after:content-['']">
+                  <button type="button" onClick={() => onOpen(j)} className="row-target block w-full truncate text-left text-[14px] font-semibold text-heading after:absolute after:inset-0 after:content-['']">
                     {j.title}
                   </button>
-                  <div className="truncate text-[13px] text-subtle">
+                  <div className="truncate text-[12.5px] text-subtle">
                     <span className="lg:hidden">{j.customerName} · </span>
-                    {j.siteAddress || j.location}
+                    {j.siteAddress ? j.siteAddress.split(",").slice(-2).join(",").trim() : j.location}
                   </div>
-                  <div className="mt-1 lg:hidden">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 lg:hidden">
                     <StatusText tone={STAGE_TONE[stage]}>{stageLabel(j, stage)}</StatusText>
+                    {next ? <span className="text-[12.5px] text-subtle">{nextLabel(next, today)}</span> : null}
                   </div>
                 </div>
               </div>
-              <div className="hidden min-w-0 truncate text-[14px] lg:block">
-                {j.customerName}
-                <div className="truncate text-[13px] text-subtle">{j.location}</div>
+              <div className="hidden min-w-0 lg:block">
+                <div className="truncate text-[13.5px] text-foreground">{j.customerName}</div>
+                <div className="truncate text-[12.5px] text-subtle">{j.location}</div>
               </div>
               <div className="hidden lg:block">
                 <StatusText tone={STAGE_TONE[stage]}>{stageLabel(j, stage)}</StatusText>
@@ -418,18 +423,21 @@ function JobList({ jobs, stages, covers, today, finance, onOpen, onSchedule }: {
               <div className="hidden min-w-0 text-[13.5px] lg:block">
                 {next ? (
                   <>
-                    <div className="font-medium">{nextLabel(next, today)}</div>
-                    <div className="text-[12.5px] text-subtle">{formatTimeRange(next.startTime, next.endTime)}</div>
+                    <div className="truncate font-medium text-foreground">{nextLabel(next, today)}</div>
+                    <div className="text-[12.5px] tabular text-subtle">{formatTimeRange(next.startTime, next.endTime)}</div>
                   </>
                 ) : stage === "ready" && j.status !== "quoted" && onSchedule ? (
-                  <button type="button" onClick={() => onSchedule(j)} className="row-secondary inline-flex h-8 items-center gap-1.5 rounded-lg bg-copper-500/10 px-2.5 text-[12.5px] font-semibold text-accent-fg hover:bg-copper-500/15" aria-label={`Schedule ${j.title} for ${j.customerName}`}>
-                    <CalendarPlus className="size-3.5" aria-hidden /> Schedule
+                  <button type="button" onClick={() => onSchedule(j)} className="row-secondary inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12.5px] font-semibold text-foreground ring-1 ring-line-strong hover:bg-surface-2" aria-label={`Schedule ${j.title} for ${j.customerName}`}>
+                    <CalendarPlus className="size-3.5 text-subtle" aria-hidden /> Schedule
                   </button>
                 ) : (
-                  <span className="text-subtle">—</span>
+                  <span className="text-subtle">Not booked</span>
                 )}
               </div>
-              <div className="hidden lg:block">{who.length ? <PeopleStack people={who} size={26} max={4} /> : <span className="text-[13px] text-subtle">—</span>}</div>
+              <div className="hidden min-w-0 lg:block">{who.length ? <PeopleStack people={who} size={24} max={4} /> : <span className="text-[13px] text-subtle">—</span>}</div>
+              <div className="hidden min-w-0 lg:block">
+                <span className="line-clamp-2 text-[13px] leading-snug text-muted-foreground">{step}</span>
+              </div>
               <div className="text-right text-[14px] font-semibold tabular text-heading">{finance ? gbp(j.quotedValue) : null}</div>
             </li>
           );
@@ -443,9 +451,9 @@ function ToQuoteList({ enquiries, onOpen, onQuote }: { enquiries: Enquiry[]; onO
   return (
     <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
       {enquiries.map((e) => (
-        <li key={e.id} className="relative flex items-start gap-3 rounded-2xl bg-card p-4 shadow-[var(--shadow-sm)] ring-1 ring-line transition hover:shadow-[var(--shadow-md)]">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-copper-500/10 text-accent-icon">
-            <ClipboardList className="size-5" />
+        <li key={e.id} className="relative flex items-start gap-3 rounded-xl bg-card p-4 ring-1 ring-line transition hover:shadow-[var(--shadow-md)]">
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-3 text-subtle">
+            <ClipboardList className="size-[18px]" />
           </span>
           <div className="min-w-0 flex-1">
             <button type="button" onClick={() => onOpen(e.id)} className="block w-full truncate text-left text-[15px] font-semibold text-heading after:absolute after:inset-0 after:content-['']">

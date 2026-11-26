@@ -331,8 +331,8 @@ function PhoneAgenda({
                 onClick={() => setSelected(d)}
                 className={cn("flex h-[58px] flex-col items-center justify-center gap-0.5 rounded-lg transition", isSel ? "bg-heading text-white" : "active:bg-surface-2")}
               >
-                <span className={cn("text-[11px] font-medium", isSel ? "text-white/60" : isToday ? "text-accent-fg" : "text-subtle")}>{new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" }).slice(0, 2)}</span>
-                <span className={cn("tabular text-[17px] font-semibold", !isSel && isToday && "text-accent-fg")}>{Number(d.slice(8))}</span>
+                <span className={cn("text-[11px] font-medium", isSel ? "text-white/60" : isToday ? "text-brand-fg" : "text-subtle")}>{new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" }).slice(0, 2)}</span>
+                <span className={cn("tabular text-[17px] font-semibold", !isSel && isToday && "text-brand-fg")}>{Number(d.slice(8))}</span>
                 <span className="flex h-1.5 gap-0.5">
                   {count ? <span className={cn("size-1.5 rounded-full", isSel ? "bg-white/70" : "bg-foreground/35")} /> : null}
                   {dayOff ? <span className="size-1.5 rounded-full bg-violet-400" /> : null}

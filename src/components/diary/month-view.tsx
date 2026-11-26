@@ -52,8 +52,8 @@ export function MonthView({ month, weekends, today, bookings, absences, jobs, pe
           return (
             <div key={d} className={cn("group/m flex min-h-[132px] min-w-0 flex-col gap-1 border-b border-r border-line p-1.5", !inMonth && "bg-surface-2", isToday && "bg-copper-50/50")}>
               <button type="button" onClick={() => onPickDay(d)} aria-label={`Open the week of ${formatDayLong(d)}`} className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left hover:bg-surface-3">
-                <span className={cn("tabular text-[13px] font-semibold", isToday ? "text-accent-fg" : inMonth ? "text-heading" : "text-subtle")}>{Number(d.slice(8))}</span>
-                {isToday ? <span className="rounded-sm bg-copper-500/12 px-1 text-[10.5px] font-semibold text-accent-fg">Today</span> : null}
+                <span className={cn("tabular text-[13px] font-semibold", isToday ? "text-brand-fg" : inMonth ? "text-heading" : "text-subtle")}>{Number(d.slice(8))}</span>
+                {isToday ? <span className="rounded-sm bg-copper-500/12 px-1 text-[10.5px] font-semibold text-brand-fg">Today</span> : null}
                 {list.length ? <span className="ml-auto text-[11.5px] tabular text-subtle">{list.length}</span> : null}
               </button>
               {off.length ? (

@@ -120,7 +120,7 @@ function SettingsInner() {
 
   const Group = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <section className="mt-6 first:mt-0" aria-label={title}>
-      <h2 className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-subtle">{title}</h2>
+      <h2 className="mb-2 px-1 text-[12.5px] font-semibold text-subtle">{title}</h2>
       <ul className="panel divide-y divide-line overflow-hidden">{children}</ul>
     </section>
   );
@@ -405,7 +405,7 @@ function FollowUpSection({ org, owner, save }: { org: OrgConfig; owner: boolean;
               </button>
             ) : null}
             <div className="rounded-xl bg-surface-2 p-3.5">
-              <p className="text-[12.5px] font-semibold uppercase tracking-wide text-subtle">Preview (example customer)</p>
+              <p className="text-[12.5px] font-semibold text-subtle">Preview (example customer)</p>
               <p className="mt-1.5 text-[14.5px] font-semibold">{fillTemplate(subject, example, false)}</p>
               <p className="mt-1.5 whitespace-pre-wrap text-[14.5px] leading-relaxed">{fillTemplate(body, example, enabled)}</p>
             </div>

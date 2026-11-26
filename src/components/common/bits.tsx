@@ -232,7 +232,7 @@ export function StatCard({ label, value, sub, tone, accent, onClick, active }: {
     <Comp
       {...(onClick ? { type: "button" as const, onClick, "aria-pressed": active } : {})}
       className={cn(
-        "relative flex min-w-0 flex-col rounded-xl bg-card px-4 py-3.5 text-left shadow-[var(--shadow-xs)] ring-1 ring-line transition sm:px-5 sm:py-4",
+        "stat-card relative flex min-w-0 flex-col rounded-xl bg-card px-4 py-3.5 text-left shadow-[var(--shadow-xs)] ring-1 ring-line transition sm:px-5 sm:py-4",
         onClick && "hover:shadow-[var(--shadow-md)]",
         active && "ring-2 ring-copper-500/60",
         accent && "bg-sidebar text-white ring-0",

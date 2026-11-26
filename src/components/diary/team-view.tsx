@@ -162,9 +162,9 @@ export function TeamView({ days, today, bookings, absences, jobs, staff, subs, m
           <div className="sticky left-0 z-10 flex items-center border-r border-line bg-card px-3 text-[12.5px] font-medium text-subtle">Team</div>
           {days.map((d) => (
             <div key={d} role="columnheader" title={formatDayLong(d)} className="flex h-11 items-center gap-1.5 border-r border-line px-2.5 last:border-r-0">
-              <span className={cn("text-[12.5px] font-medium", d === today ? "text-accent-fg" : "text-subtle")}>{dow(d)}</span>
-              <span className={cn("tabular text-[15px] font-semibold", d === today ? "text-accent-fg" : "text-heading")}>{Number(d.slice(8))}</span>
-              {d === today ? <span className="rounded-sm bg-copper-500/12 px-1 text-[11px] font-semibold text-accent-fg">Today</span> : null}
+              <span className={cn("text-[12.5px] font-medium", d === today ? "text-brand-fg" : "text-subtle")}>{dow(d)}</span>
+              <span className={cn("tabular text-[15px] font-semibold", d === today ? "text-brand-fg" : "text-heading")}>{Number(d.slice(8))}</span>
+              {d === today ? <span className="rounded-sm bg-copper-500/12 px-1 text-[11px] font-semibold text-brand-fg">Today</span> : null}
             </div>
           ))}
         </div>

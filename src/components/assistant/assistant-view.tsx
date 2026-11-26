@@ -805,8 +805,8 @@ function MicButton({ listening, onClick, disabled }: { listening: boolean; onCli
       <span
         className="absolute inset-0 rounded-full transition group-active:scale-95"
         style={{
-          background: "radial-gradient(circle at 50% 35%, #f0873d, #b9521a 75%)",
-          boxShadow: "0 0 0 1.5px rgb(255 190 140 / 0.6) inset, 0 0 22px rgb(236 122 46 / 0.6)",
+          background: "radial-gradient(circle at 50% 30%, #f6964f, #e2711f 80%)",
+          boxShadow: "0 0 0 1px rgb(255 200 160 / 0.35) inset, 0 4px 14px -2px rgb(236 122 46 / 0.35)",
         }}
       />
       {listening ? <Square className="relative size-5 fill-white text-white" /> : <Mic className="relative size-7 text-white" strokeWidth={1.9} />}
