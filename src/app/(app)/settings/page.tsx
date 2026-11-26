@@ -120,7 +120,7 @@ function SettingsInner() {
 
   const Group = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <section className="mt-6 first:mt-0" aria-label={title}>
-      <h2 className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-subtle">{title}</h2>
+      <h2 className="mb-2 px-1 text-[13px] font-semibold text-muted-foreground">{title}</h2>
       <ul className="panel divide-y divide-line overflow-hidden">{children}</ul>
     </section>
   );

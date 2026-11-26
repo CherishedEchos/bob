@@ -225,7 +225,9 @@ export function PageHeader({ title, subtitle, actions, className }: { title: Rea
 }
 
 /** A headline figure: label, big number, a quiet line of context. */
-export function StatCard({ label, value, sub, tone, accent, onClick, active }: { label: string; value: React.ReactNode; sub?: React.ReactNode; tone?: "danger" | "warn" | "good" | "muted"; accent?: boolean; onClick?: () => void; active?: boolean }) {
+export function StatCard({ label, value, sub, tone, accent: _accent, onClick, active }: { label: string; value: React.ReactNode; sub?: React.ReactNode; tone?: "danger" | "warn" | "good" | "muted"; /** Kept for callers; figures are no longer shown on black cards. */ accent?: boolean; onClick?: () => void; active?: boolean }) {
+  const accent = false;
+  void _accent;
   const toneCls = tone === "danger" ? "text-danger-fg" : tone === "warn" ? "text-warn-fg" : tone === "good" ? "text-good-fg" : tone === "muted" ? "text-subtle" : "text-heading";
   const Comp = onClick ? "button" : "div";
   return (

@@ -95,14 +95,24 @@ function InvoicesInner() {
       />
       {/* Three headline figures: what you're owed (overdue is part of it) and what came in over a stated period */}
       <Tip id="money">Invoices you create are saved as drafts — nothing goes to a customer until you send it. Ask Bob to “invoice Sophie for the final balance”.</Tip>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard accent label="Owed to you" value={gbp(owed)} sub={`${outstandingCount} unpaid invoice${outstandingCount === 1 ? "" : "s"}`} onClick={() => { setView("invoices"); setFilter("outstanding"); }} />
-        <StatCard label="Overdue" value={gbp(overdue)} tone={overdue ? "danger" : "muted"} sub={overdue ? `Part of the ${gbp(owed)} owed · ${overdueCount} past due` : "Nothing overdue"} onClick={() => { setView("invoices"); setFilter("overdue"); }} active={view === "invoices" && filter === "overdue"} />
-        <div className="relative">
-          <StatCard label="Received" value={gbp(received)} tone="good" sub={rangeLabel} />
-          <label className="absolute right-3 top-3">
+      <section aria-label="Headline figures" className="panel grid overflow-hidden sm:grid-cols-3">
+        <button type="button" onClick={() => { setView("invoices"); setFilter("outstanding"); }} className="group px-5 py-4 text-left transition-colors hover:bg-surface-2 sm:px-6">
+          <span className="block text-[12.5px] font-medium text-subtle">Owed to you</span>
+          <span className="t-figure mt-1 block">{gbp(owed)}</span>
+          <span className="mt-1 block text-[12.5px] text-subtle">{outstandingCount} unpaid invoice{outstandingCount === 1 ? "" : "s"}</span>
+        </button>
+        <button type="button" aria-pressed={view === "invoices" && filter === "overdue"} onClick={() => { setView("invoices"); setFilter("overdue"); }} className="border-t border-line px-5 py-4 text-left transition-colors hover:bg-surface-2 sm:border-l sm:border-t-0 sm:px-6">
+          <span className="block text-[12.5px] font-medium text-subtle">Overdue</span>
+          <span className={cn("t-figure mt-1 block", overdue ? "text-danger-fg" : "text-subtle")}>{gbp(overdue)}</span>
+          <span className="mt-1 block text-[12.5px] text-subtle">{overdue ? `Part of the ${gbp(owed)} owed · ${overdueCount} past due` : "Nothing overdue"}</span>
+        </button>
+        <div className="relative border-t border-line px-5 py-4 sm:border-l sm:border-t-0 sm:px-6">
+          <span className="block text-[12.5px] font-medium text-subtle">Received</span>
+          <span className="t-figure mt-1 block text-good-fg">{gbp(received)}</span>
+          <span className="mt-1 block text-[12.5px] tabular text-subtle">{rangeLabel}</span>
+          <label className="absolute right-4 top-3.5">
             <span className="sr-only">Period</span>
-            <select value={period} onChange={(e) => setPeriod(e.target.value as typeof period)} className="h-8 rounded-lg bg-surface-2 px-2 text-[12.5px] font-medium text-foreground ring-1 ring-line outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <select value={period} onChange={(e) => setPeriod(e.target.value as typeof period)} className="h-7 rounded-md bg-card px-1.5 text-[12.5px] font-medium text-foreground ring-1 ring-line-strong outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <option value="7">7 days</option>
               <option value="30">30 days</option>
               <option value="month">This month</option>
@@ -110,7 +120,7 @@ function InvoicesInner() {
             </select>
           </label>
         </div>
-      </div>
+      </section>
       <Tabs
         label="Money sections"
         className="self-start"
@@ -161,8 +171,8 @@ function InvoicesInner() {
         />
 
         {list.length ? (
-          <div className="panel overflow-hidden shadow-[var(--shadow-sm)]">
-            <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_140px_120px_130px_24px] gap-4 border-b border-line px-5 py-2.5 text-[12px] font-medium uppercase tracking-[0.06em] text-subtle lg:grid">
+          <div className="panel overflow-hidden">
+            <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_140px_120px_130px_24px] gap-4 border-b border-line bg-[#faf9f6] px-5 py-2 text-[12px] font-medium text-subtle lg:grid">
               <span>Customer</span>
               <span>Job</span>
               <span>Status</span>
