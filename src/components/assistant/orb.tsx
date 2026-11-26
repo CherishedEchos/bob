@@ -42,8 +42,8 @@ function SoftOrb({ state, size, className }: { state: OrbState; size: number; cl
       aria-label={state === "listening" ? "Assistant is listening" : state === "thinking" ? "Assistant is thinking" : "Assistant ready"}
     >
       <div
-        className={cn("absolute -inset-[14%] -z-10 rounded-full blur-2xl transition-opacity duration-500", state === "listening" ? "opacity-100" : "opacity-60")}
-        style={{ background: "radial-gradient(circle, rgb(255 140 50 / 0.30), rgb(236 122 46 / 0.08) 50%, transparent 70%)" }}
+        className={cn("absolute -inset-[14%] -z-10 rounded-full blur-2xl transition-opacity duration-500", state === "listening" ? "opacity-90" : "opacity-40")}
+        style={{ background: "radial-gradient(circle, rgb(255 140 50 / 0.22), rgb(236 122 46 / 0.05) 50%, transparent 70%)" }}
       />
       <svg viewBox="0 0 200 200" className={cn("absolute inset-0 size-full overflow-visible transition-transform duration-700", state === "listening" && "scale-[1.05]")} aria-hidden>
         <defs>
@@ -59,7 +59,7 @@ function SoftOrb({ state, size, className }: { state: OrbState; size: number; cl
           <g key={i} transform={`rotate(${p.rot} 100 100)`}>
             <g className={i % 2 ? "animate-orb-b" : "animate-orb-a"} style={{ transformOrigin: "100px 100px", animationDuration: `${p.dur * speed}s` }}>
               <path d={p.d} fill={`url(#f${id})`} style={{ mixBlendMode: "screen" }} />
-              <path d={p.d} fill="none" stroke="#ff7a1a" strokeWidth="5" opacity="0.75" filter={`url(#g${id})`} />
+              <path d={p.d} fill="none" stroke="#ff7a1a" strokeWidth="4" opacity="0.5" filter={`url(#g${id})`} />
               <path d={p.d} fill="none" stroke="#ffcf9e" strokeWidth="1.4" opacity="0.95" />
             </g>
           </g>
@@ -100,9 +100,9 @@ export function Orb({ state = "idle", size = 240, className, tone = "classic" }:
       <div
         className={cn(
           "absolute -inset-[28%] -z-10 animate-breathe rounded-full blur-2xl transition-opacity duration-500",
-          state === "listening" ? "opacity-100" : "opacity-70",
+          state === "listening" ? "opacity-90" : "opacity-45",
         )}
-        style={{ background: "radial-gradient(circle, rgb(236 122 46 / 0.42), rgb(236 122 46 / 0.12) 45%, transparent 68%)" }}
+        style={{ background: "radial-gradient(circle, rgb(236 122 46 / 0.3), rgb(236 122 46 / 0.07) 45%, transparent 68%)" }}
       />
       {/* ribbons */}
       {RIBBONS.map((rb, i) => (

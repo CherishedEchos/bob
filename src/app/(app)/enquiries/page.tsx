@@ -151,11 +151,11 @@ function EnquiriesInner() {
               aria-label={`Filters${activeFilters ? ` (${activeFilters} on)` : ""}`}
               aria-expanded={filtersOpen}
               onClick={() => setFiltersOpen((o) => !o)}
-              className={cn("flex h-12 shrink-0 items-center gap-1.5 rounded-xl px-3 text-[14.5px] font-semibold ring-1 transition", filtersOpen || activeFilters ? "bg-selected text-accent-fg ring-copper-500/40" : "bg-card text-muted-foreground ring-line-strong hover:text-foreground")}
+              className={cn("flex h-11 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[14px] font-medium ring-1 transition-colors", filtersOpen || activeFilters ? "bg-[#1a1a1a] text-white ring-[#1a1a1a]" : "bg-card text-muted-foreground ring-line-strong hover:text-foreground")}
             >
               <SlidersHorizontal className="size-[18px]" />
               <span className="hidden sm:inline lg:hidden 2xl:inline">Filters</span>
-              {activeFilters ? <span className="tabular text-[12.5px] text-accent-fg">{activeFilters}</span> : null}
+              {activeFilters ? <span className="tabular text-[12.5px] text-white/70">{activeFilters}</span> : null}
             </button>
           </div>
 
@@ -199,11 +199,11 @@ function EnquiriesInner() {
           ) : null}
 
           {tab === "reply" && toDraft > 0 && can("enquiries.write") ? (
-            <Link href="/replies" className="mb-3 flex min-h-[48px] items-center justify-between gap-3 rounded-xl bg-copper-500/10 px-4 text-[14.5px] font-semibold text-accent-fg ring-1 ring-copper-500/25 transition hover:bg-copper-500/15">
+            <Link href="/replies" className="mb-3 flex min-h-11 items-center justify-between gap-3 rounded-lg bg-card px-4 text-[14px] font-medium text-foreground ring-1 ring-line-strong transition-colors hover:bg-raised-hover">
               <span className="flex items-center gap-2">
-                <Sparkles className="size-4" aria-hidden /> Draft {toDraft} {toDraft === 1 ? "reply" : "replies"}
+                <Sparkles className="size-4 text-copper-500" aria-hidden /> Let Bob draft {toDraft} {toDraft === 1 ? "reply" : "replies"}
               </span>
-              <ChevronRight className="size-4" aria-hidden />
+              <ChevronRight className="size-4 text-subtle" aria-hidden />
             </Link>
           ) : null}
 

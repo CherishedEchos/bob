@@ -78,6 +78,9 @@ const SOURCE_STYLE: Record<EnquirySource, { bg: string; fg: string; chip: string
   manual: { bg: "linear-gradient(160deg, #4a4540, #2f2b28)", fg: "#e9e4de", chip: "bg-surface-3 text-muted-foreground ring-line-strong" },
 };
 
+/** Restrained channel marks: a neutral tile with the channel's colour on the glyph only. */
+const SOURCE_GLYPH: Record<EnquirySource, string> = { instagram: "#c1357f", email: "#3768c9", phone: "#1f8a55", website: "#6a4fc9", manual: "#6e6e73" };
+
 function GmailMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden>
@@ -96,9 +99,8 @@ export function SourceIcon({ source, provider, className }: { source: EnquirySou
   const Icon = SOURCE_ICON[source];
   const label = gmail ? "Gmail" : SOURCE_LABEL[source];
   return (
-    <span title={`Came in by ${label}`} className={cn("relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-ink-700", className)}>
-      <span aria-hidden className="absolute inset-0 opacity-[0.9]" style={{ background: SOURCE_STYLE[source].bg }} />
-      {gmail ? <GmailMark className="relative size-[55%] rounded-sm bg-white p-[1px]" /> : <Icon className="relative size-[50%] text-white/90" aria-hidden />}
+    <span title={`Came in by ${label}`} style={{ color: SOURCE_GLYPH[source] }} className={cn("relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#f3f1ed] ring-1 ring-inset ring-black/[0.05]", className)}>
+      {gmail ? <GmailMark className="relative size-[52%]" /> : <Icon className="relative size-[46%]" aria-hidden />}
       <span className="sr-only">{label}</span>
     </span>
   );

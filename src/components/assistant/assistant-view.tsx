@@ -634,8 +634,8 @@ function BigMic({ phase, disabled, onClick }: { phase: ComposerPhase; disabled?:
       style={{
         background: "radial-gradient(circle at 50% 40%, #2a170b, #120a05 72%)",
         boxShadow: recording
-          ? "0 0 0 3px rgb(255 120 90 / 0.95), 0 0 26px rgb(255 90 60 / 0.6)"
-          : "0 0 0 3px rgb(255 150 70 / 0.95), 0 0 22px rgb(255 130 40 / 0.65), 0 0 50px rgb(236 122 46 / 0.25)",
+          ? "0 0 0 3px rgb(255 120 90 / 0.95), 0 0 18px rgb(255 90 60 / 0.4)"
+          : "0 0 0 2.5px rgb(255 150 70 / 0.95), 0 0 16px rgb(255 130 40 / 0.35)",
       }}
     >
       {phase === "listening" ? <span className="absolute inset-0 animate-ping-slow rounded-full ring-2 ring-red-400/60" /> : null}
@@ -797,7 +797,7 @@ function MicButton({ listening, onClick, disabled }: { listening: boolean; onCli
         className="absolute inset-0 rounded-full transition group-active:scale-95"
         style={{
           background: "radial-gradient(circle at 50% 35%, #f0873d, #b9521a 75%)",
-          boxShadow: "0 0 0 1.5px rgb(255 190 140 / 0.6) inset, 0 0 22px rgb(236 122 46 / 0.6)",
+          boxShadow: "0 0 0 1px rgb(255 190 140 / 0.45) inset, 0 4px 14px rgb(236 122 46 / 0.3)",
         }}
       />
       {listening ? <Square className="relative size-5 fill-white text-white" /> : <Mic className="relative size-7 text-white" strokeWidth={1.9} />}

@@ -77,7 +77,7 @@ function Section({ icon: Icon, title, subtitle, children, defaultOpen = false }:
     <li>
       <h2 className="m-0">
         <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)} className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-2 active:bg-surface-3 lg:px-5">
-          <Icon className="size-5 shrink-0 text-accent-icon" />
+          <Icon className="size-5 shrink-0 text-subtle" />
           <span className="min-w-0 flex-1">
             <span className="block text-[16px] font-semibold">{title}</span>
             {subtitle && !open ? <span className="mt-0.5 block truncate text-[14px] text-muted-foreground">{subtitle}</span> : null}

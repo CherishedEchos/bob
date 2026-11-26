@@ -17,7 +17,7 @@ import { PersonAvatar } from "@/components/common/people";
 import { bookingEndDate, bookingsOnDay, initials } from "@/lib/schedule";
 import type { Booking, Person, PersonAccess } from "@/lib/types";
 import { cn, copyToClipboard, todayKey } from "@/lib/utils";
-import { EmptyState, PageHeader, StatCard, StatusText, Tabs, pageActionClass } from "@/components/common/bits";
+import { EmptyState, PageHeader, StatusText, Tabs, pageActionClass } from "@/components/common/bits";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -96,11 +96,19 @@ function TeamInner() {
       />
       {view === "holidays" ? <HolidaysView /> : (
       <>
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard accent label="On site today" value={onSiteToday} sub={`of ${active.length} people`} />
-        <StatCard label="Off today" value={offToday} tone={offToday ? "warn" : "muted"} sub="holiday or unavailable" />
-        <StatCard label="Free today" value={Math.max(0, active.length - onSiteToday - offToday)} tone="good" sub="not booked" />
-      </div>
+      <section aria-label="Today" className="panel grid grid-cols-3 overflow-hidden">
+        {[
+          { label: "On site today", value: onSiteToday, sub: `of ${active.length} people`, cls: "text-heading" },
+          { label: "Off today", value: offToday, sub: "holiday or unavailable", cls: offToday ? "text-violet-800" : "text-subtle" },
+          { label: "Free today", value: Math.max(0, active.length - onSiteToday - offToday), sub: "not booked", cls: "text-good-fg" },
+        ].map((c, i) => (
+          <div key={c.label} className={cn("px-4 py-3.5 sm:px-6", i && "border-l border-line")}>
+            <div className="text-[12.5px] font-medium text-subtle">{c.label}</div>
+            <div className={cn("t-figure-sm mt-0.5", c.cls)}>{c.value}</div>
+            <div className="mt-0.5 truncate text-[12px] text-subtle">{c.sub}</div>
+          </div>
+        ))}
+      </section>
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1 sm:max-w-[360px]">
           <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-subtle" />
@@ -119,7 +127,9 @@ function TeamInner() {
         />
       </div>
       {list.length ? (
-        <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        <>
+        <TeamTable people={list} today={today} week={week} manage={manage} onOpen={setOpen} />
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden">
           {list.map((p) => {
             const mine = data.bookings.filter((b) => b.personIds.includes(p.id));
             const todays = bookingsOnDay(mine, today);
@@ -131,7 +141,7 @@ function TeamInner() {
             const workDays = week.slice(0, 5).filter((d) => d >= today);
             const freeDays = workDays.filter((d) => !bookingsOnDay(mine, d).length && !absencesOnDay(leave.filter((x) => x.status === "approved"), d).length);
             return (
-              <li key={p.id} className="relative flex flex-col rounded-2xl bg-card p-4 shadow-[var(--shadow-sm)] ring-1 ring-line transition hover:shadow-[var(--shadow-md)] sm:p-5">
+              <li key={p.id} className="relative flex flex-col rounded-2xl bg-card p-4 ring-1 ring-line sm:p-5">
                 <div className="flex items-start gap-3">
                   <PersonAvatar person={p} size={44} />
                   <div className="min-w-0 flex-1">
@@ -148,7 +158,7 @@ function TeamInner() {
                   </span>
                 </div>
 
-                <div className="mt-4 rounded-xl bg-surface-2 px-3 py-2.5 text-[13.5px]">
+                <div className="mt-4 rounded-lg bg-surface-2 px-3 py-2.5 text-[13.5px]">
                   {todays.length ? (
                     <div className="flex items-center gap-2">
                       <span className="size-2 shrink-0 rounded-full bg-success" aria-hidden />
@@ -199,6 +209,7 @@ function TeamInner() {
             );
           })}
         </ul>
+        </>
       ) : (
         <EmptyState
           icon={Users}
@@ -210,6 +221,85 @@ function TeamInner() {
       </>
       )}
       <PersonSheet personId={open} onClose={() => setOpen(null)} />
+    </div>
+  );
+}
+
+/** Desktop: one row per person — where they are today, what's next, free days and holiday. */
+function TeamTable({ people, today, week, manage, onOpen }: { people: Person[]; today: string; week: string[]; manage: boolean; onOpen: (id: string) => void }) {
+  const { data } = useStore();
+  const jobs = new Map(data.jobs.map((j) => [j.id, j]));
+  const access = new Map(data.access.map((a) => [a.personId, a]));
+  const cols = manage ? "grid-cols-[minmax(0,1.5fr)_minmax(0,1.8fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1.1fr)_120px]" : "grid-cols-[minmax(0,1.5fr)_minmax(0,1.8fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1.1fr)]";
+  const head = "text-[12px] font-medium text-subtle";
+  const where = (jobId: string) => `${jobs.get(jobId)?.title ?? "Job"}${jobs.get(jobId)?.location ? `, ${jobs.get(jobId)?.location}` : ""}`;
+  return (
+    <div className="panel hidden overflow-hidden lg:block">
+      <div className={cn("grid items-center gap-4 border-b border-line bg-[#faf9f6] px-5 py-2", cols)}>
+        <span className={head}>Person</span>
+        <span className={head}>Today</span>
+        <span className={head}>Next booking</span>
+        <span className={head}>This week</span>
+        <span className={head}>Holiday</span>
+        {manage ? <span className={head}>Bob access</span> : null}
+      </div>
+      <ul className="divide-y divide-line">
+        {people.map((p) => {
+          const mine = data.bookings.filter((b) => b.personIds.includes(p.id));
+          const todays = bookingsOnDay(mine, today);
+          const leave = data.absences.filter((x) => x.personId === p.id && ["approved", "pending"].includes(x.status));
+          const off = absencesOnDay(leave.filter((x) => x.status === "approved"), today).length > 0;
+          const nextLeave = leave.filter((x) => x.endDate >= today).sort((x, y) => x.startDate.localeCompare(y.startDate))[0];
+          const nextBk = mine.filter((b) => b.date > today).sort((x, y) => x.date.localeCompare(y.date))[0];
+          const workDays = week.slice(0, 5).filter((d) => d >= today);
+          const freeDays = workDays.filter((d) => !bookingsOnDay(mine, d).length && !absencesOnDay(leave.filter((x) => x.status === "approved"), d).length);
+          const a = access.get(p.id) ?? { personId: p.id, state: "not_invited" as const };
+          return (
+            <li key={p.id} className={cn("row-open grid items-center gap-4 px-5 py-3", cols)}>
+              <button type="button" onClick={() => onOpen(p.id)} aria-label={`Open ${p.name}`} className="row-target flex min-w-0 items-center gap-3 text-left after:absolute after:inset-0 after:content-['']">
+                <PersonAvatar person={p} size={32} />
+                <span className="min-w-0">
+                  <span className="block truncate text-[14px] font-semibold text-heading">{p.name}</span>
+                  <span className="block truncate text-[12.5px] text-subtle">
+                    {p.trade || (p.kind === "subcontractor" ? "Subcontractor" : "Employee")}
+                    {p.company ? ` · ${p.company}` : ""}
+                  </span>
+                </span>
+              </button>
+              <span className="flex min-w-0 items-center gap-2 text-[13.5px]">
+                {todays.length ? (
+                  <>
+                    <span className="size-1.5 shrink-0 rounded-full bg-success" aria-hidden />
+                    <span className="truncate text-heading" title={todays.map((b) => where(b.jobId)).join(" · ")}>{todays.map((b) => where(b.jobId)).join(" · ")}</span>
+                  </>
+                ) : off ? (
+                  <span className="flex items-center gap-1.5 text-violet-800">
+                    <CalendarOff className="size-3.5" aria-hidden /> Off today
+                  </span>
+                ) : (
+                  <span className="text-subtle">Free today</span>
+                )}
+              </span>
+              <span className="min-w-0 truncate text-[13.5px] text-heading">{nextBk ? `${relativeDay(nextBk.date, today)} · ${where(nextBk.jobId)}` : <span className="text-subtle">Nothing booked</span>}</span>
+              <span className={cn("min-w-0 truncate text-[13.5px]", freeDays.length ? "text-good-fg" : "text-muted-foreground")}>
+                {workDays.length === 0 ? "Week finished" : freeDays.length === 0 ? "Fully booked" : freeDays.length === workDays.length ? "Free all week" : `Free ${freeDays.map((d) => formatDayShort(d).split(" ")[0]).join(", ")}`}
+              </span>
+              <span className="min-w-0 truncate text-[13.5px] text-violet-800">
+                {nextLeave ? (
+                  <>
+                    {formatDayShort(nextLeave.startDate)}
+                    {nextLeave.endDate !== nextLeave.startDate ? ` – ${formatDayShort(nextLeave.endDate)}` : ""}
+                    {nextLeave.status === "pending" ? <span className="text-subtle"> · requested</span> : null}
+                  </>
+                ) : (
+                  <span className="text-subtle">—</span>
+                )}
+              </span>
+              {manage ? <StatusText tone={ACCESS_LABEL[a.state].tone} className="text-[12.5px]">{ACCESS_LABEL[a.state].label}</StatusText> : null}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

@@ -555,7 +555,7 @@ function BottomNav() {
           <Link
             href="/assistant?listen=1"
             aria-label="Ask Bob — tap to talk"
-            className="relative -mt-7 grid size-[62px] place-items-center rounded-full bg-gradient-to-b from-[#f9a25c] to-[#ea7424] text-white shadow-[0_0_0_5px_#19191b,0_0_18px_rgb(243_135_53/0.35),0_6px_14px_rgb(243_135_53/0.25)] transition active:scale-95"
+            className="relative -mt-7 grid size-[62px] place-items-center rounded-full bg-gradient-to-b from-[#f9a25c] to-[#ea7424] text-white shadow-[0_0_0_5px_#19191b,0_6px_14px_rgb(243_135_53/0.22)] transition active:scale-95"
           >
             <span aria-hidden className="absolute inset-0 rounded-full ring-1 ring-white/25 motion-safe:animate-breathe" />
             <Mic className="size-[26px]" strokeWidth={2} />

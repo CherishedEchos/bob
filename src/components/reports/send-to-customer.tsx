@@ -211,7 +211,7 @@ export function SendToCustomer({ job, onClose }: { job: Job; onClose: () => void
 
 function Panel({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
-    <section aria-label="Send to customer" className="mt-4 rounded-2xl bg-card p-5 ring-1 ring-copper-500/30">
+    <section aria-label="Send to customer" className="mt-4 rounded-2xl bg-card p-5 ring-1 ring-line-strong">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h3 className="text-[17px] font-semibold text-heading">Send to customer</h3>

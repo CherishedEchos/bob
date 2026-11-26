@@ -294,11 +294,11 @@ function GroupHeader({ merchant, count }: { merchant?: Merchant; count: number }
       {merchant ? (
         <span className="flex flex-wrap items-center gap-x-4 text-[14px] font-normal">
           {merchant.phone ? (
-            <a href={`tel:${merchant.phone.replace(/\s/g, "")}`} className="inline-flex h-9 items-center gap-1.5 font-semibold text-accent-fg">
+            <a href={`tel:${merchant.phone.replace(/\s/g, "")}`} className="inline-flex h-9 items-center gap-1.5 font-medium text-foreground hover:text-accent-fg">
               <Phone className="size-3.5" aria-hidden /> {merchant.phone}
             </a>
           ) : null}
-          <Link href={`/merchants?open=${merchant.id}`} className="inline-flex h-9 items-center gap-0.5 font-semibold text-accent-fg">
+          <Link href={`/merchants?open=${merchant.id}`} className="inline-flex h-9 items-center gap-0.5 font-medium text-muted-foreground hover:text-foreground">
             Supplier record <ChevronRight className="size-4" aria-hidden />
           </Link>
         </span>
