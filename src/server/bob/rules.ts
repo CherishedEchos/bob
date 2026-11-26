@@ -27,7 +27,7 @@ import { cancelAction } from "./actions";
 import { invoiceFollowUp, isInvoiceRequest, runInvoice, startInvoice, type InvoiceFlow, type InvoiceIO, type InvoiceMemory } from "./invoice-chat";
 import { requestAction } from "./actions";
 import { runReadTool } from "./tools";
-import { NEEDS_ORDERING, WHO_IS_ON, needsOrdering, whoIsOn } from "./schedule-answers";
+import { DOUBLE_BOOKED, NEEDS_ORDERING, WHO_IS_ON, doubleBookings, needsOrdering, whoIsOn } from "./schedule-answers";
 import { friendlyError } from "./friendly";
 import { HANDOVER_REQUEST, OUTSTANDING_ON, jobOutstanding, MERCHANTS_TO_CONTACT, NEEDS_QUOTING, ON_HOLIDAY, PRIORITISE, READY_TO_INVOICE, WHO_IS_AVAILABLE, handoverHelp, merchantsToContact, needsQuoting, onHoliday, personPriorities, readyToInvoice, whoIsAvailable } from "./extra-answers";
 import { mentionScore, resolveCustomers, resolveEnquiries, resolveJobs } from "./resolve";
@@ -415,6 +415,10 @@ async function route(t: Turn, text: string, lower: string) {
   // Schedule and order lists (read-only, from Bob's own records).
   if (NEEDS_ORDERING.test(lower)) {
     const a = needsOrdering(t.ctx);
+    return say(t, a.text, a.chips ? { chips: a.chips } : undefined);
+  }
+  if (DOUBLE_BOOKED.test(lower) && !/\b(invoice|quote|payment)\b/.test(lower)) {
+    const a = doubleBookings(t.ctx, lower);
     return say(t, a.text, a.chips ? { chips: a.chips } : undefined);
   }
   if (/\bwhere('?s| is| are)\b[^?]*\b(everyone|everybody|the team|the lads|people|the crew)\b/.test(lower)) {

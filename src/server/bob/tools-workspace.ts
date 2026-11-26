@@ -34,6 +34,7 @@ import { listReports, listReportVersions } from "@/server/services/handover-repo
 import { morningBriefing } from "./briefing";
 import { reviewRequestStatus } from "@/server/services/followups";
 import { resolveJobs } from "./resolve";
+import { findDoubleBookings } from "./schedule-answers";
 import type { ReadTool } from "./tools";
 
 const id = z.string().min(1).max(80);
@@ -163,6 +164,20 @@ export const workspaceReadTools: ReadTool<unknown>[] = [
       return { data: { from: a.from, to, days } };
     },
   } as ReadTool<{ from: string }> as ReadTool<unknown>,
+  {
+    kind: "read",
+    name: "find_double_bookings",
+    description:
+      "People booked on two overlapping visits (double-booked) between two dates. Use for 'have I double-booked anyone this week', 'any clashes next week'. Defaults to this week (Monday to Sunday).",
+    permission: "schedule.read",
+    schema: z.object({ from: dateKey.optional(), to: dateKey.optional() }),
+    run(ctx, a: { from?: string; to?: string }) {
+      const from = a.from ?? weekStart(todayKey());
+      const to = a.to && a.to >= from ? a.to : addDays(from, 6);
+      const clashes = findDoubleBookings(ctx, from, to);
+      return { data: { from, to, double_bookings: clashes, count: clashes.length } };
+    },
+  } as ReadTool<{ from?: string }> as ReadTool<unknown>,
   {
     kind: "read",
     name: "list_team",

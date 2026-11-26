@@ -27,7 +27,9 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
   const { data, org, user, can } = useStore();
   const ui = useUI();
   const router = useRouter();
-  const atRoot = usePathname() === "/";
+  const pathname = usePathname();
+  const atRoot = pathname === "/";
+  const onDiary = pathname === "/week" && can("schedule.read");
   const [menuOpen, setMenuOpen] = React.useState(false);
   // Opened as a panel (e.g. after asking from Today), show the conversation straight away.
   const [home, setHome] = React.useState(variant !== "panel");
@@ -128,6 +130,13 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
       : pc.type === "customer"
         ? ["What jobs do they have with us?", ...(can("finance.read") ? ["Do they owe us anything?"] : []), "Remind me to call them tomorrow"]
         : ["Draft a reply", "Book a site visit", "Remind me to follow up on Friday"];
+  // From the Diary: planning questions and changes (changes always come back as a card to approve).
+  const diarySuggestions = [
+    "Where is everyone working tomorrow?",
+    "Who's free next Tuesday?",
+    "Have I double-booked anyone this week?",
+    ...(can("schedule.manage") ? ["Put Callum on holiday next Thursday"] : []),
+  ];
   const suggestions = [
     "What needs sorting today?",
     "How many enquiries have I had in the last month?",
@@ -312,9 +321,9 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
             ) : null}
 
             <section className="mt-6">
-              <h2 className="mb-2 text-[13px] font-medium text-subtle">{pc ? `About ${pc.label}` : "Try saying"}</h2>
+              <h2 className="mb-2 text-[13px] font-medium text-subtle">{pc ? `About ${pc.label}` : onDiary ? "About the diary" : "Try saying"}</h2>
               <div className="flex flex-wrap gap-2">
-                {(pc ? contextual : suggestions).slice(0, 3).map((x) => (
+                {(pc ? contextual : onDiary ? diarySuggestions : suggestions).slice(0, onDiary && !pc ? 4 : 3).map((x) => (
                   <button
                     key={x}
                     onClick={() => ask(x)}

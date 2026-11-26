@@ -15,7 +15,7 @@ import { getCustomer, getEnquiry, getJob } from "@/server/services/records";
 import { rulesTurn, type BobState, type Reply } from "./rules";
 import { BRIEFING_REQUEST } from "./briefing";
 import { isBatchReplyRequest } from "@/server/services/batch-replies";
-import { NEEDS_ORDERING, WHO_IS_ON } from "./schedule-answers";
+import { DOUBLE_BOOKED, NEEDS_ORDERING, WHO_IS_ON } from "./schedule-answers";
 
 interface StoredPayload {
   text: string;
@@ -130,7 +130,7 @@ export async function handleTurn(ctx: Ctx, input: { conversationId?: string; tex
   // Schedule and order-list questions are answered from Bob's own records by the rules engine.
   // Batch replies open a review screen, so they always use the built-in flow. With Claude on, everything
   // else (briefing, schedule, materials…) goes to Claude, which has tools for each of those records.
-  let engine = isBatchReplyRequest(input.text) || (activeEngine() !== "claude" && (BRIEFING_REQUEST.test(input.text) || WHO_IS_ON.test(input.text) || NEEDS_ORDERING.test(input.text))) ? "rules" : activeEngine();
+  let engine = isBatchReplyRequest(input.text) || (activeEngine() !== "claude" && (BRIEFING_REQUEST.test(input.text) || WHO_IS_ON.test(input.text) || NEEDS_ORDERING.test(input.text) || DOUBLE_BOOKED.test(input.text))) ? "rules" : activeEngine();
   let out: { replies: Reply[]; state: BobState; changed: boolean };
   let fallbackNote: string | undefined;
   // Monthly AI spending limit (set by Cresaro admins): once reached, Bob's built-in assistant answers.

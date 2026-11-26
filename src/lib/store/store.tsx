@@ -236,7 +236,7 @@ function SplashScreen({ error, onRetry }: { error: string | null; onRetry: () =>
         <div role="alert" className="relative max-w-sm">
           <p className="text-[16px] font-semibold text-white">Couldn&apos;t open the workspace</p>
           <p className="mt-1 text-[15px] text-white/65">{error}</p>
-          <button onClick={onRetry} className="mt-4 h-11 rounded-[10px] bg-primary px-5 text-[15px] font-semibold text-white">
+          <button onClick={onRetry} className="mt-4 h-11 rounded-lg bg-primary px-5 text-[15px] font-semibold text-white">
             Try again
           </button>
           <p className="mt-3 text-[13.5px] text-white/50">

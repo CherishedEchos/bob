@@ -19,7 +19,7 @@ type InsertFn = (db: DatabaseSync, table: TableName, orgId: string, obj: { id: s
 interface TeamCast {
   key: string;
   domain: string;
-  people: { key: string; name: string; kind: Person["kind"]; trade: string; company?: string; email?: string }[];
+  people: { key: string; name: string; kind: Person["kind"]; trade: string; company?: string; email?: string; userId?: string }[];
   /** The fictional subcontractor who has accepted an invite (demo login for My work). */
   workerLogin?: { personKey: string; email: string };
   /** Someone invited but not yet accepted. */
@@ -46,6 +46,9 @@ export const TEAM_CASTS: Record<string, TeamCast> = {
       { key: "sam", name: "Sam Okoro", kind: "subcontractor", trade: "Plasterer", company: "SO Plastering", email: "sam@so-plastering.example" },
       { key: "mark", name: "Mark Davies", kind: "subcontractor", trade: "Electrician", company: "Davies Electrical", email: "mark@davies-electrical.example" },
       { key: "priya", name: "Priya Nair", kind: "subcontractor", trade: "Plumber", company: "Nair Plumbing & Heating" },
+      // Luke and Ryan work on site too, so they can be booked (linked to their own sign-ins).
+      { key: "luke", name: "Luke", kind: "employee", trade: "Owner", userId: "usr_n93_owner" },
+      { key: "ryan", name: "Ryan", kind: "employee", trade: "Admin", userId: "usr_n93_office" },
     ],
     workerLogin: { personKey: "sam", email: "sam@so-plastering.example" },
     pendingInvite: { personKey: "mark" },
@@ -107,6 +110,7 @@ export function buildTeamScenario(orgId: string, timeZone = DEFAULT_TIME_ZONE) {
     company: p.company,
     email: p.email ?? `${p.name.split(" ")[0].toLowerCase()}@${cast.domain}`,
     phone: `07700 900${String(phoneN++ % 1000).padStart(3, "0")}`,
+    userId: p.userId,
     createdAt: now,
   }));
 

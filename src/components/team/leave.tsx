@@ -179,12 +179,12 @@ function AffectedLink({ b }: { b: Affected }) {
   );
 }
 
-export function LeaveForm({ personId, onClose, onSaved }: { personId?: string; onClose: () => void; onSaved?: (a: Absence, affected: Affected[]) => void }) {
+export function LeaveForm({ personId, date, onClose, onSaved }: { personId?: string; date?: string; onClose: () => void; onSaved?: (a: Absence, affected: Affected[]) => void }) {
   const { data, can, actions, user } = useStore();
   const manage = can("team.manage");
   const me = data.people.find((p) => p.userId === user.id);
   const active = data.people.filter((p) => !p.archivedAt);
-  const [v, setV] = React.useState({ personId: personId ?? (manage ? "" : me?.id ?? ""), kind: "holiday" as Absence["kind"], startDate: todayKey(), endDate: "", part: "full", reason: "" });
+  const [v, setV] = React.useState({ personId: personId ?? (manage ? "" : me?.id ?? ""), kind: "holiday" as Absence["kind"], startDate: date ?? todayKey(), endDate: "", part: "full", reason: "" });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [busy, setBusy] = React.useState(false);
   const person: Person | undefined = data.people.find((p) => p.id === v.personId);

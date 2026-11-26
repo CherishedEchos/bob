@@ -49,7 +49,7 @@ const isAssistantRoute = (p: string) => p === "/assistant";
 /** Schedules and lists use the full width; reading pages (settings, activity) keep a comfortable measure. */
 function pageWidth(p: string) {
   if (["/settings", "/activity", "/replies", "/overview", "/today"].some((x) => p.startsWith(x))) return "max-w-[1100px]";
-  return "max-w-none";
+  return "max-w-[1680px]";
 }
 
 const COLLAPSE_KEY = "bob.sidebar.collapsed";
@@ -106,7 +106,7 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
           {assistant ? (
             children
           ) : (
-            <div className={cn("mx-auto w-full px-4 pt-3 sm:px-6 lg:px-10 lg:pt-8 2xl:px-12", focus ? "flex min-h-full flex-col pb-0 lg:pb-0" : "pb-[calc(112px+env(safe-area-inset-bottom))] lg:pb-24", pageWidth(pathname))}>{children}</div>
+            <div className={cn("mx-auto w-full px-4 pt-3 sm:px-6 lg:px-8 lg:pt-7 2xl:px-10", focus ? "flex min-h-full flex-col pb-0 lg:pb-0" : "pb-[calc(112px+env(safe-area-inset-bottom))] lg:pb-24", pageWidth(pathname))}>{children}</div>
           )}
         </main>
         {/* Ask Bob has its own back button and bottom controls. */}
@@ -126,7 +126,7 @@ function DemoBanner() {
   const { org } = useStore();
   if (org.dataMode !== "sample") return null;
   return (
-    <div role="note" className="hidden h-8 shrink-0 items-center justify-center gap-2 border-b border-line bg-card/70 px-3 text-[12.5px] text-subtle lg:flex">
+    <div role="note" className="hidden h-7 shrink-0 items-center justify-center gap-1.5 border-b border-line bg-card px-3 text-[12px] text-subtle lg:flex">
       <FlaskConical aria-hidden className="size-3.5 shrink-0" />
       <span>
         <strong className="font-medium text-foreground">Demo workspace</strong>
@@ -180,31 +180,44 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
   return (
     <aside
       className={cn(
-        "theme-dark hidden shrink-0 flex-col bg-sidebar transition-[width] duration-200 ease-out lg:flex",
-        collapsed ? "w-[72px]" : "w-[244px]",
+        "hidden shrink-0 flex-col border-r border-line bg-nav transition-[width] duration-200 ease-out lg:flex",
+        collapsed ? "w-[64px]" : "w-[248px]",
       )}
     >
-      <div className={cn("flex items-start pt-6", collapsed ? "justify-center px-2 pb-5" : "justify-between px-5 pb-6")}>
+      {/* Workspace identity: the business first, Bob second. */}
+      <div className={cn("flex h-[60px] shrink-0 items-center border-b border-line", collapsed ? "justify-center px-2" : "gap-2.5 px-4")}>
         {collapsed ? (
-          <OrgLogo org={org} size={36} />
+          <OrgLogo org={org} size={30} />
         ) : (
-          <div className="w-full min-w-0">
-            <OrgWordmark org={org} height={30} className="max-w-[170px]" />
-            <div className="mt-2 flex items-center gap-1 text-[12.5px] text-subtle">
-              with <BobLogo height={11} />
-            </div>
-          </div>
+          <>
+            <OrgLogo org={org} size={30} />
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-[13.5px] font-semibold tracking-[-0.01em] text-heading">{org.shortName || org.name}</span>
+              <span className="mt-0.5 flex items-center gap-1 text-[11.5px] text-subtle">
+                with <BobLogo height={9} tone="dark" />
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+              className="grid size-7 place-items-center rounded-md text-subtle transition hover:bg-surface-3 hover:text-foreground"
+            >
+              <PanelLeftClose className="size-4" />
+            </button>
+          </>
         )}
       </div>
-      <nav className={cn("scrollbar-none flex-1 overflow-y-auto", collapsed ? "px-2.5" : "px-3")} aria-label="Main">
+      <nav className={cn("scrollbar-none flex-1 overflow-y-auto py-3", collapsed ? "px-2" : "px-2.5")} aria-label="Main">
         {NAV_GROUPS.map((g, gi) => {
           const items = g.items.filter((i) => !i.perm || can(i.perm));
           if (!items.length) return null;
           return (
-            <div key={gi} className={cn(gi > 0 && "mt-5")}>
-              {g.label && !collapsed ? <div className="mb-1.5 px-3 text-[11px] font-medium uppercase tracking-[0.08em] text-white/35">{g.label}</div> : null}
-              {g.label && collapsed ? <div className="mx-auto mb-2 h-px w-6 bg-white/10" /> : null}
-              <div className="space-y-0.5">
+            <div key={gi} className={cn(gi > 0 && "mt-4")}>
+              {g.label && !collapsed ? <div className="mb-1 px-2.5 text-[11.5px] font-medium text-subtle">{g.label}</div> : null}
+              {g.label && collapsed ? <div className="mx-auto mb-2 h-px w-5 bg-line-strong" /> : null}
+              <div className="space-y-px">
                 {items.map((item) => (
                   <SideLink key={item.href} item={item} active={isActive(pathname, item.href)} count={item.badge ? counts[item.badge] : 0} collapsed={collapsed} />
                 ))}
@@ -212,48 +225,49 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
             </div>
           );
         })}
-        <div className="mt-5 space-y-0.5">
+        <div className="mt-4 space-y-px">
           <SideLink item={{ href: "/settings", label: "Settings", icon: Settings }} active={isActive(pathname, "/settings")} count={0} collapsed={collapsed} />
         </div>
       </nav>
-      <div className={cn("border-t border-white/[0.06] pt-3", collapsed ? "px-2.5 pb-4" : "px-3 pb-5")}>
+      <div className={cn("shrink-0 border-t border-line py-2.5", collapsed ? "px-2" : "px-2.5")}>
         <UserMenu collapsed={collapsed} />
-        <div className={cn("mt-4 flex items-center", collapsed ? "flex-col gap-3" : "justify-between pl-3 pr-1")}>
-          {collapsed ? <BobLogo height={13} /> : <BobLogo height={15} byline />}
+        {collapsed ? (
           <button
             type="button"
             onClick={onToggle}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="grid size-8 place-items-center rounded-lg text-white/45 transition hover:bg-white/[0.06] hover:text-white"
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
+            className="mx-auto mt-2 grid size-8 place-items-center rounded-md text-subtle transition hover:bg-surface-3 hover:text-foreground"
           >
-            {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+            <PanelLeftOpen className="size-4" />
           </button>
-        </div>
+        ) : null}
       </div>
     </aside>
   );
 }
 
 function SideLink({ item, active, count, collapsed }: { item: NavItem; active: boolean; count: number; collapsed: boolean }) {
+  const bob = item.href === "/assistant";
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
       title={collapsed ? item.label : undefined}
       className={cn(
-        "group relative flex h-9 items-center rounded-lg text-[14px] font-medium transition-colors duration-150",
-        collapsed ? "justify-center" : "gap-3 px-3",
-        active ? "bg-copper-500 text-white shadow-[0_1px_2px_rgb(0_0_0/0.3),inset_0_1px_0_rgb(255_255_255/0.15)]" : "text-white/65 hover:bg-white/[0.06] hover:text-white",
+        "group relative flex h-8 items-center rounded-md text-[13.5px] transition-colors duration-100",
+        collapsed ? "justify-center" : "gap-2.5 px-2.5",
+        active ? "bg-card font-semibold text-heading shadow-[0_0_0_1px_rgb(24_24_27/0.07),0_1px_2px_rgb(24_24_27/0.05)]" : "font-medium text-foreground/75 hover:bg-surface-3 hover:text-heading",
       )}
     >
-      <item.icon className={cn("size-[18px] shrink-0", active ? "text-white" : "text-white/55 group-hover:text-white/90")} strokeWidth={1.8} />
+      {active && !collapsed ? <span aria-hidden className="absolute inset-y-[7px] -left-2.5 w-[3px] rounded-r-full bg-copper-500" /> : null}
+      <item.icon className={cn("size-[17px] shrink-0", active || bob ? "text-copper-600" : "text-foreground/50 group-hover:text-foreground/80")} strokeWidth={1.75} />
       {collapsed ? null : <span className="flex-1 truncate">{item.label}</span>}
       {count ? (
         collapsed ? (
-          <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-copper-400 ring-2 ring-sidebar" aria-label={`${count} waiting`} />
+          <span className="absolute right-1 top-1 size-1.5 rounded-full bg-copper-500" aria-label={`${count} waiting`} />
         ) : (
-          <span className={cn("tabular grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11.5px] font-semibold", active ? "bg-white/25 text-white" : "bg-white/10 text-white/80")}>{count}</span>
+          <span className="tabular text-[12px] font-medium text-subtle">{count}</span>
         )
       ) : null}
     </Link>
@@ -288,7 +302,7 @@ export function Avatar({ name, size = 32, className }: { name: string; size?: nu
   return (
     <span
       aria-hidden
-      className={cn("grid shrink-0 place-items-center rounded-full bg-gradient-to-b from-[#3a3a40] to-[#2a2a2f] font-semibold text-white ring-1 ring-white/10", className)}
+      className={cn("grid shrink-0 place-items-center rounded-full bg-[#2b2b30] font-semibold text-white", className)}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}
     >
       {initials}
@@ -319,38 +333,38 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className={cn("flex w-full items-center rounded-lg text-left transition hover:bg-white/[0.06]", collapsed ? "justify-center p-1.5" : "gap-3 px-2 py-2")}
+        className={cn("flex w-full items-center rounded-md text-left transition hover:bg-surface-3", collapsed ? "justify-center p-1" : "gap-2.5 px-1.5 py-1.5")}
       >
-        <Avatar name={user.name} size={32} />
+        <Avatar name={user.name} size={28} />
         {collapsed ? null : (
           <>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13.5px] font-medium text-white">{user.name}</span>
-              <span className="block truncate text-[12px] text-white/45">{ROLE_LABEL[user.role]}</span>
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-[13px] font-semibold text-heading">{user.name}</span>
+              <span className="block truncate text-[11.5px] text-subtle">{ROLE_LABEL[user.role]}</span>
             </span>
-            <ChevronsUpDown className="size-4 text-white/40" />
+            <ChevronsUpDown className="size-3.5 text-subtle" />
           </>
         )}
       </button>
       {open ? (
-        <div role="menu" className={cn("absolute bottom-full z-50 mb-2 w-[248px] rounded-xl border border-white/10 bg-[#232326] p-1.5 shadow-[0_16px_40px_-8px_rgb(0_0_0/0.6)]", collapsed ? "left-0" : "left-0 right-0 w-auto")}>
+        <div role="menu" className={cn("absolute bottom-full z-50 mb-2 w-[248px] rounded-lg border border-line-strong bg-popover p-1 shadow-[var(--shadow-lg)]", collapsed ? "left-0" : "left-0 right-0 w-auto")}>
           <div className="px-2.5 pb-2 pt-1.5">
-            <div className="truncate text-[13.5px] font-medium text-white">{user.name}</div>
-            <div className="truncate text-[12px] text-white/50">{user.email}</div>
+            <div className="truncate text-[13px] font-medium text-heading">{user.name}</div>
+            <div className="truncate text-[12px] text-subtle">{user.email}</div>
           </div>
           {orgs.length > 1 ? (
             <>
-              <div className="my-1 h-px bg-white/[0.07]" />
-              <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-white/35">Business</div>
+              <div className="my-1 h-px bg-line" />
+              <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-subtle">Business</div>
               {orgs.map((o) => (
                 <button
                   key={o.id}
                   role="menuitemradio"
                   aria-checked={o.id === org.id}
                   onClick={() => void switchOrg(o.id)}
-                  className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13.5px] text-white/80 hover:bg-white/[0.07] hover:text-white"
+                  className="flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] text-foreground/85 hover:bg-surface-3 hover:text-heading"
                 >
-                  <Building2 className="size-4 text-white/45" />
+                  <Building2 className="size-4 text-subtle" />
                   <span className="flex-1 truncate">
                     {o.name}
                     {o.isDemo ? " (demo)" : ""}
@@ -360,17 +374,17 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
               ))}
             </>
           ) : null}
-          <div className="my-1 h-px bg-white/[0.07]" />
-          <Link role="menuitem" href="/settings" onClick={() => setOpen(false)} className="flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] text-white/80 hover:bg-white/[0.07] hover:text-white">
-            <Settings className="size-4 text-white/45" /> Settings
+          <div className="my-1 h-px bg-line" />
+          <Link role="menuitem" href="/settings" onClick={() => setOpen(false)} className="flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] text-foreground/85 hover:bg-surface-3 hover:text-heading">
+            <Settings className="size-4 text-subtle" /> Settings
           </Link>
           {data?.mode.platformAdmin ? (
-            <Link role="menuitem" href="/cresaro" onClick={() => setOpen(false)} className="flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] text-white/80 hover:bg-white/[0.07] hover:text-white">
-              <Gauge className="size-4 text-white/45" /> Cresaro admin
+            <Link role="menuitem" href="/cresaro" onClick={() => setOpen(false)} className="flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] text-foreground/85 hover:bg-surface-3 hover:text-heading">
+              <Gauge className="size-4 text-subtle" /> Cresaro admin
             </Link>
           ) : null}
-          <button role="menuitem" onClick={() => void signOut()} className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13.5px] text-white/80 hover:bg-white/[0.07] hover:text-white">
-            <LogOut className="size-4 text-white/45" /> Sign out
+          <button role="menuitem" onClick={() => void signOut()} className="flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] text-foreground/85 hover:bg-surface-3 hover:text-heading">
+            <LogOut className="size-4 text-subtle" /> Sign out
           </button>
         </div>
       ) : null}
@@ -572,9 +586,9 @@ function DesktopAskBob() {
       type="button"
       onClick={() => ui.setAssistantOpen(true)}
       aria-label={ui.pageContext ? `Ask Bob about ${ui.pageContext.label}` : "Ask Bob"}
-      className="absolute bottom-6 right-6 z-30 hidden h-12 items-center gap-2.5 rounded-full bg-sidebar pl-2 pr-5 text-[14.5px] font-semibold text-white shadow-[0_10px_28px_-8px_rgb(0_0_0/0.45),0_0_0_1px_rgb(255_255_255/0.06)_inset] transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none lg:flex"
+      className="absolute bottom-5 right-5 z-30 hidden h-11 items-center gap-2 rounded-full bg-sidebar pl-1.5 pr-4 text-[14px] font-semibold text-white shadow-[0_8px_20px_-8px_rgb(0_0_0/0.4)] transition hover:bg-[#232326] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none lg:flex"
     >
-      <span className="grid size-8 place-items-center rounded-full bg-gradient-to-b from-[#f9a25c] to-[#ea7424]">
+      <span className="grid size-8 place-items-center rounded-full bg-copper-500">
         <Mic className="size-4" aria-hidden />
       </span>
       Ask Bob

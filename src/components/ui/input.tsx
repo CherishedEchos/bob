@@ -3,11 +3,11 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
-  "w-full rounded-[10px] bg-field px-3.5 text-[16px] text-foreground shadow-[var(--shadow-xs)] ring-1 ring-input placeholder:text-subtle outline-none transition hover:ring-foreground/25 focus:ring-2 focus:ring-copper-500/70 lg:text-[14.5px] disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:ring-destructive/70";
+  "w-full rounded-lg bg-field px-3 text-[16px] text-foreground shadow-[var(--shadow-xs)] ring-1 ring-input placeholder:text-subtle outline-none transition hover:ring-foreground/25 focus:ring-2 focus:ring-copper-500/60 lg:text-[14px] disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:ring-destructive/70";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (
-    <input ref={ref} className={cn(fieldBase, "h-11 lg:h-10", className)} {...props} />
+    <input ref={ref} className={cn(fieldBase, "h-11 lg:h-9", className)} {...props} />
   ),
 );
 Input.displayName = "Input";
@@ -27,7 +27,7 @@ Textarea.displayName = "Textarea";
 export const NativeSelect = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
   ({ className, children, ...props }, ref) => (
     <span className="relative block w-full min-w-0">
-      <select ref={ref} className={cn(fieldBase, "h-11 cursor-pointer lg:h-10 appearance-none pr-10 disabled:cursor-not-allowed [&>option]:bg-card", className)} {...props}>
+      <select ref={ref} className={cn(fieldBase, "h-11 cursor-pointer lg:h-9 appearance-none pr-9 disabled:cursor-not-allowed [&>option]:bg-card", className)} {...props}>
         {children}
       </select>
       <ChevronDown aria-hidden className={cn("pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground", props.disabled && "opacity-40")} />
@@ -37,7 +37,7 @@ export const NativeSelect = React.forwardRef<HTMLSelectElement, React.SelectHTML
 NativeSelect.displayName = "NativeSelect";
 
 export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
-  return <label className={cn("mb-1.5 block text-[13.5px] font-medium text-foreground/85", className)} {...props} />;
+  return <label className={cn("mb-1.5 block text-[13px] font-medium text-foreground/85", className)} {...props} />;
 }
 
 export function Field({

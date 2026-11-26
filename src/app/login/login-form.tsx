@@ -137,7 +137,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
             <p className="mt-1.5 text-[15.5px] text-[#6B6B70]">Sign in to your workspace.</p>
 
             {error ? (
-              <div role="alert" className="mt-6 rounded-[10px] border border-[#F1C9C4] bg-[#FDF2F1] px-3.5 py-3 text-[14.5px] leading-snug text-[#9A2B22]">
+              <div role="alert" className="mt-6 rounded-lg border border-[#F1C9C4] bg-[#FDF2F1] px-3.5 py-3 text-[14.5px] leading-snug text-[#9A2B22]">
                 {error}
               </div>
             ) : null}
@@ -164,7 +164,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
                   aria-describedby={fieldErrors.email ? "l-email-error" : undefined}
                   placeholder="you@company.co.uk"
                   className={cn(
-                    "mt-1.5 block h-12 w-full rounded-[10px] border bg-white px-3.5 text-[16px] text-[#18181B] outline-none transition placeholder:text-[#A1A1A6]",
+                    "mt-1.5 block h-12 w-full rounded-lg border bg-white px-3.5 text-[16px] text-[#18181B] outline-none transition placeholder:text-[#A1A1A6]",
                     "focus:border-[#E4752F] focus:ring-[3px] focus:ring-[#E4752F]/15",
                     fieldErrors.email ? "border-[#D6453D]" : "border-[#DCDAD4] hover:border-[#C7C4BC]",
                   )}
@@ -194,7 +194,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
                     aria-invalid={!!fieldErrors.password}
                     aria-describedby={fieldErrors.password ? "l-pass-error" : undefined}
                     className={cn(
-                      "block h-12 w-full rounded-[10px] border bg-white pl-3.5 pr-12 text-[16px] text-[#18181B] outline-none transition",
+                      "block h-12 w-full rounded-lg border bg-white pl-3.5 pr-12 text-[16px] text-[#18181B] outline-none transition",
                       "focus:border-[#E4752F] focus:ring-[3px] focus:ring-[#E4752F]/15",
                       fieldErrors.password ? "border-[#D6453D]" : "border-[#DCDAD4] hover:border-[#C7C4BC]",
                     )}
@@ -220,7 +220,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
               <button
                 type="submit"
                 disabled={!!busy}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-[10px] bg-[#E4752F] text-[16px] font-semibold text-white shadow-[0_1px_2px_rgb(0_0_0/0.12),inset_0_1px_0_rgb(255_255_255/0.18)] transition hover:bg-[#D9682A] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#E4752F]/35 active:bg-[#C95E24] disabled:cursor-default disabled:opacity-70"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#E4752F] text-[16px] font-semibold text-white shadow-[0_1px_2px_rgb(0_0_0/0.12),inset_0_1px_0_rgb(255_255_255/0.18)] transition hover:bg-[#D9682A] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#E4752F]/35 active:bg-[#C95E24] disabled:cursor-default disabled:opacity-70"
               >
                 {submitting ? <Loader2 className="size-[18px] animate-spin" aria-hidden /> : null}
                 {submitting ? "Signing in…" : "Sign in"}
@@ -239,7 +239,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
                   type="button"
                   disabled={!!busy}
                   onClick={() => void post({ email: primary.email, password: demoPassword }, true)}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-[#DCDAD4] bg-white text-[15px] font-medium text-[#2A2A2E] transition hover:border-[#C7C4BC] hover:bg-[#F6F5F1] disabled:opacity-60"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#DCDAD4] bg-white text-[15px] font-medium text-[#2A2A2E] transition hover:border-[#C7C4BC] hover:bg-[#F6F5F1] disabled:opacity-60"
                 >
                   {busy === primary.email ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
                   {busy === primary.email ? "Opening the demo workspace…" : "Try the demo"}
@@ -254,7 +254,7 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
                       {demo.map((g) => (
                         <div key={g.group}>
                           <div className="mb-1.5 text-[12px] font-medium text-[#8A8A8F]">{g.group}</div>
-                          <ul className="divide-y divide-[#ECEAE5] overflow-hidden rounded-[10px] border border-[#E7E4DE] bg-white">
+                          <ul className="divide-y divide-[#ECEAE5] overflow-hidden rounded-lg border border-[#E7E4DE] bg-white">
                             {g.accounts.map((a) => (
                               <li key={a.email}>
                                 <button
