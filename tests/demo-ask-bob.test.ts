@@ -9,7 +9,9 @@ import { Chat, ctxFor, freshDb, N93_OFFICE, N93_OWNER } from "./helpers";
 import { setClaudeClientForTests } from "@/server/bob/claude";
 import { cancelAction, approveAction } from "@/server/bob/actions";
 import { buildSnapshot } from "@/server/services/snapshot";
-import { addDays } from "@/lib/dates";
+import { addDays, weekStart } from "@/lib/dates";
+import { doubleBookings, whoIsAvailable } from "@/server/bob/extra-answers";
+import { runReadTool } from "@/server/bob/tools";
 import { todayKey } from "@/lib/utils";
 
 type Step = () => unknown;
@@ -69,5 +71,69 @@ describe("Saturday demo: Ask Bob", () => {
     cancelAction(luke.ctx, id);
     expect((await approveAction(luke.ctx, id)).status).toBe("cancelled");
     expect(buildSnapshot(luke.ctx).tasks.some((t) => t.title === "Order more oak")).toBe(false);
+  });
+
+});
+
+describe("Saturday demo: intelligent scheduling from the diary", () => {
+  const mon = () => weekStart(todayKey());
+
+  it("“Have I double-booked anyone this week?” finds Liam's Thursday clash; next week finds Callum's", () => {
+    const luke = ctxFor(N93_OWNER);
+    const thisWeek = doubleBookings(luke, "have i double-booked anyone this week?");
+    expect(thisWeek.text).toMatch(/^One clash this week\. Liam Carter on /);
+    expect(thisWeek.text).toMatch(/Kitchen refit .*Kitchen renovation|Kitchen renovation .*Kitchen refit/);
+    const next = runReadTool(luke, "find_double_bookings", { from: addDays(mon(), 7), to: addDays(mon(), 13) });
+    expect(next.ok).toBe(true);
+    const clashes = (next.data as { clashes: { person: string; kind: string }[] }).clashes;
+    expect(clashes.some((c) => c.person === "Callum Price" && c.kind === "booked on two jobs at once")).toBe(true);
+    expect(clashes.some((c) => c.person === "Callum Price" && c.kind === "booked while on holiday")).toBe(true);
+  });
+
+  it("“Who's free next Tuesday?” answers from the diary (Luke and Ryan are bookable too)", () => {
+    const a = whoIsAvailable(ctxFor(N93_OWNER), "who's free next tuesday?");
+    expect(a.text).toMatch(/^Free /);
+    expect(a.text).toContain("Ryan");
+    expect(a.text).toMatch(/Booked: .*Callum Price/);
+  });
+
+  it("“Book Ryan on the staircase job next Monday” → Book work preview with Ryan → approved", async () => {
+    const day = addDays(mon(), 7);
+    script([call("create_booking", { jobId: "n93_job_stairs_horley", date: day, people: ["Ryan"] }), say("Ryan on the staircase next Monday — confirm?")]);
+    const luke = new Chat(ctxFor(N93_OWNER));
+    await luke.say("Book Ryan on the staircase job next Monday");
+    expect(luke.action?.title).toBe("Book work");
+    expect(JSON.stringify(luke.action)).toContain("Ryan");
+    expect((await luke.approve()).status).toBe("executed");
+    expect(buildSnapshot(ctxFor(N93_OFFICE)).bookings.some((b) => b.jobId === "n93_job_stairs_horley" && b.date === day && b.personIds.includes("n93_per_ryan"))).toBe(true);
+  });
+
+  it("“Move Liam onto the Copthorne kitchen on Friday” → book him there and take him off Friday's other job, both previewed", async () => {
+    const fri = addDays(mon(), 11);
+    script([
+      call("create_booking", { jobId: "n93_job_kitchen_copthorne", date: fri, startTime: "08:00", endTime: "12:00", people: ["Liam"] }),
+      call("update_booking", { bookingId: "n93_bk_patel_handover", removePeople: ["Liam"] }),
+      say("Liam onto the Copthorne kitchen on Friday and off the Patels' handover — confirm both."),
+    ]);
+    const luke = new Chat(ctxFor(N93_OWNER));
+    await luke.say("Move Liam onto the Copthorne kitchen next Friday");
+    const cards = luke.last.filter((m) => m.action).map((m) => m.action!);
+    expect(cards.map((c) => c.title)).toEqual(["Book work", "Move booking"]);
+    expect(JSON.stringify(cards[1])).toMatch(/Liam Carter → nobody/);
+    for (const c of cards) expect((await approveAction(luke.ctx, c.id)).status).toBe("executed");
+    const s = buildSnapshot(ctxFor(N93_OFFICE));
+    expect(s.bookings.some((b) => b.jobId === "n93_job_kitchen_copthorne" && b.date === fri && b.personIds.includes("n93_per_liam"))).toBe(true);
+    expect(s.bookings.find((b) => b.id === "n93_bk_patel_handover")!.personIds).toEqual([]);
+  });
+
+  it("“Put Callum on holiday next Thursday” → Book holiday preview, which warns about his booking that day", async () => {
+    const thu = addDays(mon(), 10);
+    script([call("book_holiday", { person: "Callum", startDate: thu, endDate: thu }), say("Callum off next Thursday — confirm?")]);
+    const luke = new Chat(ctxFor(N93_OWNER));
+    await luke.say("Put Callum on holiday next Thursday");
+    expect(luke.action?.status).toBe("pending");
+    expect(JSON.stringify(luke.action)).toMatch(/Callum Price/);
+    expect((await luke.approve()).status).toBe("executed");
+    expect(buildSnapshot(ctxFor(N93_OFFICE)).absences.some((a) => a.personId === "n93_per_callum" && a.startDate === thu && a.status === "approved")).toBe(true);
   });
 });

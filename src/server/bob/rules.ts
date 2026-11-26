@@ -29,7 +29,7 @@ import { requestAction } from "./actions";
 import { runReadTool } from "./tools";
 import { NEEDS_ORDERING, WHO_IS_ON, needsOrdering, whoIsOn } from "./schedule-answers";
 import { friendlyError } from "./friendly";
-import { HANDOVER_REQUEST, OUTSTANDING_ON, jobOutstanding, MERCHANTS_TO_CONTACT, NEEDS_QUOTING, ON_HOLIDAY, PRIORITISE, READY_TO_INVOICE, WHO_IS_AVAILABLE, handoverHelp, merchantsToContact, needsQuoting, onHoliday, personPriorities, readyToInvoice, whoIsAvailable } from "./extra-answers";
+import { HANDOVER_REQUEST, OUTSTANDING_ON, jobOutstanding, MERCHANTS_TO_CONTACT, NEEDS_QUOTING, ON_HOLIDAY, PRIORITISE, READY_TO_INVOICE, WHO_IS_AVAILABLE, handoverHelp, merchantsToContact, DOUBLE_BOOKED, doubleBookings, needsQuoting, onHoliday, personPriorities, readyToInvoice, whoIsAvailable } from "./extra-answers";
 import { mentionScore, resolveCustomers, resolveEnquiries, resolveJobs } from "./resolve";
 import {
   cleanUtterance, detectMethod, findAmounts, isAffirmative, parseDeposit, parseDueDate,
@@ -431,6 +431,7 @@ async function route(t: Turn, text: string, lower: string) {
     if (!r.jobs.length && t.state.focus?.jobId && /\b(it|that|this)\b/.test(lower)) return sayA(jobOutstanding(t.ctx, t.state.focus.jobId));
     return runFlow(t, { type: "job_lookup", text });
   }
+  if (DOUBLE_BOOKED.test(lower) && /\b(anyone|anybody|someone|any|who)\b/.test(lower)) return sayA(doubleBookings(t.ctx, lower));
   if (WHO_IS_AVAILABLE.test(lower)) return sayA(whoIsAvailable(t.ctx, lower));
   if (READY_TO_INVOICE.test(lower)) return sayA(readyToInvoice(t.ctx));
   if (MERCHANTS_TO_CONTACT.test(lower)) return sayA(merchantsToContact(t.ctx));

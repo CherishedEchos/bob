@@ -210,8 +210,8 @@ describe("Flow 8: a subcontractor can't reach anything else", () => {
     const jobIds = new Set(mine.bookings.map((b) => b.job.id));
     expect(jobIds.size).toBeGreaterThan(0);
     for (const b of mine.bookings) expect(b.withPeople).not.toContain("Sam Okoro");
-    // Sam is only booked on the extension: no kitchen jobs, no money.
-    expect([...jobIds].every((id) => id === "n93_job_extension_copthorne")).toBe(true);
+    // Sam is only booked on the extension and the loft: no kitchen jobs, no money.
+    expect([...jobIds].every((id) => ["n93_job_extension_copthorne", "n93_job_loft_eg"].includes(id))).toBe(true);
     expect(JSON.stringify(mine)).not.toMatch(/quotedValue|£|amount/);
     // Writes through the company services are refused.
     expect(R.createJob(sam, { customerName: "Hack", title: "Hack job", location: "X", quotedValue: 1 })).toMatchObject({ ok: false, code: "forbidden" });

@@ -32,6 +32,7 @@ import { listVariations } from "@/server/services/variations";
 import { listUpdates } from "@/server/services/updates";
 import { listReports, listReportVersions } from "@/server/services/handover-reports";
 import { morningBriefing } from "./briefing";
+import { findConflicts } from "@/lib/diary";
 import { reviewRequestStatus } from "@/server/services/followups";
 import { resolveJobs } from "./resolve";
 import type { ReadTool } from "./tools";
@@ -133,6 +134,33 @@ export const workspaceReadTools: ReadTool<unknown>[] = [
       return { data: { from: a.from, to, days, people_off: off, total_bookings: days.reduce((s, d) => s + d.bookings.length, 0) } };
     },
   } as ReadTool<{ from: string }> as ReadTool<unknown>,
+  {
+    kind: "read",
+    name: "find_double_bookings",
+    description:
+      "Clashes in the diary for a date range: anyone booked on two overlapping jobs, or booked while on approved holiday/unavailable. Use for 'have I double-booked anyone this week?', 'any clashes next week?'. Default range: this week (Monday–Sunday).",
+    permission: "schedule.read",
+    schema: z.object({ from: dateKey.optional(), to: dateKey.optional() }),
+    run(ctx, a: { from?: string; to?: string }) {
+      const mon = weekStart(todayKey());
+      const from = a.from ?? mon;
+      const to = a.to && a.to >= from ? a.to : a.from ? a.from : addDays(mon, 6);
+      const { byId, jobs } = names(ctx);
+      const bookings = listBookings(ctx);
+      const absences = listAbsences(ctx);
+      const found = findConflicts(bookings, absences, from, to).map((c) => {
+        const bs = c.bookingIds.map((id) => bookings.find((b) => b.id === id)).filter(Boolean) as Booking[];
+        const leave = c.absenceId ? absences.find((x) => x.id === c.absenceId) : undefined;
+        return {
+          person: byId.get(c.personId)?.name ?? "Someone",
+          date: c.day,
+          kind: c.kind === "double" ? "booked on two jobs at once" : `booked while on ${leave ? ABSENCE_LABEL[leave.kind].toLowerCase() : "leave"}`,
+          bookings: bs.map((b) => bookingOut(b, c.day, jobs, byId)),
+        };
+      });
+      return { data: { from, to, clashes: found, count: found.length } };
+    },
+  } as ReadTool<{ from?: string }> as ReadTool<unknown>,
   {
     kind: "read",
     name: "get_team_availability",

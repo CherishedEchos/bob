@@ -125,6 +125,26 @@ export function whoIsAvailable(ctx: Ctx, lower: string): Answer {
   return { text: parts.join(" "), chips: [{ kind: "link", label: "Open diary", href: "/week" }] };
 }
 
+export const DOUBLE_BOOKED = /\b(double[- ]?book(ed|ing)?|clash(es|ing)?|overlap(s|ping)?)\b/;
+type Clashes = { from: string; to: string; clashes: { person: string; date: string; kind: string; bookings: { job: string; time: string }[] }[] };
+/** "Have I double-booked anyone this week?" — clashes from the diary, this week or next. */
+export function doubleBookings(ctx: Ctx, lower: string): Answer {
+  if (!can(ctx.role, "schedule.read")) return { text: "Your account can't see the company schedule." };
+  const mon = weekStart(todayKey());
+  const next = /\bnext week\b/.test(lower);
+  const from = next ? addDays(mon, 7) : mon;
+  const r = runReadTool(ctx, "find_double_bookings", { from, to: addDays(from, 6) });
+  if (!r.ok) return { text: r.error ?? "Couldn't look that up." };
+  const { clashes } = r.data as Clashes;
+  const when = next ? "next week" : "this week";
+  if (!clashes.length) return { text: `No clashes ${when} — nobody is double-booked or booked while off.`, chips: [{ kind: "link", label: "Open diary", href: "/week?view=team" }] };
+  const lines = clashes.slice(0, 4).map((c) => `${c.person} on ${formatDayLong(c.date)}: ${c.bookings.map((b) => `${b.job.split(" — ")[1] ?? b.job} (${b.time})`).join(" and ")}${c.kind.startsWith("booked while") ? ` — ${c.kind.replace("booked while ", "")}` : ""}`);
+  return {
+    text: `${clashes.length === 1 ? "One clash" : `${clashes.length} clashes`} ${when}. ${lines.join(". ")}.`,
+    chips: [{ kind: "link", label: "Open team view", href: `/week?view=team${next ? `&d=${from}` : ""}` }],
+  };
+}
+
 type Merch = { merchants: { name: string; phone?: string; items_to_order: { item: string; needed_by?: string }[] }[]; items_with_no_merchant: { item: string }[] };
 export function merchantsToContact(ctx: Ctx): Answer {
   const r = runReadTool(ctx, "list_merchants", { only_with_items_to_order: true });
