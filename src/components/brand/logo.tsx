@@ -78,8 +78,8 @@ export function BobWordmark({ className, org, compact }: { className?: string; o
  * The business's own wordmark on a dark surface (sidebar, Ask Bob, My work).
  * Falls back to the round logo and short name when no wordmark is set.
  */
-export function OrgWordmark({ org, height = 32, className }: { org: Pick<OrgConfig, "logoUrl" | "name" | "shortName" | "wordmark">; height?: number; className?: string }) {
-  const src = org.wordmark?.onDark;
+export function OrgWordmark({ org, height = 32, className, tone = "dark" }: { org: Pick<OrgConfig, "logoUrl" | "name" | "shortName" | "wordmark">; height?: number; className?: string; tone?: "dark" | "light" }) {
+  const src = tone === "light" ? (org.wordmark?.onLight ?? org.wordmark?.onDark) : org.wordmark?.onDark;
   if (!src)
     return (
       <span className={cn("flex min-w-0 items-center gap-2.5", className)}>
@@ -100,7 +100,7 @@ export function OrgLogo({ org, size = 36, className }: { org: Pick<OrgConfig, "l
         width={size}
         height={size}
         priority
-        className={cn("shrink-0 rounded-full shadow-[0_0_0_1px_rgb(255_255_255/0.08),0_4px_18px_-4px_rgb(236_122_46/0.45)]", className)}
+        className={cn("shrink-0 rounded-full ring-1 ring-black/[0.06]", className)}
       />
     );
   const initials = org.shortName

@@ -55,15 +55,15 @@ export function FilterChips<T extends string>({
             aria-checked={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              "flex h-10 shrink-0 items-center gap-1.5 rounded-lg px-3.5 text-[14px] font-semibold ring-1 transition active:bg-surface-3",
+              "flex h-10 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[14px] font-medium ring-1 transition-colors active:bg-surface-3 lg:h-9",
               active
-                ? "bg-selected text-accent-fg ring-copper-500/40"
-                : "bg-card text-muted-foreground ring-line hover:bg-surface-2 hover:text-foreground",
+                ? "bg-[#1a1a1a] text-white ring-[#1a1a1a]"
+                : "bg-card text-muted-foreground ring-line-strong hover:bg-surface-2 hover:text-foreground",
             )}
           >
             {o.label}
             {typeof o.count === "number" ? (
-              <span className={cn("tabular rounded-md px-1.5 text-[12px]", active ? "bg-copper-500/20 text-accent-fg" : "bg-surface-3")}>
+              <span className={cn("tabular text-[12.5px]", active ? "text-white/60" : "text-subtle")}>
                 {o.count}
               </span>
             ) : null}
@@ -96,7 +96,7 @@ export function MoneyRow({ label, value, strong, tone }: { label: string; value:
 export function ProgressBar({ value, className }: { value: number; className?: string }) {
   return (
     <div className={cn("h-1.5 overflow-hidden rounded-full bg-surface-3", className)} role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
-      <div className="h-full rounded-full bg-gradient-to-r from-copper-600 to-copper-400" style={{ width: `${value}%` }} />
+      <div className="h-full rounded-full bg-success" style={{ width: `${value}%` }} />
     </div>
   );
 }
@@ -139,11 +139,11 @@ export function ListPanel({
 
 /** Quiet, tappable amber action used at the end of a row ("Draft reply", "Chase deposit"). */
 export const rowActionClass =
-  "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] bg-copper-500/[0.13] px-3.5 text-[14.5px] font-semibold text-accent-fg transition hover:bg-copper-500/[0.22] active:bg-copper-500/[0.28] disabled:opacity-50";
+  "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-card px-3.5 text-[14px] font-medium text-foreground ring-1 ring-line-strong transition-colors hover:bg-raised-hover active:bg-surface-3 disabled:opacity-50 lg:h-9";
 
 /** Text link-button for panel headers/footers ("Show all 12", "View all"). */
 export const textActionClass =
-  "inline-flex h-10 items-center gap-1 rounded-md px-1 text-[14.5px] font-semibold text-accent-fg transition hover:text-copper-700";
+  "inline-flex h-10 items-center gap-1 rounded-md px-1 text-[14px] font-medium text-accent-fg transition-colors hover:text-copper-700";
 
 /**
  * One record in a list: leading mark, name, a short detail that may wrap, an
@@ -207,16 +207,16 @@ export function ListRow({
 
 /** Primary page action ("Add new…", "Create invoice draft"): orange, compact. */
 export const pageActionClass =
-  "flex h-11 shrink-0 items-center gap-1.5 rounded-[10px] bg-primary px-4 text-[15px] font-semibold tracking-[-0.005em] text-white shadow-[0_1px_2px_rgb(180_82_15/0.25),inset_0_1px_0_rgb(255_255_255/0.18)] transition hover:bg-copper-600 active:scale-[0.98] active:bg-copper-700 lg:h-10 lg:text-[14px]";
+  "flex h-11 shrink-0 items-center gap-1.5 rounded-lg bg-primary px-4 text-[15px] font-medium tracking-[-0.006em] text-white shadow-[0_1px_1px_rgb(180_82_15/0.18)] transition-colors hover:bg-copper-600 active:bg-copper-700 lg:h-9 lg:px-3.5 lg:text-[14px]";
 
 /** Secondary page action: white, bordered. */
 export const pageSecondaryClass =
-  "flex h-11 shrink-0 items-center gap-1.5 rounded-[10px] bg-card px-4 text-[15px] font-semibold tracking-[-0.005em] text-foreground shadow-[var(--shadow-xs)] ring-1 ring-line-strong transition hover:bg-raised-hover active:bg-surface-3 lg:h-10 lg:text-[14px]";
+  "flex h-11 shrink-0 items-center gap-1.5 rounded-lg bg-card px-4 text-[15px] font-medium tracking-[-0.006em] text-foreground ring-1 ring-line-strong transition-colors hover:bg-raised-hover active:bg-surface-3 lg:h-9 lg:px-3.5 lg:text-[14px]";
 
 /** One page header everywhere: strong title, a quiet summary line, actions on the right. */
 export function PageHeader({ title, subtitle, actions, className }: { title: React.ReactNode; subtitle?: React.ReactNode; actions?: React.ReactNode; className?: string }) {
   return (
-    <header className={cn("grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 lg:items-end", className)}>
+    <header className={cn("grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 lg:items-end", className)}>
       <h1 className="t-page min-w-0 lg:col-start-1 lg:row-start-1">{title}</h1>
       {actions ? <div className="col-start-2 row-start-1 flex shrink-0 flex-wrap items-center justify-end gap-2 lg:row-span-2">{actions}</div> : null}
       {subtitle ? <p className="col-span-2 text-[13.5px] text-subtle lg:col-span-1 lg:text-[14px]">{subtitle}</p> : null}
@@ -232,14 +232,14 @@ export function StatCard({ label, value, sub, tone, accent, onClick, active }: {
     <Comp
       {...(onClick ? { type: "button" as const, onClick, "aria-pressed": active } : {})}
       className={cn(
-        "relative flex min-w-0 flex-col rounded-2xl bg-card px-4 py-3.5 text-left shadow-[var(--shadow-xs)] ring-1 ring-line transition sm:px-5 sm:py-4",
-        onClick && "hover:shadow-[var(--shadow-md)]",
-        active && "ring-2 ring-copper-500/60",
+        "relative flex min-w-0 flex-col rounded-2xl bg-card px-4 py-3.5 text-left ring-1 ring-line transition-colors sm:px-5 sm:py-4",
+        onClick && "hover:ring-line-strong",
+        active && "ring-1 ring-foreground/40",
         accent && "bg-sidebar text-white ring-0",
       )}
     >
       <span className={cn("text-[12px] font-medium leading-tight sm:text-[12.5px]", accent ? "text-white/60" : "text-subtle")}>{label}</span>
-      <span className={cn("mt-1 truncate text-[22px] font-semibold tabular leading-tight tracking-[-0.025em] sm:text-[26px]", accent ? "text-white" : toneCls)}>{value}</span>
+      <span className={cn("mt-1 truncate text-[22px] font-semibold tabular leading-tight tracking-[-0.025em] sm:text-[24px]", accent ? "text-white" : toneCls)}>{value}</span>
       {sub ? <span className={cn("mt-1 line-clamp-2 text-[12px] leading-snug sm:text-[12.5px]", accent ? "text-white/55" : "text-subtle")}>{sub}</span> : null}
     </Comp>
   );
@@ -249,7 +249,7 @@ export function StatCard({ label, value, sub, tone, accent, onClick, active }: {
 export function EmptyState({ icon: Icon, title, body, action, className, bare }: { icon: React.ComponentType<{ className?: string }>; title: string; body?: React.ReactNode; action?: React.ReactNode; className?: string; bare?: boolean }) {
   return (
     <div className={cn("flex flex-col items-center justify-center px-6 py-14 text-center", !bare && "card-surface", className)}>
-      <span className="grid size-12 place-items-center rounded-2xl bg-card text-subtle shadow-[var(--shadow-sm)] ring-1 ring-line">
+      <span className="grid size-11 place-items-center rounded-xl bg-card text-subtle ring-1 ring-line-strong">
         <Icon className="size-[22px]" />
       </span>
       <p className="mt-4 text-[15px] font-semibold text-heading">{title}</p>
@@ -360,7 +360,7 @@ export function StatusText({ tone, children, className }: { tone: "neutral" | "a
 /** Simple segmented tabs for a page's main lists (2–4 options). */
 export function Tabs<T extends string>({ label, value, onChange, options, className }: { label: string; value: T; onChange: (v: T) => void; options: { value: T; label: string; count?: number; highlight?: boolean }[]; className?: string }) {
   return (
-    <div role="tablist" aria-label={label} className={cn("scrollbar-none inline-flex min-w-0 max-w-full gap-0.5 overflow-x-auto rounded-[10px] bg-[#ededea] p-[3px]", className)}>
+    <div role="tablist" aria-label={label} className={cn("scrollbar-none inline-flex min-w-0 max-w-full gap-0.5 overflow-x-auto rounded-lg bg-[#ededea] p-[3px]", className)}>
       {options.map((o) => {
         const active = value === o.value;
         return (

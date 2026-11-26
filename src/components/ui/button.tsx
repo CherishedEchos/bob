@@ -4,14 +4,15 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-[15px] font-semibold tracking-[-0.005em] transition-all duration-150 select-none disabled:cursor-not-allowed disabled:opacity-40 disabled:saturate-50 active:scale-[0.98] lg:text-[14px] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg text-[15px] font-semibold tracking-[-0.005em] transition-all duration-150 select-none disabled:cursor-not-allowed disabled:opacity-40 disabled:saturate-50 active:scale-[0.98] lg:text-[14px] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-white shadow-[0_1px_2px_rgb(180_82_15/0.25),inset_0_1px_0_rgb(255_255_255/0.18)] hover:bg-copper-600 active:bg-copper-700",
-        secondary: "bg-card text-foreground shadow-[var(--shadow-xs)] ring-1 ring-line-strong hover:bg-raised-hover active:bg-surface-3",
-        outline: "ring-1 ring-copper-500/55 text-accent-fg hover:bg-copper-500/10 active:bg-copper-500/18",
+          "bg-primary text-white shadow-[0_1px_1px_rgb(180_82_15/0.18)] hover:bg-copper-600 active:bg-copper-700",
+        secondary: "bg-card text-foreground ring-1 ring-line-strong hover:bg-raised-hover active:bg-surface-3",
+        dark: "bg-[#1a1a1a] text-white hover:bg-black active:bg-black",
+        outline: "bg-card ring-1 ring-line-strong text-foreground hover:bg-raised-hover active:bg-surface-3",
         ghost: "text-muted-foreground hover:bg-surface-3 hover:text-foreground active:bg-surface-2",
         destructive: "bg-destructive/10 text-danger-fg ring-1 ring-destructive/35 hover:bg-destructive/15",
         success: "bg-success/10 text-good-fg ring-1 ring-success/35 hover:bg-success/15",

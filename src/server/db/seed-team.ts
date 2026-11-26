@@ -135,6 +135,21 @@ export function buildTeamScenario(orgId: string, timeZone = DEFAULT_TIME_ZONE) {
     b("patel_plumb", "kitchen_crawley", 4, null, ["10:00", "14:00"], ["priya"], "Connect sink, dishwasher and island tap."),
     b("smith_snag", "stairs_horley", 1, null, ["13:00", "15:00"], ["ellie"], "Fix the squeaky tread."),
     b("nadia_wall", "mediawall_reigate", 7, 8, null, ["callum"], "Build the media wall frame and shelves."),
+    // Next week: finishing the kitchens, second fix on the extension, and one genuine clash to sort out.
+    b("mackay_seal", "mackay_kitchen", 7, null, ["08:00", "12:00"], ["liam"], "Seal the oak worktops and walk the snag list with Sophie."),
+    b("sophie_cornice", "kitchen_copthorne", 8, 10, ["08:00", "16:30"], ["liam", "ellie"], "Cornice, pelmets and end panels."),
+    b("fletcher_skim", "extension_copthorne", 7, 8, ["08:00", "17:00"], ["sam"], "Skim the ceilings and the lantern reveal."),
+    b("smith_handrail", "stairs_horley", 8, null, ["13:00", "15:00"], ["callum"], "Refit the loose handrail bracket."),
+    b("fletcher_doors", "extension_copthorne", 9, 10, ["08:00", "16:00"], ["callum"], "Hang the internal doors and fit architrave."),
+    b("fletcher_second_fix", "extension_copthorne", 10, null, ["09:00", "13:00"], ["mark"], "Electrical second fix."),
+    b("patel_final", "kitchen_crawley", 10, null, ["09:00", "12:00"], ["priya"], "Final plumbing connections and leak test."),
+    b("patel_handover", "kitchen_crawley", 11, null, ["08:00", "12:00"], ["liam"], "Snag list and handover walk-round."),
+    b("horsham_survey", "wardrobes_horsham", 11, null, ["10:00", "11:00"], [], "Measure up the alcoves — needs someone."),
+    // The rest of the month.
+    b("mackay_wardrobes", "mackay_wardrobes", 14, 16, ["08:00", "16:30"], ["callum"], "Build and fit the alcove wardrobes."),
+    b("loft_start", "loft_eg", 15, 18, ["08:00", "16:30"], ["liam", "sam"], "Strip out, floor joists and boarding."),
+    b("horsham_fit", "wardrobes_horsham", 17, 18, ["08:00", "16:00"], ["ellie", "callum"], "Fit the wardrobes and spray the doors."),
+    b("loft_frame", "loft_eg", 21, 23, ["08:00", "16:30"], ["callum", "sam"], "Dormer framing and stud walls."),
   ];
 
   const merchantFor: Record<string, string> = { "Crawley Timber Supplies": "timber", "Sussex Builders Merchants": "sbm", "Stone & Surface Ltd": "stone" };

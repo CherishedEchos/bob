@@ -1,19 +1,20 @@
 @import "tailwindcss";
 
 /*
- * Ninety3 design tokens
- * Dark charcoal surfaces, warm copper accents, white type.
+ * Bob design tokens
+ * Warm off-white workspace, white surfaces, near-black type, hairline borders.
+ * Orange (#F38735) is reserved for key actions, the selected nav item and Bob's voice.
  * Semantic names follow shadcn/ui conventions so primitives drop in cleanly.
  */
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  /* Light workspace: cool grey canvas, white panels, charcoal type, slate meta.
-     Dark tokens live in .theme-dark (sidebar, Ask Bob, toasts, landing page). */
-  --color-background: #f7f7f5;
-  --color-foreground: #18181b;
-  --color-heading: #18181b;
+  /* Light workspace: warm off-white canvas, white panels, near-black type, muted grey meta.
+     Dark tokens live in .theme-dark (Ask Bob, the phone tab bar, toasts). */
+  --color-background: #f7f6f3;
+  --color-foreground: #1a1a1a;
+  --color-heading: #111111;
 
   /* Charcoal ramp (used by the dark scopes) */
   --color-ink-950: #0c0c0e;
@@ -26,16 +27,16 @@
 
   --color-card: #ffffff;
   --color-raised: #ffffff;
-  --color-raised-hover: #f4f4f2;
-  --color-card-foreground: #18181b;
+  --color-raised-hover: #f5f4f1;
+  --color-card-foreground: #1a1a1a;
   --color-popover: #ffffff;
-  --color-popover-foreground: #18181b;
+  --color-popover-foreground: #1a1a1a;
   /* Text fields: white and visibly editable. */
   --color-field: #ffffff;
   /* Quoted customer messages: light grey, clearly not editable. */
-  --color-message: #f4f4f2;
+  --color-message: #f5f4f1;
   /* Selected rows: pale orange tint plus a slim orange accent. */
-  --color-selected: #fef3ea;
+  --color-selected: #fdf1e7;
 
   --color-copper-50: #fef6ef;
   --color-copper-100: #fde8d6;
@@ -50,24 +51,28 @@
   --color-primary: #f38735;
   --color-brand: #f38735;
   --color-sidebar: #19191b;
+  /* Light desktop navigation */
+  --color-nav: #fbfaf8;
+  --color-nav-hover: rgb(17 17 17 / 0.045);
+  --color-nav-active: rgb(17 17 17 / 0.06);
   --color-primary-foreground: #ffffff;
-  --color-secondary: #f4f4f2;
-  --color-secondary-foreground: #18181b;
-  --color-muted: #f4f4f2;
-  --color-muted-foreground: #52525b;
-  --color-subtle: #71717a;
-  --color-accent: #f4f4f2;
-  --color-accent-foreground: #18181b;
-  --color-destructive: #d6453d;
-  --color-success: #2f9e6e;
-  --color-warning: #d4952a;
+  --color-secondary: #f5f4f1;
+  --color-secondary-foreground: #1a1a1a;
+  --color-muted: #f5f4f1;
+  --color-muted-foreground: #4b4b4f;
+  --color-subtle: #6e6e73;
+  --color-accent: #f5f4f1;
+  --color-accent-foreground: #1a1a1a;
+  --color-destructive: #d23f36;
+  --color-success: #23915f;
+  --color-warning: #d18a1c;
   --color-info: #4f6bd8;
 
   /* Semantic helpers */
-  --color-line: rgb(24 24 27 / 0.07);
-  --color-line-strong: rgb(24 24 27 / 0.13);
-  --color-surface-2: rgb(24 24 27 / 0.035);
-  --color-surface-3: rgb(24 24 27 / 0.06);
+  --color-line: #ebe9e4;
+  --color-line-strong: #dedbd4;
+  --color-surface-2: rgb(17 17 17 / 0.03);
+  --color-surface-3: rgb(17 17 17 / 0.055);
   --color-accent-fg: #b4520f;
   --color-accent-icon: #e8792a;
   --color-danger-fg: #b3322b;
@@ -76,22 +81,22 @@
   --color-info-fg: #3a52b5;
   --color-violet-fg: #5b3fc4;
 
-  --color-border: rgb(24 24 27 / 0.08);
-  --color-input: rgb(24 24 27 / 0.16);
+  --color-border: #ebe9e4;
+  --color-input: #d9d6cf;
   --color-ring: #f38735;
 
-  /* Elevation: hairline + soft ambient shadow */
-  --shadow-xs: 0 1px 2px rgb(24 24 27 / 0.04);
-  --shadow-sm: 0 1px 2px rgb(24 24 27 / 0.04), 0 1px 3px rgb(24 24 27 / 0.05);
-  --shadow-md: 0 1px 2px rgb(24 24 27 / 0.04), 0 6px 16px -4px rgb(24 24 27 / 0.08);
-  --shadow-lg: 0 2px 4px rgb(24 24 27 / 0.04), 0 16px 40px -12px rgb(24 24 27 / 0.18);
+  /* Elevation: borders do the work; shadows only for things that float. */
+  --shadow-xs: 0 1px 1px rgb(17 17 17 / 0.03);
+  --shadow-sm: 0 1px 2px rgb(17 17 17 / 0.04);
+  --shadow-md: 0 1px 2px rgb(17 17 17 / 0.04), 0 4px 12px -4px rgb(17 17 17 / 0.08);
+  --shadow-lg: 0 1px 3px rgb(17 17 17 / 0.05), 0 12px 32px -12px rgb(17 17 17 / 0.16);
 
-  /* One radius scale: md 8 (chips) · lg 10 (controls) · xl 12 (tiles) · 2xl 14 (panels) · 3xl 20 (sheets) */
-  --radius-md: 0.5rem;
-  --radius-lg: 0.625rem;
-  --radius-xl: 0.75rem;
-  --radius-2xl: 0.875rem;
-  --radius-3xl: 1.25rem;
+  /* One radius scale, deliberately tight: md 6 (chips) · lg 8 (controls) · xl 8 (tiles) · 2xl 10 (panels) · 3xl 14 (sheets) */
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.625rem;
+  --radius-3xl: 0.875rem;
 
   --animate-orb-a: orb-spin 14s linear infinite;
   --animate-orb-b: orb-spin-rev 18s linear infinite;
@@ -153,7 +158,9 @@
     background: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss03";
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
   /* Keyboard focus is always visible and distinct from hover/pressed. */
   a:focus-visible,
@@ -181,6 +188,7 @@
 @layer utilities {
   .tabular {
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "cv11";
   }
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
@@ -209,7 +217,6 @@
     background: var(--color-card);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-2xl);
-    box-shadow: var(--shadow-xs);
   }
   .theme-dark .panel,
   .theme-dark .card-surface {
@@ -223,22 +230,22 @@
   }
   /* Type scale */
   .t-page {
-    font-size: 30px;
-    line-height: 1.1;
-    font-weight: 650;
-    letter-spacing: -0.025em;
+    font-size: 24px;
+    line-height: 1.15;
+    font-weight: 600;
+    letter-spacing: -0.022em;
     color: var(--color-heading);
   }
   @media (min-width: 1024px) {
     .t-page {
-      font-size: 30px;
+      font-size: 26px;
     }
   }
   .t-section {
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1.3;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.011em;
     color: var(--color-heading);
   }
   .t-name {
@@ -255,17 +262,17 @@
   }
   /* Financial figures: large, tight, tabular */
   .t-figure {
-    font-size: 30px;
+    font-size: 28px;
     line-height: 1.1;
-    font-weight: 650;
+    font-weight: 600;
     letter-spacing: -0.03em;
     font-variant-numeric: tabular-nums;
     color: var(--color-heading);
   }
   .t-figure-sm {
-    font-size: 22px;
+    font-size: 20px;
     line-height: 1.15;
-    font-weight: 650;
+    font-weight: 600;
     letter-spacing: -0.025em;
     font-variant-numeric: tabular-nums;
     color: var(--color-heading);
@@ -278,10 +285,10 @@
     border-radius: var(--radius-md);
   }
   .t-eyebrow {
-    font-size: 12px;
+    font-size: 11.5px;
     line-height: 1.2;
     font-weight: 600;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--color-subtle);
   }
@@ -333,9 +340,8 @@
   }
   .glow-copper {
     box-shadow:
-      0 0 0 1px rgb(255 180 126 / 0.35) inset,
-      0 0 24px rgb(236 122 46 / 0.55),
-      0 0 60px rgb(236 122 46 / 0.25);
+      0 0 0 1px rgb(255 180 126 / 0.3) inset,
+      0 0 18px rgb(236 122 46 / 0.32);
   }
 }
 
@@ -393,9 +399,9 @@
 .row-open[data-selected="true"]::before {
   content: "";
   position: absolute;
-  inset: 6px auto 6px 0;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
+  inset: 8px auto 8px 0;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
   background: var(--color-copper-500);
 }
 .row-chevron {

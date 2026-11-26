@@ -1,28 +1,30 @@
 "use client";
 
 /**
- * Diary — the owner's home page: what's booked, when, where and who's on it.
- * Desktop: a seven-day planner (drag a booking to move it, click to edit).
- * Phone: an agenda grouped by day, starting today. The page ends after the
- * schedule — replies live in Enquiries, to-dos in Tasks, bills in Money and
- * unscheduled won jobs in Jobs.
+ * Diary — Bob's landing page: where everyone is working, who's free, who's off
+ * and what still needs someone.
+ * Desktop: Week, Month and Team views (each person's choice is remembered).
+ * Phone: a day-grouped agenda with large cards, directions and a team filter.
  */
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CalendarDays, CalendarOff, CalendarPlus, ChevronLeft, ChevronRight, MapPin, Pencil, Plus, Users } from "lucide-react";
-import { ABSENCE_LABEL, PART_LABEL, absencesOnDay } from "@/lib/leave";
+import { CalendarOff, CalendarPlus, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
-import { addDays, daysBetween, formatDayLong, formatDayShort, formatTimeRange, formatWeekRange, isDateKey, rangeKeys, weekStart } from "@/lib/dates";
-import { bookingDays, bookingsOnDay } from "@/lib/schedule";
-import type { Absence, Booking, Job, Person } from "@/lib/types";
+import { addDays, formatWeekRange, isDateKey, weekStart } from "@/lib/dates";
+import { diarySummary, findConflicts, isDiaryView, monthWeeks, summaryParts, weekDays, type DiaryView } from "@/lib/diary";
+import { bookingEndDate } from "@/lib/schedule";
+import type { Booking } from "@/lib/types";
 import { cn, todayKey } from "@/lib/utils";
 import { PageHeader, pageActionClass, pageSecondaryClass } from "@/components/common/bits";
-import { PeopleStack, jobTone } from "@/components/common/people";
 import { NativeSelect } from "@/components/ui/input";
-import { toast } from "@/components/ui/toaster";
 import { Onboarding } from "@/components/common/onboarding";
+import { DatePicker, ViewSwitch, firstName, useBookingMover, useJobsAndPeople } from "@/components/diary/shared";
+import { WeekView } from "@/components/diary/week-view";
+import { TeamView } from "@/components/diary/team-view";
+import { MonthView } from "@/components/diary/month-view";
+import { Agenda } from "@/components/diary/agenda";
 
 export default function DiaryPage() {
   return (
@@ -32,364 +34,230 @@ export default function DiaryPage() {
   );
 }
 
+function usePref<T extends string>(key: string, fallback: T, valid: (v: string) => boolean): [T, (v: T) => void] {
+  const [value, setValue] = React.useState<T>(fallback);
+  React.useEffect(() => {
+    try {
+      const v = localStorage.getItem(key);
+      if (v && valid(v)) setValue(v as T);
+    } catch {
+      /* private mode */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- read once per key
+  }, [key]);
+  const set = (v: T) => {
+    setValue(v);
+    try {
+      localStorage.setItem(key, v);
+    } catch {
+      /* private mode */
+    }
+  };
+  return [value, set];
+}
+
+const monthLabel = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+
 function Diary() {
-  const { data, can, actions } = useStore();
+  const { data, can, user } = useStore();
   const ui = useUI();
   const router = useRouter();
   const params = useSearchParams();
   const today = todayKey();
-  const start = weekStart(isDateKey(params.get("w")) ? params.get("w")! : today);
-  const days = rangeKeys(start, addDays(start, 6));
-  const personFilter = params.get("person") ?? "";
+  const { jobs, people } = useJobsAndPeople();
+  const { move, dialog } = useBookingMover();
   const manage = can("schedule.manage");
-  const jobs = new Map(data.jobs.map((j) => [j.id, j]));
-  const people = new Map(data.people.map((p) => [p.id, p]));
-  const activePeople = data.people.filter((p) => !p.archivedAt);
-  const staff = activePeople.filter((p) => p.kind === "employee");
-  const subs = activePeople.filter((p) => p.kind === "subcontractor");
-  const visible = data.bookings.filter((b) => (personFilter === "unassigned" ? !b.personIds.length : !personFilter || b.personIds.includes(personFilter)));
-  const leave = data.absences.filter((a) => !personFilter || personFilter === "unassigned" || a.personId === personFilter);
-  const thisWeek = visible.filter((b) => b.date <= days[6] && (b.endDate ?? b.date) >= days[0]);
-  const isThisWeek = start === weekStart(today);
 
-  const setParam = (k: string, v: string | null) => {
+  const [savedView, saveView] = usePref<DiaryView>(`bob.diary.view.${user.id}`, "week", isDiaryView);
+  const [weekendsPref, saveWeekends] = usePref<"show" | "hide">(`bob.diary.weekends.${user.id}`, "show", (v) => v === "show" || v === "hide");
+  const urlView = params.get("view");
+  const view: DiaryView = isDiaryView(urlView) ? urlView : savedView;
+  const anchorParam = params.get("d") ?? params.get("w");
+  const anchor = isDateKey(anchorParam) ? anchorParam! : today;
+  const personFilter = params.get("person") ?? "";
+
+  const setParams = (patch: Record<string, string | null>) => {
     const q = new URLSearchParams(params.toString());
-    if (v) q.set(k, v);
-    else q.delete(k);
+    q.delete("w");
+    for (const [k, v] of Object.entries(patch)) (v ? q.set(k, v) : q.delete(k));
     router.replace(`/week${q.toString() ? `?${q}` : ""}`, { scroll: false });
   };
-  const goWeek = (key: string | null) => setParam("w", key && weekStart(key) !== weekStart(today) ? weekStart(key) : null);
-  /** Click, Enter or tap: open the editor. Unassigned bookings open at the people picker. */
-  const openBooking = (b: Booking) => (manage ? ui.openForm({ form: "booking", bookingId: b.id, focus: b.personIds.length ? undefined : "people" }) : ui.openJob(b.jobId, { tab: "schedule" }));
+  const chooseView = (v: DiaryView) => {
+    saveView(v);
+    setParams({ view: null });
+  };
+  // A view in the URL (e.g. a shared link) becomes this person's choice too.
+  React.useEffect(() => {
+    if (isDiaryView(urlView) && urlView !== savedView) saveView(urlView);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlView]);
 
-  /** Drag a booking to another day (desktop shortcut). Clashes open the editor so the planner decides. */
-  const moveTo = async (bookingId: string, day: string) => {
-    const b = data.bookings.find((x) => x.id === bookingId);
-    if (!b || b.date === day) return;
-    const shift = daysBetween(b.date, day);
-    const res = await actions.run("saveBooking", {
-      input: { id: b.id, jobId: b.jobId, date: day, endDate: b.endDate ? addDays(b.endDate, shift) : "", allDay: !b.startTime, startTime: b.startTime ?? "", endTime: b.endTime ?? "", personIds: b.personIds, notes: b.notes ?? "" },
-    });
-    if (res.ok) return toast(`Moved to ${formatDayShort(day)}`);
-    if (res.clashes?.length) {
-      toast(`${res.clashes[0].personName} is already booked then — check the clash`, "error");
-      return ui.openForm({ form: "booking", bookingId: b.id, date: day });
-    }
-    toast(res.errors._ || "Couldn't move it — nothing was changed", "error");
+  const goTo = (d: string | null) => setParams({ d: d && d !== today ? d : null });
+  const step = (n: number) => {
+    if (view === "month") {
+      const m = new Date(`${anchor.slice(0, 7)}-01T12:00:00Z`);
+      m.setUTCMonth(m.getUTCMonth() + n);
+      goTo(m.toISOString().slice(0, 10));
+    } else goTo(addDays(anchor, 7 * n));
   };
 
-  const weekBookings = thisWeek.length;
-  const offThisWeek = new Set(leave.filter((a) => !["declined", "cancelled"].includes(a.status) && a.startDate <= days[6] && a.endDate >= days[0]).map((a) => a.personId)).size;
-  const [selected, setSelected] = React.useState<string>(isThisWeek ? today : start);
-  React.useEffect(() => setSelected(isThisWeek ? today : start), [start, isThisWeek, today]);
-  const selectedList = bookingsOnDay(thisWeek, selected);
-  const holidaysLink = can("schedule.read") ? (
-    <Link href="/team?view=holidays" className={cn(pageSecondaryClass, "px-3")}>
-      <CalendarOff className="size-4 text-subtle" aria-hidden /> <span className="hidden sm:inline">Holidays</span>
-      {data.absences.some((a) => a.status === "pending") ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-warning/15 px-1.5 text-[11.5px] font-semibold text-warn-fg">{data.absences.filter((a) => a.status === "pending").length}</span> : null}
-    </Link>
-  ) : null;
-  const scheduleBtn = manage ? (
-    <button type="button" className={pageActionClass} onClick={() => ui.openForm({ form: "booking", date: isThisWeek ? selected : start, personIds: personFilter && personFilter !== "unassigned" ? [personFilter] : undefined })}>
-      <CalendarPlus className="size-[17px]" aria-hidden /> Schedule work
-    </button>
-  ) : null;
+  // Weekends: hidden only by choice, and never when today is one of them.
+  const todayInWeek = weekStart(today) === weekStart(anchor);
+  const todayIsWeekend = [0, 6].includes(new Date(`${today}T12:00:00Z`).getUTCDay());
+  const showWeekends = weekendsPref === "show" || (todayInWeek && todayIsWeekend && view !== "month");
+  const days = weekDays(anchor, showWeekends);
+  const allWeek = weekDays(anchor, true);
+  const weeks = monthWeeks(anchor);
+  const [from, to] = view === "month" ? [weeks[0][0], weeks.at(-1)![6]] : [days[0], days.at(-1)!];
+
+  const active = data.people.filter((p) => !p.archivedAt);
+  const filtered = (b: Booking) => (personFilter === "unassigned" ? !b.personIds.length : !personFilter || b.personIds.includes(personFilter));
+  const inRange = (b: Booking, a: string, z: string) => b.date <= z && bookingEndDate(b) >= a;
+  const visible = data.bookings.filter((b) => inRange(b, from, to) && (view === "team" || filtered(b)));
+  const leave = data.absences.filter((a) => view === "team" || !personFilter || personFilter === "unassigned" || a.personId === personFilter);
+  const conflicts = React.useMemo(() => findConflicts(data.bookings, data.absences, view === "month" ? from : allWeek[0], view === "month" ? to : allWeek[6]), [data.bookings, data.absences, from, to, allWeek, view]);
+  const summary = diarySummary(data.bookings.filter(filtered), leave, jobs, view === "month" ? `${anchor.slice(0, 7)}-01` : allWeek[0], view === "month" ? weeks.at(-1)!.filter((d) => d.slice(0, 7) === anchor.slice(0, 7)).at(-1)! : allWeek[6]);
+  const label = view === "month" ? monthLabel(anchor) : formatWeekRange(weekStart(anchor));
+  const isCurrent = view === "month" ? anchor.slice(0, 7) === today.slice(0, 7) : todayInWeek;
+
+  const openBooking = (b: Booking) => (manage ? ui.openForm({ form: "booking", bookingId: b.id, focus: b.personIds.length ? undefined : "people" }) : ui.openJob(b.jobId, { tab: "schedule" }));
+  const add = (day?: string, personId?: string) =>
+    ui.openForm({ form: "booking", date: day ?? (todayInWeek ? today : weekStart(anchor)), personIds: personId ? [personId] : personFilter && personFilter !== "unassigned" ? [personFilter] : undefined });
+
+  const pending = data.absences.filter((a) => a.status === "pending").length;
+  const filterOptions = (
+    <>
+      <option value="">Everyone</option>
+      <option value="unassigned">Needs someone</option>
+      {active.filter((p) => p.kind === "employee").length ? (
+        <optgroup label="Staff">
+          {active.filter((p) => p.kind === "employee").map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </optgroup>
+      ) : null}
+      {active.filter((p) => p.kind === "subcontractor").length ? (
+        <optgroup label="Subcontractors">
+          {active.filter((p) => p.kind === "subcontractor").map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+              {p.trade ? ` · ${p.trade}` : ""}
+            </option>
+          ))}
+        </optgroup>
+      ) : null}
+    </>
+  );
 
   return (
-    <div className="flex flex-col gap-5 lg:gap-6">
+    <div className="flex flex-col gap-4 lg:gap-5">
       <PageHeader
         title="Diary"
         subtitle={
           <span className="tabular">
-            {formatWeekRange(start)} · {weekBookings} {weekBookings === 1 ? "booking" : "bookings"}
-            {offThisWeek ? ` · ${offThisWeek} off` : ""}
+            {summaryParts(summary).join(" · ")}
+            {summary.unassigned ? <span className="text-warn-fg"> · {summary.unassigned} needs someone</span> : null}
+            {summary.conflicts ? <span className="font-medium text-danger-fg"> · {summary.conflicts} {summary.conflicts === 1 ? "clash" : "clashes"}</span> : null}
           </span>
         }
         actions={
           <>
-            {holidaysLink}
-            {scheduleBtn}
+            {can("schedule.read") ? (
+              <Link href="/team?view=holidays" className={cn(pageSecondaryClass, "px-3")}>
+                <CalendarOff className="size-4 text-subtle" aria-hidden /> <span className="hidden sm:inline">Holidays</span>
+                {pending ? <span className="tabular text-[12.5px] font-semibold text-warn-fg">{pending}</span> : null}
+              </Link>
+            ) : null}
+            {manage ? (
+              <button type="button" className={pageActionClass} onClick={() => add()}>
+                <CalendarPlus className="size-[17px]" aria-hidden /> Schedule work
+              </button>
+            ) : null}
           </>
         }
       />
 
       <Onboarding />
 
-      {/* Week navigation and person filter */}
+      {/* Controls */}
       <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Diary controls">
-        <div className="flex items-center rounded-[10px] bg-card p-0.5 shadow-[var(--shadow-xs)] ring-1 ring-line-strong">
-          <button type="button" aria-label="Previous week" onClick={() => goWeek(addDays(start, -7))} className="grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-surface-2 hover:text-foreground lg:size-9">
-            <ChevronLeft className="size-[18px]" aria-hidden />
+        <div className="flex h-9 items-center rounded-lg bg-card ring-1 ring-line-strong">
+          <button type="button" aria-label={view === "month" ? "Previous month" : "Previous week"} onClick={() => step(-1)} className="grid h-full w-9 place-items-center rounded-l-lg text-muted-foreground hover:bg-surface-2 hover:text-foreground">
+            <ChevronLeft className="size-4" aria-hidden />
           </button>
-          <button type="button" onClick={() => goWeek(null)} aria-pressed={isThisWeek} className={cn("h-10 rounded-lg px-3.5 text-[14px] font-semibold lg:h-9", isThisWeek ? "text-accent-fg" : "text-foreground hover:bg-surface-2")}>
+          <button type="button" onClick={() => goTo(null)} aria-pressed={isCurrent} className={cn("h-full border-x border-line px-3 text-[13.5px] font-medium", isCurrent ? "text-copper-600" : "text-foreground hover:bg-surface-2")}>
             Today
           </button>
-          <button type="button" aria-label="Next week" onClick={() => goWeek(addDays(start, 7))} className="grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-surface-2 hover:text-foreground lg:size-9">
-            <ChevronRight className="size-[18px]" aria-hidden />
+          <button type="button" aria-label={view === "month" ? "Next month" : "Next week"} onClick={() => step(1)} className="grid h-full w-9 place-items-center rounded-r-lg text-muted-foreground hover:bg-surface-2 hover:text-foreground">
+            <ChevronRight className="size-4" aria-hidden />
           </button>
         </div>
-        <p className="hidden px-1 text-[16px] font-semibold tabular tracking-[-0.01em] text-heading lg:block" aria-live="polite">
-          {monthLabel(start)}
-        </p>
-        <label className="ml-auto flex min-w-[170px] flex-1 items-center gap-2 sm:max-w-[240px] lg:flex-none">
-          <span className="sr-only">Show work for</span>
-          <span className="relative w-full">
-            <Users className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-subtle" aria-hidden />
-            <NativeSelect value={personFilter} onChange={(e) => setParam("person", e.target.value || null)} className="pl-9">
-              <option value="">Everyone</option>
-              <option value="unassigned">Unassigned only</option>
-              {staff.length ? (
-                <optgroup label="Staff">
-                  {staff.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : null}
-              {subs.length ? (
-                <optgroup label="Subcontractors">
-                  {subs.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                      {p.trade ? ` · ${p.trade}` : ""}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : null}
-            </NativeSelect>
-          </span>
-        </label>
-        {personFilter ? (
-          <button type="button" onClick={() => setParam("person", null)} className="h-10 px-2 text-[14px] font-semibold text-accent-fg">
-            Show everyone
-          </button>
-        ) : null}
+        <DatePicker value={anchor} today={today} label={label} mode={view} onPick={(d) => goTo(d)} />
+
+        <div className="ml-auto hidden items-center gap-2 lg:flex">
+          {view !== "team" ? (
+            <label className="flex w-[200px] items-center">
+              <span className="sr-only">Show work for</span>
+              <span className="relative w-full">
+                <Users className="pointer-events-none absolute left-2.5 top-1/2 z-10 size-4 -translate-y-1/2 text-subtle" aria-hidden />
+                <NativeSelect value={personFilter} onChange={(e) => setParams({ person: e.target.value || null })} className="h-9 pl-8 text-[13.5px] lg:h-9">
+                  {filterOptions}
+                </NativeSelect>
+              </span>
+            </label>
+          ) : null}
+          <label className="flex h-9 cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 text-[13.5px] font-medium text-muted-foreground hover:bg-surface-3">
+            <input type="checkbox" checked={weekendsPref === "show"} onChange={(e) => saveWeekends(e.target.checked ? "show" : "hide")} className="size-4 accent-[#1a1a1a]" />
+            Weekends
+          </label>
+          <ViewSwitch value={view} onChange={chooseView} />
+        </div>
       </div>
 
-      {/* Desktop planner */}
-      <section aria-label={`Diary ${formatWeekRange(start)}`} className="panel hidden overflow-hidden shadow-[var(--shadow-sm)] lg:block">
-        <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_minmax(0,0.7fr)_minmax(0,0.7fr)] divide-x divide-line">
-          {days.map((d) => {
-            const isToday = d === today;
-            const list = bookingsOnDay(thisWeek, d);
-            const weekend = daysBetween(start, d) >= 5;
-            const [dow, num] = [new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short" }), Number(d.slice(8))];
-            return (
-              <div
-                key={d}
-                className={cn("flex min-h-[calc(100dvh-300px)] min-w-0 flex-col", weekend && !isToday && "bg-[#fafaf8]", isToday && "bg-copper-50/60")}
-                onDragOver={manage ? (e) => e.preventDefault() : undefined}
-                onDrop={
-                  manage
-                    ? (e) => {
-                        e.preventDefault();
-                        const id = e.dataTransfer.getData("text/booking");
-                        if (id) void moveTo(id, d);
-                      }
-                    : undefined
-                }
-              >
-                <h2 title={formatDayLong(d)} className="flex items-center gap-2 border-b border-line px-3 py-3">
-                  <span className={cn("text-[12px] font-medium uppercase tracking-[0.06em]", isToday ? "text-accent-fg" : "text-subtle")}>{dow}</span>
-                  <span className={cn("tabular grid h-7 min-w-7 place-items-center rounded-full px-1 text-[15px] font-semibold", isToday ? "bg-copper-500 text-white shadow-[0_1px_3px_rgb(243_135_53/0.45)]" : "text-heading")}>{num}</span>
-                  {isToday ? <span className="sr-only">(today)</span> : null}
-                  {list.length ? <span className="ml-auto text-[12px] tabular text-subtle">{list.length}</span> : null}
-                </h2>
-                <LeaveChips list={absencesOnDay(leave, d)} people={people} />
-                <ul className="flex flex-1 flex-col gap-2 p-2">
-                  {list.map((b) => (
-                    <li key={`${b.id}-${d}`}>
-                      <BookingCard booking={b} day={d} job={jobs.get(b.jobId)} people={people} onOpen={() => openBooking(b)} draggable={manage} />
-                    </li>
-                  ))}
-                  {manage ? (
-                    <li className="mt-auto">
-                      <button
-                        type="button"
-                        onClick={() => ui.openForm({ form: "booking", date: d, personIds: personFilter && personFilter !== "unassigned" ? [personFilter] : undefined })}
-                        className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg text-[13px] font-medium text-subtle opacity-70 transition hover:bg-card hover:text-accent-fg hover:opacity-100 hover:shadow-[var(--shadow-xs)] focus-visible:opacity-100"
-                        aria-label={`Schedule work on ${formatDayLong(d)}`}
-                      >
-                        <Plus className="size-3.5" aria-hidden /> Add
-                      </button>
-                    </li>
-                  ) : null}
-                </ul>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Phone agenda: a day strip, then the chosen day */}
-      <section aria-label={`Agenda ${formatWeekRange(start)}`} className="-mt-1 flex flex-col gap-4 lg:hidden">
-        <div className="grid grid-cols-7 gap-1 rounded-2xl bg-card p-1.5 shadow-[var(--shadow-sm)] ring-1 ring-line" role="tablist" aria-label="Choose a day">
-          {days.map((d) => {
-            const isSel = d === selected;
-            const isToday = d === today;
-            const count = bookingsOnDay(thisWeek, d).length;
-            const off = absencesOnDay(leave, d).length;
-            return (
-              <button
-                key={d}
-                type="button"
-                role="tab"
-                aria-selected={isSel}
-                aria-label={`${formatDayLong(d)}${count ? `, ${count} booked` : ""}`}
-                onClick={() => setSelected(d)}
-                className={cn("flex h-[62px] flex-col items-center justify-center gap-0.5 rounded-xl transition", isSel ? "bg-sidebar text-white" : "active:bg-surface-2")}
-              >
-                <span className={cn("text-[11px] font-medium uppercase tracking-wide", isSel ? "text-white/60" : isToday ? "text-accent-fg" : "text-subtle")}>{new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { weekday: "narrow" })}</span>
-                <span className={cn("tabular text-[17px] font-semibold", !isSel && isToday && "text-accent-fg")}>{Number(d.slice(8))}</span>
-                <span className="flex h-1.5 gap-0.5">
-                  {count ? <span className={cn("size-1.5 rounded-full", isSel ? "bg-copper-400" : "bg-copper-500")} /> : null}
-                  {off ? <span className="size-1.5 rounded-full bg-violet-400" /> : null}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div>
-          <h2 className="mb-2 flex items-baseline justify-between px-0.5">
-            <span className="text-[17px] font-semibold tracking-[-0.01em] text-heading">{selected === today ? "Today" : formatDayLong(selected).split(" ")[0]}</span>
-            <span className="text-[13.5px] text-subtle">{new Date(`${selected}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long" })}</span>
-          </h2>
-          <LeaveChips list={absencesOnDay(leave, selected)} people={people} phone />
-          {selectedList.length ? (
-            <ul className="flex flex-col gap-2.5">
-              {selectedList.map((b) => (
-                <li key={b.id}>
-                  <AgendaRow booking={b} day={selected} job={jobs.get(b.jobId)} people={people} onOpen={() => openBooking(b)} onJob={() => ui.openJob(b.jobId)} />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="flex flex-col items-center rounded-2xl border border-dashed border-line-strong px-4 py-8 text-center">
-              <CalendarDays className="size-6 text-subtle" aria-hidden />
-              <p className="mt-2 text-[14.5px] font-medium text-heading">Nothing booked</p>
-              {manage ? (
-                <button type="button" onClick={() => ui.openForm({ form: "booking", date: selected })} className="mt-3 h-10 rounded-[10px] px-4 text-[14px] font-semibold text-accent-fg ring-1 ring-copper-500/40">
-                  Schedule work
-                </button>
-              ) : null}
-            </div>
-          )}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-const monthLabel = (start: string) => {
-  const end = addDays(start, 6);
-  const a = new Date(`${start}T12:00:00`);
-  const b = new Date(`${end}T12:00:00`);
-  const m = (d: Date) => d.toLocaleDateString("en-GB", { month: "long" });
-  return a.getMonth() === b.getMonth() ? `${m(a)} ${a.getFullYear()}` : `${m(a)} – ${m(b)} ${b.getFullYear()}`;
-};
-
-/** Who's off that day. Approved: solid; pending requests: dashed and labelled. */
-function LeaveChips({ list, people, phone }: { list: Absence[]; people: Map<string, Person>; phone?: boolean }) {
-  if (!list.length) return null;
-  return (
-    <ul className={cn("flex flex-wrap gap-1", phone ? "mb-2.5" : "border-b border-line px-2 py-1.5")} aria-label="Leave">
-      {list.map((a) => {
-        const name = people.get(a.personId)?.name.split(" ")[0] ?? "Someone";
-        const pending = a.status === "pending";
-        return (
-          <li
-            key={a.id}
-            title={`${people.get(a.personId)?.name ?? "Someone"}: ${ABSENCE_LABEL[a.kind]}${a.part ? ` (${PART_LABEL[a.part].toLowerCase()})` : ""}${pending ? " — waiting for approval" : ""}`}
-            className={cn(
-              "inline-flex h-6 max-w-full items-center gap-1 rounded-full px-2 text-[12px] font-medium",
-              pending ? "border border-dashed border-violet-300 text-violet-700" : "bg-violet-500/10 text-violet-800",
-            )}
-          >
-            <CalendarOff className="size-3 shrink-0" aria-hidden />
-            <span className="truncate">
-              {name} · {a.kind === "unavailable" ? "Unavailable" : ABSENCE_LABEL[a.kind]}
-              {a.part ? ` ${a.part.toUpperCase()}` : ""}
-              {pending ? " (pending)" : ""}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function BookingCard({ booking: b, day, job, people, onOpen, draggable }: { booking: Booking; day: string; job?: Job; people: Map<string, Person>; onOpen: () => void; draggable?: boolean }) {
-  const who = b.personIds.map((id) => people.get(id)).filter(Boolean) as Person[];
-  const days = bookingDays(b);
-  const tone = jobTone(b.jobId);
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      draggable={draggable}
-      onDragStart={(e) => {
-        e.dataTransfer.setData("text/booking", b.id);
-        e.dataTransfer.effectAllowed = "move";
-      }}
-      aria-label={`Edit booking: ${job?.title ?? "job"}, ${job?.location ?? ""}, ${formatTimeRange(b.startTime, b.endTime)}, ${who.length ? who.map((p) => p.name).join(", ") : "unassigned"}`}
-      className={cn("group relative block w-full overflow-hidden rounded-[10px] py-2 pl-3 pr-2 text-left ring-1 transition duration-150 hover:shadow-[var(--shadow-md)] active:scale-[0.99]", tone.card, draggable && "cursor-grab active:cursor-grabbing")}
-    >
-      <span aria-hidden className={cn("absolute inset-y-1.5 left-1 w-[3px] rounded-full", who.length ? tone.bar : "bg-warning")} />
-      <span className={cn("block line-clamp-2 text-[13.5px] font-semibold leading-snug [overflow-wrap:anywhere]", tone.text)} lang="en-GB">
-        {job?.title ?? "Job"}
-      </span>
-      <span className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-[12.5px] tabular text-foreground/80">
-        <span className="whitespace-nowrap font-medium">{formatTimeRange(b.startTime, b.endTime)}</span>
-        {days.length > 1 ? <span className="whitespace-nowrap text-[11.5px] text-subtle" title={`Day ${days.indexOf(day) + 1} of ${days.length}`}>day {days.indexOf(day) + 1}/{days.length}</span> : null}
-      </span>
-      {job?.location ? (
-        <span className="mt-0.5 flex items-center gap-1 truncate text-[12.5px] text-subtle">
-          <MapPin className="size-3 shrink-0" aria-hidden />
-          <span className="truncate">{job.location}</span>
-        </span>
-      ) : null}
-      <span className="mt-2 flex items-center justify-between gap-1">
-        {who.length ? <PeopleStack people={who} size={22} max={3} /> : <span className="inline-flex h-[22px] items-center rounded-full bg-warning/15 px-2 text-[11.5px] font-semibold text-warn-fg">Unassigned</span>}
-        <Pencil aria-hidden className="size-3.5 text-subtle opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100" />
-      </span>
-    </button>
-  );
-}
-
-/** Phone: time on the left, the booking in its job colour, team on the right; tap the site to open the job. */
-function AgendaRow({ booking: b, day, job, people, onOpen, onJob }: { booking: Booking; day: string; job?: Job; people: Map<string, Person>; onOpen: () => void; onJob: () => void }) {
-  const who = b.personIds.map((id) => people.get(id)).filter(Boolean) as Person[];
-  const days = bookingDays(b);
-  const tone = jobTone(b.jobId);
-  return (
-    <div className="flex gap-3">
-      <div className="w-[46px] shrink-0 pt-2.5 text-right tabular">
-        {b.startTime ? (
-          <>
-            <div className="text-[14px] font-semibold text-heading">{b.startTime}</div>
-            <div className="text-[12.5px] text-subtle">{b.endTime}</div>
-          </>
+      {/* Desktop and tablet */}
+      <div className="hidden lg:block">
+        {view === "week" ? (
+          <WeekView days={days} today={today} bookings={visible} absences={leave} jobs={jobs} people={people} team={active} conflicts={conflicts} manage={manage} onOpen={openBooking} onAdd={(d) => add(d)} onMove={(id, shift) => move(id, { shift })} />
+        ) : view === "team" ? (
+          <TeamView days={days} today={today} bookings={visible} absences={data.absences} jobs={jobs} people={people} team={active} conflicts={conflicts} manage={manage} onOpen={openBooking} onAdd={add} onMove={(id, o) => move(id, o)} />
         ) : (
-          <div className="text-[12.5px] font-medium text-subtle">All day</div>
+          <MonthView anchor={anchor} today={today} showWeekends={weekendsPref === "show"} bookings={visible} absences={leave} jobs={jobs} people={people} onOpen={openBooking} onDay={(d) => setParams({ d: d === today ? null : d, view: "week" })} />
         )}
       </div>
-      <div className={cn("relative flex min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-2xl py-3 pl-4 pr-3 ring-1", tone.card)}>
-        <span aria-hidden className={cn("absolute inset-y-2.5 left-1.5 w-[3px] rounded-full", who.length ? tone.bar : "bg-warning")} />
-        <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left" aria-label={`Booking: ${job?.title ?? "job"}, ${formatTimeRange(b.startTime, b.endTime)}`}>
-          <span className={cn("block truncate text-[15.5px] font-semibold", tone.text)}>{job?.title ?? "Job"}</span>
-          <span className="mt-0.5 flex items-center gap-1 text-[13px] text-subtle">
-            <MapPin className="size-3.5 shrink-0" aria-hidden />
-            <span className="truncate">{job?.location ?? "No site set"}</span>
-            {days.length > 1 ? <span className="shrink-0">· day {days.indexOf(day) + 1}/{days.length}</span> : null}
-          </span>
-        </button>
-        {who.length ? <PeopleStack people={who} size={28} max={2} /> : <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[11.5px] font-semibold text-warn-fg">Unassigned</span>}
-        <button type="button" onClick={onJob} aria-label={`Open job ${job?.title ?? ""}`} className="-mr-1 grid size-9 shrink-0 place-items-center rounded-full text-subtle active:bg-black/5">
-          <ChevronRight className="size-4" />
-        </button>
+
+      {/* Phone: team filter chips, then the agenda */}
+      <div className="lg:hidden">
+        <div role="radiogroup" aria-label="Show work for" className="scrollbar-none -mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 sm:-mx-6 sm:px-6">
+          {[{ id: "", label: "Everyone" }, ...active.map((p) => ({ id: p.id, label: firstName(p.name) })), { id: "unassigned", label: "Needs someone" }].map((o) => (
+            <button
+              key={o.id || "all"}
+              type="button"
+              role="radio"
+              aria-checked={personFilter === o.id}
+              onClick={() => setParams({ person: o.id || null })}
+              className={cn("h-9 shrink-0 rounded-full px-3.5 text-[14px] font-medium ring-1 transition-colors", personFilter === o.id ? "bg-[#1a1a1a] text-white ring-[#1a1a1a]" : "bg-card text-muted-foreground ring-line-strong")}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <Agenda
+          days={allWeek}
+          today={today}
+          bookings={data.bookings.filter((b) => inRange(b, allWeek[0], allWeek[6]) && filtered(b))}
+          absences={leave}
+          jobs={jobs}
+          people={people}
+          conflicts={conflicts}
+          manage={manage}
+          onOpen={openBooking}
+          onJob={(id) => ui.openJob(id)}
+          onAdd={(d) => add(d)}
+        />
       </div>
+      {dialog}
     </div>
   );
 }

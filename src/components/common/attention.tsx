@@ -27,7 +27,7 @@ export function AttentionRow({ item, onAskBob }: { item: PriorityItem; onAskBob:
         "source" in item ? (
           <SourceIcon source={item.source} provider={item.provider} />
         ) : (
-          <span className={cn("grid size-9 shrink-0 place-items-center rounded-[10px]", urgent ? "bg-red-500/10 text-danger-fg" : "bg-copper-500/10 text-accent-icon")}>
+          <span className={cn("grid size-9 shrink-0 place-items-center rounded-lg", urgent ? "bg-red-500/10 text-danger-fg" : "bg-copper-500/10 text-accent-icon")}>
             <Icon className="size-[17px]" />
           </span>
         )

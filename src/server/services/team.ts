@@ -1,3 +1,4 @@
+import { bookingsOverlap } from "@/lib/diary";
 import "server-only";
 /**
  * Team, invitations, the schedule, job materials and bills to pay.
@@ -291,12 +292,8 @@ export function listBookings(ctx: Ctx): Booking[] {
 
 const bookingEnd = (b: Pick<Booking, "date" | "endDate">) => b.endDate ?? b.date;
 
-/** Two bookings clash if their days overlap and their hours overlap (all day overlaps everything). */
-export function bookingsOverlap(a: Pick<Booking, "date" | "endDate" | "startTime" | "endTime">, b: Pick<Booking, "date" | "endDate" | "startTime" | "endTime">): boolean {
-  if (bookingEnd(a) < b.date || bookingEnd(b) < a.date) return false;
-  if (!a.startTime || !a.endTime || !b.startTime || !b.endTime) return true;
-  return timeToMinutes(a.startTime) < timeToMinutes(b.endTime) && timeToMinutes(b.startTime) < timeToMinutes(a.endTime);
-}
+/** Shared with the diary so the planner and the server agree on what a clash is. */
+export { bookingsOverlap };
 
 export interface Clash {
   /** "booking": already on another job. "absence": approved leave or unavailability. */

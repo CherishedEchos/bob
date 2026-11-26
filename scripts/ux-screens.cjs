@@ -9,10 +9,16 @@ const OUT = process.env.OUT || '/tmp';
 const PREFIX = process.argv[2] || 'shot';
 fs.mkdirSync(OUT, { recursive: true });
 const PAGES = [
-  ['diary', '/week'], ['ask-bob', '/assistant'], ['enquiries', '/enquiries'], ['jobs', '/jobs'], ['job', '/jobs/n93_job_mackay_kitchen'],
+  ['diary', '/week'], ['diary-team', '/week?view=team'], ['diary-month', '/week?view=month'], ['ask-bob', '/assistant'], ['enquiries', '/enquiries'], ['jobs', '/jobs'], ['job', '/jobs/n93_job_mackay_kitchen'],
   ['handover', '/jobs/n93_job_gardenroom_lingfield?tab=handover'], ['activity', '/activity'], ['customers', '/customers'], ['tasks', '/tasks'], ['team', '/team'], ['materials', '/materials'], ['merchants', '/merchants'], ['money', '/invoices'], ['settings', '/settings'],
 ];
-const SIZES = { 'phone-375': { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, phone: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, tablet: { viewport: { width: 820, height: 1180 }, deviceScaleFactor: 1 }, desktop: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } };
+const SIZES = {
+  'phone-375': { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
+  'phone-390': { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
+  'tablet-1024': { viewport: { width: 1024, height: 768 }, deviceScaleFactor: 1 },
+  'laptop-1440': { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
+  'desktop-1920': { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 },
+};
 (async () => {
   const b = await chromium.launch();
   const only = process.env.ONLY ? process.env.ONLY.split(',') : null;
@@ -26,7 +32,7 @@ const SIZES = { 'phone-375': { viewport: { width: 375, height: 812 }, isMobile: 
     await ctx.addInitScript(() => { try { localStorage.setItem('bob.onboarding.done', '1'); localStorage.setItem('bob.tips.off', '1'); } catch { /* */ } });
     for (const [name, url] of PAGES) {
       if (only && !only.includes(name)) continue;
-      await p.goto(BASE + url);
+      await p.goto(BASE + url).catch(() => p.goto(BASE + url));
       await p.waitForLoadState('networkidle').catch(() => {});
       await p.waitForTimeout(1200);
       await p.screenshot({ path: path.join(OUT, `${PREFIX}-${size}-${name}.png`), fullPage: size !== 'desktop' ? false : false });

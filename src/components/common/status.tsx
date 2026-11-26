@@ -96,7 +96,7 @@ export function SourceIcon({ source, provider, className }: { source: EnquirySou
   const Icon = SOURCE_ICON[source];
   const label = gmail ? "Gmail" : SOURCE_LABEL[source];
   return (
-    <span title={`Came in by ${label}`} className={cn("relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-ink-700", className)}>
+    <span title={`Came in by ${label}`} className={cn("relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-ink-700", className)}>
       <span aria-hidden className="absolute inset-0 opacity-[0.9]" style={{ background: SOURCE_STYLE[source].bg }} />
       {gmail ? <GmailMark className="relative size-[55%] rounded-sm bg-white p-[1px]" /> : <Icon className="relative size-[50%] text-white/90" aria-hidden />}
       <span className="sr-only">{label}</span>

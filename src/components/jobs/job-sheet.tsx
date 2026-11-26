@@ -309,7 +309,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             <Menu
               label="More actions"
               items={[{ label: "Add task", icon: AlarmClock, onSelect: reminder }, ...more]}
-              triggerClassName="flex h-10 w-full items-center justify-center sm:w-auto gap-1.5 rounded-[10px] bg-card px-3 text-[14px] font-semibold text-foreground shadow-[var(--shadow-xs)] ring-1 ring-line-strong transition hover:bg-raised-hover lg:h-9 lg:text-[13.5px]"
+              triggerClassName="flex h-10 w-full items-center justify-center sm:w-auto gap-1.5 rounded-lg bg-card px-3 text-[14px] font-semibold text-foreground shadow-[var(--shadow-xs)] ring-1 ring-line-strong transition hover:bg-raised-hover lg:h-9 lg:text-[13.5px]"
               trigger={
                 <>
                   <MoreHorizontal className="size-4" aria-hidden /> More

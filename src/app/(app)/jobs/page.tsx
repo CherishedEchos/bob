@@ -207,7 +207,7 @@ function Jobs() {
               </NativeSelect>
             </label>
           ) : null}
-          <div className="ml-auto flex rounded-[10px] bg-card p-[3px] shadow-[var(--shadow-xs)] ring-1 ring-line-strong" role="group" aria-label="Layout">
+          <div className="ml-auto flex rounded-lg bg-card p-[3px] shadow-[var(--shadow-xs)] ring-1 ring-line-strong" role="group" aria-label="Layout">
             {(
               [
                 ["grid", LayoutGrid, "Cards"],

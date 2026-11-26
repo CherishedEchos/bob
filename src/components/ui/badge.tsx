@@ -4,14 +4,14 @@ import { cn } from "@/lib/utils";
 
 /** Restrained status label: a small soft pill with a coloured dot. */
 const badgeVariants = cva(
-  "inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[12.5px] font-medium leading-none before:size-1.5 before:shrink-0 before:rounded-full before:content-[''] [&_svg]:size-3",
+  "inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-md px-1.5 text-[12.5px] font-medium leading-none before:size-1.5 before:shrink-0 before:rounded-full before:content-[''] [&_svg]:size-3",
   {
     variants: {
       tone: {
-        neutral: "bg-surface-3 text-muted-foreground before:bg-subtle",
-        copper: "bg-copper-500/12 text-accent-fg before:bg-copper-500",
-        green: "bg-success/12 text-good-fg before:bg-success",
-        amber: "bg-warning/14 text-warn-fg before:bg-warning",
+        neutral: "bg-transparent text-muted-foreground ring-1 ring-inset ring-line-strong before:bg-subtle",
+        copper: "bg-copper-500/10 text-accent-fg before:bg-copper-500",
+        green: "bg-success/10 text-good-fg before:bg-success",
+        amber: "bg-warning/12 text-warn-fg before:bg-warning",
         red: "bg-destructive/10 text-danger-fg before:bg-destructive",
         blue: "bg-info/10 text-info-fg before:bg-info",
         violet: "bg-violet-500/10 text-violet-fg before:bg-violet-500",
