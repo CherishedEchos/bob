@@ -217,7 +217,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
 
       {/* Project header: compact — photo, name, customer, site and status, then the key facts */}
       <header className="overflow-hidden rounded-2xl bg-card ring-1 ring-line">
-        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:p-5">
+        <div className="flex flex-col gap-4 p-4 sm:p-5 xl:flex-row xl:items-start">
           <div className="flex min-w-0 flex-1 gap-4">
             <JobCover job={j} file={covers.get(j.id)} className="h-[72px] w-[96px] shrink-0 rounded-lg ring-1 ring-line sm:h-[84px] sm:w-[112px]" small />
             <div className="min-w-0 flex-1">
@@ -242,7 +242,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:shrink-0 sm:flex-wrap sm:items-center sm:justify-end [&>*]:min-w-0">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:shrink-0 sm:flex-wrap sm:items-center xl:justify-end [&>*]:min-w-0">
             <Button asChild variant="secondary" size="sm">
               <a href={mapsHref} target="_blank" rel="noopener noreferrer">
                 <Navigation /> Directions
@@ -773,9 +773,9 @@ function FinancialSummary({ fin, onOpen }: { fin: JobFinancials; onOpen: () => v
           Details
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-px bg-line sm:grid-cols-5 [&>div]:bg-card">
+      <div className="grid grid-cols-2 gap-px bg-line xl:grid-cols-5 [&>div]:bg-card">
         {cells.map((c, i) => (
-          <div key={c.label} className={cn("px-5 py-3 sm:px-6", i === 4 && "col-span-2 sm:col-span-1")}>
+          <div key={c.label} className={cn("px-5 py-3 sm:px-6", i === 4 && "col-span-2 xl:col-span-1")}>
             <div className="text-[12px] font-medium text-subtle">{c.label}</div>
             <div className={cn("mt-0.5 text-[19px] font-semibold tabular tracking-[-0.02em] text-heading", c.tone)}>{c.value}</div>
             <div className={cn("text-[12px] text-subtle", c.subTone)}>{c.sub}</div>

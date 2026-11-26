@@ -51,8 +51,13 @@ Then **Save Changes** → **Manual Deploy → Deploy latest commit**.
 ## 3. Suggested walkthrough (about 12 minutes)
 
 1. **Luke's phone, from the home-screen icon.**
-   - The Diary opens on today: who's where, what's next, and holidays (shown in purple).
-   - Tap tomorrow in the week strip.
+   - The Diary opens on today: a day-by-day agenda with who's where, directions, and holidays (shown in violet).
+   - Tap a name in the chips to see one person's week.
+1b. **Luke, desktop: the Diary.**
+   - The summary line reads like "4 active sites · 6 people scheduled · 1 person off · 1 clash".
+   - **Week**: multi-day work is one block. **Team**: one row per person, with Free / Free AM / off. **Month**: what's coming up.
+   - In Team, drag the hatched "Needs someone" visit onto Ellie. Then drag something onto a busy person: Bob shows the clash and asks before saving.
+   - Ask Bob: *"Have I double-booked anyone this week?"*
 2. **Ask Bob, spoken.** Tap the mic and say: *"Where is everyone working tomorrow?"* Bob answers in a sentence and reads it aloud.
 3. **Ask Bob, an action.** Say: *"Book Sam Okoro on the Reigate media wall on Friday, 8 till 4, and remind Ryan to order the oak veneer."*
    - Two compact cards appear: **Book work** and **Add task**.
@@ -86,9 +91,12 @@ Then **Save Changes** → **Manual Deploy → Deploy latest commit**.
 
 | Check | Result |
 |---|---|
-| Unit and integration tests (`npx vitest run`) | 266 passed |
+| Unit and integration tests (`npx vitest run`) | 302 passed |
+| `scripts/e2e-diary.cjs`: views remembered, date picker, weekends, drag to assign, clash confirmation, Ryan sees it, phone agenda | 22/22 |
+| `scripts/e2e-followups.cjs` | 33/33 |
+| `scripts/e2e-handover-wizard.cjs` | 55/55 |
 | Typecheck, lint, production build | clean |
-| `scripts/e2e-demo-collab.cjs`: Luke and Ryan in separate sessions with individual sign-ins. Luke books and Ryan sees it; Ryan adds materials and Luke sees them; job and task updates both ways; names in Bob; permissions; no Cresaro access | 24/24 |
+| `scripts/e2e-demo-collab.cjs`: Luke and Ryan in separate sessions. Luke books and Ryan sees it; Ryan adds materials and Luke sees them; job and task updates both ways; names in Bob; permissions; no Cresaro access | 22/22 |
 | `scripts/e2e-ux-tasks.cjs` at 375, 390, 820 and 1440 px: tomorrow's work, add a job, a customer's address, book a holiday, upload a photo, add materials, money owed, an invoice through Bob, desktop Ask Bob with page context. Also: the floating nav never covers the last control, no sideways scrolling, 44 px+ job actions | 63/63 |
 | `scripts/e2e-pilot-flows.cjs` (updated to the current screens) | 104/104 |
 | `scripts/e2e-team-flows.cjs` (updated to the current screens) | 68/68 |

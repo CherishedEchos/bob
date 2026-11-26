@@ -34,6 +34,7 @@ const SIZES = {
       if (only && !only.includes(name)) continue;
       await p.goto(BASE + url).catch(() => p.goto(BASE + url));
       await p.waitForLoadState('networkidle').catch(() => {});
+      await p.getByText('Opening your workspace').waitFor({ state: 'hidden', timeout: 60000 }).catch(() => {});
       await p.waitForTimeout(1200);
       await p.screenshot({ path: path.join(OUT, `${PREFIX}-${size}-${name}.png`), fullPage: size !== 'desktop' ? false : false });
     }

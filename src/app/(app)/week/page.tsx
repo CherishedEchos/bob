@@ -79,7 +79,10 @@ function Diary() {
   const setParams = (patch: Record<string, string | null>) => {
     const q = new URLSearchParams(params.toString());
     q.delete("w");
-    for (const [k, v] of Object.entries(patch)) (v ? q.set(k, v) : q.delete(k));
+    for (const [k, v] of Object.entries(patch)) {
+      if (v) q.set(k, v);
+      else q.delete(k);
+    }
     router.replace(`/week${q.toString() ? `?${q}` : ""}`, { scroll: false });
   };
   const chooseView = (v: DiaryView) => {

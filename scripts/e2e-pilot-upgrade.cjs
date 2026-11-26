@@ -66,7 +66,7 @@ void zlib;
   await luke.goto(BASE + '/week');
   check(1, 'Direct link /week opens the Diary', await luke.getByRole('heading', { name: 'Diary', level: 1 }).waitFor().then(() => true, () => false));
   const diaryText = await luke.locator('main').innerText();
-  check(1, 'Diary has no summary panels or drag tip', !/Needs attention|Not scheduled yet|Needs someone|Tip: drag/.test(diaryText));
+  check(1, 'Diary has no dashboard panels (only the diary summary line)', !/Needs attention|Not scheduled yet|Tip: drag/.test(diaryText));
   check(1, 'Diary shows leave (approved and pending)', /Holiday|Unavailable/.test(diaryText));
   await shot(luke, 'desk-1440-diary', true);
 
@@ -170,7 +170,7 @@ void zlib;
   const w2 = await ops(ryan, 'convertToJob', { enquiryId: enq.id });
   check(7, 'Won enquiry becomes one job (retry returns the same job)', w1.ok && w2.ok && w1.value.id === w2.value.id && w2.value.existed === true);
   check(7, 'Only one job for that enquiry', (await snap(luke)).jobs.filter((j) => j.enquiryId === enq.id).length === 1);
-  const wb = await ops(luke, 'saveBooking', { input: { jobId: w1.value.id, date: london(8), allDay: true, personIds: ['n93_per_liam'] } });
+  const wb = await ops(luke, 'saveBooking', { input: { jobId: w1.value.id, date: london(8), allDay: true, personIds: ['n93_per_ryan'] } });
   check(7, 'The won job can be scheduled', wb.ok, wb.error);
 
   /* 8. Leave: request, approve, clash warning, cancel */
@@ -181,7 +181,7 @@ void zlib;
   await cp.goto(BASE + '/login');
   const acc = await cp.evaluate(async (t) => (await fetch(`/api/invite/${t}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: 'callum-demo-1' }) })).status, token);
   check(8, 'Invited employee accepts', acc === 200);
-  const start = london(20);
+  const start = london(30);
   const req = await cp.evaluate(async (start) => (await fetch('/api/leave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input: { kind: 'holiday', startDate: start, endDate: start } }) })).json(), start);
   check(8, 'Employee requests leave from My work', req.ok && req.value.status === 'pending');
   const appr = await ops(ryan, 'decideAbsence', { id: req.value.id, decision: 'approve' });

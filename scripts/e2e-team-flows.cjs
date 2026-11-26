@@ -72,7 +72,7 @@ function london(offsetDays) {
   await bf.waitFor({ state: 'detached', timeout: 8000 });
   await o.keyboard.press('Escape');
   await o.goto(BASE + `/week?w=${tomorrow}`);
-  const card = o.getByRole('button', { name: /Garden room base, Lingfield, 08:00–16:00, Rob Turner/ }).first();
+  const card = o.getByRole('button', { name: /^Garden room base,.*08:00–16:00, Rob Turner/ }).first();
   check(1, "Rob is booked on tomorrow's job in the planner", await card.waitFor({ timeout: 8000 }).then(() => true).catch(() => false));
   await o.screenshot({ path: `${OUT}/e2e-week-desk.png` });
   // Invite Rob
@@ -111,10 +111,12 @@ function london(offsetDays) {
 
   /* -------- Flow 3 + 4: move and reassign; overlap warning; failed save keeps input -------- */
   await o.goto(BASE + `/week?w=${tomorrow}`);
-  await o.getByRole('button', { name: /Garden room base, Lingfield/ }).first().click();
+  await o.getByRole('button', { name: /^Garden room base,/ }).first().click();
   const ef = o.getByRole('dialog', { name: 'Schedule work' });
   await ef.waitFor();
-  const dayAfter = london(2);
+  // A day from the day after tomorrow on which Callum is already booked (so the overlap warning shows, whatever weekday the run is on).
+  const callumDays = await o.evaluate(async () => (await (await fetch('/api/data')).json()).bookings.filter((b) => b.personIds.includes('n93_per_callum')).flatMap((b) => { const out = []; for (let d = new Date(b.date + 'T12:00:00Z'); d.toISOString().slice(0, 10) <= (b.endDate || b.date); d.setUTCDate(d.getUTCDate() + 1)) out.push(d.toISOString().slice(0, 10)); return out; }));
+  const dayAfter = callumDays.filter((d) => d >= london(2)).sort()[0] || london(2);
   await ef.getByLabel('Day', { exact: true }).fill(dayAfter);
   await ef.getByRole('button', { name: /Rob Turner/ }).click(); // remove Rob
   await ef.getByRole('button', { name: /Callum Price/ }).click(); // add Callum (busy on the extension)
@@ -139,7 +141,7 @@ function london(offsetDays) {
   const robApi = await w.evaluate(async () => (await fetch('/api/my-work')).json());
   check(3, "Rob's API no longer returns the job, its tasks or materials", robApi.value.bookings.length === 0 && robApi.value.materials.length === 0);
   await o.goto(BASE + `/week?w=${dayAfter}&person=n93_per_callum`);
-  check(3, "Callum's schedule shows the moved booking", await o.getByRole('button', { name: /Garden room base, Lingfield, 08:00–16:00, Callum Price/ }).first().waitFor({ timeout: 8000 }).then(() => true).catch(() => false));
+  check(3, "Callum's schedule shows the moved booking", await o.getByRole('button', { name: /^Garden room base,.*08:00–16:00, Callum Price/ }).first().waitFor({ timeout: 8000 }).then(() => true).catch(() => false));
 
   /* -------- Flow 5: enquiry — read, edit, save, copy; saved draft ≠ replied -------- */
   await o.goto(BASE + '/enquiries');
@@ -233,7 +235,7 @@ function london(offsetDays) {
   check(8, 'Writes refused (create job, schedule)', api.createJob === 403 && api.booking === 403, `${api.createJob}/${api.booking}`);
   check(8, 'Ask Bob refused for workers', api.bob === 403, String(api.bob));
   check(8, 'Data export refused', api.exportAll >= 400, String(api.exportAll));
-  check(8, "My work holds only Sam's own job, no money", api.myWork.value.bookings.every((x) => x.job.id === 'n93_job_extension_copthorne') && !/quotedValue|£/.test(JSON.stringify(api.myWork)));
+  check(8, "My work holds only Sam's own job, no money", api.myWork.value.bookings.every((x) => ['n93_job_extension_copthorne', 'n93_job_loft_eg'].includes(x.job.id)) && !/quotedValue|£/.test(JSON.stringify(api.myWork)));
   // Revoked invite
   const inv = await o.evaluate(async () => (await fetch('/api/ops', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'createInvite', args: { personId: 'n93_per_priya', email: 'priya@nair-plumbing.example' } }) })).json());
   await o.evaluate(async (id) => fetch('/api/ops', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'revokeInvite', args: { inviteId: id } }) }), inv.value.inviteId);

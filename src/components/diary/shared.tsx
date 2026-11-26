@@ -71,7 +71,7 @@ export function BookingBlock({
       aria-label={`${job?.title ?? "Job"}, ${job?.customerName ?? ""}, ${town}, ${time}${days.length > 1 ? `, ${formatDayShort(days[0])} to ${formatDayShort(days.at(-1)!)}` : ""}, ${unassigned ? "nobody assigned" : who.map((p) => p.name).join(", ")}${conflict ? `. Clash: ${conflict}` : ""}`}
       title={conflict ? `Clash: ${conflict}` : undefined}
       className={cn(
-        "group relative flex h-full w-full min-w-0 flex-col overflow-hidden rounded-md text-left ring-1 transition-[box-shadow,opacity] duration-100 hover:shadow-[var(--shadow-md)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-copper-500",
+        "@container group relative flex h-full w-full min-w-0 flex-col overflow-hidden rounded-md text-left ring-1 transition-[box-shadow,opacity] duration-100 hover:shadow-[var(--shadow-md)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-copper-500",
         unassigned ? "bg-[#fffbf2] ring-warning/50 [background-image:repeating-linear-gradient(135deg,transparent_0_7px,rgb(209_138_28/0.06)_7px_14px)]" : tone.card,
         conflict && "ring-2 ring-destructive/70",
         continuesBefore && "rounded-l-none",
@@ -103,14 +103,14 @@ export function BookingBlock({
       {compact ? null : (
         <span className="mt-1.5 flex min-w-0 items-center gap-1.5">
           {unassigned ? (
-            <span className="text-[11.5px] font-semibold text-[#8a5c0a]">Needs someone</span>
+            <span className="min-w-0 truncate text-[11.5px] font-semibold text-[#8a5c0a]">Needs someone</span>
           ) : (
             <>
               <PeopleStack people={who} size={18} max={3} />
-              <span className="min-w-0 truncate text-[11.5px] text-foreground/70">{who.map((p) => firstName(p.name)).join(", ")}</span>
+              <span className="min-w-0 truncate text-[11.5px] text-foreground/70 @max-[150px]:hidden">{who.map((p) => firstName(p.name)).join(", ")}</span>
             </>
           )}
-          <span className="tabular ml-auto shrink-0 pl-1 text-[11.5px] font-medium text-foreground/60">{time}</span>
+          <span className="tabular ml-auto shrink-0 pl-1 text-[11.5px] font-medium text-foreground/60 @max-[120px]:hidden">{time}</span>
         </span>
       )}
     </button>

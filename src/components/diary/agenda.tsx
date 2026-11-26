@@ -117,8 +117,8 @@ export function Agenda({
                   <CalendarDays className="size-4" aria-hidden /> Nothing booked
                 </span>
                 {manage && !past ? (
-                  <button type="button" onClick={() => onAdd(d)} className="h-9 rounded-md px-2 text-[14px] font-medium text-accent-fg">
-                    Schedule work
+                  <button type="button" onClick={() => onAdd(d)} aria-label={`Schedule work on ${dow(d, "long")} ${dayNum(d)}`} className="h-9 rounded-md px-2 text-[14px] font-medium text-accent-fg">
+                    Add work
                   </button>
                 ) : null}
               </div>

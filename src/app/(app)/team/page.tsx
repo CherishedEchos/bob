@@ -129,7 +129,7 @@ function TeamInner() {
       {list.length ? (
         <>
         <TeamTable people={list} today={today} week={week} manage={manage} onOpen={setOpen} />
-        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:hidden">
           {list.map((p) => {
             const mine = data.bookings.filter((b) => b.personIds.includes(p.id));
             const todays = bookingsOnDay(mine, today);
@@ -234,7 +234,7 @@ function TeamTable({ people, today, week, manage, onOpen }: { people: Person[]; 
   const head = "text-[12px] font-medium text-subtle";
   const where = (jobId: string) => `${jobs.get(jobId)?.title ?? "Job"}${jobs.get(jobId)?.location ? `, ${jobs.get(jobId)?.location}` : ""}`;
   return (
-    <div className="panel hidden overflow-hidden lg:block">
+    <div className="panel hidden overflow-hidden xl:block">
       <div className={cn("grid items-center gap-4 border-b border-line bg-[#faf9f6] px-5 py-2", cols)}>
         <span className={head}>Person</span>
         <span className={head}>Today</span>

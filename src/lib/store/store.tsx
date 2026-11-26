@@ -225,30 +225,30 @@ export function useStore(): StoreValue {
 /** Bob's launch screen: shown only while the workspace genuinely loads (motion is reduced if the user asks). */
 function SplashScreen({ error, onRetry }: { error: string | null; onRetry: () => void }) {
   return (
-    <div className="theme-dark flex min-h-dvh flex-col items-center justify-center gap-7 bg-[#141416] px-6 text-center">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-background px-6 text-center">
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-1/2 size-[520px] -translate-x-1/2 -translate-y-1/2 animate-breathe rounded-full bg-[radial-gradient(circle,rgb(243_135_53/0.16),transparent_62%)]" />
+        <div className="absolute left-1/2 top-1/2 size-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgb(243_135_53/0.07),transparent_62%)]" />
       </div>
       <div className="relative animate-fade-up">
-        <BobLogo height={54} title="Bob" />
+        <BobLogo height={44} tone="dark" title="Bob" />
       </div>
       {error ? (
         <div role="alert" className="relative max-w-sm">
-          <p className="text-[16px] font-semibold text-white">Couldn&apos;t open the workspace</p>
-          <p className="mt-1 text-[15px] text-white/65">{error}</p>
+          <p className="text-[16px] font-semibold text-heading">Couldn&apos;t open the workspace</p>
+          <p className="mt-1 text-[15px] text-muted-foreground">{error}</p>
           <button onClick={onRetry} className="mt-4 h-11 rounded-lg bg-primary px-5 text-[15px] font-semibold text-white">
             Try again
           </button>
-          <p className="mt-3 text-[13.5px] text-white/50">
-            Still stuck? <a href="/login" className="font-medium text-copper-300 underline">Go back to the start</a> and tap Try the demo.
+          <p className="mt-3 text-[13.5px] text-subtle">
+            Still stuck? <a href="/login" className="font-medium text-accent-fg underline">Go back to the start</a> and tap Try the demo.
           </p>
         </div>
       ) : (
         <div className="relative flex flex-col items-center gap-3">
-          <div className="h-[3px] w-40 overflow-hidden rounded-full bg-white/10" aria-hidden>
+          <div className="h-[2px] w-32 overflow-hidden rounded-full bg-black/[0.07]" aria-hidden>
             <div className="h-full w-1/3 animate-[launch_1.1s_ease-in-out_infinite] rounded-full bg-copper-500" />
           </div>
-          <p className="text-[13.5px] font-medium text-white/55" aria-live="polite">
+          <p className="text-[13px] font-medium text-subtle" aria-live="polite">
             Opening your workspace…
           </p>
         </div>

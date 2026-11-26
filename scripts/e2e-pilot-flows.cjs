@@ -33,23 +33,23 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
   await o.getByRole('heading', { name: 'Diary', level: 1 }).waitFor();
   check(1, 'Sidebar and page call it Diary', await o.getByRole('link', { name: 'Diary' }).first().isVisible());
   const main = await o.locator('main').innerText();
-  check(1, 'No panels below the diary', !/Needs attention|Not scheduled yet|Needs someone/.test(main));
+  check(1, 'No panels below the diary', !/Needs attention|Not scheduled yet/.test(main));
   check(1, 'No permanent drag tip', !/Tip: drag/.test(main));
-  const range1 = await o.getByRole('toolbar', { name: 'Diary controls' }).locator('p').innerText();
+  const range1 = await o.getByRole('toolbar', { name: 'Diary controls' }).locator('[aria-live="polite"]').innerText();
   await o.getByRole('button', { name: 'Next week' }).click();
   await o.waitForTimeout(400);
-  const range2 = await o.getByRole('toolbar', { name: 'Diary controls' }).locator('p').innerText();
+  const range2 = await o.getByRole('toolbar', { name: 'Diary controls' }).locator('[aria-live="polite"]').innerText();
   await o.getByRole('button', { name: 'Today', exact: true }).click();
   await o.waitForTimeout(400);
-  check(1, 'Week navigation updates the date range', range1 !== range2 && (await o.getByRole('toolbar', { name: 'Diary controls' }).locator('p').innerText()) === range1, `${range1} → ${range2}`);
+  check(1, 'Week navigation updates the date range', range1 !== range2 && (await o.getByRole('toolbar', { name: 'Diary controls' }).locator('[aria-live="polite"]').innerText()) === range1, `${range1} → ${range2}`);
   await o.getByRole('toolbar', { name: 'Diary controls' }).locator('select').selectOption({ label: 'Sam Okoro · Plasterer' });
   await o.waitForTimeout(500);
-  const cards = await o.getByRole('region', { name: /^Diary/ }).getByRole('button', { name: /^Edit booking/ }).evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') || ''));
+  const cards = await o.getByRole('region', { name: 'Week' }).locator('button[draggable]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') || ''));
   check(1, 'Filter by a subcontractor shows only their work', cards.length > 0 && cards.every((t) => /Sam/.test(t)), `${cards.length} bookings`);
-  await o.getByRole('button', { name: 'Show everyone' }).click();
-  const unassigned = o.getByRole('button', { name: /^Edit booking: .*unassigned/ }).first();
+  await o.getByRole('toolbar', { name: 'Diary controls' }).locator('select').selectOption({ label: 'Everyone' });
+  const unassigned = o.getByRole('button', { name: /nobody assigned/ }).first();
   await unassigned.waitFor();
-  check(1, 'Unassigned booking shows a small Unassigned label', /Unassigned/.test(await unassigned.innerText()));
+  check(1, 'Unassigned booking shows a small Needs someone label', /Needs someone/.test(await unassigned.innerText()));
   await unassigned.click();
   const bf = o.getByRole('dialog', { name: 'Schedule work' });
   await bf.waitFor();
@@ -113,7 +113,7 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
   const ownerFeed = await ops(o, 'createFeed', { scope: 'company' });
   const bookingId = book.value.id;
   await o.goto(BASE + `/week?w=${tomorrow}`);
-  await o.getByRole('button', { name: /^Edit booking: Media wall.*Rob Turner/ }).first().click();
+  await o.getByRole('button', { name: /^Media wall,.*Rob Turner/ }).first().click();
   const ef = o.getByRole('dialog', { name: 'Schedule work' });
   await ef.waitFor();
   const dayAfter = london(2);
@@ -304,12 +304,12 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
     }
     if (label === '1920' || label === '1280') {
       await p.goto(BASE + '/week');
-      await p.locator('section[aria-label^="Diary"]').waitFor({ timeout: 30000 });
+      await p.locator('section[aria-label="Week"]').waitFor({ timeout: 30000 });
       await p.waitForTimeout(500);
       const geo = await p.evaluate(() => {
-        const grid = document.querySelector('section[aria-label^="Diary"]').getBoundingClientRect();
+        const grid = document.querySelector('section[aria-label="Week"]').getBoundingClientRect();
         const main = document.querySelector('main').getBoundingClientRect();
-        const clipped = [...document.querySelectorAll('section[aria-label^="Diary"] button[aria-label^="Edit booking"]')].some((el) => el.scrollWidth > el.clientWidth + 1);
+        const clipped = [...document.querySelectorAll('section[aria-label="Week"] button[draggable]')].some((el) => el.scrollWidth > el.clientWidth + 1);
         return { leftGap: Math.round(grid.left - main.left), rightGap: Math.round(main.right - grid.right), clipped, col: Math.round(grid.width / 6.1) };
       });
       check(8, `${label}: diary uses the width (gutters ≤ 56px, no clipped cards)`, geo.leftGap <= 56 && geo.rightGap <= 56 && !geo.clipped, JSON.stringify(geo));
