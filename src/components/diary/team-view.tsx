@@ -34,7 +34,7 @@ type Props = {
 const dow = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
 
 export function TeamView({ days, today, bookings, absences, jobs, staff, subs, manage, onOpen, onAdd, onLeave, onMove }: Props) {
-  const cols = { gridTemplateColumns: `minmax(180px, 220px) repeat(${days.length}, minmax(0, 1fr))` } as const;
+  const cols = { gridTemplateColumns: `minmax(150px, 220px) repeat(${days.length}, minmax(0, 1fr))` } as const;
   const [over, setOver] = React.useState<string | null>(null);
   const unassigned = bookings.filter((b) => !b.personIds.length && days.some((d) => coversDay(b, d)));
 
@@ -157,7 +157,7 @@ export function TeamView({ days, today, bookings, absences, jobs, staff, subs, m
 
   return (
     <section aria-label="Team schedule" className="panel overflow-x-auto">
-      <div role="grid" className="min-w-[860px]">
+      <div role="grid" className={days.length > 5 ? "min-w-[980px]" : "min-w-[700px]"}>
         <div role="row" className="sticky top-0 z-20 grid border-b border-line bg-card" style={cols}>
           <div className="sticky left-0 z-10 flex items-center border-r border-line bg-card px-3 text-[12.5px] font-medium text-subtle">Team</div>
           {days.map((d) => (

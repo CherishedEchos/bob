@@ -925,7 +925,12 @@ function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) 
       ) : null}
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <Button asChild className="h-12 text-[15.5px] sm:px-6">
+        {finished && status !== "changes" && !emailed ? (
+          <Button className="h-12 text-[15px] sm:px-5" variant={sending ? "secondary" : "default"} onClick={() => setSending((v) => !v)}>
+            <Mail /> Send to customer
+          </Button>
+        ) : null}
+        <Button asChild variant={finished && status !== "changes" && !emailed ? "secondary" : "default"} className="h-12 text-[15px] sm:px-5">
           <Link href={finished ? `${href}?step=5` : href}>
             <PackageCheck /> {status === "not_started" ? "Create handover report" : finished ? "View handover" : "Continue handover"}
           </Link>
@@ -938,7 +943,7 @@ function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) 
             <Button variant="secondary" className="h-12 text-[15px]" disabled={!!busy} onClick={() => void pack()}>
               {busy === "pack" ? <Loader2 className="animate-spin" /> : <FileArchive />} Download handover pack
             </Button>
-            <Button asChild variant="secondary" className="h-12 text-[15px]">
+            <Button asChild variant="ghost" className="h-12 text-[15px]">
               <Link href={`${href}?step=3`}>
                 <Pencil /> Edit report
               </Link>
@@ -946,11 +951,6 @@ function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) 
           </>
         ) : null}
       </div>
-      {finished && status !== "changes" && !emailed ? (
-        <Button className="mt-3 h-12 w-full text-[15.5px] sm:w-auto sm:px-6" variant={sending ? "secondary" : "default"} onClick={() => setSending((v) => !v)}>
-          <Mail /> Send to customer
-        </Button>
-      ) : null}
       {sending ? <SendToCustomer job={job} onClose={() => setSending(false)} /> : null}
       <FollowUpTrail job={job} />
       {versions.length > 1 ? <p className="mt-2 text-[13px] text-subtle">{versions.length} versions kept — all are listed in the handover.</p> : null}
