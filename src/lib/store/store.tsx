@@ -239,7 +239,7 @@ function SplashScreen({ error, onRetry }: { error: string | null; onRetry: () =>
           <button onClick={onRetry} className="mt-4 h-11 rounded-lg bg-primary px-5 text-[15px] font-semibold text-white">
             Try again
           </button>
-          <p className="mt-3 text-[13.5px] text-subtle">
+          <p className="mt-3 text-[14.5px] text-subtle">
             Still stuck? <a href="/login" className="font-medium text-accent-fg underline">Go back to the start</a> and tap Try the demo.
           </p>
         </div>
@@ -248,7 +248,7 @@ function SplashScreen({ error, onRetry }: { error: string | null; onRetry: () =>
           <div className="h-[2px] w-32 overflow-hidden rounded-full bg-black/[0.07]" aria-hidden>
             <div className="h-full w-1/3 animate-[launch_1.1s_ease-in-out_infinite] rounded-full bg-copper-500" />
           </div>
-          <p className="text-[13px] font-medium text-subtle" aria-live="polite">
+          <p className="text-[14px] font-medium text-subtle" aria-live="polite">
             Opening your workspace…
           </p>
         </div>

@@ -71,7 +71,7 @@ export function PhotoGrid({ relatedType, relatedId }: { relatedType: Photo["rela
           </button>
         ))}
         {can("notes.write") ? (
-          <label className={cn("grid aspect-square cursor-pointer place-items-center rounded-lg border border-dashed border-line-strong bg-card text-center text-[13px] font-medium text-muted-foreground transition hover:text-foreground", busy && "pointer-events-none opacity-60")}>
+          <label className={cn("grid aspect-square cursor-pointer place-items-center rounded-lg border border-dashed border-line-strong bg-card text-center text-[14px] font-medium text-muted-foreground transition hover:text-foreground", busy && "pointer-events-none opacity-60")}>
             <span className="flex flex-col items-center gap-1">
               {busy ? <Loader2 className="size-5 animate-spin" /> : <ImagePlus className="size-5 text-accent-icon" />}
               {busy ? "Saving…" : "Add photo"}
@@ -183,7 +183,7 @@ export function SnapPhotoButton({ className, label = false, inputId, hideTrigger
           <div className="mt-3 flex gap-3">
             {preview ? <img src={preview} alt="Your photo" className="size-24 shrink-0 rounded-xl object-cover ring-1 ring-line-strong" /> : null}
             <div className="min-w-0 flex-1">
-              <label htmlFor="photo-caption" className="mb-1.5 block text-[14px] font-medium text-foreground/90">
+              <label htmlFor="photo-caption" className="mb-1.5 block text-[15px] font-medium text-foreground/90">
                 Note (optional)
               </label>
               <input
@@ -198,13 +198,13 @@ export function SnapPhotoButton({ className, label = false, inputId, hideTrigger
           </div>
           <div className="mt-4 flex items-center justify-between">
             <div className="t-eyebrow">{showEnquiries ? "Which enquiry?" : "Which job? Bob's best guess first"}</div>
-            <button type="button" onClick={() => setShowEnquiries((v) => !v)} className="h-9 px-1 text-[13.5px] font-medium text-accent-fg">
+            <button type="button" onClick={() => setShowEnquiries((v) => !v)} className="h-9 px-1 text-[14.5px] font-medium text-accent-fg">
               {showEnquiries ? "Show jobs" : "It's for an enquiry"}
             </button>
           </div>
           <ul className="mt-2 min-h-0 flex-1 divide-y divide-line overflow-y-auto rounded-xl bg-card ring-1 ring-line">
             {(showEnquiries ? enquiries : jobs).length === 0 ? (
-              <li className="px-4 py-4 text-[14.5px] text-muted-foreground">{showEnquiries ? "No open enquiries." : "No active jobs."}</li>
+              <li className="px-4 py-4 text-[15px] text-muted-foreground">{showEnquiries ? "No open enquiries." : "No active jobs."}</li>
             ) : null}
             {showEnquiries
               ? enquiries.map((e) => (
@@ -212,7 +212,7 @@ export function SnapPhotoButton({ className, label = false, inputId, hideTrigger
                     <button type="button" disabled={!!saving} onClick={() => void fileTo("enquiry", e.id, `${e.customerName}'s enquiry`)} className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-2 active:bg-raised disabled:opacity-60">
                       <div className="min-w-0 flex-1">
                         <div className="t-name truncate">{e.customerName}</div>
-                        <div className="truncate text-[13.5px] text-muted-foreground">
+                        <div className="truncate text-[14.5px] text-muted-foreground">
                           {e.title} · {e.location}
                         </div>
                       </div>
@@ -228,11 +228,11 @@ export function SnapPhotoButton({ className, label = false, inputId, hideTrigger
                         <div className="t-name truncate">
                           {j.title} · {j.customerName}
                         </div>
-                        <div className="flex items-center gap-1 truncate text-[13.5px] text-muted-foreground">
+                        <div className="flex items-center gap-1 truncate text-[14.5px] text-muted-foreground">
                           <MapPin className="size-3.5 shrink-0" /> {j.location} · {JOB_STATUS_LABEL[j.status]}
                         </div>
                       </div>
-                      {saving === j.id ? <Loader2 className="size-4 animate-spin text-accent-fg" /> : i === 0 ? <span className="rounded-md bg-copper-500/15 px-1.5 py-0.5 text-[12px] font-medium text-accent-fg">Likely</span> : null}
+                      {saving === j.id ? <Loader2 className="size-4 animate-spin text-accent-fg" /> : i === 0 ? <span className="rounded-md bg-copper-500/15 px-1.5 py-0.5 text-[13px] font-medium text-accent-fg">Likely</span> : null}
                     </button>
                   </li>
                 ))}

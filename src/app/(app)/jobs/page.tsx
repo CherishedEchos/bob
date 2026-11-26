@@ -156,12 +156,12 @@ function Jobs() {
                   aria-selected={on}
                   onClick={() => setView(v)}
                   className={cn(
-                    "flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 text-[14px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:h-9",
-                    on ? "bg-[#1a1a1a] text-white" : "bg-card text-muted-foreground ring-1 ring-line-strong hover:text-foreground",
+                    "flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 text-[15px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:h-9",
+                    on ? "bg-selected font-semibold text-accent-fg ring-1 ring-copper-500/45" : "bg-card text-muted-foreground ring-1 ring-line-strong hover:text-foreground",
                   )}
                 >
                   {VIEW_LABEL[v]}
-                  <span className={cn("tabular text-[12px]", on ? "text-white/55" : "text-subtle", !on && v === "unscheduled" && n ? "font-semibold text-accent-fg" : "")}>{n}</span>
+                  <span className={cn("tabular text-[13px]", on ? "text-accent-fg/70" : "text-subtle", !on && v === "unscheduled" && n ? "font-semibold text-accent-fg" : "")}>{n}</span>
                 </button>
               );
             })}
@@ -171,8 +171,8 @@ function Jobs() {
                 value={MORE.includes(q ? "all" : view) ? (q ? "all" : view) : ""}
                 onChange={(e) => setView((e.target.value || "active") as View)}
                 className={cn(
-                  "h-10 appearance-none rounded-lg pl-3.5 pr-9 text-[14px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:h-9",
-                  MORE.includes(q ? "all" : view) ? "bg-[#1a1a1a] text-white" : "bg-card text-muted-foreground ring-1 ring-line-strong hover:text-foreground",
+                  "h-10 appearance-none rounded-lg pl-3.5 pr-9 text-[15px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:h-9",
+                  MORE.includes(q ? "all" : view) ? "bg-selected font-semibold text-accent-fg ring-1 ring-copper-500/45" : "bg-card text-muted-foreground ring-1 ring-line-strong hover:text-foreground",
                 )}
               >
                 <option value="">More stages</option>
@@ -228,7 +228,7 @@ function Jobs() {
             ))}
           </div>
         </div>
-        {q ? <p className="text-[13.5px] text-subtle">Searching every job, including completed ones.</p> : null}
+        {q ? <p className="text-[14.5px] text-subtle">Searching every job, including completed ones.</p> : null}
         <Tip id="jobs">Ask Bob about any job in plain words — “what&apos;s left to pay on the Patels&apos; kitchen?”</Tip>
       </div>
 
@@ -308,7 +308,7 @@ function JobCard({
   return (
     <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-line transition-shadow duration-150 hover:shadow-[var(--shadow-md)]">
       <JobCover job={j} file={cover} className="aspect-[16/10] w-full">
-        <span className={cn("absolute left-3 top-3 inline-flex h-6 items-center rounded-md px-2 text-[12px] font-semibold shadow-[0_1px_2px_rgb(0_0_0/0.12)]", STAGE_PILL[stage], j.status === "quoted" && "bg-[#f4f4f5] text-[#3f3f46]")}>
+        <span className={cn("absolute left-3 top-3 inline-flex h-6 items-center rounded-md px-2 text-[13px] font-semibold shadow-[0_1px_2px_rgb(0_0_0/0.12)]", STAGE_PILL[stage], j.status === "quoted" && "bg-[#f4f4f5] text-[#3f3f46]")}>
           {stageLabel(j, stage)}
         </span>
       </JobCover>
@@ -325,7 +325,7 @@ function JobCard({
             {j.title}
           </a>
         </h2>
-        <div className="mt-1.5 space-y-1 text-[13px] text-subtle">
+        <div className="mt-1.5 space-y-1 text-[14px] text-subtle">
           <div className="flex items-center gap-1.5 truncate">
             <User className="size-3.5 shrink-0" aria-hidden /> <span className="truncate">{j.customerName}</span>
           </div>
@@ -333,7 +333,7 @@ function JobCard({
             <span className="flex min-w-0 items-center gap-1.5">
               <MapPin className="size-3.5 shrink-0" aria-hidden /> <span className="truncate">{j.siteAddress ? j.siteAddress.split(",").slice(-2).join(",").trim() : j.location}</span>
             </span>
-            {finance ? <span className="shrink-0 text-[14.5px] font-semibold tabular tracking-[-0.01em] text-heading">{gbp(j.quotedValue)}</span> : null}
+            {finance ? <span className="shrink-0 text-[15px] font-semibold tabular tracking-[-0.01em] text-heading">{gbp(j.quotedValue)}</span> : null}
           </div>
         </div>
         {progress ? (
@@ -341,14 +341,14 @@ function JobCard({
             <div className="h-1 overflow-hidden rounded-full bg-surface-3">
               <div className="h-full rounded-full bg-copper-500" style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }} />
             </div>
-            <div className="mt-1 text-[11.5px] tabular text-subtle">
+            <div className="mt-1 text-[12.5px] tabular text-subtle">
               {progress.done} of {progress.total} days on site
             </div>
           </div>
         ) : null}
         <div className="mt-auto flex items-center justify-between gap-2 border-t border-line pt-3" style={{ marginTop: progress ? 12 : 14 }}>
           {next ? (
-            <span className="flex min-w-0 items-center gap-1.5 text-[12.5px]">
+            <span className="flex min-w-0 items-center gap-1.5 text-[13.5px]">
               <CalendarDays className="size-3.5 shrink-0 text-subtle" aria-hidden />
               <span className="truncate">
                 <span className="font-medium text-foreground">{nextLabel(next, today)}</span>
@@ -359,13 +359,13 @@ function JobCard({
             <button
               type="button"
               onClick={onSchedule}
-              className="relative z-10 inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[12.5px] font-medium text-accent-fg ring-1 ring-copper-500/35 hover:bg-copper-500/[0.08]"
+              className="relative z-10 inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13.5px] font-medium text-accent-fg ring-1 ring-copper-500/35 hover:bg-copper-500/[0.08]"
               aria-label={`Schedule ${j.title} for ${j.customerName}`}
             >
               <CalendarPlus className="size-3.5" aria-hidden /> Schedule work
             </button>
           ) : (
-            <span className="truncate text-[12.5px] text-subtle">{stage === "complete" ? "Completed" : nextStep}</span>
+            <span className="truncate text-[13.5px] text-subtle">{stage === "complete" ? "Completed" : nextStep}</span>
           )}
           {people.length ? <PeopleStack people={people} size={24} max={3} /> : null}
         </div>
@@ -382,7 +382,7 @@ const LIST_COLS = "lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.3fr)_minmax(0,1fr)_m
 
 function JobList({ jobs, stages, covers, today, finance, onOpen, onSchedule }: { jobs: Job[]; stages: Map<string, JobStage>; covers: Map<string, JobFile>; today: string; finance: boolean; onOpen: (j: Job) => void; onSchedule?: (j: Job) => void }) {
   const { data } = useStore();
-  const head = "text-[12px] font-medium text-subtle";
+  const head = "text-[13px] font-medium text-subtle";
   return (
     <div className="panel overflow-hidden">
       <div role="row" className={cn("hidden items-center gap-4 border-b border-line bg-[#faf9f6] px-4 py-2 lg:grid", LIST_COLS)}>
@@ -407,40 +407,40 @@ function JobList({ jobs, stages, covers, today, finance, onOpen, onSchedule }: {
               <div className="contents lg:flex lg:min-w-0 lg:items-center lg:gap-3">
                 <JobCover job={j} file={covers.get(j.id)} small className="h-9 w-12 shrink-0 rounded-md ring-1 ring-line" />
                 <div className="min-w-0">
-                  <button type="button" onClick={() => onOpen(j)} className="row-target block w-full truncate text-left text-[14px] font-semibold text-heading after:absolute after:inset-0 after:content-['']">
+                  <button type="button" onClick={() => onOpen(j)} className="row-target block w-full truncate text-left text-[15px] font-semibold text-heading after:absolute after:inset-0 after:content-['']">
                     {j.title}
                   </button>
-                  <div className="truncate text-[12.5px] text-subtle lg:hidden">
+                  <div className="truncate text-[13.5px] text-subtle lg:hidden">
                     {j.customerName} · {town}
                   </div>
                   <div className="mt-1 flex items-center gap-2 lg:hidden">
                     <StatusText tone={STAGE_TONE[stage]}>{stageLabel(j, stage)}</StatusText>
-                    {next ? <span className="text-[12.5px] text-subtle">· {nextLabel(next, today)}</span> : null}
+                    {next ? <span className="text-[13.5px] text-subtle">· {nextLabel(next, today)}</span> : null}
                   </div>
                 </div>
               </div>
-              <div className="hidden min-w-0 truncate text-[13.5px] text-foreground lg:block">{j.customerName}</div>
-              <div className="hidden min-w-0 truncate text-[13.5px] text-muted-foreground xl:block">{town}</div>
+              <div className="hidden min-w-0 truncate text-[14.5px] text-foreground lg:block">{j.customerName}</div>
+              <div className="hidden min-w-0 truncate text-[14.5px] text-muted-foreground xl:block">{town}</div>
               <div className="hidden lg:block">
                 <StatusText tone={STAGE_TONE[stage]}>{stageLabel(j, stage)}</StatusText>
               </div>
-              <div className="text-right text-[13.5px] font-semibold tabular text-heading">{finance ? gbp(j.quotedValue) : null}</div>
-              <div className="hidden min-w-0 text-[13px] lg:block">
+              <div className="text-right text-[14.5px] font-semibold tabular text-heading">{finance ? gbp(j.quotedValue) : null}</div>
+              <div className="hidden min-w-0 text-[14px] lg:block">
                 {next ? (
                   <span className="block truncate">
                     <span className="font-medium text-foreground">{nextLabel(next, today)}</span>
                     <span className="tabular text-subtle"> · {formatTimeRange(next.startTime, next.endTime)}</span>
                   </span>
                 ) : stage === "ready" && j.status !== "quoted" && onSchedule ? (
-                  <button type="button" onClick={() => onSchedule(j)} className="row-secondary inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12.5px] font-medium text-accent-fg ring-1 ring-copper-500/35 hover:bg-copper-500/[0.08]" aria-label={`Schedule ${j.title} for ${j.customerName}`}>
+                  <button type="button" onClick={() => onSchedule(j)} className="row-secondary inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[13.5px] font-medium text-accent-fg ring-1 ring-copper-500/35 hover:bg-copper-500/[0.08]" aria-label={`Schedule ${j.title} for ${j.customerName}`}>
                     <CalendarPlus className="size-3.5" aria-hidden /> Schedule
                   </button>
                 ) : (
                   <span className="text-subtle">—</span>
                 )}
               </div>
-              <div className="hidden xl:block">{who.length ? <PeopleStack people={who} size={24} max={4} /> : <span className="text-[13px] text-subtle">—</span>}</div>
-              <div className="hidden min-w-0 truncate text-[13px] text-muted-foreground xl:block" title={action ?? undefined}>
+              <div className="hidden xl:block">{who.length ? <PeopleStack people={who} size={24} max={4} /> : <span className="text-[14px] text-subtle">—</span>}</div>
+              <div className="hidden min-w-0 truncate text-[14px] text-muted-foreground xl:block" title={action ?? undefined}>
                 {action ?? <span className="text-warn-fg">Needs scheduling</span>}
               </div>
             </li>
@@ -463,13 +463,13 @@ function ToQuoteList({ enquiries, onOpen, onQuote }: { enquiries: Enquiry[]; onO
             <button type="button" onClick={() => onOpen(e.id)} className="block w-full truncate text-left text-[15px] font-semibold text-heading after:absolute after:inset-0 after:content-['']">
               {e.title}
             </button>
-            <div className="mt-0.5 truncate text-[13px] text-subtle">
+            <div className="mt-0.5 truncate text-[14px] text-subtle">
               {e.customerName} · {e.location}
             </div>
-            <div className="mt-1 text-[12.5px] text-subtle">Received {new Date(e.receivedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div>
+            <div className="mt-1 text-[13.5px] text-subtle">Received {new Date(e.receivedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div>
           </div>
           {onQuote ? (
-            <button type="button" onClick={() => onQuote(e)} className="relative z-10 h-9 shrink-0 rounded-lg bg-card px-3 text-[13px] font-medium text-foreground ring-1 ring-line-strong hover:bg-raised-hover">
+            <button type="button" onClick={() => onQuote(e)} className="relative z-10 h-9 shrink-0 rounded-lg bg-card px-3 text-[14px] font-medium text-foreground ring-1 ring-line-strong hover:bg-raised-hover">
               Create quote
             </button>
           ) : null}

@@ -80,16 +80,16 @@ function Merchants() {
               role="tab"
               aria-selected={view === v}
               onClick={() => setView(v)}
-              className={cn("flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[14px] font-semibold transition sm:flex-none", view === v ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground")}
+              className={cn("flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[15px] font-semibold transition sm:flex-none", view === v ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground")}
             >
               {label}
-              <span className={cn("tabular text-[12.5px]", view === v ? "text-accent-fg" : "text-subtle")}>{n}</span>
+              <span className={cn("tabular text-[13.5px]", view === v ? "text-accent-fg" : "text-subtle")}>{n}</span>
             </button>
           ))}
         </div>
         <div className="relative min-w-[220px] flex-1">
           <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-subtle" />
-          <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, branch or phone" aria-label="Search merchants" className="h-11 pl-10 text-[14.5px]" />
+          <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, branch or phone" aria-label="Search merchants" className="h-11 pl-10 text-[15px]" />
         </div>
       </div>
 
@@ -107,7 +107,7 @@ function Merchants() {
                 <col className="w-[44px]" />
               </colgroup>
               <thead>
-                <tr className="border-b border-line bg-surface-2 text-[13px] font-semibold text-muted-foreground">
+                <tr className="border-b border-line bg-surface-2 text-[14px] font-semibold text-muted-foreground">
                   <th scope="col" className="px-4 py-2.5 lg:px-5">Supplier</th>
                   <th scope="col" className="px-3 py-2.5">Branch</th>
                   <th scope="col" className="px-3 py-2.5">Phone</th>
@@ -130,11 +130,11 @@ function Merchants() {
                           <span className="min-w-0 text-[15.5px] font-semibold leading-snug text-heading [overflow-wrap:anywhere]">{m.name}</span>
                         </button>
                       </td>
-                      <td className="truncate px-3 py-3.5 text-[14.5px] text-foreground" title={m.branch}>
+                      <td className="truncate px-3 py-3.5 text-[15px] text-foreground" title={m.branch}>
                         {m.branch ?? <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3.5 text-[14.5px] tabular text-foreground">{m.phone ?? <span className="text-muted-foreground">—</span>}</td>
-                      <td className="px-3 py-3.5 text-[14.5px]">
+                      <td className="whitespace-nowrap px-3 py-3.5 text-[15px] tabular text-foreground">{m.phone ?? <span className="text-muted-foreground">—</span>}</td>
+                      <td className="px-3 py-3.5 text-[15px]">
                         <span className={cn(o.toOrder ? "font-semibold text-warn-fg" : o.ordered ? "text-info-fg" : "text-muted-foreground")}>{o.label}</span>
                       </td>
                       <td className="pr-4 text-right">
@@ -155,8 +155,8 @@ function Merchants() {
                 <li key={m.id} className="row-open flex items-center gap-3 px-4 py-3">
                   <button type="button" onClick={() => setOpen(m.id)} className="row-target min-w-0 flex-1 text-left after:absolute after:inset-0 after:content-['']" aria-label={`Open ${m.name}`}>
                     <span className="block text-[15.5px] font-semibold leading-snug text-heading [overflow-wrap:anywhere]">{m.name}</span>
-                    <span className="mt-0.5 block text-[14px] text-muted-foreground">{[m.branch, m.phone].filter(Boolean).join(" · ") || "No contact details yet"}</span>
-                    <span className={cn("mt-0.5 block text-[14px]", o.toOrder ? "font-semibold text-warn-fg" : o.ordered ? "text-info-fg" : "text-muted-foreground")}>{o.label}</span>
+                    <span className="mt-0.5 block text-[15px] text-muted-foreground">{[m.branch, m.phone].filter(Boolean).join(" · ") || "No contact details yet"}</span>
+                    <span className={cn("mt-0.5 block text-[15px]", o.toOrder ? "font-semibold text-warn-fg" : o.ordered ? "text-info-fg" : "text-muted-foreground")}>{o.label}</span>
                   </button>
                   <ChevronRight aria-hidden className="row-chevron size-[18px] shrink-0" />
                 </li>
@@ -195,7 +195,7 @@ function MerchantSheet({ id, onClose }: { id: string | null; onClose: () => void
         <div className="flex-1 overflow-y-auto px-5 pb-8 pt-6 sm:px-6">
           <h2 className="pr-12 text-[22px] font-bold leading-tight tracking-tight">{m.name}</h2>
           {m.branch ? <p className="mt-0.5 text-[15px] text-muted-foreground">{m.branch}</p> : null}
-          {m.archivedAt ? <p className="mt-3 rounded-xl bg-surface-2 px-3 py-2 text-[14.5px] text-muted-foreground">Archived — kept so past orders and bills still show who they were with.</p> : null}
+          {m.archivedAt ? <p className="mt-3 rounded-xl bg-surface-2 px-3 py-2 text-[15px] text-muted-foreground">Archived — kept so past orders and bills still show who they were with.</p> : null}
           <div className="mt-4 flex flex-wrap gap-2">
             {m.phone ? (
               <Button asChild size="sm" variant="secondary">
@@ -224,9 +224,9 @@ function MerchantSheet({ id, onClose }: { id: string | null; onClose: () => void
           {manage ? (
             <section className="mt-5 rounded-2xl p-4 ring-1 ring-line">
               <h3 className="flex items-center gap-1.5 text-[15px] font-semibold">
-                <KeyRound className="size-4 text-subtle" aria-hidden /> Account & access <span className="text-[13px] font-normal text-muted-foreground">· owner and office only</span>
+                <KeyRound className="size-4 text-subtle" aria-hidden /> Account & access <span className="text-[14px] font-normal text-muted-foreground">· owner and office only</span>
               </h3>
-              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[14.5px]">
+              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[15px]">
                 <dt className="text-muted-foreground">Trade account</dt>
                 <dd>{m.accountRef ?? "Not set"}</dd>
                 <dt className="text-muted-foreground">Login managed by</dt>
@@ -242,7 +242,7 @@ function MerchantSheet({ id, onClose }: { id: string | null; onClose: () => void
                   )}
                 </dd>
               </dl>
-              <p className="mt-2 text-[13px] text-muted-foreground">Passwords stay in your password manager. Bob only keeps the link.</p>
+              <p className="mt-2 text-[14px] text-muted-foreground">Passwords stay in your password manager. Bob only keeps the link.</p>
             </section>
           ) : null}
 
@@ -260,12 +260,12 @@ function MerchantSheet({ id, onClose }: { id: string | null; onClose: () => void
                             {o.item} × {o.quantity}
                             {o.unit ? ` ${o.unit}` : ""}
                           </span>
-                          <span className="block text-[13.5px] text-muted-foreground">
+                          <span className="block text-[14.5px] text-muted-foreground">
                             {j ? `${j.title} · ${j.customerName}` : "Job"}
                             {o.neededBy ? ` · needed ${relativeDayInline(o.neededBy, today)}` : ""}
                           </span>
                         </span>
-                        <span className={o.status === "to_order" ? "text-[13.5px] font-semibold text-warn-fg" : "text-[13.5px] font-semibold text-info-fg"}>{MATERIAL_STATUS_LABEL[o.status]}</span>
+                        <span className={o.status === "to_order" ? "text-[14.5px] font-semibold text-warn-fg" : "text-[14.5px] font-semibold text-info-fg"}>{MATERIAL_STATUS_LABEL[o.status]}</span>
                       </button>
                     </li>
                   );
@@ -276,7 +276,7 @@ function MerchantSheet({ id, onClose }: { id: string | null; onClose: () => void
             )}
           </section>
           {bills.length && can("finance.read") ? (
-            <p className="mt-4 text-[14.5px]">
+            <p className="mt-4 text-[15px]">
               {bills.length} unpaid {bills.length === 1 ? "bill" : "bills"} — see Money → Bills to pay.
             </p>
           ) : null}
@@ -292,7 +292,7 @@ function MerchantSheet({ id, onClose }: { id: string | null; onClose: () => void
                 </Button>
               ) : confirm ? (
                 <div className="w-full rounded-xl bg-red-500/[0.06] p-3 ring-1 ring-red-500/25">
-                  <p className="text-[14.5px]">Archive {m.name}? It leaves the merchant lists but past orders and bills keep its name.</p>
+                  <p className="text-[15px]">Archive {m.name}? It leaves the merchant lists but past orders and bills keep its name.</p>
                   <div className="mt-2 flex gap-2">
                     <Button size="sm" variant="secondary" onClick={() => setConfirm(false)}>Keep</Button>
                     <Button size="sm" variant="destructive" onClick={async () => { const r = await actions.run("archiveMerchant", { id: m.id }); setConfirm(false); toast(r.ok ? `${m.name} archived` : "Couldn't archive", r.ok ? "success" : "error"); }}>Archive</Button>

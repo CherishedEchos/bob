@@ -80,7 +80,7 @@ function FormActions({ submitLabel, onCancel, busy }: { submitLabel: string; onC
 
 function FormError({ errors }: { errors: FieldErrors }) {
   return errors._ ? (
-    <p role="alert" className="rounded-xl bg-red-500/10 px-3 py-2 text-[14.5px] text-danger-fg ring-1 ring-red-500/25">
+    <p role="alert" className="rounded-xl bg-red-500/10 px-3 py-2 text-[15px] text-danger-fg ring-1 ring-red-500/25">
       {errors._}
     </p>
   ) : null;
@@ -198,7 +198,7 @@ function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }
                   key={pct}
                   type="button"
                   onClick={() => f.setValues((s) => ({ ...s, depositRequired: String(Math.round((quote * pct) / 100)) }))}
-                  className="rounded-full bg-surface-2 px-2.5 py-1 text-[13px] text-muted-foreground ring-1 ring-line hover:text-foreground"
+                  className="rounded-full bg-surface-2 px-2.5 py-1 text-[14px] text-muted-foreground ring-1 ring-line hover:text-foreground"
                 >
                   {pct}%
                 </button>
@@ -284,7 +284,7 @@ function PaymentForm({ prefill }: { prefill: Extract<FormPrefill, { form: "payme
         </NativeSelect>
       </Field>
       {fin ? (
-        <p className="text-[14px] text-muted-foreground">
+        <p className="text-[15px] text-muted-foreground">
           {gbp(fin.balance)} left to pay{fin.depositOutstanding ? ` · deposit outstanding ${gbp(fin.depositOutstanding)}` : ""}
         </p>
       ) : null}
@@ -376,7 +376,7 @@ function ReminderForm({ prefill }: { prefill: Extract<FormPrefill, { form: "remi
             ["Tomorrow", 1],
             ["Next week", 7],
           ].map(([l, d]) => (
-            <button key={l} type="button" onClick={() => f.setValues((s) => ({ ...s, dueDate: addDaysKey(d as number) }))} className="rounded-full bg-surface-2 px-2.5 py-1 text-[13px] text-muted-foreground ring-1 ring-line hover:text-foreground">
+            <button key={l} type="button" onClick={() => f.setValues((s) => ({ ...s, dueDate: addDaysKey(d as number) }))} className="rounded-full bg-surface-2 px-2.5 py-1 text-[14px] text-muted-foreground ring-1 ring-line hover:text-foreground">
               {l}
             </button>
           ))}

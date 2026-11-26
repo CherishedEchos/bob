@@ -103,9 +103,9 @@ function TeamInner() {
           { label: "Free today", value: Math.max(0, active.length - onSiteToday - offToday), sub: "not booked", cls: "text-good-fg" },
         ].map((c, i) => (
           <div key={c.label} className={cn("px-4 py-3.5 sm:px-6", i && "border-l border-line")}>
-            <div className="text-[12.5px] font-medium text-subtle">{c.label}</div>
+            <div className="text-[13.5px] font-medium text-subtle">{c.label}</div>
             <div className={cn("t-figure-sm mt-0.5", c.cls)}>{c.value}</div>
-            <div className="mt-0.5 truncate text-[12px] text-subtle">{c.sub}</div>
+            <div className="mt-0.5 truncate text-[13px] text-subtle">{c.sub}</div>
           </div>
         ))}
       </section>
@@ -148,17 +148,17 @@ function TeamInner() {
                     <button type="button" onClick={() => setOpen(p.id)} className="block w-full truncate text-left text-[15.5px] font-semibold tracking-[-0.01em] text-heading after:absolute after:inset-0 after:content-['']" aria-label={`Open ${p.name}`}>
                       {p.name}
                     </button>
-                    <div className="truncate text-[13px] text-subtle">
+                    <div className="truncate text-[14px] text-subtle">
                       {p.trade || (p.kind === "subcontractor" ? "Subcontractor" : "Employee")}
                       {p.company ? ` · ${p.company}` : ""}
                     </div>
                   </div>
-                  <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11.5px] font-medium", p.kind === "subcontractor" ? "border border-dashed border-black/20 text-muted-foreground" : "bg-surface-3 text-foreground/80")}>
+                  <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[12.5px] font-medium", p.kind === "subcontractor" ? "border border-dashed border-black/20 text-muted-foreground" : "bg-surface-3 text-foreground/80")}>
                     {p.kind === "subcontractor" ? "Subcontractor" : "Employee"}
                   </span>
                 </div>
 
-                <div className="mt-4 rounded-lg bg-surface-2 px-3 py-2.5 text-[13.5px]">
+                <div className="mt-4 rounded-lg bg-surface-2 px-3 py-2.5 text-[14.5px]">
                   {todays.length ? (
                     <div className="flex items-center gap-2">
                       <span className="size-2 shrink-0 rounded-full bg-success" aria-hidden />
@@ -178,7 +178,7 @@ function TeamInner() {
                 </div>
 
                 {/* Plain facts instead of colour bars: next booking, free days, holiday */}
-                <dl className="mt-3 space-y-1.5 text-[13.5px]">
+                <dl className="mt-3 space-y-1.5 text-[14.5px]">
                   <div className="flex gap-2">
                     <dt className="w-[92px] shrink-0 text-subtle">Next booking</dt>
                     <dd className="min-w-0 truncate text-heading">
@@ -201,9 +201,9 @@ function TeamInner() {
                   ) : null}
                 </dl>
 
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-[12.5px] text-subtle">
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-[13.5px] text-subtle">
                   <span>{jobIds.length ? `${jobIds.length} job${jobIds.length === 1 ? "" : "s"} booked` : "No upcoming work"} · tap to see their schedule</span>
-                  {manage ? <StatusText tone={ACCESS_LABEL[a.state].tone} className="text-[12px]">{ACCESS_LABEL[a.state].label}</StatusText> : null}
+                  {manage ? <StatusText tone={ACCESS_LABEL[a.state].tone} className="text-[13px]">{ACCESS_LABEL[a.state].label}</StatusText> : null}
                 </div>
               </li>
             );
@@ -231,7 +231,7 @@ function TeamTable({ people, today, week, manage, onOpen }: { people: Person[]; 
   const jobs = new Map(data.jobs.map((j) => [j.id, j]));
   const access = new Map(data.access.map((a) => [a.personId, a]));
   const cols = manage ? "grid-cols-[minmax(0,1.5fr)_minmax(0,1.8fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1.1fr)_120px]" : "grid-cols-[minmax(0,1.5fr)_minmax(0,1.8fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1.1fr)]";
-  const head = "text-[12px] font-medium text-subtle";
+  const head = "text-[13px] font-medium text-subtle";
   const where = (jobId: string) => `${jobs.get(jobId)?.title ?? "Job"}${jobs.get(jobId)?.location ? `, ${jobs.get(jobId)?.location}` : ""}`;
   return (
     <div className="panel hidden overflow-hidden xl:block">
@@ -259,14 +259,14 @@ function TeamTable({ people, today, week, manage, onOpen }: { people: Person[]; 
               <button type="button" onClick={() => onOpen(p.id)} aria-label={`Open ${p.name}`} className="row-target flex min-w-0 items-center gap-3 text-left after:absolute after:inset-0 after:content-['']">
                 <PersonAvatar person={p} size={32} />
                 <span className="min-w-0">
-                  <span className="block truncate text-[14px] font-semibold text-heading">{p.name}</span>
-                  <span className="block truncate text-[12.5px] text-subtle">
+                  <span className="block truncate text-[15px] font-semibold text-heading">{p.name}</span>
+                  <span className="block truncate text-[13.5px] text-subtle">
                     {p.trade || (p.kind === "subcontractor" ? "Subcontractor" : "Employee")}
                     {p.company ? ` · ${p.company}` : ""}
                   </span>
                 </span>
               </button>
-              <span className="flex min-w-0 items-center gap-2 text-[13.5px]">
+              <span className="flex min-w-0 items-center gap-2 text-[14.5px]">
                 {todays.length ? (
                   <>
                     <span className="size-1.5 shrink-0 rounded-full bg-success" aria-hidden />
@@ -280,11 +280,11 @@ function TeamTable({ people, today, week, manage, onOpen }: { people: Person[]; 
                   <span className="text-subtle">Free today</span>
                 )}
               </span>
-              <span className="min-w-0 truncate text-[13.5px] text-heading">{nextBk ? `${relativeDay(nextBk.date, today)} · ${where(nextBk.jobId)}` : <span className="text-subtle">Nothing booked</span>}</span>
-              <span className={cn("min-w-0 truncate text-[13.5px]", freeDays.length ? "text-good-fg" : "text-muted-foreground")}>
+              <span className="min-w-0 truncate text-[14.5px] text-heading">{nextBk ? `${relativeDay(nextBk.date, today)} · ${where(nextBk.jobId)}` : <span className="text-subtle">Nothing booked</span>}</span>
+              <span className={cn("min-w-0 truncate text-[14.5px]", freeDays.length ? "text-good-fg" : "text-muted-foreground")}>
                 {workDays.length === 0 ? "Week finished" : freeDays.length === 0 ? "Fully booked" : freeDays.length === workDays.length ? "Free all week" : `Free ${freeDays.map((d) => formatDayShort(d).split(" ")[0]).join(", ")}`}
               </span>
-              <span className="min-w-0 truncate text-[13.5px] text-violet-800">
+              <span className="min-w-0 truncate text-[14.5px] text-violet-800">
                 {nextLeave ? (
                   <>
                     {formatDayShort(nextLeave.startDate)}
@@ -295,7 +295,7 @@ function TeamTable({ people, today, week, manage, onOpen }: { people: Person[]; 
                   <span className="text-subtle">—</span>
                 )}
               </span>
-              {manage ? <StatusText tone={ACCESS_LABEL[a.state].tone} className="text-[12.5px]">{ACCESS_LABEL[a.state].label}</StatusText> : null}
+              {manage ? <StatusText tone={ACCESS_LABEL[a.state].tone} className="text-[13.5px]">{ACCESS_LABEL[a.state].label}</StatusText> : null}
             </li>
           );
         })}
@@ -306,7 +306,7 @@ function TeamTable({ people, today, week, manage, onOpen }: { people: Person[]; 
 
 function Avatar({ person }: { person: Person }) {
   return (
-    <span aria-hidden className={cn("grid size-10 shrink-0 place-items-center rounded-full text-[14px] font-semibold", person.kind === "subcontractor" ? "bg-sky-500/10 text-info-fg" : "bg-selected text-accent-fg")}>
+    <span aria-hidden className={cn("grid size-10 shrink-0 place-items-center rounded-full text-[15px] font-semibold", person.kind === "subcontractor" ? "bg-sky-500/10 text-info-fg" : "bg-selected text-accent-fg")}>
       {initials(person.name)}
     </span>
   );
@@ -362,7 +362,7 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
         <button type="button" onClick={() => (can("schedule.manage") ? ui.openForm({ form: "booking", bookingId: b.id }) : j && ui.openJob(j.id, { tab: "schedule" }))} className="flex w-full items-center justify-between gap-3 rounded-lg py-2.5 text-left hover:bg-surface-2">
           <span className="min-w-0">
             <span className="block truncate text-[15px] font-medium">{j ? `${j.title} · ${j.customerName}` : "Job"}</span>
-            <span className="block text-[13.5px] text-muted-foreground">
+            <span className="block text-[14.5px] text-muted-foreground">
               {relativeDay(b.date, today)}
               {b.endDate ? ` – ${formatDayShort(b.endDate)}` : ""} · {formatTimeRange(b.startTime, b.endTime)} · {j?.location}
             </span>
@@ -387,7 +387,7 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
               </p>
             </div>
           </div>
-          {p.archivedAt ? <p className="mt-3 rounded-xl bg-surface-2 px-3 py-2 text-[14.5px] text-muted-foreground">Archived — kept for history. They can&apos;t be booked or sign in.</p> : null}
+          {p.archivedAt ? <p className="mt-3 rounded-xl bg-surface-2 px-3 py-2 text-[15px] text-muted-foreground">Archived — kept for history. They can&apos;t be booked or sign in.</p> : null}
           <div className="mt-4 grid grid-cols-2 gap-2">
             {p.phone ? (
               <Button asChild size="sm" variant="secondary">
@@ -414,7 +414,7 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
               </Link>
             </Button>
           </div>
-          <dl className="mt-3 space-y-0.5 text-[14.5px] text-muted-foreground">
+          <dl className="mt-3 space-y-0.5 text-[15px] text-muted-foreground">
             {p.phone ? <div>Mobile: <span className="text-foreground">{p.phone}</span></div> : null}
             {p.email ? <div>Email: <span className="break-all text-foreground">{p.email}</span></div> : null}
           </dl>
@@ -437,7 +437,7 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
                 <h3 className="text-[15.5px] font-semibold">Access to Bob</h3>
                 <StatusText tone={ACCESS_LABEL[a.state].tone}>{ACCESS_LABEL[a.state].label}</StatusText>
               </div>
-              <p className="mt-1 text-[14px] text-muted-foreground">
+              <p className="mt-1 text-[15px] text-muted-foreground">
                 {a.state === "accepted" && admin === "owner"
                   ? "Owner: full access, including Settings and connected accounts."
                   : a.state === "accepted" && admin === "office"
@@ -450,7 +450,7 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
               </p>
               {isOwner && !p.archivedAt && a.state !== "accepted" && !link ? (
                 <fieldset className="mt-3">
-                  <legend className="text-[13.5px] font-semibold">Access when they accept</legend>
+                  <legend className="text-[14.5px] font-semibold">Access when they accept</legend>
                   <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
                     {([
                       ["worker", "My work only", "Their own bookings, site details and tasks"],
@@ -459,8 +459,8 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
                       <label key={value} className={cn("flex cursor-pointer items-start gap-2.5 rounded-xl px-3 py-2.5 ring-1", inviteRole === value ? "bg-selected ring-accent/40" : "ring-line hover:bg-surface-2")}>
                         <input type="radio" name="invite-role" value={value} checked={inviteRole === value} onChange={() => setInviteRole(value)} className="mt-1 accent-[var(--color-accent)]" />
                         <span>
-                          <span className="block text-[14.5px] font-medium">{label}</span>
-                          <span className="block text-[13px] text-muted-foreground">{hint}</span>
+                          <span className="block text-[15px] font-medium">{label}</span>
+                          <span className="block text-[14px] text-muted-foreground">{hint}</span>
                         </span>
                       </label>
                     ))}
@@ -468,22 +468,22 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
                 </fieldset>
               ) : null}
               {error ? (
-                <p role="alert" className="mt-2 text-[14px] text-danger-fg">
+                <p role="alert" className="mt-2 text-[15px] text-danger-fg">
                   {error}
                 </p>
               ) : null}
               {link ? (
                 <div className="mt-3 rounded-xl bg-message p-3">
-                  <label htmlFor="invite-link" className="text-[13.5px] font-semibold">
+                  <label htmlFor="invite-link" className="text-[14.5px] font-semibold">
                     Invite link for {a.email ?? p.email}
                   </label>
                   <div className="mt-1.5 flex gap-2">
-                    <Input id="invite-link" readOnly value={link.url} onFocus={(e) => e.currentTarget.select()} className="h-11 text-[14px]" />
+                    <Input id="invite-link" readOnly value={link.url} onFocus={(e) => e.currentTarget.select()} className="h-11 text-[15px]" />
                     <Button size="sm" onClick={() => void copy()}>
                       {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy link"}
                     </Button>
                   </div>
-                  <p className="mt-2 text-[13px] text-muted-foreground">
+                  <p className="mt-2 text-[14px] text-muted-foreground">
                     Bob doesn&apos;t email this — send it by text, WhatsApp or email. It works once, only for {a.email ?? p.email}, and expires {formatDayShort(link.expiresAt.slice(0, 10))}. Save it now: it isn&apos;t shown again.
                   </p>
                 </div>
@@ -563,7 +563,7 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
               }}
             />
           ) : null}
-          <p className="mt-6 text-[12.5px] text-subtle">Added {formatDayShort(p.createdAt.slice(0, 10))}. Next 7 days: {upcoming.filter((b) => b.date <= addDays(today, 7)).length} bookings.</p>
+          <p className="mt-6 text-[13.5px] text-subtle">Added {formatDayShort(p.createdAt.slice(0, 10))}. Next 7 days: {upcoming.filter((b) => b.date <= addDays(today, 7)).length} bookings.</p>
         </div>
       </SheetContent>
     </Sheet>
@@ -573,7 +573,7 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
 function ConfirmBox({ text, action, onCancel, onConfirm }: { text: string; action: string; onCancel: () => void; onConfirm: () => void }) {
   return (
     <div className="mt-3 rounded-xl bg-red-500/[0.06] p-3 ring-1 ring-red-500/25">
-      <p className="text-[14.5px]">{text}</p>
+      <p className="text-[15px]">{text}</p>
       <div className="mt-2 flex gap-2">
         <Button size="sm" variant="secondary" onClick={onCancel}>
           Keep

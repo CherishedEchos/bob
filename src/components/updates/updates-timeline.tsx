@@ -50,10 +50,10 @@ export function UpdatesTimeline({ job, limit }: { job: Job; limit?: number }) {
           return (
             <li key={u.id} className="relative">
               <span aria-hidden className={cn("absolute -left-[27px] top-1.5 size-3 rounded-full ring-4 ring-card", u.stage === "finished" ? "bg-emerald-500" : "bg-copper-500")} />
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[14.5px] text-muted-foreground">
                 <time dateTime={u.createdAt} className="font-semibold text-foreground">{formatDayShort(u.createdAt.slice(0, 10))}</time>
                 <span>· {u.authorName}</span>
-                {u.stage ? <span className={cn("rounded-md px-1.5 py-0.5 text-[12.5px] font-semibold", STAGE_TONE[u.stage])}>{STAGE_LABEL[u.stage]}</span> : null}
+                {u.stage ? <span className={cn("rounded-md px-1.5 py-0.5 text-[13.5px] font-semibold", STAGE_TONE[u.stage])}>{STAGE_LABEL[u.stage]}</span> : null}
                 <span className="sr-only">{timeAgo(u.createdAt)}</span>
                 {manager || mine ? (
                   <span className="ml-auto flex">
@@ -81,7 +81,7 @@ export function UpdatesTimeline({ job, limit }: { job: Job; limit?: number }) {
                       <button type="button" onClick={() => setViewing({ list: photos.filter((x) => x.previewable), index: Math.max(0, photos.filter((x) => x.previewable).indexOf(f)) })} className="block w-full overflow-hidden rounded-lg ring-1 ring-line focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`View photo ${i + 1}${f.description ? `: ${f.description}` : ""}`}>
                         <img src={fileUrl(f.id, { thumb: f.hasThumb })} alt={f.description ?? ""} loading="lazy" className="aspect-square w-full bg-surface-2 object-cover" />
                       </button>
-                      {f.description ? <p className="mt-1 line-clamp-2 text-[12.5px] text-muted-foreground">{f.description}</p> : null}
+                      {f.description ? <p className="mt-1 line-clamp-2 text-[13.5px] text-muted-foreground">{f.description}</p> : null}
                     </li>
                   ))}
                 </ul>
@@ -91,7 +91,7 @@ export function UpdatesTimeline({ job, limit }: { job: Job; limit?: number }) {
         })}
       </ol>
       {limit && updates.length > limit ? (
-        <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-3 h-10 text-[14.5px] font-semibold text-accent-fg">
+        <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-3 h-10 text-[15px] font-semibold text-accent-fg">
           {showAll ? "Show fewer" : `Show all ${updates.length} updates`}
         </button>
       ) : null}

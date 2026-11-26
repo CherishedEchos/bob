@@ -111,7 +111,7 @@ export function FilesPanel({ jobId, enquiryId, compact = false, only }: { jobId?
         <div className="mt-4 rounded-2xl border border-dashed border-line-strong px-5 py-8 text-center">
           <FileImage className="mx-auto size-7 text-subtle" aria-hidden />
           <p className="mt-2 text-[15.5px] font-semibold text-heading">No files yet</p>
-          <p className="mx-auto mt-1 max-w-md text-[14.5px] text-muted-foreground">
+          <p className="mx-auto mt-1 max-w-md text-[15px] text-muted-foreground">
             {canUpload ? "Add drawings, progress photos and documents. On a phone you can take a photo straight from the camera." : "Files added by the team will show here."}
           </p>
         </div>
@@ -121,7 +121,7 @@ export function FilesPanel({ jobId, enquiryId, compact = false, only }: { jobId?
         <div className="mt-4 space-y-6">
           {sections.map(({ c, groups: gs }) => (
             <section key={c} aria-labelledby={`fs-${c}`}>
-              <h3 id={`fs-${c}`} className="mb-2 flex items-baseline gap-2 text-[14px] font-semibold text-heading">
+              <h3 id={`fs-${c}`} className="mb-2 flex items-baseline gap-2 text-[15px] font-semibold text-heading">
                 {CATEGORY_LABEL[c]} <span className="font-normal text-muted-foreground">{gs.length}</span>
               </h3>
               {c === "progress" || c === "completion" ? (
@@ -133,8 +133,8 @@ export function FilesPanel({ jobId, enquiryId, compact = false, only }: { jobId?
                       </button>
                       <div className="flex items-start gap-1 px-3 py-2">
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-[14px] font-medium text-heading">{f.title ?? f.description ?? f.filename}</div>
-                          <div className="truncate text-[12.5px] text-muted-foreground">
+                          <div className="truncate text-[15px] font-medium text-heading">{f.title ?? f.description ?? f.filename}</div>
+                          <div className="truncate text-[13.5px] text-muted-foreground">
                             {f.uploadedBy} · {formatDateKey(f.createdAt.slice(0, 10))}
                           </div>
                         </div>
@@ -153,7 +153,7 @@ export function FilesPanel({ jobId, enquiryId, compact = false, only }: { jobId?
                             type="button"
                             aria-expanded={openHistory.has(f.groupId)}
                             onClick={() => setOpenHistory((s) => { const n = new Set(s); if (n.has(f.groupId)) n.delete(f.groupId); else n.add(f.groupId); return n; })}
-                            className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-md px-1.5 text-[13.5px] font-semibold text-accent-fg hover:bg-copper-500/10"
+                            className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-md px-1.5 text-[14.5px] font-semibold text-accent-fg hover:bg-copper-500/10"
                           >
                             <History className="size-3.5" aria-hidden /> {openHistory.has(f.groupId) ? "Hide" : "Show"} {history.length} earlier revision{history.length === 1 ? "" : "s"}
                           </button>
@@ -224,7 +224,7 @@ export function Thumb({ file, className }: { file: JobFile; className?: string }
   if (file.previewable && file.mimeType.startsWith("image/") && !broken) return <img src={fileUrl(file.id)} alt="" loading="lazy" onError={() => setBroken(true)} className={cn("bg-surface-2 object-cover", className)} />;
   return (
     <span className={cn("grid place-items-center bg-surface-2 text-muted-foreground", className)}>
-      <span className="flex flex-col items-center gap-1 text-[12px] font-semibold uppercase">
+      <span className="flex flex-col items-center gap-1 text-[13px] font-semibold uppercase">
         {file.mimeType.startsWith("image/") ? <ImageOff className="size-6" aria-hidden /> : <FileText className="size-6" aria-hidden />}
         {extOf(file.filename)}
       </span>
@@ -243,20 +243,20 @@ function FileRow({ file: f, current, superseded, revisions = 0, onOpen, menu, ch
           <button type="button" onClick={onOpen} className="min-w-0 truncate text-left text-[15px] font-semibold text-heading hover:text-accent-fg hover:underline">
             {f.title ?? f.filename}
           </button>
-          {f.revision ? <span className="rounded-md bg-surface-3 px-1.5 py-0.5 text-[12.5px] font-semibold text-foreground">{f.revision}</span> : null}
-          {current ? <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[12.5px] font-semibold text-good-fg">Current{revisions ? ` · ${revisions + 1} versions` : ""}</span> : null}
-          {superseded ? <span className="rounded-md bg-surface-3 px-1.5 py-0.5 text-[12.5px] font-medium text-muted-foreground">Superseded</span> : null}
-          {f.visibility === "office" ? <span className="rounded-md bg-surface-3 px-1.5 py-0.5 text-[12.5px] font-medium text-muted-foreground">Office only</span> : null}
+          {f.revision ? <span className="rounded-md bg-surface-3 px-1.5 py-0.5 text-[13.5px] font-semibold text-foreground">{f.revision}</span> : null}
+          {current ? <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[13.5px] font-semibold text-good-fg">Current{revisions ? ` · ${revisions + 1} versions` : ""}</span> : null}
+          {superseded ? <span className="rounded-md bg-surface-3 px-1.5 py-0.5 text-[13.5px] font-medium text-muted-foreground">Superseded</span> : null}
+          {f.visibility === "office" ? <span className="rounded-md bg-surface-3 px-1.5 py-0.5 text-[13.5px] font-medium text-muted-foreground">Office only</span> : null}
         </div>
-        <div className="mt-0.5 text-[13.5px] text-muted-foreground">
+        <div className="mt-0.5 text-[14.5px] text-muted-foreground">
           {f.title ? `${f.filename} · ` : ""}
           {CATEGORY_SINGULAR[f.category]} · {formatBytes(f.bytes)} · {f.uploadedBy}, {timeAgo(f.createdAt)}
         </div>
-        {f.description ? <p className="mt-1 text-[14.5px] text-foreground/90">{f.description}</p> : null}
-        {!f.previewable ? <p className="mt-0.5 text-[13px] text-subtle">{f.mimeType.startsWith("image/") ? "Preview isn't available for this photo format — download to view the original." : "No preview — download to open."}</p> : null}
+        {f.description ? <p className="mt-1 text-[15px] text-foreground/90">{f.description}</p> : null}
+        {!f.previewable ? <p className="mt-0.5 text-[14px] text-subtle">{f.mimeType.startsWith("image/") ? "Preview isn't available for this photo format — download to view the original." : "No preview — download to open."}</p> : null}
         {children}
       </div>
-      <a href={fileUrl(f.id, { download: true })} className="hidden h-9 items-center gap-1.5 rounded-lg px-2.5 text-[14px] font-medium text-muted-foreground hover:bg-surface-3 hover:text-foreground sm:inline-flex" aria-label={`Download ${f.title ?? f.filename}`}>
+      <a href={fileUrl(f.id, { download: true })} className="hidden h-9 items-center gap-1.5 rounded-lg px-2.5 text-[15px] font-medium text-muted-foreground hover:bg-surface-3 hover:text-foreground sm:inline-flex" aria-label={`Download ${f.title ?? f.filename}`}>
         <Download className="size-4" aria-hidden /> Download
       </a>
       <FileMenu items={menu} name={f.title ?? f.filename} />
@@ -297,7 +297,7 @@ export function FileViewer({ list, index, onIndex, onClose }: { list: JobFile[];
               <Button variant="secondary" size="sm" disabled={index === 0} onClick={() => onIndex(index - 1)} aria-label="Previous file">
                 <ChevronLeft /> Previous
               </Button>
-              <span className="text-[14px] tabular text-muted-foreground">
+              <span className="text-[15px] tabular text-muted-foreground">
                 {index + 1} of {list.length}
               </span>
               <Button variant="secondary" size="sm" disabled={index === list.length - 1} onClick={() => onIndex(index + 1)} aria-label="Next file">
@@ -381,7 +381,7 @@ function EditFile({ file, onClose, onSaved }: { file: JobFile; onClose: () => vo
             <Textarea id="ef-desc" rows={3} value={v.description} onChange={(e) => setV({ ...v, description: e.target.value })} maxLength={500} />
           </div>
           {error ? (
-            <p role="alert" className="text-[14px] text-danger-fg">
+            <p role="alert" className="text-[15px] text-danger-fg">
               {error}
             </p>
           ) : null}

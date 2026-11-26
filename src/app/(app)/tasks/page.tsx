@@ -59,10 +59,10 @@ export default function TasksPage() {
               role="tab"
               aria-selected={view === t.value}
               onClick={() => setView(t.value)}
-              className={cn("flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-[14px] font-medium transition", view === t.value ? "bg-card text-heading shadow-[var(--shadow-xs)]" : "text-subtle hover:text-foreground")}
+              className={cn("flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-[15px] font-medium transition", view === t.value ? "bg-card text-heading shadow-[var(--shadow-xs)]" : "text-subtle hover:text-foreground")}
             >
               {t.label}
-              {t.count ? <span className="tabular text-[12px] text-subtle">{t.count}</span> : null}
+              {t.count ? <span className="tabular text-[13px] text-subtle">{t.count}</span> : null}
             </button>
           ))}
         </div>
@@ -159,10 +159,10 @@ function TaskRow({ task: t }: { task: Task }) {
         <button type="button" aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} details: ${t.title}`} onClick={() => setOpen((o) => !o)} className="row-target flex min-w-0 flex-1 items-center gap-3 py-0.5 text-left after:absolute after:inset-0 after:content-['']">
           <span className="min-w-0 flex-1">
             <span className={cn("block text-[15.5px] font-medium leading-snug", t.done && "font-normal text-muted-foreground line-through")}>
-              {t.priority === "high" && !t.done ? <span className="mr-1.5 inline-flex h-5 items-center rounded-full bg-destructive/10 px-1.5 align-[2px] text-[11.5px] font-semibold text-danger-fg">High</span> : null}
+              {t.priority === "high" && !t.done ? <span className="mr-1.5 inline-flex h-5 items-center rounded-full bg-destructive/10 px-1.5 align-[2px] text-[12.5px] font-semibold text-danger-fg">High</span> : null}
               {t.title}
             </span>
-            <span className="mt-0.5 flex flex-wrap gap-x-3 text-[14px] text-muted-foreground">
+            <span className="mt-0.5 flex flex-wrap gap-x-3 text-[15px] text-muted-foreground">
               <span className={cn(overdue && "font-semibold text-danger-fg", !t.done && daysFromToday(t.dueDate) === 0 && "font-semibold text-warn-fg")}>{when(t)}</span>
               <span>{person ? `For ${person.name}` : assignee ? `For ${assignee.name}` : "Office"}</span>
               {job ? <span>{job.title} · {job.customerName}</span> : customer ? <span>{customer.name}</span> : null}
@@ -172,7 +172,7 @@ function TaskRow({ task: t }: { task: Task }) {
         </button>
       </div>
       {open ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pb-3 pl-[60px] pr-4 text-[14px] text-muted-foreground lg:pl-[64px]">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pb-3 pl-[60px] pr-4 text-[15px] text-muted-foreground lg:pl-[64px]">
           <span>
             Due {formatDateKey(t.dueDate)}
             {assignee ? ` · for ${assignee.name}` : ""} · added by {t.createdBy}

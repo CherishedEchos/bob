@@ -13,8 +13,8 @@
   /* Light workspace: warm off-white canvas, white panels, near-black type, muted grey meta.
      Dark tokens live in .theme-dark (Ask Bob, the phone tab bar, toasts). */
   --color-background: #f7f6f3;
-  --color-foreground: #1a1a1a;
-  --color-heading: #111111;
+  --color-foreground: #1d1b19;
+  --color-heading: #151311;
 
   /* Charcoal ramp (used by the dark scopes) */
   --color-ink-950: #0c0c0e;
@@ -36,7 +36,7 @@
   /* Quoted customer messages: light grey, clearly not editable. */
   --color-message: #f5f4f1;
   /* Selected rows: pale orange tint plus a slim orange accent. */
-  --color-selected: #fdf1e7;
+  --color-selected: #fdeedf;
 
   --color-copper-50: #fef6ef;
   --color-copper-100: #fde8d6;
@@ -52,37 +52,37 @@
   --color-brand: #f38735;
   --color-sidebar: #19191b;
   /* Light desktop navigation */
-  --color-nav: #fbfaf8;
-  --color-nav-hover: rgb(17 17 17 / 0.045);
-  --color-nav-active: rgb(17 17 17 / 0.06);
+  --color-nav: #fbf9f6;
+  --color-nav-hover: rgb(243 135 53 / 0.07);
+  --color-nav-active: rgb(243 135 53 / 0.12);
   --color-primary-foreground: #ffffff;
   --color-secondary: #f5f4f1;
   --color-secondary-foreground: #1a1a1a;
   --color-muted: #f5f4f1;
-  --color-muted-foreground: #4b4b4f;
-  --color-subtle: #6e6e73;
+  --color-muted-foreground: #4f4943;
+  --color-subtle: #6f675e;
   --color-accent: #f5f4f1;
   --color-accent-foreground: #1a1a1a;
   --color-destructive: #d23f36;
-  --color-success: #23915f;
+  --color-success: #2f8a5b;
   --color-warning: #d18a1c;
   --color-info: #4f6bd8;
 
   /* Semantic helpers */
-  --color-line: #ebe9e4;
-  --color-line-strong: #dedbd4;
+  --color-line: #ebe6de;
+  --color-line-strong: #ddd6cb;
   --color-surface-2: rgb(17 17 17 / 0.03);
   --color-surface-3: rgb(17 17 17 / 0.055);
   --color-accent-fg: #b4520f;
   --color-accent-icon: #e8792a;
   --color-danger-fg: #b3322b;
   --color-warn-fg: #8f5e0e;
-  --color-good-fg: #1f7a54;
+  --color-good-fg: #22704a;
   --color-info-fg: #3a52b5;
   --color-violet-fg: #5b3fc4;
 
-  --color-border: #ebe9e4;
-  --color-input: #d9d6cf;
+  --color-border: #ebe6de;
+  --color-input: #d3ccc1;
   --color-ring: #f38735;
 
   /* Elevation: borders do the work; shadows only for things that float. */
@@ -230,49 +230,49 @@
   }
   /* Type scale */
   .t-page {
-    font-size: 24px;
-    line-height: 1.15;
-    font-weight: 600;
-    letter-spacing: -0.022em;
+    font-size: 28px;
+    line-height: 1.12;
+    font-weight: 700;
+    letter-spacing: -0.025em;
     color: var(--color-heading);
   }
   @media (min-width: 1024px) {
     .t-page {
-      font-size: 26px;
+      font-size: 32px;
     }
   }
   .t-section {
-    font-size: 15px;
+    font-size: 18px;
     line-height: 1.3;
-    font-weight: 600;
-    letter-spacing: -0.011em;
+    font-weight: 650;
+    letter-spacing: -0.015em;
     color: var(--color-heading);
   }
   .t-name {
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.3;
     font-weight: 600;
     letter-spacing: -0.005em;
     color: var(--color-foreground);
   }
   .t-meta {
-    font-size: 13.5px;
+    font-size: 14.5px;
     line-height: 1.4;
     color: var(--color-subtle);
   }
   /* Financial figures: large, tight, tabular */
   .t-figure {
-    font-size: 28px;
+    font-size: 32px;
     line-height: 1.1;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: -0.03em;
     font-variant-numeric: tabular-nums;
     color: var(--color-heading);
   }
   .t-figure-sm {
-    font-size: 20px;
+    font-size: 24px;
     line-height: 1.15;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: -0.025em;
     font-variant-numeric: tabular-nums;
     color: var(--color-heading);
@@ -285,7 +285,7 @@
     border-radius: var(--radius-md);
   }
   .t-eyebrow {
-    font-size: 11.5px;
+    font-size: 12.5px;
     line-height: 1.2;
     font-weight: 600;
     letter-spacing: 0.06em;

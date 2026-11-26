@@ -131,7 +131,7 @@ export function AddUpdateDialog({
             <Textarea id={`${id}-note`} rows={3} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Worktops fitted and sealed. Sink goes in tomorrow." className="text-[16px]" />
           </div>
           <fieldset>
-            <legend className="mb-1.5 text-[14px] font-medium text-foreground/90">Stage (optional)</legend>
+            <legend className="mb-1.5 text-[15px] font-medium text-foreground/90">Stage (optional)</legend>
             <div className="flex flex-wrap gap-2">
               {STAGES.map((s) => (
                 <button key={s.value} type="button" aria-pressed={stage === s.value} onClick={() => setStage(stage === s.value ? undefined : s.value)} className={cn("h-11 rounded-xl px-4 text-[15px] font-semibold ring-1 transition", stage === s.value ? "bg-selected text-accent-fg ring-copper-500/50" : "bg-card text-foreground ring-line-strong hover:bg-surface-2")}>
@@ -142,7 +142,7 @@ export function AddUpdateDialog({
           </fieldset>
 
           <div>
-            <div className="mb-1.5 text-[14px] font-medium text-foreground/90">Photos</div>
+            <div className="mb-1.5 text-[15px] font-medium text-foreground/90">Photos</div>
             <div className="grid grid-cols-2 gap-2">
               <label htmlFor={`${id}-cam`} className="flex h-14 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary text-[16px] font-semibold text-white focus-within:ring-2 focus-within:ring-ring">
                 <Camera className="size-5" aria-hidden /> Take photo
@@ -186,7 +186,7 @@ export function AddUpdateDialog({
                         </div>
                       ) : null}
                       {p.error ? (
-                        <p role="alert" className="mt-1 flex items-start gap-1.5 text-[13.5px] text-danger-fg">
+                        <p role="alert" className="mt-1 flex items-start gap-1.5 text-[14.5px] text-danger-fg">
                           <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden /> {p.error}
                         </p>
                       ) : null}
@@ -207,7 +207,7 @@ export function AddUpdateDialog({
           </div>
 
           {error ? (
-            <p role="alert" className="rounded-xl bg-red-500/[0.06] px-3 py-2 text-[14.5px] text-danger-fg ring-1 ring-red-500/25">
+            <p role="alert" className="rounded-xl bg-red-500/[0.06] px-3 py-2 text-[15px] text-danger-fg ring-1 ring-red-500/25">
               {error}
             </p>
           ) : null}

@@ -6,7 +6,10 @@
  * date picker and the view switch.
  */
 import * as React from "react";
-import { AlertTriangle, CalendarDays, CalendarOff, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertTriangle, CalendarDays, CalendarOff, ChevronLeft, ChevronRight, Mic } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useUI } from "@/lib/store/ui";
+import { useBob } from "@/lib/bob/provider";
 import { ABSENCE_LABEL, PART_LABEL } from "@/lib/leave";
 import { useStore } from "@/lib/store/store";
 import { addDays, daysBetween, formatDayShort, formatTimeRange, weekStart } from "@/lib/dates";
@@ -76,7 +79,7 @@ export function BookingBlock({
         conflict && "ring-2 ring-destructive/70",
         continuesBefore && "rounded-l-none",
         continuesAfter && "rounded-r-none",
-        compact ? "px-2 py-1.5" : "px-2.5 py-2",
+        compact ? "px-2.5 py-1.5" : "px-3 py-2.5",
         draggable && "cursor-grab active:cursor-grabbing",
         dimmed && "opacity-40",
         className,
@@ -84,10 +87,10 @@ export function BookingBlock({
     >
       {continuesBefore ? null : <span aria-hidden className={cn("absolute inset-y-0 left-0 w-[3px]", unassigned ? "bg-warning" : tone.bar)} />}
       <span className="flex min-w-0 items-start gap-1.5">
-        <span className={cn("min-w-0 flex-1 truncate font-semibold leading-tight", compact ? "text-[12.5px]" : "text-[13px]", unassigned ? "text-[#7a5410]" : tone.text)}>{job?.title ?? "Job"}</span>
+        <span className={cn("min-w-0 flex-1 truncate font-semibold leading-tight", compact ? "text-[13.5px]" : "text-[14.5px]", unassigned ? "text-[#7a5410]" : tone.text)}>{job?.title ?? "Job"}</span>
         {conflict ? <AlertTriangle aria-hidden className="mt-px size-3.5 shrink-0 text-destructive" /> : null}
       </span>
-      <span className={cn("mt-0.5 truncate leading-tight text-foreground/70", compact ? "text-[11.5px]" : "text-[12px]")}>
+      <span className={cn("mt-0.5 truncate leading-tight text-foreground/75", compact ? "text-[12.5px]" : "text-[13px]")}>
         {compact ? (
           <>
             <span className="tabular">{time}</span>
@@ -103,14 +106,14 @@ export function BookingBlock({
       {compact ? null : (
         <span className="mt-1.5 flex min-w-0 items-center gap-1.5">
           {unassigned ? (
-            <span className="min-w-0 truncate text-[11.5px] font-semibold text-[#8a5c0a]">Needs someone</span>
+            <span className="min-w-0 truncate text-[12.5px] font-semibold text-[#8a5c0a]">Needs someone</span>
           ) : (
             <>
-              <PeopleStack people={who} size={18} max={3} />
-              <span className="min-w-0 truncate text-[11.5px] text-foreground/70 @max-[150px]:hidden">{who.map((p) => firstName(p.name)).join(", ")}</span>
+              <PeopleStack people={who} size={20} max={3} />
+              <span className="min-w-0 truncate text-[12.5px] text-foreground/75 @max-[160px]:hidden">{who.map((p) => firstName(p.name)).join(", ")}</span>
             </>
           )}
-          <span className="tabular ml-auto shrink-0 pl-1 text-[11.5px] font-medium text-foreground/60 @max-[120px]:hidden">{time}</span>
+          <span className="tabular ml-auto shrink-0 pl-1 text-[12.5px] font-semibold text-foreground/70 @max-[130px]:hidden">{time}</span>
         </span>
       )}
     </button>
@@ -130,7 +133,7 @@ export function LeaveBlock({ absence: a, people, withName = true, className, con
     <div
       title={`${people.get(a.personId)?.name ?? "Someone"}: ${absenceText(a, people, false)}`}
       className={cn(
-        "flex h-full min-w-0 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium",
+        "flex h-full min-w-0 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium",
         pending ? "border border-dashed border-violet-300 bg-white text-violet-700" : "bg-violet-50 text-violet-800 ring-1 ring-violet-200 [background-image:repeating-linear-gradient(135deg,transparent_0_6px,rgb(124_58_237/0.06)_6px_12px)]",
         continuesBefore && "rounded-l-none",
         continuesAfter && "rounded-r-none",
@@ -247,7 +250,7 @@ export const shiftBetween = (from: string, to: string) => daysBetween(from, to);
 
 export function ViewSwitch({ value, onChange }: { value: DiaryView; onChange: (v: DiaryView) => void }) {
   return (
-    <div role="radiogroup" aria-label="Diary view" className="flex h-9 items-center rounded-lg bg-surface-3 p-0.5">
+    <div role="radiogroup" aria-label="Diary view" className="flex h-11 items-center rounded-lg bg-[#efeae2] p-1">
       {DIARY_VIEWS.map((v) => (
         <button
           key={v.value}
@@ -256,7 +259,7 @@ export function ViewSwitch({ value, onChange }: { value: DiaryView; onChange: (v
           aria-checked={value === v.value}
           onClick={() => onChange(v.value)}
           className={cn(
-            "h-8 rounded-md px-3.5 text-[13.5px] font-medium transition-colors",
+            "h-9 rounded-md px-4 text-[15px] font-medium transition-colors",
             value === v.value ? "bg-card text-heading shadow-[0_1px_2px_rgb(17_17_17/0.08),0_0_0_1px_rgb(17_17_17/0.04)]" : "text-muted-foreground hover:text-heading",
           )}
         >
@@ -302,9 +305,9 @@ export function DatePicker({ value, today, label, mode, onPick }: { value: strin
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="flex h-9 items-center gap-2 rounded-lg px-2.5 text-[15px] font-semibold tracking-[-0.01em] text-heading transition-colors hover:bg-surface-3"
+        className="flex h-11 items-center gap-2 rounded-lg px-3 text-[17px] font-semibold tracking-[-0.01em] text-heading transition-colors hover:bg-surface-3"
       >
-        <CalendarDays aria-hidden className="size-4 text-subtle" />
+        <CalendarDays aria-hidden className="size-[18px] text-subtle" />
         <span className="tabular" aria-live="polite">
           {label}
         </span>
@@ -347,7 +350,7 @@ export function DatePicker({ value, today, label, mode, onPick }: { value: strin
                         "tabular m-0.5 grid h-8 place-items-center rounded-md text-[13px] transition-colors hover:bg-surface-3",
                         other ? "text-subtle/60" : "text-foreground",
                         d === today && "font-semibold text-copper-600",
-                        d === value && "bg-[#1a1a1a] font-semibold text-white hover:bg-black",
+                        d === value && "bg-copper-500 font-semibold text-white hover:bg-copper-600",
                       )}
                     >
                       {dayNum(d)}
@@ -379,3 +382,46 @@ export function useJobsAndPeople() {
 }
 
 export { PeopleStack };
+
+/* ------------------------------ Ask Bob from the diary ------------------------------ */
+
+const DIARY_PROMPTS = ["Who's free next Wednesday?", "Have I double-booked anyone this week?", "Where is everyone working tomorrow?"];
+
+/**
+ * The diary can be run by talking to Bob: a dark strip with Bob's microphone and
+ * a few things to try. A tap asks Bob there and then; changes still come back as
+ * previews to approve, with the usual clash checks.
+ */
+export function AskBobDiaryBar({ compact }: { compact?: boolean }) {
+  const ui = useUI();
+  const bob = useBob();
+  const router = useRouter();
+  const ask = (text: string) => {
+    ui.setAssistantOpen(true);
+    void bob.send(text, "text");
+  };
+  const talk = () => {
+    if (compact) router.push("/assistant?listen=1");
+    else ui.setAssistantOpen(true);
+  };
+  return (
+    <section aria-label="Ask Bob about the diary" className={cn("flex items-center gap-3 rounded-xl bg-[#1d1b19] text-white", compact ? "px-3 py-2.5" : "px-4 py-3")}>
+      <button type="button" onClick={talk} aria-label="Ask Bob — tap to talk" className="grid size-10 shrink-0 place-items-center rounded-full bg-copper-500 shadow-[0_0_0_4px_rgb(243_135_53/0.18)] transition hover:bg-copper-600">
+        <Mic className="size-5" strokeWidth={2.2} aria-hidden />
+      </button>
+      <div className="min-w-0 flex-1 xl:min-w-[300px]">
+        <p className="text-[15.5px] font-semibold leading-tight">{compact ? "Ask Bob about the diary" : "Talk to Bob about the diary"}</p>
+        <p className="truncate text-[13.5px] text-white/60">{compact ? "“Move Liam onto the Copthorne kitchen tomorrow”" : "“Move Liam onto the Copthorne kitchen tomorrow” · “Book Ryan in for a site visit on Friday”"}</p>
+      </div>
+      {compact ? null : (
+        <div className="hidden shrink-0 flex-wrap justify-end gap-2 xl:flex">
+          {DIARY_PROMPTS.map((t, i) => (
+            <button key={t} type="button" onClick={() => ask(t)} className={cn("h-9 rounded-full bg-white/[0.08] px-3.5 text-[14px] font-medium text-white/90 ring-1 ring-white/10 transition hover:bg-white/[0.14]", i === 2 && "hidden 2xl:block")}>
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}

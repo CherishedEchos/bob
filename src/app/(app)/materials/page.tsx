@@ -104,17 +104,17 @@ export default function MaterialsPage() {
               role="tab"
               aria-selected={status === v}
               onClick={() => setStatus(v)}
-              className={cn("flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[14px] font-semibold transition lg:flex-none", status === v ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground")}
+              className={cn("flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[15px] font-semibold transition lg:flex-none", status === v ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground")}
             >
               {label}
-              {v !== "all" ? <span className={cn("tabular text-[12.5px]", status === v ? "text-accent-fg" : "text-subtle")}>{count(v)}</span> : null}
+              {v !== "all" ? <span className={cn("tabular text-[13.5px]", status === v ? "text-accent-fg" : "text-subtle")}>{count(v)}</span> : null}
             </button>
           ))}
         </div>
         <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-3 lg:w-auto lg:flex-1">
           <label className="min-w-0">
             <span className="sr-only">Job</span>
-            <NativeSelect value={job} onChange={(e) => setJob(e.target.value)} className="h-11 text-[14.5px]">
+            <NativeSelect value={job} onChange={(e) => setJob(e.target.value)} className="h-11 text-[15px]">
               <option value="">All jobs</option>
               {[...new Set(data.materials.map((m) => m.jobId))].map((id) => (
                 <option key={id} value={id}>
@@ -125,7 +125,7 @@ export default function MaterialsPage() {
           </label>
           <label className="min-w-0">
             <span className="sr-only">Merchant</span>
-            <NativeSelect value={merchant} onChange={(e) => setMerchant(e.target.value)} className="h-11 text-[14.5px]">
+            <NativeSelect value={merchant} onChange={(e) => setMerchant(e.target.value)} className="h-11 text-[15px]">
               <option value="">All merchants</option>
               <option value="none">No merchant yet</option>
               {data.merchants.map((m) => (
@@ -137,7 +137,7 @@ export default function MaterialsPage() {
           </label>
           <label className="min-w-0">
             <span className="sr-only">Needed by</span>
-            <NativeSelect value={when} onChange={(e) => setWhen(e.target.value as When)} className="h-11 text-[14.5px]">
+            <NativeSelect value={when} onChange={(e) => setWhen(e.target.value as When)} className="h-11 text-[15px]">
               <option value="any">Any date</option>
               <option value="late">Needed date passed</option>
               <option value="week">Needed in the next 7 days</option>
@@ -153,7 +153,7 @@ export default function MaterialsPage() {
               setMerchant("");
               setWhen("any");
             }}
-            className="h-11 px-1 text-[14.5px] font-semibold text-accent-fg"
+            className="h-11 px-1 text-[15px] font-semibold text-accent-fg"
           >
             Clear filters
           </button>
@@ -174,7 +174,7 @@ export default function MaterialsPage() {
                 <col className="w-[150px]" />
               </colgroup>
               <thead>
-                <tr className="border-b border-line bg-surface-2 text-[13px] font-semibold text-muted-foreground">
+                <tr className="border-b border-line bg-surface-2 text-[14px] font-semibold text-muted-foreground">
                   <th scope="col" className="px-4 py-2.5 lg:px-5">Material</th>
                   <th scope="col" className="px-3 py-2.5 text-right">Quantity</th>
                   <th scope="col" className="px-3 py-2.5">Job</th>
@@ -203,7 +203,7 @@ export default function MaterialsPage() {
                           <button type="button" onClick={(e) => { e.stopPropagation(); edit(m); }} aria-label={`Edit ${m.item}`} className="block w-full rounded text-left">
                             <span className="block text-[15px] font-semibold leading-snug text-heading [overflow-wrap:anywhere]">{m.item}</span>
                             {m.orderRef || (!m.merchantId && m.supplier) ? (
-                              <span className="mt-0.5 block text-[13px] text-muted-foreground">
+                              <span className="mt-0.5 block text-[14px] text-muted-foreground">
                                 {m.orderRef ? `Ref ${m.orderRef}` : ""}
                                 {m.orderRef && !m.merchantId && m.supplier ? " · " : ""}
                                 {!m.merchantId && m.supplier ? `Supplier: ${m.supplier}` : ""}
@@ -212,7 +212,7 @@ export default function MaterialsPage() {
                           </button>
                         </td>
                         <td className="px-3 py-3 text-right text-[15px] tabular text-foreground">{qty(m)}</td>
-                        <td className="px-3 py-3 text-[14px] leading-snug">
+                        <td className="px-3 py-3 text-[15px] leading-snug">
                           <span className="block truncate text-foreground" title={j?.title}>
                             {j?.title ?? "Job"}
                           </span>
@@ -220,7 +220,7 @@ export default function MaterialsPage() {
                             {j?.customerName}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-[14px] leading-snug tabular">
+                        <td className="px-3 py-3 text-[15px] leading-snug tabular">
                           <NeededBy m={m} u={u} />
                         </td>
                         <td className="px-4 py-2 lg:pr-5">
@@ -249,12 +249,12 @@ export default function MaterialsPage() {
                       <li key={m.id} className="row-open px-4 py-3">
                         <button type="button" onClick={() => edit(m)} aria-label={`Edit ${m.item}`} className="row-target block w-full text-left after:absolute after:inset-0 after:content-['']">
                           <span className="block text-[15.5px] font-semibold leading-snug text-heading [overflow-wrap:anywhere]">{m.item}</span>
-                          <span className="mt-1 flex flex-wrap items-baseline gap-x-2 text-[14.5px] tabular">
+                          <span className="mt-1 flex flex-wrap items-baseline gap-x-2 text-[15px] tabular">
                             <span className="font-medium text-foreground">{qty(m)}</span>
                             <span aria-hidden className="text-subtle">·</span>
                             <span className={cn(u.tone === "late" ? "font-semibold text-danger-fg" : u.tone === "soon" ? "font-semibold text-warn-fg" : "text-muted-foreground")}>{m.neededBy ? `Needed ${u.tone === "normal" ? u.label : u.label.toLowerCase()}` : "No date"}</span>
                           </span>
-                          <span className="mt-0.5 block truncate text-[14px] text-muted-foreground">
+                          <span className="mt-0.5 block truncate text-[15px] text-muted-foreground">
                             {j ? `${j.title} · ${j.customerName}` : "Job"}
                             {m.orderRef ? ` · Ref ${m.orderRef}` : ""}
                           </span>
@@ -287,12 +287,12 @@ function GroupHeader({ merchant, count }: { merchant?: Merchant; count: number }
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
       <h2 className="text-[16px] font-semibold text-heading">
         {merchant ? merchant.name : "No merchant yet"}
-        <span className="ml-2 text-[13.5px] font-normal text-muted-foreground">
+        <span className="ml-2 text-[14.5px] font-normal text-muted-foreground">
           {count} {count === 1 ? "item" : "items"}
         </span>
       </h2>
       {merchant ? (
-        <span className="flex flex-wrap items-center gap-x-4 text-[14px] font-normal">
+        <span className="flex flex-wrap items-center gap-x-4 text-[15px] font-normal">
           {merchant.phone ? (
             <a href={`tel:${merchant.phone.replace(/\s/g, "")}`} className="inline-flex h-9 items-center gap-1.5 font-medium text-foreground hover:text-accent-fg">
               <Phone className="size-3.5" aria-hidden /> {merchant.phone}
@@ -303,7 +303,7 @@ function GroupHeader({ merchant, count }: { merchant?: Merchant; count: number }
           </Link>
         </span>
       ) : (
-        <span className="text-[13.5px] font-normal text-muted-foreground">Choose a merchant on each item to order it.</span>
+        <span className="text-[14.5px] font-normal text-muted-foreground">Choose a merchant on each item to order it.</span>
       )}
     </div>
   );
@@ -314,7 +314,7 @@ function NeededBy({ m, u }: { m: Material; u: ReturnType<typeof urgency> }) {
   return (
     <>
       <span className={cn("block", u.tone === "late" ? "font-semibold text-danger-fg" : u.tone === "soon" ? "font-semibold text-warn-fg" : "text-foreground")}>{u.label}</span>
-      {u.tone !== "normal" ? <span className="block text-[13px] text-muted-foreground">{formatDayShort(m.neededBy)}</span> : null}
+      {u.tone !== "normal" ? <span className="block text-[14px] text-muted-foreground">{formatDayShort(m.neededBy)}</span> : null}
     </>
   );
 }
@@ -324,7 +324,7 @@ function StatusSelect({ m, write, onChange }: { m: Material; write: boolean; onC
   return (
     <label className="row-secondary relative block">
       <span className="sr-only">Status for {m.item}</span>
-      <NativeSelect value={m.status} disabled={!write} onChange={(e) => onChange(e.target.value as MaterialStatus)} className={cn("h-10 pl-3 text-[14.5px] font-semibold", STATUS_TEXT[m.status])}>
+      <NativeSelect value={m.status} disabled={!write} onChange={(e) => onChange(e.target.value as MaterialStatus)} className={cn("h-10 pl-3 text-[15px] font-semibold", STATUS_TEXT[m.status])}>
         {(Object.keys(MATERIAL_STATUS_LABEL) as MaterialStatus[]).map((st) => (
           <option key={st} value={st}>
             {MATERIAL_STATUS_LABEL[st]}

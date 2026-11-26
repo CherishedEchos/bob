@@ -43,7 +43,7 @@ export default function ActivityPage() {
               <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", mine ? "bg-copper-500" : "bg-line-strong")} />
               <div className="min-w-0 flex-1">
                 <p className="text-[15.5px]">{a.summary}</p>
-                <p className="mt-0.5 text-[13.5px] text-subtle">
+                <p className="mt-0.5 text-[14.5px] text-subtle">
                   {mine ? "You" : a.actor}
                   {a.via === "bob" ? " via Bob" : a.via === "integration" ? " (integration)" : ""} · {timeAgo(a.at)} · {new Date(a.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                 </p>

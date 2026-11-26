@@ -93,7 +93,7 @@ export function Menu({
                 {Icon ? <Icon className="size-[18px] shrink-0 text-accent-icon" /> : null}
                 <span className="min-w-0">
                   <span className="block">{it.label}</span>
-                  {it.hint ? <span className="block text-[13px] font-normal text-muted-foreground">{it.hint}</span> : null}
+                  {it.hint ? <span className="block text-[14px] font-normal text-muted-foreground">{it.hint}</span> : null}
                 </span>
               </>
             );

@@ -41,17 +41,17 @@ function WebsiteFormSection({ slug }: { slug: string }) {
     <Section icon={Globe} title="Website enquiry form" subtitle="Enquiries from your website land straight in Bob, with a reply drafted.">
       <div className="space-y-3">
         <div>
-          <div className="mb-1.5 text-[14px] font-medium text-foreground/90">Form link</div>
+          <div className="mb-1.5 text-[15px] font-medium text-foreground/90">Form link</div>
           <div className="flex gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-xl bg-message px-3.5 py-3 text-[14px] ring-1 ring-line-strong">{link}</code>
+            <code className="min-w-0 flex-1 truncate rounded-xl bg-message px-3.5 py-3 text-[15px] ring-1 ring-line-strong">{link}</code>
             <Button variant="secondary" onClick={() => void copy(link, "Link")}>
               <Copy /> Copy
             </Button>
           </div>
         </div>
         <div>
-          <div className="mb-1.5 text-[14px] font-medium text-foreground/90">Add it to your website</div>
-          <code className="block break-all rounded-xl bg-message px-3.5 py-3 text-[13px] leading-relaxed text-muted-foreground ring-1 ring-line-strong">{embed}</code>
+          <div className="mb-1.5 text-[15px] font-medium text-foreground/90">Add it to your website</div>
+          <code className="block break-all rounded-xl bg-message px-3.5 py-3 text-[14px] leading-relaxed text-muted-foreground ring-1 ring-line-strong">{embed}</code>
           <div className="mt-2 flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => void copy(embed, "Embed code")}>
               <Copy /> Copy embed code
@@ -63,7 +63,7 @@ function WebsiteFormSection({ slug }: { slug: string }) {
             </Button>
           </div>
         </div>
-        <p className="text-[13px] text-subtle">Spam protection and rate limits are built in. Messages are treated as plain text — never as instructions to Bob.</p>
+        <p className="text-[14px] text-subtle">Spam protection and rate limits are built in. Messages are treated as plain text — never as instructions to Bob.</p>
       </div>
     </Section>
   );
@@ -80,9 +80,9 @@ function Section({ icon: Icon, title, subtitle, children, defaultOpen = false }:
           <Icon className="size-5 shrink-0 text-subtle" />
           <span className="min-w-0 flex-1">
             <span className="block text-[16px] font-semibold">{title}</span>
-            {subtitle && !open ? <span className="mt-0.5 block truncate text-[14px] text-muted-foreground">{subtitle}</span> : null}
+            {subtitle && !open ? <span className="mt-0.5 block truncate text-[15px] text-muted-foreground">{subtitle}</span> : null}
           </span>
-          <span className="flex shrink-0 items-center gap-1 text-[13.5px] font-medium text-muted-foreground">
+          <span className="flex shrink-0 items-center gap-1 text-[14.5px] font-medium text-muted-foreground">
             <span className="hidden sm:inline">{open ? "Hide" : "Show"}</span>
             <ChevronRight aria-hidden className={cn("size-5 text-subtle transition-transform", open && "rotate-90")} />
           </span>
@@ -90,7 +90,7 @@ function Section({ icon: Icon, title, subtitle, children, defaultOpen = false }:
       </h2>
       {open ? (
         <div id={id} className="px-4 pb-5 lg:px-5">
-          {subtitle ? <p className="mb-4 text-[14.5px] text-muted-foreground">{subtitle}</p> : null}
+          {subtitle ? <p className="mb-4 text-[15px] text-muted-foreground">{subtitle}</p> : null}
           {children}
         </div>
       ) : null}
@@ -120,7 +120,7 @@ function SettingsInner() {
 
   const Group = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <section className="mt-6 first:mt-0" aria-label={title}>
-      <h2 className="mb-2 px-1 text-[13px] font-semibold text-muted-foreground">{title}</h2>
+      <h2 className="mb-2 px-1 text-[14px] font-semibold text-muted-foreground">{title}</h2>
       <ul className="panel divide-y divide-line overflow-hidden">{children}</ul>
     </section>
   );
@@ -140,7 +140,7 @@ function SettingsInner() {
 
       <Group title="Connections">
         <Section icon={Link2} title="Email & accounting" subtitle={connectedSummary}>
-          <p className="mb-3 text-[14.5px] text-muted-foreground">Connecting uses each service&apos;s own sign-in page — Bob never sees your password. You can disconnect at any time, and Bob deletes its access straight away.</p>
+          <p className="mb-3 text-[15px] text-muted-foreground">Connecting uses each service&apos;s own sign-in page — Bob never sees your password. You can disconnect at any time, and Bob deletes its access straight away.</p>
           <div className="space-y-2">
             {data.connections.map((c) => (
               <ConnectionRow key={c.provider} c={c} owner={can("integrations.manage")} />
@@ -150,7 +150,7 @@ function SettingsInner() {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-[15px] font-medium">Instagram</div>
-                  <div className="text-[13.5px] text-muted-foreground">Log Instagram enquiries in Bob and paste Bob&apos;s reply into Instagram yourself.</div>
+                  <div className="text-[14.5px] text-muted-foreground">Log Instagram enquiries in Bob and paste Bob&apos;s reply into Instagram yourself.</div>
                 </div>
                 <StatusChip tone="neutral">Coming soon</StatusChip>
               </div>
@@ -170,19 +170,19 @@ function SettingsInner() {
               <li key={m.id} className="flex items-center justify-between py-2.5">
                 <div>
                   <div className="text-[15px] font-medium">{m.name}</div>
-                  <div className="text-[13.5px] text-muted-foreground">{m.email}</div>
+                  <div className="text-[14.5px] text-muted-foreground">{m.email}</div>
                 </div>
-                <span className="text-[14px] text-muted-foreground">{ROLE_LABEL[m.role]}</span>
+                <span className="text-[15px] text-muted-foreground">{ROLE_LABEL[m.role]}</span>
               </li>
             ))}
           </ul>
-          <dl className="mt-3 space-y-1 text-[13.5px] text-subtle">
+          <dl className="mt-3 space-y-1 text-[14.5px] text-subtle">
             <div><dt className="inline font-medium text-foreground">Owner</dt> <dd className="inline">— everything.</dd></div>
             <div><dt className="inline font-medium text-foreground">Admin</dt> <dd className="inline">— planning, jobs, enquiries, tasks, materials, merchants, team and money. Not Settings or connections.</dd></div>
             <div><dt className="inline font-medium text-foreground">Site team</dt> <dd className="inline">— jobs, tasks, notes and costs. No money.</dd></div>
             <div><dt className="inline font-medium text-foreground">My work only</dt> <dd className="inline">— their own bookings.</dd></div>
           </dl>
-          <p className="mt-3 text-[13.5px] text-subtle">Invite someone from Team → their name → Invite.</p>
+          <p className="mt-3 text-[14.5px] text-subtle">Invite someone from Team → their name → Invite.</p>
         </Section>
         <LeavePolicySection org={org} owner={owner} save={save} />
       </Group>
@@ -191,13 +191,13 @@ function SettingsInner() {
         <BobSection org={org} owner={owner} save={save} />
         <Section icon={Smartphone} title="Bob on your phone" subtitle="Add Bob to your home screen so it opens like an app.">
           <InstallBob />
-          <p className="text-[14px] text-muted-foreground">Already installed? Bob opens full-screen from your home screen icon.</p>
+          <p className="text-[15px] text-muted-foreground">Already installed? Bob opens full-screen from your home screen icon.</p>
         </Section>
       </Group>
 
       <Group title="Account">
         <Section icon={UserRound} title="Your details" subtitle={`${user.name} · ${ROLE_LABEL[user.role]}`}>
-          <dl className="grid grid-cols-[110px_1fr] gap-y-2 text-[14.5px]">
+          <dl className="grid grid-cols-[110px_1fr] gap-y-2 text-[15px]">
             <dt className="text-subtle">Name</dt>
             <dd>{user.name}</dd>
             <dt className="text-subtle">Email</dt>
@@ -207,7 +207,7 @@ function SettingsInner() {
           </dl>
         </Section>
         <Section icon={CreditCard} title="Subscription" subtitle={org.dataMode === "sample" ? "Demo workspace" : "Pilot — managed by Cresaro"}>
-          <p className="text-[14.5px] text-muted-foreground">
+          <p className="text-[15px] text-muted-foreground">
             {org.dataMode === "sample" ? "This is a demo workspace with fictional data. Nothing here is billed." : "Your business is on the Bob pilot. Cresaro looks after billing — get in touch with them for anything about your plan."}
           </p>
         </Section>
@@ -231,12 +231,12 @@ function LeavePolicySection({ org, owner, save }: { org: OrgConfig; owner: boole
         />
         <span>
           <span className="block text-[15px] font-medium">Owners and admins can record their own leave as approved</span>
-          <span className="block text-[14px] text-muted-foreground">
+          <span className="block text-[15px] text-muted-foreground">
             Either way, owners and admins approve or decline requests from employees, and subcontractors record their own unavailable dates. Manage leave in Team → Holidays.
           </span>
         </span>
       </label>
-      {!owner ? <p className="mt-2 text-[13.5px] text-subtle">Only the owner can change this.</p> : null}
+      {!owner ? <p className="mt-2 text-[14.5px] text-subtle">Only the owner can change this.</p> : null}
     </Section>
   );
 }
@@ -363,18 +363,18 @@ function FollowUpSection({ org, owner, save }: { org: OrgConfig; owner: boolean;
         </Field>
         <label className="flex items-start gap-3">
           <input type="checkbox" className="mt-1 size-5 accent-[var(--color-copper-500)]" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} disabled={!owner} />
-          <span className="text-[14.5px]">
+          <span className="text-[15px]">
             <span className="block font-semibold">Ask customers for a Google review</span>
             <span className="block text-muted-foreground">The same honest request to every customer, once per job. Bob never asks only happy customers and never says a review was left.</span>
           </span>
         </label>
         <fieldset>
-          <legend className="mb-1.5 text-[14px] font-medium">Sending</legend>
+          <legend className="mb-1.5 text-[15px] font-medium">Sending</legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {([["manual", "I approve each email", "Bob prepares it; you check and press send."], ["auto", "Send automatically", "Sent as soon as you finish a handover. Needs a connected email account."]] as const).map(([v, label, hint]) => (
               <label key={v} className={cn("flex cursor-pointer items-start gap-3 rounded-xl px-3.5 py-3 ring-1", mode === v ? "bg-selected ring-copper-500/50" : "ring-line-strong", (!owner || (v === "auto" && !mailbox)) && "cursor-not-allowed opacity-60")}>
                 <input type="radio" name="fu-mode" className="mt-1 accent-[var(--color-copper-500)]" checked={mode === v} onChange={() => setMode(v)} disabled={!owner || (v === "auto" && !mailbox)} />
-                <span className="text-[14.5px]">
+                <span className="text-[15px]">
                   <span className="block font-semibold">{label}</span>
                   <span className="block text-muted-foreground">{v === "auto" && !mailbox ? "Connect an email account first (Connections)." : hint}</span>
                 </span>
@@ -384,15 +384,15 @@ function FollowUpSection({ org, owner, save }: { org: OrgConfig; owner: boolean;
         </fieldset>
         <label className="flex items-start gap-3">
           <input type="checkbox" className="mt-1 size-5 accent-[var(--color-copper-500)]" checked={reminder} onChange={(e) => setReminder(e.target.checked)} disabled={!owner} />
-          <span className="text-[14.5px]">
+          <span className="text-[15px]">
             <span className="block font-semibold">One reminder after seven days</span>
             <span className="block text-muted-foreground">Only if a review was asked for. It can be cancelled on the job.</span>
           </span>
         </label>
         <details className="rounded-xl ring-1 ring-line">
-          <summary className="flex min-h-12 cursor-pointer items-center px-3.5 text-[14.5px] font-semibold">Email template</summary>
+          <summary className="flex min-h-12 cursor-pointer items-center px-3.5 text-[15px] font-semibold">Email template</summary>
           <div className="space-y-3 border-t border-line px-3.5 pb-3.5 pt-3">
-            <p className="text-[13px] text-muted-foreground">Bob fills in {"{firstName}"}, {"{job}"}, {"{business}"}, {"{team}"}, {"{businessName}"} and {"{reviewBlock}"} (the review paragraph, only when asking). Your contact details are added at the end.</p>
+            <p className="text-[14px] text-muted-foreground">Bob fills in {"{firstName}"}, {"{job}"}, {"{business}"}, {"{team}"}, {"{businessName}"} and {"{reviewBlock}"} (the review paragraph, only when asking). Your contact details are added at the end.</p>
             <Field label="Subject" htmlFor="fu-subject">
               <Input id="fu-subject" value={subject} onChange={(e) => setSubject(e.target.value)} disabled={!owner} />
             </Field>
@@ -400,14 +400,14 @@ function FollowUpSection({ org, owner, save }: { org: OrgConfig; owner: boolean;
               <Textarea id="fu-body" rows={9} value={body} onChange={(e) => setBody(e.target.value)} disabled={!owner} />
             </Field>
             {owner ? (
-              <button type="button" onClick={() => { setSubject(DEFAULT_TEMPLATE.subject); setBody(DEFAULT_TEMPLATE.body); }} className="h-9 text-[14px] font-semibold text-accent-fg">
+              <button type="button" onClick={() => { setSubject(DEFAULT_TEMPLATE.subject); setBody(DEFAULT_TEMPLATE.body); }} className="h-9 text-[15px] font-semibold text-accent-fg">
                 Reset to Bob&apos;s wording
               </button>
             ) : null}
             <div className="rounded-xl bg-surface-2 p-3.5">
-              <p className="text-[12.5px] font-semibold uppercase tracking-wide text-subtle">Preview (example customer)</p>
-              <p className="mt-1.5 text-[14.5px] font-semibold">{fillTemplate(subject, example, false)}</p>
-              <p className="mt-1.5 whitespace-pre-wrap text-[14.5px] leading-relaxed">{fillTemplate(body, example, enabled)}</p>
+              <p className="text-[13.5px] font-semibold uppercase tracking-wide text-subtle">Preview (example customer)</p>
+              <p className="mt-1.5 text-[15px] font-semibold">{fillTemplate(subject, example, false)}</p>
+              <p className="mt-1.5 whitespace-pre-wrap text-[15px] leading-relaxed">{fillTemplate(body, example, enabled)}</p>
             </div>
           </div>
         </details>
@@ -485,7 +485,7 @@ function BobSection({ org, owner, save }: { org: OrgConfig; owner: boolean; save
   }, []);
   return (
     <Section icon={Bot} title="Bob" subtitle="How your assistant behaves.">
-      <div className="mb-4 space-y-2 text-[14.5px]">
+      <div className="mb-4 space-y-2 text-[15px]">
         <StatusLine ok={data.mode.aiEngine === "claude"} label="Understanding" value={data.mode.aiEngine === "claude" ? "Full AI assistant" : "Built-in assistant"} />
         <StatusLine ok={!!voice} label="Voice" value={voice === null ? "Checking…" : voice ? "Browser speech recognition available on this device" : "Not available in this browser — typing works the same"} />
         <StatusLine ok={false} label="Database" value="Local demo database (SQLite). Supabase is set up in code but not connected." />
@@ -523,7 +523,7 @@ function CalendarSettings() {
   const revoke = async (id: string) => (await actions.run("revokeFeed", { id })).ok;
   return (
     <div className="space-y-3">
-      <p className="text-[14.5px] text-muted-foreground">
+      <p className="text-[15px] text-muted-foreground">
         Bob is where work is created and changed. These links let a calendar app show it. Feeds include the job, town or site address, times and who&apos;s on it — never customer phone numbers, emails, site access notes, entry codes or private notes. A moved booking updates the same event; a cancelled one disappears.
       </p>
       {can("schedule.read") ? (
@@ -537,7 +537,7 @@ function CalendarSettings() {
         create={create("person")}
         revoke={revoke}
       />
-      <p className="text-[13px] text-muted-foreground">Team members get their own personal link in My work. Removing someone&apos;s access turns their links off.</p>
+      <p className="text-[14px] text-muted-foreground">Team members get their own personal link in My work. Removing someone&apos;s access turns their links off.</p>
     </div>
   );
 }
@@ -555,7 +555,7 @@ function QuickBooksLink({ org, owner, save }: { org: OrgConfig; owner: boolean; 
       <label htmlFor="qb-url" className="text-[15px] font-medium">
         Open QuickBooks shortcut
       </label>
-      <p className="text-[13.5px] text-muted-foreground">Where the Open QuickBooks button in Money goes, e.g. your QuickBooks bills page. This is just a link — it doesn&apos;t connect or sync anything.</p>
+      <p className="text-[14.5px] text-muted-foreground">Where the Open QuickBooks button in Money goes, e.g. your QuickBooks bills page. This is just a link — it doesn&apos;t connect or sync anything.</p>
       <div className="mt-2 flex gap-2">
         <Input id="qb-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://qbo.intuit.com/app/bills" disabled={!owner} className="h-11" />
         {owner ? (
@@ -587,7 +587,7 @@ function StatusChip({ tone, children }: { tone: "good" | "info" | "bad" | "neutr
     bad: "bg-red-500/10 text-danger-fg ring-red-500/25",
     neutral: "bg-surface-2 text-muted-foreground ring-line-strong",
   }[tone];
-  return <span className={cn("inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-md px-2 text-[12.5px] font-medium ring-1", cls)}>{children}</span>;
+  return <span className={cn("inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-md px-2 text-[13.5px] font-medium ring-1", cls)}>{children}</span>;
 }
 
 function ConnectionRow({ c, owner }: { c: Connection; owner: boolean }) {
@@ -610,10 +610,10 @@ function ConnectionRow({ c, owner }: { c: Connection; owner: boolean }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 text-[15px] font-medium">
-            {PROVIDER_LABEL[c.provider] ?? c.provider} <span className="text-[13px] font-normal text-subtle">· {c.kind === "email" ? "Email" : "Accounting"}</span>
+            {PROVIDER_LABEL[c.provider] ?? c.provider} <span className="text-[14px] font-normal text-subtle">· {c.kind === "email" ? "Email" : "Accounting"}</span>
             <StatusChip tone={chip.tone}>{chip.label}</StatusChip>
           </div>
-          <div className="mt-0.5 text-[13.5px] text-muted-foreground">
+          <div className="mt-0.5 text-[14.5px] text-muted-foreground">
             {statusText}
             {c.lastSyncAt ? ` · synced ${timeAgo(c.lastSyncAt)}` : ""}
           </div>
@@ -652,7 +652,7 @@ function ConnectionRow({ c, owner }: { c: Connection; owner: boolean }) {
         ) : null}
       </div>
       {missing ? (
-        <p className="mt-2 text-[13px] text-warn-fg">
+        <p className="mt-2 text-[14px] text-warn-fg">
           Cresaro needs to finish setting this up before it can connect. We&apos;ve kept your place — try again later.
         </p>
       ) : null}
@@ -667,7 +667,7 @@ function PrivacySection({ org, owner, save }: { org: OrgConfig; owner: boolean; 
   const [confirmReset, setConfirmReset] = React.useState(false);
   return (
     <Section icon={ShieldCheck} title="Data & privacy" subtitle="UK GDPR controls for your business data.">
-      <ul className="mb-4 space-y-1.5 text-[14px] text-muted-foreground">
+      <ul className="mb-4 space-y-1.5 text-[15px] text-muted-foreground">
         <li>• Your data is only visible to members of {org.shortName}. Every request is checked on the server.</li>
         <li>• Customer emails are treated as untrusted text — instructions inside them are ignored.</li>
         <li>• Nothing is sent to a customer without your explicit approval.</li>
@@ -728,7 +728,7 @@ function PrivacySection({ org, owner, save }: { org: OrgConfig; owner: boolean; 
           ) : null}
         </div>
       ) : null}
-      <p className="mt-3 text-[13px] text-subtle">To erase one customer&apos;s personal data, open them under Customers → Privacy.</p>
+      <p className="mt-3 text-[14px] text-subtle">To erase one customer&apos;s personal data, open them under Customers → Privacy.</p>
     </Section>
   );
 }

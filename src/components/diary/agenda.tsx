@@ -70,11 +70,11 @@ export function Agenda({
                 aria-selected={isToday}
                 aria-label={`${dow(d, "long")} ${dayNum(d)}${count ? `, ${count} booked` : ""}`}
                 onClick={() => jump(d)}
-                className={cn("flex h-14 flex-col items-center justify-center gap-0.5 rounded-lg transition-colors", isToday ? "bg-[#1a1a1a] text-white" : "bg-card ring-1 ring-line active:bg-surface-2")}
+                className={cn("flex h-14 flex-col items-center justify-center gap-0.5 rounded-lg transition-colors", isToday ? "bg-copper-500 text-white" : "bg-card ring-1 ring-line active:bg-surface-2")}
               >
-                <span className={cn("text-[11px] font-medium uppercase", isToday ? "text-white/60" : "text-subtle")}>{dow(d, "narrow")}</span>
-                <span className="tabular text-[16px] font-semibold leading-none">{dayNum(d)}</span>
-                <span className={cn("h-1 w-1 rounded-full", count ? (isToday ? "bg-copper-400" : "bg-copper-500") : "bg-transparent")} />
+                <span className={cn("text-[12px] font-semibold uppercase", isToday ? "text-white/80" : "text-subtle")}>{dow(d, "narrow")}</span>
+                <span className="tabular text-[18px] font-bold leading-none">{dayNum(d)}</span>
+                <span className={cn("h-1 w-1 rounded-full", count ? (isToday ? "bg-white" : "bg-copper-500") : "bg-transparent")} />
               </button>
             );
           })}
@@ -93,7 +93,7 @@ export function Agenda({
         return (
           <div key={d} id={`agenda-${d}`} className={cn("scroll-mt-20", past && "opacity-60")}>
             <h2 className="mb-2 flex items-baseline justify-between px-0.5">
-              <span className="text-[16px] font-semibold tracking-[-0.01em] text-heading">{d === today ? "Today" : dow(d, "long")}</span>
+              <span className="text-[19px] font-bold tracking-[-0.015em] text-heading">{d === today ? "Today" : dow(d, "long")}</span>
               <span className="text-[13px] text-subtle">{new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long" })}</span>
             </h2>
             {off.length ? (
@@ -142,8 +142,8 @@ function AgendaCard({ booking: b, day, job, people, clash, onOpen, onJob }: { bo
       <button type="button" onClick={onOpen} className="block w-full py-3 pl-4 pr-3 text-left" aria-label={`Booking: ${job?.title ?? "job"}, ${formatTimeRange(b.startTime, b.endTime)}`}>
         <span className="flex items-start justify-between gap-3">
           <span className="min-w-0">
-            <span className="block truncate text-[16px] font-semibold text-heading">{job?.title ?? "Job"}</span>
-            <span className="mt-0.5 block truncate text-[14px] text-muted-foreground">
+            <span className="block truncate text-[17px] font-semibold text-heading">{job?.title ?? "Job"}</span>
+            <span className="mt-0.5 block truncate text-[15px] text-muted-foreground">
               {job?.customerName}
               {jobTown(job) ? ` · ${jobTown(job)}` : ""}
             </span>
@@ -168,7 +168,7 @@ function AgendaCard({ booking: b, day, job, people, clash, onOpen, onJob }: { bo
       </button>
       <div className="flex border-t border-line">
         {maps ? (
-          <a href={maps} target="_blank" rel="noreferrer" className="flex h-11 flex-1 items-center justify-center gap-1.5 text-[14px] font-medium text-foreground active:bg-surface-2">
+          <a href={maps} target="_blank" rel="noreferrer" className="flex h-12 flex-1 items-center justify-center gap-1.5 text-[15px] font-semibold text-foreground active:bg-surface-2">
             <Navigation className="size-4 text-subtle" aria-hidden /> Directions
           </a>
         ) : (
@@ -176,7 +176,7 @@ function AgendaCard({ booking: b, day, job, people, clash, onOpen, onJob }: { bo
             <MapPin className="size-4" aria-hidden /> No address yet
           </span>
         )}
-        <button type="button" onClick={onJob} className="flex h-11 flex-1 items-center justify-center gap-1 border-l border-line text-[14px] font-medium text-foreground active:bg-surface-2">
+        <button type="button" onClick={onJob} className="flex h-12 flex-1 items-center justify-center gap-1 border-l border-line text-[15px] font-semibold text-foreground active:bg-surface-2">
           Open job <ChevronRight className="size-4 text-subtle" aria-hidden />
         </button>
       </div>

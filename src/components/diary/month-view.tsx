@@ -42,7 +42,7 @@ export function MonthView({
     <section aria-label="Month" className="panel overflow-hidden">
       <div className="grid border-b border-line" style={{ gridTemplateColumns: cols }}>
         {heads.map((h, i) => (
-          <div key={h} className={cn("px-3 py-2 text-[12px] font-medium uppercase tracking-[0.04em] text-subtle", i && "border-l border-line")}>
+          <div key={h} className={cn("px-3 py-2 text-[13px] font-semibold uppercase tracking-[0.04em] text-subtle", i && "border-l border-line")}>
             {h}
           </div>
         ))}
@@ -56,13 +56,13 @@ export function MonthView({
             const shown = list.slice(0, Math.max(0, MAX - Math.min(off.length, 1)));
             const more = list.length - shown.length;
             return (
-              <div key={d} className={cn("flex min-h-[124px] min-w-0 flex-col gap-1 p-1.5", i && "border-l border-line", !inMonth && "bg-[#fbfaf8]", d === today && "bg-copper-50/60")}>
+              <div key={d} className={cn("flex min-h-[132px] min-w-0 flex-col gap-1 p-1.5", i && "border-l border-line", !inMonth && "bg-[#fbfaf8]", d === today && "bg-copper-50/60")}>
                 <button
                   type="button"
                   onClick={() => onDay(d)}
                   aria-label={`Open the week of ${formatDayLong(d)}`}
                   className={cn(
-                    "tabular grid size-6 place-items-center self-start rounded-md text-[12.5px] font-semibold transition-colors hover:bg-surface-3",
+                    "tabular grid size-6 place-items-center self-start rounded-md text-[13.5px] font-semibold transition-colors hover:bg-surface-3",
                     inMonth ? "text-heading" : "text-subtle/70",
                     d === today && "bg-copper-500 text-white hover:bg-copper-600",
                   )}
@@ -70,7 +70,7 @@ export function MonthView({
                   {dayNum(d)}
                 </button>
                 {off.length ? (
-                  <span title={off.map((a) => absenceText(a, people)).join("\n")} className="truncate rounded px-1.5 py-0.5 text-[11.5px] font-medium text-violet-800 bg-violet-50">
+                  <span title={off.map((a) => absenceText(a, people)).join("\n")} className="truncate rounded px-1.5 py-0.5 text-[12.5px] font-medium text-violet-800 bg-violet-50">
                     {off.map((a) => firstName(people.get(a.personId)?.name)).join(", ")} off
                   </span>
                 ) : null}
@@ -83,7 +83,7 @@ export function MonthView({
                       type="button"
                       onClick={() => onOpen(b)}
                       title={`${job?.title ?? "Job"} · ${job?.customerName ?? ""}`}
-                      className={cn("flex min-w-0 items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-[11.5px] font-medium ring-1", b.personIds.length ? tone.card : "bg-[#fffbf2] ring-warning/50")}
+                      className={cn("flex min-w-0 items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-[12.5px] font-medium ring-1", b.personIds.length ? tone.card : "bg-[#fffbf2] ring-warning/50")}
                     >
                       <span className={cn("size-1.5 shrink-0 rounded-full", b.personIds.length ? tone.dot : "bg-warning")} />
                       <span className={cn("truncate", b.personIds.length ? tone.text : "text-[#7a5410]")}>{job?.title ?? "Job"}</span>
@@ -91,7 +91,7 @@ export function MonthView({
                   );
                 })}
                 {more > 0 ? (
-                  <button type="button" onClick={() => onDay(d)} className="self-start rounded px-1.5 text-[11.5px] font-medium text-subtle hover:text-foreground">
+                  <button type="button" onClick={() => onDay(d)} className="self-start rounded px-1.5 text-[12.5px] font-medium text-subtle hover:text-foreground">
                     +{more} more
                   </button>
                 ) : null}

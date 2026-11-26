@@ -162,11 +162,11 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
           ) : null}
           <SourceIcon source={e.source} provider={e.provider} className={cn("hidden shrink-0 sm:grid", onBack ? "mt-1" : "mt-0.5")} />
           <div className="min-w-0 flex-1">
-            <h2 className="line-clamp-2 break-words text-[19px] font-semibold leading-tight tracking-tight">{e.customerName}</h2>
-            <p className="mt-0.5 truncate text-[14.5px] text-muted-foreground">
+            <h2 className="line-clamp-2 break-words text-[22px] font-bold leading-tight tracking-tight">{e.customerName}</h2>
+            <p className="mt-0.5 truncate text-[15px] text-muted-foreground">
               <span className="text-foreground/85">{e.title}</span> · {e.location}
             </p>
-            <p className="mt-0.5 truncate text-[13.5px] text-muted-foreground">
+            <p className="mt-0.5 truncate text-[14.5px] text-muted-foreground">
               {SOURCE_LABEL[e.source]}
               {e.email ? ` · ${e.email}` : e.instagramHandle ? ` · ${e.instagramHandle}` : e.phone ? ` · ${e.phone}` : ""} · {timeAgo(e.receivedAt)}
             </p>
@@ -176,7 +176,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
             aria-expanded={contactOpen}
             aria-controls={`contact-${e.id}`}
             onClick={() => setContactOpen((o) => !o)}
-            className="flex h-10 shrink-0 items-center gap-1 rounded-xl bg-card px-2.5 text-[14px] font-semibold text-foreground ring-1 ring-line-strong transition hover:bg-raised-hover sm:gap-1.5 sm:px-3"
+            className="flex h-10 shrink-0 items-center gap-1 rounded-xl bg-card px-2.5 text-[15px] font-semibold text-foreground ring-1 ring-line-strong transition hover:bg-raised-hover sm:gap-1.5 sm:px-3"
           >
             <span className="hidden sm:inline">Contact details</span>
             <span className="sm:hidden">Contact</span>
@@ -187,14 +187,14 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
           {callback ? <StatusText tone="amber">Asked for a call back</StatusText> : <StatusText tone={state.main.tone}>{state.main.label}</StatusText>}
           {state.high ? <HighPriority /> : null}
           {e.followUpDate ? (
-            <span className="inline-flex items-center gap-1 text-[13.5px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 text-[14.5px] text-muted-foreground">
               <CalendarCheck className="size-3.5" /> Follow up {formatDateInline(e.followUpDate)}
             </span>
           ) : null}
         </div>
         {contactOpen ? (
           <div id={`contact-${e.id}`} className="mt-3 rounded-xl bg-message p-3">
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[14.5px]">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[15px]">
               {e.phone ? (
                 <>
                   <dt className="text-subtle">Phone</dt>
@@ -254,7 +254,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
 
       {/* ---------------- One scroll area: message → reply → more ---------------- */}
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className={cn("mx-auto w-full px-4 py-4 sm:px-5", inline ? "max-w-[760px]" : "max-w-none")}>
+        <div className={cn("w-full px-4 py-4 sm:px-6", inline ? "max-w-[820px]" : "mx-auto max-w-[760px]")}>
           {write ? (
             <div className="mb-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap" role="toolbar" aria-label="Enquiry actions">
               <Button size="sm" variant="secondary" className="justify-center" onClick={() => { editor.current?.focus(); editor.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>
@@ -283,13 +283,13 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
           ) : null}
           <section aria-labelledby={`msg-${e.id}`}>
             <div className="mb-1.5 flex items-baseline justify-between gap-3">
-              <h3 id={`msg-${e.id}`} className="text-[14px] font-semibold text-foreground">
+              <h3 id={`msg-${e.id}`} className="text-[15px] font-semibold text-foreground">
                 {callback && e.source === "phone" ? "Voicemail summary" : "Customer message"}
               </h3>
-              <span className="text-[13px] text-subtle">{latest ? timeAgo(latest.at) : ""}</span>
+              <span className="text-[14px] text-subtle">{latest ? timeAgo(latest.at) : ""}</span>
             </div>
             {earlier.length ? (
-              <button type="button" onClick={() => setShowEarlier((v) => !v)} aria-expanded={showEarlier} className="mb-2 h-9 text-[14px] font-medium text-accent-fg">
+              <button type="button" onClick={() => setShowEarlier((v) => !v)} aria-expanded={showEarlier} className="mb-2 h-9 text-[15px] font-medium text-accent-fg">
                 {showEarlier ? "Hide" : "Show"} {earlier.length} earlier {earlier.length === 1 ? "message" : "messages"}
               </button>
             ) : null}
@@ -297,7 +297,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
               <ol className="mb-3 space-y-2">
                 {earlier.map((m) => (
                   <li key={m.id} className={cn("rounded-xl px-3.5 py-2.5 text-[15px]", m.direction === "inbound" ? "bg-message" : "ml-6 bg-selected")}>
-                    <div className="mb-0.5 text-[13px] text-subtle">
+                    <div className="mb-0.5 text-[14px] text-subtle">
                       {m.direction === "inbound" ? firstName(e.customerName) : "You"} · {timeAgo(m.at)}
                     </div>
                     <p className="whitespace-pre-wrap leading-relaxed text-foreground/85">{m.body}</p>
@@ -306,9 +306,9 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
               </ol>
             ) : null}
             <div className="rounded-2xl border-l-[3px] border-[rgb(16_24_40/0.18)] bg-message px-4 py-3.5">
-              {latest?.subject ? <div className="mb-1 text-[14px] font-medium text-muted-foreground">{latest.subject}</div> : null}
+              {latest?.subject ? <div className="mb-1 text-[15px] font-medium text-muted-foreground">{latest.subject}</div> : null}
               {flagged ? (
-                <div className="mb-2 flex items-center gap-1.5 text-[14px] text-warn-fg">
+                <div className="mb-2 flex items-center gap-1.5 text-[15px] text-warn-fg">
                   <AlertTriangle className="size-4" /> Contains instructions aimed at an assistant — Bob ignores them.
                 </div>
               ) : null}
@@ -321,7 +321,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
           {callback && !replied ? (
             <section aria-label="Next step" className="mt-4 rounded-2xl bg-selected px-4 py-3.5 ring-1 ring-copper-500/25">
               <p className="text-[15.5px] font-semibold text-heading">Next step: call {first} back</p>
-              <p className="mt-0.5 text-[14.5px] text-muted-foreground">
+              <p className="mt-0.5 text-[15px] text-muted-foreground">
                 {first} asked for a call back{e.phone ? ` on ${e.phone}` : ""}. Bob doesn&apos;t promise a price or a start date — talk it through, then tap I&apos;ve called {first}.
               </p>
               {e.phone ? (
@@ -336,7 +336,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
 
           <section aria-labelledby={`reply-label-${e.id}`} className="mt-5">
             <div className="mb-1.5 flex items-baseline justify-between gap-3">
-              <label id={`reply-label-${e.id}`} htmlFor={`reply-${e.id}`} className="text-[14px] font-semibold text-foreground">
+              <label id={`reply-label-${e.id}`} htmlFor={`reply-${e.id}`} className="text-[15px] font-semibold text-foreground">
                 {replied ? "Your reply" : callback ? `Optional: text ${first} instead` : e.draftReply || saved === "saved" ? "Edit your draft" : "Edit Bob's draft"}
               </label>
               <span aria-live="polite">
@@ -356,7 +356,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
                 {suggestion.flags.map((f, i) => (
                   <li
                     key={i}
-                    className={cn("flex items-start gap-2 rounded-xl px-3 py-2 text-[14px] leading-snug", f.deferred ? "bg-message text-muted-foreground" : "bg-amber-500/10 text-warn-fg")}
+                    className={cn("flex items-start gap-2 rounded-xl px-3 py-2 text-[15px] leading-snug", f.deferred ? "bg-message text-muted-foreground" : "bg-amber-500/10 text-warn-fg")}
                   >
                     {f.deferred ? <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-subtle" /> : <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />}
                     <span>
@@ -379,7 +379,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
               className="block w-full resize-none overflow-hidden rounded-2xl bg-field px-4 py-3.5 text-[16px] leading-relaxed text-foreground shadow-[0_1px_2px_rgb(16_24_40/0.05)] outline-none ring-1 ring-input transition placeholder:text-subtle hover:ring-foreground/30 focus:ring-2 focus:ring-copper-500 read-only:bg-message read-only:shadow-none"
             />
             {!replied ? (
-              <p className="mt-2 flex items-start gap-2 text-[14px] leading-snug text-muted-foreground">
+              <p className="mt-2 flex items-start gap-2 text-[15px] leading-snug text-muted-foreground">
                 <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-subtle" />
                 <span>
                   {canSend
@@ -439,7 +439,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
             ) : null}
             {write ? (
               <Fold title="Status & priority" summary={`${ENQUIRY_STATUS_LABEL[e.status]} · ${PRIORITY_LABEL[e.priority]} priority`} last>
-                <div className="text-[14px] font-medium text-muted-foreground">Stage</div>
+                <div className="text-[15px] font-medium text-muted-foreground">Stage</div>
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {STAGE_ORDER.map((s) => (
                     <button
@@ -450,7 +450,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
                         if (res.ok) toast(`Moved to ${ENQUIRY_STATUS_LABEL[s]}`);
                       }}
                       aria-pressed={e.status === s}
-                      className={cn("h-10 rounded-xl text-[14px] font-medium transition", e.status === s ? "bg-copper-500/18 text-accent-fg" : "bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground")}
+                      className={cn("h-10 rounded-xl text-[15px] font-medium transition", e.status === s ? "bg-copper-500/18 text-accent-fg" : "bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground")}
                     >
                       {ENQUIRY_STATUS_LABEL[s]}
                     </button>
@@ -458,7 +458,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
                 </div>
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <div className="text-[14px] font-medium text-muted-foreground">Priority</div>
+                    <div className="text-[15px] font-medium text-muted-foreground">Priority</div>
                     <div className="mt-2 grid grid-cols-3 gap-2">
                       {(["high", "medium", "low"] as Priority[]).map((p) => (
                         <button
@@ -469,7 +469,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
                             if (res.ok) toast(`Priority set to ${PRIORITY_LABEL[p].toLowerCase()}`);
                           }}
                           aria-pressed={e.priority === p}
-                          className={cn("h-10 rounded-xl text-[14px] font-medium transition", e.priority === p ? "bg-copper-500/18 text-accent-fg" : "bg-surface-2 text-muted-foreground hover:bg-surface-3")}
+                          className={cn("h-10 rounded-xl text-[15px] font-medium transition", e.priority === p ? "bg-copper-500/18 text-accent-fg" : "bg-surface-2 text-muted-foreground hover:bg-surface-3")}
                         >
                           {PRIORITY_LABEL[p]}
                         </button>
@@ -477,7 +477,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
                     </div>
                   </div>
                   <label className="block">
-                    <span className="text-[14px] font-medium text-muted-foreground">Assigned to</span>
+                    <span className="text-[15px] font-medium text-muted-foreground">Assigned to</span>
                     <NativeSelect
                       className="mt-2"
                       value={e.assignedUserId ?? ""}
@@ -530,7 +530,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
           <div className="flex flex-wrap items-center gap-2">
             {canSend ? (
               <Button
-                size="sm"
+                size="default"
                 onClick={async () => {
                   await save(true);
                   const r = await propose("send_email", { to: e.email, subject: `Re: ${e.title}`, body: reply, enquiryId: e.id, customerId: e.customerId, purpose: "reply" });
@@ -544,14 +544,14 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
               </Button>
             ) : null}
             {callback && e.phone && !replied ? (
-              <Button asChild size="sm" className="flex-1 sm:flex-none">
+              <Button asChild size="default" className="flex-1 sm:flex-none">
                 <a href={`tel:${e.phone.replace(/\s/g, "")}`}>
                   <PhoneCall /> Call {first} back
                 </a>
               </Button>
             ) : null}
             <Button
-              size="sm"
+              size="default"
               variant={canSend || callback || replied ? "secondary" : "default"}
               className="flex-1 sm:flex-none"
               disabled={!reply.trim()}
@@ -567,12 +567,12 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
               {copied ? <Check /> : <Copy />} <span aria-live="polite">{copied ? "Copied" : callback ? "Copy text" : "Copy reply"}</span>
             </Button>
             {!replied ? (
-              <Button size="sm" variant="ghost" className="flex-1 sm:flex-none" disabled={saved !== "unsaved"} onClick={() => void save()}>
+              <Button size="default" variant="ghost" className="flex-1 sm:flex-none" disabled={saved !== "unsaved"} onClick={() => void save()}>
                 <Save /> {saved === "saved" ? "Draft saved" : saved === "saving" ? "Saving…" : "Save draft"}
               </Button>
             ) : null}
             {!replied && !confirmReplied ? (
-              <Button size="sm" variant="secondary" className="w-full sm:ml-auto sm:w-auto" onClick={() => setConfirmReplied(true)}>
+              <Button size="default" variant="secondary" className="flex-1 sm:ml-auto sm:flex-none" onClick={() => setConfirmReplied(true)}>
                 <CheckCheck /> {callback ? `I've called ${first}` : "I've replied"}
               </Button>
             ) : null}
@@ -609,7 +609,7 @@ function WonToJob({ e }: { e: Enquiry }) {
     return (
       <div className={cn("rounded-2xl p-4 ring-1", justCreated ? "bg-emerald-500/[0.07] ring-emerald-500/25" : "bg-message ring-line")}>
         <p className="text-[15.5px] font-semibold">{justCreated ? "Job created" : "Won — this is a job now"}</p>
-        <p className="mt-0.5 text-[14px] text-muted-foreground">
+        <p className="mt-0.5 text-[15px] text-muted-foreground">
           {job.title} for {job.customerName} · {job.siteAddress || job.location}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -628,12 +628,12 @@ function WonToJob({ e }: { e: Enquiry }) {
   return (
     <div className="space-y-3">
       {quote ? (
-        <p className="text-[14.5px] text-muted-foreground">
+        <p className="text-[15px] text-muted-foreground">
           Quote {quote.status === "sent" ? "sent" : quote.status} · the job will use this price.
         </p>
       ) : null}
       {error ? (
-        <p role="alert" className="text-[14px] text-danger-fg">
+        <p role="alert" className="text-[15px] text-danger-fg">
           {error}
         </p>
       ) : null}
@@ -649,7 +649,7 @@ function WonToJob({ e }: { e: Enquiry }) {
           </Button>
         ) : null}
       </div>
-      <p className="text-[13px] text-muted-foreground">Creating the job carries {e.customerName.split(" ")[0]}&apos;s details and the site ({e.location}) across. You can change them on the job.</p>
+      <p className="text-[14px] text-muted-foreground">Creating the job carries {e.customerName.split(" ")[0]}&apos;s details and the site ({e.location}) across. You can change them on the job.</p>
     </div>
   );
 }

@@ -94,7 +94,7 @@ export default function InvitePage() {
               </p>
             </div>
             {info.signedInAs && !info.signedInAs.isInvitee ? (
-              <div role="note" className="rounded-xl bg-amber-500/10 p-3 text-[14.5px] ring-1 ring-amber-500/30">
+              <div role="note" className="rounded-xl bg-amber-500/10 p-3 text-[15px] ring-1 ring-amber-500/30">
                 <p className="font-semibold text-warn-fg">This browser is signed in as someone else</p>
                 <p className="mt-1">
                   {info.signedInAs.demo ? (
@@ -107,7 +107,7 @@ export default function InvitePage() {
                 <p className="mt-1 text-muted-foreground">Continuing signs that session out and sets up {info.personName ? `${info.personName.split(" ")[0]}'s` : "their"} own login. Nothing from the {info.signedInAs.demo ? "demo" : "other session"} is carried over.</p>
               </div>
             ) : info.signedInAs?.isInvitee ? (
-              <p role="note" className="rounded-xl bg-surface-2 p-3 text-[14.5px]">You&apos;re already signed in as {info.signedInAs.email}. Enter your password to add {info.businessName} to your login.</p>
+              <p role="note" className="rounded-xl bg-surface-2 p-3 text-[15px]">You&apos;re already signed in as {info.signedInAs.email}. Enter your password to add {info.businessName} to your login.</p>
             ) : null}
             <Field label="Email" htmlFor="inv-email" hint="The invite only works for this email.">
               <Input id="inv-email" value={info.email ?? ""} readOnly autoComplete="username" className="bg-message" />
@@ -116,7 +116,7 @@ export default function InvitePage() {
               <Input id="inv-pass" type="password" autoComplete={info.hasAccount ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} aria-invalid={!!error} />
             </Field>
             {error ? (
-              <p role="alert" className="rounded-xl bg-red-500/10 px-3 py-2 text-[14.5px] text-danger-fg ring-1 ring-red-500/25">
+              <p role="alert" className="rounded-xl bg-red-500/10 px-3 py-2 text-[15px] text-danger-fg ring-1 ring-red-500/25">
                 {error}
               </p>
             ) : null}

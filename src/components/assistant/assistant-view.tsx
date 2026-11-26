@@ -186,7 +186,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
                 >
                   <PlusCircle className="size-4" /> New conversation
                 </MenuItem>
-                {data.mode.platformAdmin ? <div className="px-3 pb-1.5 pt-2 text-[12.5px] leading-snug text-subtle">
+                {data.mode.platformAdmin ? <div className="px-3 pb-1.5 pt-2 text-[13.5px] leading-snug text-subtle">
                   Engine: {data.mode.aiEngine === "claude" ? "Claude (live AI)" : "Bob rules engine (demo — no AI key configured)"}.
                   Voice input: {speech.supported ? "your browser's speech recognition" : "not available in this browser"}.
                   <br />
@@ -233,7 +233,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
               >
                 {speakReplies ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
                 <span className="flex-1">Speak replies to voice requests</span>
-                <span className={cn("rounded-md px-1.5 text-[12px] font-semibold", speakReplies ? "bg-copper-500/15 text-accent-fg" : "bg-surface-3 text-subtle")}>{speakReplies ? "On" : "Off"}</span>
+                <span className={cn("rounded-md px-1.5 text-[13px] font-semibold", speakReplies ? "bg-copper-500/15 text-accent-fg" : "bg-surface-3 text-subtle")}>{speakReplies ? "On" : "Off"}</span>
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -248,7 +248,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
                 <PlusCircle className="size-4" /> New conversation
               </MenuItem>
               {data.mode.platformAdmin ? (
-                <div className="px-3 pb-1.5 pt-2 text-[12.5px] leading-snug text-subtle">
+                <div className="px-3 pb-1.5 pt-2 text-[13.5px] leading-snug text-subtle">
                   Engine: {data.mode.aiEngine === "claude" ? "Claude (live AI)" : "Bob rules engine (demo — no AI key configured)"}.
                 </div>
               ) : null}
@@ -312,7 +312,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
             ) : null}
 
             <section className="mt-6">
-              <h2 className="mb-2 text-[13px] font-medium text-subtle">{pc ? `About ${pc.label}` : "Try saying"}</h2>
+              <h2 className="mb-2 text-[14px] font-medium text-subtle">{pc ? `About ${pc.label}` : "Try saying"}</h2>
               <div className="flex flex-wrap gap-2">
                 {(pc ? contextual : suggestions).slice(0, 3).map((x) => (
                   <button
@@ -328,7 +328,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
           </div>
         ) : (
           <div className="mx-auto max-w-2xl space-y-4 px-4 pb-6 pt-2 lg:px-6" aria-live="polite">
-            {!ready ? <p className="text-center text-[14px] text-subtle">Loading conversation…</p> : null}
+            {!ready ? <p className="text-center text-[15px] text-subtle">Loading conversation…</p> : null}
             {messages.map((m, i) => (
               <MessageRow
                 key={m.id}
@@ -387,7 +387,7 @@ export function AssistantView({ variant = "page", onClose }: { variant?: "page" 
               </div>
             ) : null}
             {phase === "idle" ? <ComposerStatus phase="idle" interim="" error={speech.error} notice={c.notice} supported={speech.supported} /> : null}
-            {pc && variant === "panel" ? <p className="mt-1 truncate text-[12.5px] text-subtle">Bob knows you&apos;re looking at {pc.label}.</p> : null}
+            {pc && variant === "panel" ? <p className="mt-1 truncate text-[13.5px] text-subtle">Bob knows you&apos;re looking at {pc.label}.</p> : null}
             <div className="mt-2">
               <Composer
                 inputRef={inputRef}
@@ -422,10 +422,10 @@ function WorkspaceLockup({ org }: { org: { name: string; shortName: string; logo
       {org.wordmark?.onDark ? null : <OrgLogo org={org} size={40} />}
       <div className="flex min-w-0 flex-col items-center leading-none">
         {org.wordmark?.onDark ? <OrgWordmark org={org} height={26} /> : <div className="truncate text-[17px] font-bold uppercase tracking-[0.04em]">{org.shortName}</div>}
-        <div className="mt-1.5 flex items-center gap-1 text-[13px] text-muted-foreground">
+        <div className="mt-1.5 flex items-center gap-1 text-[14px] text-muted-foreground">
           with <BobLogo height={10} title="Bob" className="translate-y-[1px]" />
           {org.dataMode === "sample" ? (
-            <span title="Fictional sample data. Nothing is sent to anyone." className="ml-1 whitespace-nowrap rounded bg-white/10 px-1.5 py-[2px] text-[11px] font-medium text-white/75">
+            <span title="Fictional sample data. Nothing is sent to anyone." className="ml-1 whitespace-nowrap rounded bg-white/10 px-1.5 py-[2px] text-[12px] font-medium text-white/75">
               Demo · sample data
             </span>
           ) : null}
@@ -526,7 +526,7 @@ function AskBobHome({
               <>
                 <p className="text-[15px] font-medium text-white/70">{greeting}</p>
                 <h1 className="mt-0.5 text-[27px] font-bold leading-tight tracking-[-0.02em] text-[#FAF9F6] min-[400px]:text-[30px]">How can I help?</h1>
-                <p className="mt-1 hidden text-[14px] text-white/50 sm:block">Your building and carpentry business assistant</p>
+                <p className="mt-1 hidden text-[15px] text-white/50 sm:block">Your building and carpentry business assistant</p>
               </>
             )}
           </div>
@@ -539,7 +539,7 @@ function AskBobHome({
                   type="button"
                   onClick={s.run}
                   disabled={busy || recording}
-                  className="flex min-h-[52px] w-full items-center gap-3 rounded-xl bg-white/[0.035] px-3.5 py-2.5 text-left text-[14px] leading-snug text-[#FAF9F6]/90 ring-1 ring-white/[0.09] transition hover:bg-white/[0.06] hover:ring-copper-500/50 active:scale-[0.99] disabled:opacity-40"
+                  className="flex min-h-[52px] w-full items-center gap-3 rounded-xl bg-white/[0.035] px-3.5 py-2.5 text-left text-[15px] leading-snug text-[#FAF9F6]/90 ring-1 ring-white/[0.09] transition hover:bg-white/[0.06] hover:ring-copper-500/50 active:scale-[0.99] disabled:opacity-40"
                 >
                   <s.icon className="size-[18px] shrink-0 text-copper-400" strokeWidth={1.7} />
                   <span className="line-clamp-2">{s.label}</span>
@@ -548,7 +548,7 @@ function AskBobHome({
             ))}
           </ul>
           {hasConversation ? (
-            <button onClick={onContinue} className="mt-2 h-10 text-[14.5px] font-medium text-accent-fg">
+            <button onClick={onContinue} className="mt-2 h-10 text-[15px] font-medium text-accent-fg">
               Continue our conversation
             </button>
           ) : null}
@@ -829,14 +829,14 @@ function MessageRow({
       <div className="flex animate-fade-up flex-col items-end">
         <div className="max-w-[85%] rounded-3xl rounded-br-lg bg-ink-700 px-4 py-3 text-white ring-1 ring-line">
           {message.via === "voice" ? (
-            <div className="mb-1.5 flex items-center gap-1.5 text-[13px] text-copper-300">
+            <div className="mb-1.5 flex items-center gap-1.5 text-[14px] text-copper-300">
               <AudioLines className="size-3.5" /> You said
             </div>
           ) : null}
           <p className="whitespace-pre-wrap text-[17px] leading-relaxed">{message.via === "voice" ? `“${message.text}”` : message.text}</p>
         </div>
         {canEdit ? (
-          <button onClick={onEdit} className="mt-1 flex items-center gap-1 px-2 text-[13px] text-subtle hover:text-foreground">
+          <button onClick={onEdit} className="mt-1 flex items-center gap-1 px-2 text-[14px] text-subtle hover:text-foreground">
             <Pencil className="size-3" /> {message.via === "voice" ? "Not what you said? Edit" : "Edit"}
           </button>
         ) : null}
@@ -862,7 +862,7 @@ function MessageRow({
               <button
                 key={i}
                 onClick={() => onChip(c)}
-                className="rounded-full bg-surface-2 px-3.5 py-2 text-[14.5px] text-accent-fg ring-1 ring-copper-500/40 transition hover:bg-copper-500/12"
+                className="rounded-full bg-surface-2 px-3.5 py-2 text-[15px] text-accent-fg ring-1 ring-copper-500/40 transition hover:bg-copper-500/12"
               >
                 {c.label}
               </button>

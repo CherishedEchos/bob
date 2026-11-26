@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 /** Restrained status label: a small soft pill with a coloured dot. */
 const badgeVariants = cva(
-  "inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-md px-1.5 text-[12.5px] font-medium leading-none before:size-1.5 before:shrink-0 before:rounded-full before:content-[''] [&_svg]:size-3",
+  "inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-md px-1.5 text-[13.5px] font-medium leading-none before:size-1.5 before:shrink-0 before:rounded-full before:content-[''] [&_svg]:size-3",
   {
     variants: {
       tone: {

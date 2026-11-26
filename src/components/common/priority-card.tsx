@@ -91,13 +91,13 @@ export function PriorityRow({ item, onAskBob, onNavigate }: { item: PriorityItem
         </span>
         <span className="min-w-0">
           <span className="block text-[16px] font-semibold leading-snug">{item.title}</span>
-          <span className="mt-0.5 block text-[14.5px] leading-snug text-muted-foreground">{item.detail}</span>
+          <span className="mt-0.5 block text-[15px] leading-snug text-muted-foreground">{item.detail}</span>
         </span>
       </button>
       <button
         onClick={() => void action.run()}
         disabled={busy}
-        className="flex h-11 shrink-0 items-center gap-1 rounded-lg px-3 text-[14.5px] font-medium text-accent-fg ring-1 ring-copper-500/35 transition hover:bg-copper-500/12 disabled:opacity-50"
+        className="flex h-11 shrink-0 items-center gap-1 rounded-lg px-3 text-[15px] font-medium text-accent-fg ring-1 ring-copper-500/35 transition hover:bg-copper-500/12 disabled:opacity-50"
       >
         {item.kind === "task" ? <Check className="size-4" /> : null}
         <span className="hidden sm:inline">{action.label}</span>

@@ -42,15 +42,15 @@ export function SharedInstructions({ job: j }: { job: Job }) {
   return (
     <section className="border-t border-line px-5 py-5 sm:px-6">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-[14px] font-semibold tracking-[-0.01em] text-heading">Site & access</h3>
-        <span className="inline-flex items-center gap-1 rounded-md bg-sky-500/10 px-2 py-0.5 text-[12.5px] font-medium text-info-fg">
+        <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-heading">Site & access</h3>
+        <span className="inline-flex items-center gap-1 rounded-md bg-sky-500/10 px-2 py-0.5 text-[13.5px] font-medium text-info-fg">
           <Eye className="size-3.5" aria-hidden /> Shared with people booked
         </span>
       </div>
       {editing ? (
         <form onSubmit={save} className="space-y-3" noValidate>
           {errors._ ? (
-            <p role="alert" className="text-[14px] text-danger-fg">
+            <p role="alert" className="text-[15px] text-danger-fg">
               {errors._} Your changes are still here.
             </p>
           ) : null}
@@ -58,7 +58,7 @@ export function SharedInstructions({ job: j }: { job: Job }) {
             <Input id={`site-${j.id}`} value={v.siteAddress} onChange={(e) => setV({ ...v, siteAddress: e.target.value })} autoComplete="off" />
           </Field>
           {customerAddress && v.siteAddress !== customerAddress ? (
-            <button type="button" onClick={() => setV({ ...v, siteAddress: customerAddress })} className="-mt-1 h-9 text-[14px] font-semibold text-accent-fg">
+            <button type="button" onClick={() => setV({ ...v, siteAddress: customerAddress })} className="-mt-1 h-9 text-[15px] font-semibold text-accent-fg">
               Copy customer address ({customerAddress})
             </button>
           ) : null}
@@ -85,7 +85,7 @@ export function SharedInstructions({ job: j }: { job: Job }) {
           <SiteActions job={j} />
           {j.sharedNotes ? (
             <div className="mt-3">
-              <h4 className="text-[13.5px] font-semibold">Instructions</h4>
+              <h4 className="text-[14.5px] font-semibold">Instructions</h4>
               <p className="mt-0.5 whitespace-pre-wrap text-[15px] leading-relaxed">{j.sharedNotes}</p>
             </div>
           ) : null}
@@ -118,7 +118,7 @@ export function SiteActions({ job: j, compact = false }: { job: Pick<Job, "siteA
         <div className="flex flex-wrap items-start justify-between gap-2">
           <p className="min-w-0 text-[15.5px] font-medium">
             {address}
-            {!j.siteAddress ? <span className="block text-[13px] font-normal text-muted-foreground">Town only — add the site address.</span> : null}
+            {!j.siteAddress ? <span className="block text-[14px] font-normal text-muted-foreground">Town only — add the site address.</span> : null}
           </p>
           <Button asChild size="sm" variant="secondary">
             <a href={mapsUrl(address)} target="_blank" rel="noreferrer">
@@ -144,7 +144,7 @@ export function SiteActions({ job: j, compact = false }: { job: Pick<Job, "siteA
       ) : null}
       {j.accessNote ? (
         <div className="rounded-xl bg-amber-500/[0.08] px-3 py-2 ring-1 ring-amber-500/20">
-          <h4 className="text-[13px] font-semibold text-warn-fg">Site access</h4>
+          <h4 className="text-[14px] font-semibold text-warn-fg">Site access</h4>
           <p className="whitespace-pre-wrap text-[15px] leading-snug">{j.accessNote}</p>
         </div>
       ) : null}
@@ -161,7 +161,7 @@ export function JobCrew({ job: j }: { job: Job }) {
   const crew = ids.map((id) => data.people.find((p) => p.id === id)).filter(Boolean) as typeof data.people;
   return (
     <section className="border-t border-line px-5 py-5 sm:px-6">
-      <h3 className="mb-2 text-[14px] font-semibold tracking-[-0.01em] text-heading">Crew</h3>
+      <h3 className="mb-2 text-[15px] font-semibold tracking-[-0.01em] text-heading">Crew</h3>
       {crew.length ? (
         <ul className="divide-y divide-line">
           {crew.map((p) => {
@@ -170,7 +170,7 @@ export function JobCrew({ job: j }: { job: Job }) {
               <li key={p.id} className="flex items-center justify-between gap-3 py-2.5">
                 <span className="min-w-0">
                   <span className="block text-[15px] font-medium">{p.name}</span>
-                  <span className="block text-[13.5px] text-muted-foreground">
+                  <span className="block text-[14.5px] text-muted-foreground">
                     {p.kind === "subcontractor" ? `Subcontractor${p.trade ? ` · ${p.trade}` : ""}` : p.trade ?? "Employee"} · next {relativeDayInline(next.date, today)}
                   </span>
                 </span>
@@ -213,12 +213,12 @@ export function JobSchedule({ job: j }: { job: Job }) {
             {relativeDay(b.date, today)}
             {b.endDate ? ` – ${formatDayShort(b.endDate)}` : ""} · {formatTimeRange(b.startTime, b.endTime)}
           </span>
-          <span className="block text-[14px] text-muted-foreground">
+          <span className="block text-[15px] text-muted-foreground">
             {b.personIds.length ? b.personIds.map((id) => people.get(id)?.name ?? "Someone").join(", ") : <span className="font-semibold text-warn-fg">Needs someone</span>}
           </span>
-          {b.notes ? <span className="mt-0.5 block text-[13.5px] text-muted-foreground">{b.notes}</span> : null}
+          {b.notes ? <span className="mt-0.5 block text-[14.5px] text-muted-foreground">{b.notes}</span> : null}
         </span>
-        {can("schedule.manage") ? <span className="text-[14px] font-semibold text-accent-fg">Edit</span> : null}
+        {can("schedule.manage") ? <span className="text-[15px] font-semibold text-accent-fg">Edit</span> : null}
       </button>
     </li>
   );
@@ -229,11 +229,11 @@ export function JobSchedule({ job: j }: { job: Job }) {
           <CalendarPlus /> Schedule work
         </Button>
       ) : null}
-      <h3 className="mt-5 text-[14px] font-semibold tracking-[-0.01em] text-heading">Booked</h3>
+      <h3 className="mt-5 text-[15px] font-semibold tracking-[-0.01em] text-heading">Booked</h3>
       {upcoming.length ? <ul className="mt-1 divide-y divide-line">{upcoming.map((b) => <Row key={b.id} b={b} />)}</ul> : <p className="mt-2 text-[15px] text-muted-foreground">Nothing booked yet.</p>}
       {past.length ? (
         <>
-          <h3 className="mt-6 text-[14px] font-semibold tracking-[-0.01em] text-heading">Done</h3>
+          <h3 className="mt-6 text-[15px] font-semibold tracking-[-0.01em] text-heading">Done</h3>
           <ul className="mt-1 divide-y divide-line">{past.map((b) => <Row key={b.id} b={b} />)}</ul>
         </>
       ) : null}
@@ -277,7 +277,7 @@ export function JobTasks({ job: j }: { job: Job }) {
                 </button>
                 <span className="min-w-0 flex-1">
                   <span className={cn("block text-[15px] font-medium leading-snug", t.done && "font-normal text-muted-foreground line-through")}>{t.title}</span>
-                  <span className="mt-0.5 flex flex-wrap gap-x-3 text-[13.5px] text-muted-foreground">
+                  <span className="mt-0.5 flex flex-wrap gap-x-3 text-[14.5px] text-muted-foreground">
                     {t.done ? <span>Done</span> : d < 0 ? <StatusText tone="red">Overdue</StatusText> : d === 0 ? <StatusText tone="amber">Due today</StatusText> : <span>Due {relativeDayInline(t.dueDate, todayKey())}</span>}
                     {t.assignedPersonId ? <span>For {people.get(t.assignedPersonId)?.name ?? "someone"}</span> : <span>Office</span>}
                   </span>
@@ -360,7 +360,7 @@ export function MaterialRow({
             {m.unit ? ` ${m.unit}` : ""}
           </span>
         </span>
-        <span className="mt-0.5 flex flex-wrap gap-x-3 text-[14px] text-muted-foreground">
+        <span className="mt-0.5 flex flex-wrap gap-x-3 text-[15px] text-muted-foreground">
           {jobLabel ? <span>{jobLabel}</span> : null}
           {hideMerchant ? null : <span>{merchantName ?? m.supplier ?? <span className="italic">No merchant yet</span>}</span>}
           {m.neededBy ? <span className={cn(late && "font-semibold text-danger-fg")}>Needed {relativeDayInline(m.neededBy, today)}</span> : null}
@@ -370,7 +370,7 @@ export function MaterialRow({
       </button>
       <label className="row-secondary w-36 shrink-0">
         <span className="sr-only">Status for {m.item}</span>
-        <NativeSelect value={m.status} disabled={!write} onChange={(e) => onStatus(e.target.value as MaterialStatus)} className={cn("h-11 text-[14.5px] font-semibold", m.status === "to_order" ? "text-warn-fg" : m.status === "ordered" ? "text-info-fg" : "text-good-fg")}>
+        <NativeSelect value={m.status} disabled={!write} onChange={(e) => onStatus(e.target.value as MaterialStatus)} className={cn("h-11 text-[15px] font-semibold", m.status === "to_order" ? "text-warn-fg" : m.status === "ordered" ? "text-info-fg" : "text-good-fg")}>
           {(Object.keys(MATERIAL_STATUS_LABEL) as MaterialStatus[]).map((st) => (
             <option key={st} value={st}>
               {MATERIAL_STATUS_LABEL[st]}

@@ -97,7 +97,7 @@ function Fold({ title, hint, children, defaultOpen = false }: { title: string; h
       <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex min-h-14 w-full items-center gap-3 px-4 text-left">
         <span className="min-w-0 flex-1">
           <span className="block text-[15.5px] font-semibold text-heading">{title}</span>
-          {hint && !open ? <span className="block truncate text-[13.5px] text-muted-foreground">{hint}</span> : null}
+          {hint && !open ? <span className="block truncate text-[14.5px] text-muted-foreground">{hint}</span> : null}
         </span>
         <ChevronDown aria-hidden className={cn("size-5 shrink-0 text-subtle transition", open && "rotate-180")} />
       </button>
@@ -155,7 +155,7 @@ export function HandoverWorkspace({ job, askedStep }: { job: Job; askedStep?: nu
           >
             {busy ? <Loader2 className="animate-spin" /> : null} Start the handover
           </BigButton>
-          <p className="mt-3 text-center text-[13.5px] text-subtle">Nothing is sent to the customer until you choose to.</p>
+          <p className="mt-3 text-center text-[14.5px] text-subtle">Nothing is sent to the customer until you choose to.</p>
         </div>
       </div>
     );
@@ -170,7 +170,7 @@ function JobStrip({ job, right }: { job: Job; right?: React.ReactNode }) {
       </Link>
       <div className="min-w-0 flex-1">
         <div className="truncate text-[15.5px] font-semibold text-heading">{job.title}</div>
-        <div className="truncate text-[13.5px] text-muted-foreground">
+        <div className="truncate text-[14.5px] text-muted-foreground">
           {job.customerName} · {job.siteAddress || job.location}
         </div>
       </div>
@@ -301,7 +301,7 @@ function Wizard({ job, report, askedStep }: { job: Job; report: HandoverReport; 
         <JobStrip
           job={job}
           right={
-            <button type="button" onClick={() => void exit()} className="h-11 shrink-0 rounded-xl px-3 text-[14.5px] font-semibold text-foreground ring-1 ring-line-strong hover:bg-surface-2">
+            <button type="button" onClick={() => void exit()} className="h-11 shrink-0 rounded-xl px-3 text-[15px] font-semibold text-foreground ring-1 ring-line-strong hover:bg-surface-2">
               Save &amp; exit
             </button>
           }
@@ -314,7 +314,7 @@ function Wizard({ job, report, askedStep }: { job: Job; report: HandoverReport; 
           <p className="flex items-center gap-2 text-[15px] font-semibold text-warn-fg">
             <AlertTriangle className="size-4" aria-hidden /> {conflict.updatedBy} changed this handover {timeAgo(conflict.updatedAt)}
           </p>
-          <p className="mt-1 text-[14.5px]">Your latest changes are still on screen but weren&apos;t saved. Load their version to carry on from it.</p>
+          <p className="mt-1 text-[15px]">Your latest changes are still on screen but weren&apos;t saved. Load their version to carry on from it.</p>
           <div className="mt-3 flex gap-2">
             <BigButton
               onClick={() => {
@@ -372,7 +372,7 @@ function Wizard({ job, report, askedStep }: { job: Job; report: HandoverReport; 
 function Progress({ step, onGo, saveState }: { step: StepNo; onGo: (s: StepNo) => void; saveState: "saved" | "saving" | "error" | "pending" }) {
   return (
     <nav aria-label="Handover steps" className="mt-3">
-      <div className="flex items-center justify-between gap-3 text-[13.5px]">
+      <div className="flex items-center justify-between gap-3 text-[14.5px]">
         <span className="font-semibold text-heading">
           Step {step} of 5 <span className="font-normal text-muted-foreground">· {STEPS[step - 1]}</span>
         </span>
@@ -397,7 +397,7 @@ function Progress({ step, onGo, saveState }: { step: StepNo; onGo: (s: StepNo) =
                 className="group block w-full py-1.5 text-left focus-visible:outline-none"
               >
                 <span className={cn("block h-1.5 rounded-full transition", n < step ? "bg-copper-500" : n === step ? "bg-copper-500" : "bg-surface-3 group-hover:bg-line-strong", n === step && "ring-2 ring-copper-500/25")} />
-                <span className={cn("mt-1.5 hidden truncate text-[12.5px] sm:block", n === step ? "font-semibold text-heading" : "text-subtle")}>{label}</span>
+                <span className={cn("mt-1.5 hidden truncate text-[13.5px] sm:block", n === step ? "font-semibold text-heading" : "text-subtle")}>{label}</span>
               </button>
             </li>
           );
@@ -417,23 +417,23 @@ function StepDetails({ job, content, edit }: { job: Job; content: ReportContent;
       <StepTitle title="Job details" sub="Filled in from the job. Change anything that should read differently on the report." />
       <div className="space-y-5">
         <label className="block">
-          <span className="mb-1.5 block text-[14.5px] font-medium text-foreground">Report title</span>
+          <span className="mb-1.5 block text-[15px] font-medium text-foreground">Report title</span>
           <input className={field} value={content.title} onChange={(e) => edit((c) => ({ ...c, title: e.target.value }))} />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-[14.5px] font-medium text-foreground">Customer</span>
+          <span className="mb-1.5 block text-[15px] font-medium text-foreground">Customer</span>
           <input className={field} value={content.customerName} onChange={(e) => edit((c) => ({ ...c, customerName: e.target.value }))} />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-[14.5px] font-medium text-foreground">Address</span>
+          <span className="mb-1.5 block text-[15px] font-medium text-foreground">Address</span>
           <input className={field} value={content.siteAddress ?? ""} onChange={(e) => edit((c) => ({ ...c, siteAddress: e.target.value }))} />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-[14.5px] font-medium text-foreground">Completion date</span>
+          <span className="mb-1.5 block text-[15px] font-medium text-foreground">Completion date</span>
           <input type="date" className={cn(field, "sm:w-60")} value={content.completionDate ?? ""} onChange={(e) => edit((c) => ({ ...c, completionDate: e.target.value || undefined }))} />
         </label>
         {customer?.email || customer?.phone ? (
-          <p className="rounded-xl bg-surface-2 px-4 py-3 text-[14px] text-muted-foreground">
+          <p className="rounded-xl bg-surface-2 px-4 py-3 text-[15px] text-muted-foreground">
             Customer contact from their record: {[customer.email, customer.phone].filter(Boolean).join(" · ")}. This isn&apos;t printed on the report.
           </p>
         ) : null}
@@ -469,7 +469,7 @@ function StepPhotos({ job, files, sel, content, editSel, edit }: { job: Job; fil
       <StepTitle title="Photos & documents" sub="Tick the photos the customer should see. Unticked photos stay private." />
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <UploadButtons onPick={setPicked} primaryLabel="Add photos" />
-        <span className="text-[14px] text-muted-foreground">{sel.photoIds.length} chosen</span>
+        <span className="text-[15px] text-muted-foreground">{sel.photoIds.length} chosen</span>
       </div>
       {!photos.length ? (
         <div className="rounded-2xl bg-surface-2 px-5 py-8 text-center">
@@ -503,10 +503,10 @@ function StepPhotos({ job, files, sel, content, editSel, edit }: { job: Job; fil
                         <span className={cn("absolute left-2.5 top-2.5 grid size-8 place-items-center rounded-full ring-2 transition", on ? "bg-copper-500 text-white ring-white" : "bg-black/35 text-transparent ring-white/80")}>
                           <Check className="size-5" strokeWidth={3} aria-hidden />
                         </span>
-                        {isCover ? <span className="absolute bottom-2.5 left-2.5 rounded-full bg-black/60 px-2.5 py-1 text-[12.5px] font-semibold text-white">Cover photo</span> : null}
+                        {isCover ? <span className="absolute bottom-2.5 left-2.5 rounded-full bg-black/60 px-2.5 py-1 text-[13.5px] font-semibold text-white">Cover photo</span> : null}
                       </button>
                       {on && !isCover ? (
-                        <button type="button" onClick={() => edit((c) => ({ ...c, coverFileId: f.id }))} className="absolute bottom-2.5 left-2.5 inline-flex h-9 items-center gap-1 rounded-full bg-white/90 px-3 text-[13px] font-semibold text-[#18181b] shadow-sm">
+                        <button type="button" onClick={() => edit((c) => ({ ...c, coverFileId: f.id }))} className="absolute bottom-2.5 left-2.5 inline-flex h-9 items-center gap-1 rounded-full bg-white/90 px-3 text-[14px] font-semibold text-[#18181b] shadow-sm">
                           <Star className="size-3.5" aria-hidden /> Make cover
                         </button>
                       ) : null}
@@ -521,7 +521,7 @@ function StepPhotos({ job, files, sel, content, editSel, edit }: { job: Job; fil
 
       <div className="mt-9">
         <h2 className="text-[15px] font-semibold text-heading">Drawings, certificates &amp; documents</h2>
-        <p className="mb-3 text-[14px] text-muted-foreground">Ticked documents go in the handover pack, and Bob can mention them in the report.</p>
+        <p className="mb-3 text-[15px] text-muted-foreground">Ticked documents go in the handover pack, and Bob can mention them in the report.</p>
         {docs.length ? (
           <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card ring-1 ring-line">
             {docs.map((f) => {
@@ -534,9 +534,9 @@ function StepPhotos({ job, files, sel, content, editSel, edit }: { job: Job; fil
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[15px] font-medium text-heading">
                         {f.title ?? f.filename}
-                        {f.revision ? <span className="ml-1.5 text-[13px] font-normal text-muted-foreground">{f.revision}</span> : null}
+                        {f.revision ? <span className="ml-1.5 text-[14px] font-normal text-muted-foreground">{f.revision}</span> : null}
                       </span>
-                      <span className="block truncate text-[13px] text-muted-foreground">{f.category === "drawing" ? "Drawing" : "Document"}{f.visibility === "office" ? " · office only until you include it" : ""}</span>
+                      <span className="block truncate text-[14px] text-muted-foreground">{f.category === "drawing" ? "Drawing" : "Document"}{f.visibility === "office" ? " · office only until you include it" : ""}</span>
                     </span>
                   </label>
                 </li>
@@ -544,7 +544,7 @@ function StepPhotos({ job, files, sel, content, editSel, edit }: { job: Job; fil
             })}
           </ul>
         ) : (
-          <p className="rounded-2xl bg-surface-2 px-4 py-4 text-[14.5px] text-muted-foreground">No drawings or documents on this job. You can add them with Add photos (it takes PDFs too).</p>
+          <p className="rounded-2xl bg-surface-2 px-4 py-4 text-[15px] text-muted-foreground">No drawings or documents on this job. You can add them with Add photos (it takes PDFs too).</p>
         )}
       </div>
 
@@ -610,7 +610,7 @@ function StepReport({
           </BigButton>
         </div>
       ) : null}
-      {note ? <p role="status" className="mb-5 rounded-xl bg-amber-500/10 px-4 py-3 text-[14.5px] text-warn-fg ring-1 ring-amber-500/30">{note} Bob filled in what it knows — add to it below.</p> : null}
+      {note ? <p role="status" className="mb-5 rounded-xl bg-amber-500/10 px-4 py-3 text-[15px] text-warn-fg ring-1 ring-amber-500/30">{note} Bob filled in what it knows — add to it below.</p> : null}
 
       <div className="space-y-5">
         {section("overview") ? <TextSection reportId={report.id} section={section("overview")!} onChange={(p) => editSection("overview", p)} /> : null}
@@ -633,7 +633,7 @@ function StepReport({
             <BigButton variant="secondary" disabled={drafting} onClick={() => void draft()}>
               {drafting ? <Loader2 className="animate-spin" /> : <Sparkles />} Ask Bob to write it again
             </BigButton>
-            <span className="text-[13.5px] text-subtle">Replaces the text above; photo captions you wrote are kept.</span>
+            <span className="text-[14.5px] text-subtle">Replaces the text above; photo captions you wrote are kept.</span>
           </div>
         ) : null}
 
@@ -649,25 +649,25 @@ function StepReport({
                 </li>
               );
             })}
-            {!content.photos.some((p) => p.include) ? <li className="text-[14.5px] text-muted-foreground">No photos chosen yet — go back a step to pick some.</li> : null}
+            {!content.photos.some((p) => p.include) ? <li className="text-[15px] text-muted-foreground">No photos chosen yet — go back a step to pick some.</li> : null}
           </ul>
         </Fold>
 
         <Fold title="What Bob writes from" hint={`${sel.updateIds.length} of ${updates.length} site updates`}>
-          <p className="mb-2 text-[14px] text-muted-foreground">Untick anything that shouldn&apos;t go into the customer&apos;s summary.</p>
+          <p className="mb-2 text-[15px] text-muted-foreground">Untick anything that shouldn&apos;t go into the customer&apos;s summary.</p>
           <ul className="space-y-1">
             {updates.map((u) => (
               <li key={u.id}>
                 <label className="flex cursor-pointer items-start gap-3 rounded-xl px-2 py-2 hover:bg-surface-2">
                   <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-[var(--color-copper-500)]" checked={sel.updateIds.includes(u.id)} onChange={(e) => editSel((s) => ({ ...s, updateIds: e.target.checked ? [...s.updateIds, u.id] : s.updateIds.filter((x) => x !== u.id) }))} />
-                  <span className="text-[14.5px]">
+                  <span className="text-[15px]">
                     <span className="font-medium">{formatDateKey(u.createdAt.slice(0, 10))}</span> · <span className="text-muted-foreground">{u.authorName}</span>
                     <span className="block text-foreground/90">{u.note || "Photos only"}</span>
                   </span>
                 </label>
               </li>
             ))}
-            {!updates.length ? <li className="text-[14.5px] text-muted-foreground">No site updates on this job — Bob will use the job description and photos.</li> : null}
+            {!updates.length ? <li className="text-[15px] text-muted-foreground">No site updates on this job — Bob will use the job description and photos.</li> : null}
           </ul>
         </Fold>
       </div>
@@ -694,7 +694,7 @@ function TextSection({ reportId, section: s, onChange, onRemove }: { reportId: s
       <div className="mb-2 flex items-center gap-2">
         <input aria-label="Section heading" value={s.heading} onChange={(e) => onChange({ heading: e.target.value })} className="h-10 min-w-0 flex-1 rounded-lg bg-transparent px-1 text-[17px] font-semibold text-heading hover:bg-surface-2 focus:bg-field focus:outline-none focus:ring-2 focus:ring-copper-400/60" />
         {onRemove ? (
-          <button type="button" onClick={onRemove} className="h-10 shrink-0 rounded-lg px-2.5 text-[13.5px] font-semibold text-muted-foreground hover:bg-surface-2">
+          <button type="button" onClick={onRemove} className="h-10 shrink-0 rounded-lg px-2.5 text-[14.5px] font-semibold text-muted-foreground hover:bg-surface-2">
             Remove
           </button>
         ) : null}
@@ -719,7 +719,7 @@ function TextSection({ reportId, section: s, onChange, onRemove }: { reportId: s
       )}
       {proposal ? (
         <div className="mt-3 rounded-xl bg-selected/70 p-4 ring-1 ring-copper-500/30" role="region" aria-label="Bob's suggested version">
-          <p className="text-[13.5px] font-semibold text-accent-fg">Bob&apos;s suggestion</p>
+          <p className="text-[14.5px] font-semibold text-accent-fg">Bob&apos;s suggestion</p>
           {proposal.body !== undefined ? <p className="mt-1 whitespace-pre-wrap text-[15.5px] leading-relaxed">{proposal.body}</p> : <ul className="mt-1 list-disc pl-5 text-[15.5px]">{proposal.items?.map((x, i) => <li key={i}>{x}</li>)}</ul>}
           <div className="mt-3 flex gap-2">
             <BigButton onClick={() => { onChange(proposal.body !== undefined ? { body: proposal.body } : { items: proposal.items }); setProposal(null); setOpen(false); setInstruction(""); }}>
@@ -732,7 +732,7 @@ function TextSection({ reportId, section: s, onChange, onRemove }: { reportId: s
         </div>
       ) : open ? (
         <div className="mt-3 rounded-xl bg-surface-2 p-3">
-          <label className="block text-[14px] font-medium text-foreground" htmlFor={`ins-${s.id}`}>
+          <label className="block text-[15px] font-medium text-foreground" htmlFor={`ins-${s.id}`}>
             How should Bob change it?
           </label>
           <div className="mt-1.5 flex gap-2">
@@ -774,7 +774,7 @@ function StepCosts({ job, sel, content, editSel, edit }: { job: Job; sel: Report
       <label className="flex min-h-[72px] cursor-pointer items-center gap-4 rounded-2xl bg-card px-5 py-4 ring-1 ring-line">
         <span className="min-w-0 flex-1">
           <span className="block text-[16px] font-semibold text-heading">Include financial summary in customer report</span>
-          <span className="block text-[14px] text-muted-foreground">{sel.includeCosts ? "The figures below will be printed." : "Off — the report won't mention money."}</span>
+          <span className="block text-[15px] text-muted-foreground">{sel.includeCosts ? "The figures below will be printed." : "Off — the report won't mention money."}</span>
         </span>
         <span className="relative inline-flex shrink-0">
           <input type="checkbox" role="switch" className="peer sr-only" checked={sel.includeCosts} onChange={(e) => editSel((s) => ({ ...s, includeCosts: e.target.checked }))} />
@@ -798,7 +798,7 @@ function StepCosts({ job, sel, content, editSel, edit }: { job: Job; sel: Report
                 <tr key={l.key} className={cn("border-b border-line last:border-0", l.strong && "font-semibold text-heading")}>
                   <td className="py-2.5 pr-3">
                     {l.label}
-                    {l.note ? <span className="block text-[13px] font-normal text-muted-foreground">{l.note}</span> : null}
+                    {l.note ? <span className="block text-[14px] font-normal text-muted-foreground">{l.note}</span> : null}
                   </td>
                   <td className="py-2.5 text-right align-top tabular">{gbp(l.amount)}</td>
                 </tr>
@@ -808,7 +808,7 @@ function StepCosts({ job, sel, content, editSel, edit }: { job: Job; sel: Report
         )}
         {manual ? (
           <div className="mt-4 space-y-2">
-            <p className="text-[13.5px] text-muted-foreground">Printed as &quot;{MANUAL_COST_NOTE}&quot;. Your invoices and payments aren&apos;t changed.</p>
+            <p className="text-[14.5px] text-muted-foreground">Printed as &quot;{MANUAL_COST_NOTE}&quot;. Your invoices and payments aren&apos;t changed.</p>
             {content.manualFigures.map((f, i) => (
               <div key={i} className="flex gap-2">
                 <input className={field} aria-label={`Figure ${i + 1} label`} value={f.label} onChange={(e) => edit((c) => ({ ...c, manualFigures: c.manualFigures.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) }))} />
@@ -822,7 +822,7 @@ function StepCosts({ job, sel, content, editSel, edit }: { job: Job; sel: Report
           </div>
         ) : null}
       </div>
-      <p className="mt-4 text-[13.5px] leading-relaxed text-subtle">Only the agreed price, approved extras, invoices, payments received and the balance can appear. Supplier bills, labour costs and profit are never included.</p>
+      <p className="mt-4 text-[14.5px] leading-relaxed text-subtle">Only the agreed price, approved extras, invoices, payments received and the balance can appear. Supplier bills, labour costs and profit are never included.</p>
     </section>
   );
 }
@@ -897,16 +897,16 @@ function StepFinish({ job, report, sel, content, versions, base, dirty, save, on
       {isFinished(status) ? (
         <div role="status" className={cn("mb-5 rounded-2xl px-4 py-3.5 ring-1", status === "changes" ? "bg-amber-500/10 ring-amber-500/25" : "bg-emerald-500/10 ring-emerald-500/25")}>
           <p className="flex flex-wrap items-center gap-2 text-[15px] font-semibold text-heading">
-            <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-[12.5px] font-semibold text-white">Completed</span>
+            <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-[13.5px] font-semibold text-white">Completed</span>
             {longDate(report.completedAt)} by {report.completedBy}
             {pub ? <span className="font-normal text-muted-foreground">· version {pub.version}</span> : null}
           </p>
           {status === "changes" ? (
-            <p className="mt-1.5 text-[14.5px] text-warn-fg">
+            <p className="mt-1.5 text-[15px] text-warn-fg">
               <strong>Unpublished changes.</strong> You&apos;ve edited the report since version {pub?.version} was finished. Press Finish again to publish them as a new version — version {pub?.version} is kept.
             </p>
           ) : sentEmail ? (
-            <p className="mt-1.5 text-[14.5px] text-good-fg">
+            <p className="mt-1.5 text-[15px] text-good-fg">
               Emailed to the customer {longDate(sentEmail.sentAt)} — approved by {sentEmail.approvedBy}
               {sentEmail.sentVia === "demo" ? " (demo: simulated, nothing really sent)" : sentEmail.sentVia === "manual" ? " (sent from their own email)" : ""}
               {sentEmail.reviewRequested ? " · review requested" : ""}.
@@ -916,7 +916,7 @@ function StepFinish({ job, report, sel, content, versions, base, dirty, save, on
               <BigButton className="w-full sm:w-auto" onClick={() => setEmailOpen(true)}>
                 <Mail /> Send to customer
               </BigButton>
-              <p className="mt-2 text-[13.5px] text-muted-foreground">{draftEmail ? "A draft is saved — open it to finish and send." : "Bob prepares a thank-you email with the report attached; you check it before it goes."}</p>
+              <p className="mt-2 text-[14.5px] text-muted-foreground">{draftEmail ? "A draft is saved — open it to finish and send." : "Bob prepares a thank-you email with the report attached; you check it before it goes."}</p>
             </div>
           )}
         </div>
@@ -925,8 +925,8 @@ function StepFinish({ job, report, sel, content, versions, base, dirty, save, on
 
       {content.prompts.length ? (
         <div className="mb-5 rounded-2xl bg-amber-500/10 px-4 py-3 ring-1 ring-amber-500/25">
-          <p className="text-[14.5px] font-semibold text-warn-fg">Worth a quick check</p>
-          <ul className="mt-1 space-y-1 text-[14px]">
+          <p className="text-[15px] font-semibold text-warn-fg">Worth a quick check</p>
+          <ul className="mt-1 space-y-1 text-[15px]">
             {content.prompts.slice(0, 4).map((p, i) => (
               <li key={i} className="flex gap-2">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warn-fg" aria-hidden /> {p.text}
@@ -939,7 +939,7 @@ function StepFinish({ job, report, sel, content, versions, base, dirty, save, on
       <div className="overflow-hidden rounded-2xl bg-surface-2 ring-1 ring-line">
         <iframe key={base} src={`/api/handover-reports/${report.id}/preview?v=${base}`} title="Preview of the customer's handover report" className="h-[62dvh] w-full sm:h-[72dvh]" />
       </div>
-      <a href={`/api/handover-reports/${report.id}/preview?v=${base}`} target="_blank" rel="noreferrer" className="mt-2 inline-flex h-11 items-center gap-1.5 text-[14.5px] font-semibold text-accent-fg">
+      <a href={`/api/handover-reports/${report.id}/preview?v=${base}`} target="_blank" rel="noreferrer" className="mt-2 inline-flex h-11 items-center gap-1.5 text-[15px] font-semibold text-accent-fg">
         <ExternalLink className="size-4" aria-hidden /> Open the preview full screen
       </a>
 
@@ -954,7 +954,7 @@ function StepFinish({ job, report, sel, content, versions, base, dirty, save, on
           <Pencil /> Edit report
         </BigButton>
       </div>
-      <p className="mt-3 text-[13.5px] text-subtle">
+      <p className="mt-3 text-[14.5px] text-subtle">
         The pack is one ZIP: this report, the {sel.photoIds.length} photo{sel.photoIds.length === 1 ? "" : "s"} you chose at full size{sel.fileIds.length ? ` and ${sel.fileIds.length} document${sel.fileIds.length === 1 ? "" : "s"}` : ""}. Not included: internal notes, site access details, anything you didn&apos;t tick, and your own costs.
       </p>
 
@@ -965,18 +965,18 @@ function StepFinish({ job, report, sel, content, versions, base, dirty, save, on
             <ul className="divide-y divide-line">
               {versions.map((v) => (
                 <li key={v.id} className="flex items-center gap-3 py-2.5">
-                  <span className="min-w-0 flex-1 text-[14.5px]">
+                  <span className="min-w-0 flex-1 text-[15px]">
                     <span className="font-medium">Version {v.version}</span> · {v.pages} page{v.pages === 1 ? "" : "s"}
-                    <span className="block text-[13px] text-muted-foreground">{v.createdBy}, {timeAgo(v.createdAt)}</span>
+                    <span className="block text-[14px] text-muted-foreground">{v.createdBy}, {timeAgo(v.createdAt)}</span>
                   </span>
-                  <a href={fileUrl(v.fileId, { download: true })} className="inline-flex h-11 items-center gap-1 rounded-xl px-3 text-[14.5px] font-semibold text-accent-fg hover:bg-copper-500/10" aria-label={`Download ${v.filename}`}>
+                  <a href={fileUrl(v.fileId, { download: true })} className="inline-flex h-11 items-center gap-1 rounded-xl px-3 text-[15px] font-semibold text-accent-fg hover:bg-copper-500/10" aria-label={`Download ${v.filename}`}>
                     <Download className="size-4" aria-hidden /> PDF
                   </a>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-[14.5px] text-muted-foreground">Each download after a change saves a new numbered version; earlier ones are kept.</p>
+            <p className="text-[15px] text-muted-foreground">Each download after a change saves a new numbered version; earlier ones are kept.</p>
           )}
         </Fold>
         {packs.length ? (
@@ -984,11 +984,11 @@ function StepFinish({ job, report, sel, content, versions, base, dirty, save, on
             <ul className="divide-y divide-line">
               {packs.map((h) => (
                 <li key={h.id} className="flex items-center gap-3 py-2.5">
-                  <span className="min-w-0 flex-1 text-[14.5px]">
+                  <span className="min-w-0 flex-1 text-[15px]">
                     <span className="font-medium">{h.items.length} files</span> · {h.createdBy}, {timeAgo(h.createdAt)}
-                    <span className="block text-[13px] text-muted-foreground">Downloaded {h.downloads} time{h.downloads === 1 ? "" : "s"}</span>
+                    <span className="block text-[14px] text-muted-foreground">Downloaded {h.downloads} time{h.downloads === 1 ? "" : "s"}</span>
                   </span>
-                  <button type="button" onClick={() => void downloadFile(`/api/handovers/${h.id}`, `${job.title} handover.zip`).then(() => refresh()).catch((e) => toast(e.message, "error"))} className="inline-flex h-11 items-center gap-1 rounded-xl px-3 text-[14.5px] font-semibold text-accent-fg hover:bg-copper-500/10">
+                  <button type="button" onClick={() => void downloadFile(`/api/handovers/${h.id}`, `${job.title} handover.zip`).then(() => refresh()).catch((e) => toast(e.message, "error"))} className="inline-flex h-11 items-center gap-1 rounded-xl px-3 text-[15px] font-semibold text-accent-fg hover:bg-copper-500/10">
                     <Download className="size-4" aria-hidden /> ZIP
                   </button>
                 </li>

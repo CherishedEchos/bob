@@ -44,7 +44,7 @@ export function Fold({ title, summary, children, defaultOpen = false, last = fal
       <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)} className="flex min-h-14 w-full items-center gap-3 px-5 py-3 text-left transition hover:bg-surface-2 sm:px-6">
         <span className="min-w-0 flex-1">
           <span className="block text-[15.5px] font-semibold">{title}</span>
-          {summary && !open ? <span className="mt-0.5 block truncate text-[14px] text-muted-foreground">{summary}</span> : null}
+          {summary && !open ? <span className="mt-0.5 block truncate text-[15px] text-muted-foreground">{summary}</span> : null}
         </span>
         <ChevronRight className={cn("size-5 shrink-0 text-subtle transition-transform", open && "rotate-90")} />
       </button>
@@ -60,7 +60,7 @@ export function Fold({ title, summary, children, defaultOpen = false, last = fal
 export function Section({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
     <section className={cn("border-t border-line px-5 py-5 sm:px-6", className)}>
-      <h3 className="mb-3 text-[14px] font-semibold tracking-[-0.01em] text-heading">{title}</h3>
+      <h3 className="mb-3 text-[15px] font-semibold tracking-[-0.01em] text-heading">{title}</h3>
       {children}
     </section>
   );
@@ -180,7 +180,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
     setTimeout(() => document.getElementById("job-photos")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
   };
   // Phones: a 3-up grid of icon-over-label buttons (no sideways scrolling). Wider screens: one row.
-  const quickBtn = "h-auto min-h-[58px] flex-col gap-1 px-1.5 py-2 text-[12.5px] leading-tight sm:min-h-0 sm:h-9 sm:flex-row sm:gap-1.5 sm:px-3 sm:text-[13.5px]";
+  const quickBtn = "h-auto min-h-[58px] flex-col gap-1 px-1.5 py-2 text-[13.5px] leading-tight sm:min-h-0 sm:h-9 sm:flex-row sm:gap-1.5 sm:px-3 sm:text-[14.5px]";
   const quick = [
     can("notes.write") ? <AddUpdateButton key="u" job={j} variant="secondary" size="sm" className={quickBtn} /> : null,
     can("notes.write") ? (
@@ -211,7 +211,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
 
   return (
     <div className="mx-auto w-full max-w-[1480px]">
-      <Link href="/jobs" className="mb-3 hidden h-9 items-center lg:inline-flex gap-1 rounded-lg pr-2 text-[13.5px] font-medium text-subtle hover:text-foreground">
+      <Link href="/jobs" className="mb-3 hidden h-9 items-center lg:inline-flex gap-1 rounded-lg pr-2 text-[14.5px] font-medium text-subtle hover:text-foreground">
         <ChevronLeft className="size-4" aria-hidden /> Jobs
       </Link>
 
@@ -226,7 +226,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                 {paymentStatus && paymentStatus.tone !== "neutral" ? <Badge tone={paymentStatus.tone === "red" ? "red" : paymentStatus.tone === "green" ? "green" : "amber"}>{paymentStatus.text}</Badge> : null}
               </div>
               <h1 className="mt-1.5 text-[22px] font-semibold leading-tight tracking-[-0.022em] text-heading sm:text-[24px]">{j.title}</h1>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[14px] text-muted-foreground">
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[15px] text-muted-foreground">
                 <button className="flex items-center gap-1.5 font-medium text-foreground hover:text-accent-fg" onClick={() => ui.openCustomer(j.customerId)}>
                   <UserRound className="size-4 text-subtle" aria-hidden /> {j.customerName}
                 </button>
@@ -258,7 +258,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             <Menu
               label="More actions"
               items={[{ label: "Add task", icon: AlarmClock, onSelect: reminder }, ...more]}
-              triggerClassName="flex h-10 w-full items-center justify-center sm:w-auto gap-1.5 rounded-lg bg-card px-3 text-[14px] font-medium text-foreground ring-1 ring-line-strong transition-colors hover:bg-raised-hover lg:h-9 lg:text-[13.5px]"
+              triggerClassName="flex h-10 w-full items-center justify-center sm:w-auto gap-1.5 rounded-lg bg-card px-3 text-[15px] font-medium text-foreground ring-1 ring-line-strong transition-colors hover:bg-raised-hover lg:h-9 lg:text-[14.5px]"
               trigger={
                 <>
                   <MoreHorizontal className="size-4" aria-hidden /> More
@@ -273,13 +273,13 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
         <dl className="grid grid-cols-2 gap-px border-t border-line bg-line sm:grid-cols-[repeat(auto-fit,minmax(150px,1fr))] [&>div]:bg-card [&>div]:px-4 [&>div]:py-3 sm:[&>div]:px-5">
           {money ? (
             <div>
-              <dt className="text-[12px] font-medium text-subtle">Contract value</dt>
+              <dt className="text-[13px] font-medium text-subtle">Contract value</dt>
               <dd className="mt-0.5 text-[17px] font-semibold tabular tracking-[-0.02em] text-heading">{gbp(fin.contractValue)}</dd>
             </div>
           ) : null}
           <div>
-            <dt className="text-[12px] font-medium text-subtle">Next visit</dt>
-            <dd className="mt-0.5 truncate text-[14px] font-medium text-heading">
+            <dt className="text-[13px] font-medium text-subtle">Next visit</dt>
+            <dd className="mt-0.5 truncate text-[15px] font-medium text-heading">
               {nextBooking ? (
                 <>
                   {nextBooking.date <= today ? "Today" : relativeDayInline(nextBooking.date, today).replace(/^./, (c) => c.toUpperCase())}
@@ -291,20 +291,20 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             </dd>
           </div>
           <div className="col-span-2 sm:col-span-1">
-            <dt className="text-[12px] font-medium text-subtle">Assigned team</dt>
+            <dt className="text-[13px] font-medium text-subtle">Assigned team</dt>
             <dd className="mt-0.5 flex h-6 items-center gap-2">
               {crew.length ? (
                 <>
                   <PeopleStack people={crew} size={22} max={4} />
-                  <span className="truncate text-[13px] text-muted-foreground">{crew.map((p) => firstName(p.name)).join(", ")}</span>
+                  <span className="truncate text-[14px] text-muted-foreground">{crew.map((p) => firstName(p.name)).join(", ")}</span>
                 </>
               ) : (
-                <span className="text-[14px] text-subtle">{nextBooking ? "Needs someone" : "—"}</span>
+                <span className="text-[15px] text-subtle">{nextBooking ? "Needs someone" : "—"}</span>
               )}
             </dd>
           </div>
           <div className="col-span-2 sm:col-span-1">
-            <dt className="text-[12px] font-medium text-subtle">Next action</dt>
+            <dt className="text-[13px] font-medium text-subtle">Next action</dt>
             <dd className="mt-0.5">
               <button
                 type="button"
@@ -314,7 +314,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                   setEditingNext(true);
                 }}
                 title={jobNextStep(j, data, money)}
-                className="block max-w-full truncate text-left text-[14px] font-medium text-heading enabled:hover:text-accent-fg disabled:cursor-default"
+                className="block max-w-full truncate text-left text-[15px] font-medium text-heading enabled:hover:text-accent-fg disabled:cursor-default"
               >
                 {jobNextStep(j, data, money)}
               </button>
@@ -322,8 +322,8 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
           </div>
           {j.customerPhone || j.customerEmail ? (
             <div className="hidden xl:block">
-              <dt className="text-[12px] font-medium text-subtle">Contact</dt>
-              <dd className="mt-0.5 truncate text-[14px] font-medium text-heading">
+              <dt className="text-[13px] font-medium text-subtle">Contact</dt>
+              <dd className="mt-0.5 truncate text-[15px] font-medium text-heading">
                 {j.customerPhone ? (
                   <a href={`tel:${j.customerPhone.replace(/\s/g, "")}`} className="tabular hover:text-accent-fg">
                     {j.customerPhone}
@@ -375,12 +375,12 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             aria-controls="job-tabpanel"
             onClick={() => setTab(t.value)}
             className={cn(
-              "relative flex h-11 shrink-0 items-center gap-1.5 px-3 text-[14px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-              tab === t.value ? "text-heading after:absolute after:inset-x-3 after:bottom-[-1px] after:h-[2px] after:rounded-full after:bg-[#1a1a1a]" : "text-subtle hover:text-foreground",
+              "relative flex h-11 shrink-0 items-center gap-1.5 px-3 text-[15px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+              tab === t.value ? "text-heading after:absolute after:inset-x-3 after:bottom-[-1px] after:h-[2px] after:rounded-full after:bg-copper-500" : "text-subtle hover:text-foreground",
             )}
           >
             {t.label}
-            {t.count ? <span className="tabular text-[12px] text-subtle">{t.count}</span> : null}
+            {t.count ? <span className="tabular text-[13px] text-subtle">{t.count}</span> : null}
           </button>
         ))}
       </div>
@@ -461,7 +461,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                   <h2 id={`notes-${j.id}`} className="t-section">
                     Internal notes
                   </h2>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-[12px] font-medium text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-[13px] font-medium text-muted-foreground">
                     <Lock className="size-3" aria-hidden /> Office only — never shown to workers or customers
                   </span>
                 </div>
@@ -484,10 +484,10 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                       return (
                         <li key={b.id} className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-2.5">
                           <div className="w-11 shrink-0 text-center">
-                            <div className="text-[11px] font-medium uppercase text-subtle">{new Date(`${b.date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short" })}</div>
+                            <div className="text-[12px] font-medium uppercase text-subtle">{new Date(`${b.date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short" })}</div>
                             <div className="text-[17px] font-semibold tabular leading-tight text-heading">{Number(b.date.slice(8))}</div>
                           </div>
-                          <div className="min-w-0 flex-1 text-[13.5px]">
+                          <div className="min-w-0 flex-1 text-[14.5px]">
                             <div className="font-medium text-heading">{formatTimeRange(b.startTime, b.endTime)}</div>
                             <div className="truncate text-subtle">{who.length ? who.map((p) => p.name.split(" ")[0]).join(", ") : "Unassigned"}</div>
                           </div>
@@ -497,19 +497,19 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                     })}
                   </ul>
                 ) : (
-                  <p className="text-[14px] text-subtle">Nothing booked.</p>
+                  <p className="text-[15px] text-subtle">Nothing booked.</p>
                 )}
               </section>
 
               {openTasks.length || toOrder.length ? (
                 <section className="panel px-5 py-4">
                   <h2 className="t-section mb-2">Outstanding</h2>
-                  <ul className="space-y-1.5 text-[14px]">
+                  <ul className="space-y-1.5 text-[15px]">
                     {openTasks.slice(0, 4).map((t) => (
                       <li key={t.id} className="flex items-center gap-2">
                         <AlarmClock className="size-4 shrink-0 text-subtle" aria-hidden />
                         <span className="min-w-0 flex-1 truncate">{t.title}</span>
-                        {t.dueDate ? <span className="shrink-0 text-[12.5px] text-subtle">{formatDateKey(t.dueDate)}</span> : null}
+                        {t.dueDate ? <span className="shrink-0 text-[13.5px] text-subtle">{formatDateKey(t.dueDate)}</span> : null}
                       </li>
                     ))}
                     {toOrder.length ? (
@@ -531,7 +531,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                 <h2 id={`dates-${j.id}`} className="t-section">
                   Key dates
                 </h2>
-                <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[14px]">
+                <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[15px]">
                   <dt className="text-subtle">Start</dt>
                   <dd>{j.startDate ? formatDateKey(j.startDate) : "Not set"}</dd>
                   <dt className="text-subtle">Next on site</dt>
@@ -547,7 +547,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                 </dl>
                 {can("jobs.write") ? (
                   <label className="mt-3 block">
-                    <span className="mb-1 block text-[13px] font-medium text-subtle">Job status</span>
+                    <span className="mb-1 block text-[14px] font-medium text-subtle">Job status</span>
                     <NativeSelect
                       value={j.status}
                       onChange={async (e) => {
@@ -573,16 +573,16 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                 {activity.length ? (
                   <ol className="mt-2 space-y-2.5">
                     {activity.slice(0, 6).map((a) => (
-                      <li key={a.id} className="text-[13.5px] leading-snug">
+                      <li key={a.id} className="text-[14.5px] leading-snug">
                         <span className="text-foreground">{a.summary}</span>
-                        <span className="block text-[12.5px] text-subtle">
+                        <span className="block text-[13.5px] text-subtle">
                           {a.actor} · {timeAgo(a.at)}
                         </span>
                       </li>
                     ))}
                   </ol>
                 ) : (
-                  <p className="mt-2 text-[14px] text-subtle">{can("activity.read") ? "Nothing yet." : "Activity is visible to owners and admins."}</p>
+                  <p className="mt-2 text-[15px] text-subtle">{can("activity.read") ? "Nothing yet." : "Activity is visible to owners and admins."}</p>
                 )}
               </section>
             </aside>
@@ -594,7 +594,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-line pb-4">
               <div>
                 <h2 className="t-section">Project timeline</h2>
-                <p className="mt-0.5 text-[13.5px] text-subtle">Photos and notes from site, newest first. Dictate a note with the keyboard&apos;s microphone.</p>
+                <p className="mt-0.5 text-[14.5px] text-subtle">Photos and notes from site, newest first. Dictate a note with the keyboard&apos;s microphone.</p>
               </div>
               <AddUpdateButton job={j} />
             </div>
@@ -609,16 +609,16 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             <FilesPanel jobId={j.id} only={["drawing", "other"]} />
             {money && invoices.length ? (
               <div className="mt-6 border-t border-line pt-5">
-                <h3 className="mb-2 text-[14px] font-semibold text-heading">Quotes and invoices</h3>
+                <h3 className="mb-2 text-[15px] font-semibold text-heading">Quotes and invoices</h3>
                 <ul className="divide-y divide-line">
                   {invoices.map((i) => (
                     <li key={i.id}>
                       <Link href={`/invoices?open=${i.id}`} className="flex items-center justify-between gap-3 py-2.5 hover:text-accent-fg">
-                        <span className="flex items-center gap-2 text-[14.5px] font-medium">
+                        <span className="flex items-center gap-2 text-[15px] font-medium">
                           <ReceiptText className="size-4 text-subtle" aria-hidden /> {i.number ?? i.draftRef}
-                          <span className="text-[13px] font-normal text-subtle">{invoiceStatusLabel(i)}</span>
+                          <span className="text-[14px] font-normal text-subtle">{invoiceStatusLabel(i)}</span>
                         </span>
-                        <span className="tabular text-[14.5px] font-semibold">{gbp(i.total)}</span>
+                        <span className="tabular text-[15px] font-semibold">{gbp(i.total)}</span>
                       </Link>
                     </li>
                   ))}
@@ -658,7 +658,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
               <VariationsPanel job={j} />
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4 sm:px-6">
                 <div className="flex items-center gap-3">
-                  <span className="text-[14px] font-semibold text-heading">Payment</span>
+                  <span className="text-[15px] font-semibold text-heading">Payment</span>
                   {paymentStatus ? <Badge tone={paymentStatus.tone}>{paymentStatus.text}</Badge> : null}
                 </div>
                 {moneyAction ? (
@@ -675,8 +675,8 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                     {payments.map((p) => (
                       <li key={p.id} className="flex items-center justify-between gap-3 py-2.5">
                         <div className="min-w-0">
-                          <div className="text-[14.5px] font-medium">{PAYMENT_TYPE_LABEL[p.type]}</div>
-                          <div className="text-[13px] text-subtle">
+                          <div className="text-[15px] font-medium">{PAYMENT_TYPE_LABEL[p.type]}</div>
+                          <div className="text-[14px] text-subtle">
                             {formatDateKey(p.receivedAt)} · {PAYMENT_METHOD_LABEL[p.method]}
                             {p.reference ? ` · ${p.reference}` : ""} · by {p.recordedBy}
                           </div>
@@ -686,7 +686,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-2 text-[14px] text-subtle">No payments recorded yet.</p>
+                  <p className="mt-2 text-[15px] text-subtle">No payments recorded yet.</p>
                 )}
               </Fold>
               <Fold title="Invoices" summary={invoices.length ? invoices.map((i) => `${i.number ?? i.draftRef} ${invoiceStatusLabel(i).toLowerCase()}`).join(" · ") : "None yet"}>
@@ -695,8 +695,8 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                     {invoices.map((i) => (
                       <li key={i.id} className="flex items-center justify-between gap-3 py-2.5">
                         <div>
-                          <div className="text-[14.5px] font-medium">{i.number ?? i.draftRef}</div>
-                          <div className="text-[13px] text-subtle">
+                          <div className="text-[15px] font-medium">{i.number ?? i.draftRef}</div>
+                          <div className="text-[14px] text-subtle">
                             {invoiceStatusLabel(i)}
                             {i.dueDate ? ` · due ${formatDateKey(i.dueDate)}` : ""}
                           </div>
@@ -706,7 +706,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-[14px] text-subtle">No invoices for this job yet.</p>
+                  <p className="text-[15px] text-subtle">No invoices for this job yet.</p>
                 )}
               </Fold>
               <Fold title="Recorded costs" summary={expenses.length ? `${expenses.length} · ${gbp(f.expenses)}` : "None recorded"} last>
@@ -715,8 +715,8 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                     {expenses.map((e) => (
                       <li key={e.id} className="flex items-center justify-between gap-2 py-2.5">
                         <div className="min-w-0">
-                          <div className="truncate text-[14.5px] font-medium">{e.description}</div>
-                          <div className="text-[13px] text-subtle">
+                          <div className="truncate text-[15px] font-medium">{e.description}</div>
+                          <div className="text-[14px] text-subtle">
                             {EXPENSE_CATEGORY_LABEL[e.category]} · {formatDateKey(e.incurredOn)} · by {e.recordedBy}
                           </div>
                         </div>
@@ -739,7 +739,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-[14px] text-subtle">No costs recorded. Tell Bob “add £450 of materials to this job”, or use More → Add a cost.</p>
+                  <p className="text-[15px] text-subtle">No costs recorded. Tell Bob “add £450 of materials to this job”, or use More → Add a cost.</p>
                 )}
               </Fold>
             </div>
@@ -769,16 +769,16 @@ function FinancialSummary({ fin, onOpen }: { fin: JobFinancials; onOpen: () => v
     <section className="panel overflow-hidden" aria-label="Financial position">
       <div className="flex items-center justify-between px-5 pb-1 pt-3.5 sm:px-6">
         <h2 className="t-section">Financial position</h2>
-        <button type="button" onClick={onOpen} className="text-[13.5px] font-medium text-accent-fg hover:text-copper-700">
+        <button type="button" onClick={onOpen} className="text-[14.5px] font-medium text-accent-fg hover:text-copper-700">
           Details
         </button>
       </div>
       <div className="grid grid-cols-2 gap-px bg-line xl:grid-cols-5 [&>div]:bg-card">
         {cells.map((c, i) => (
           <div key={c.label} className={cn("px-5 py-3 sm:px-6", i === 4 && "col-span-2 xl:col-span-1")}>
-            <div className="text-[12px] font-medium text-subtle">{c.label}</div>
+            <div className="text-[13px] font-medium text-subtle">{c.label}</div>
             <div className={cn("mt-0.5 text-[19px] font-semibold tabular tracking-[-0.02em] text-heading", c.tone)}>{c.value}</div>
-            <div className={cn("text-[12px] text-subtle", c.subTone)}>{c.sub}</div>
+            <div className={cn("text-[13px] text-subtle", c.subTone)}>{c.sub}</div>
           </div>
         ))}
       </div>
@@ -786,7 +786,7 @@ function FinancialSummary({ fin, onOpen }: { fin: JobFinancials; onOpen: () => v
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-3" title={`${fin.paidPercent}% paid`}>
           <div className="h-full rounded-full bg-success" style={{ width: `${fin.paidPercent}%` }} />
         </div>
-        <span className="tabular text-[12px] text-subtle">{fin.paidPercent}% received · internal figures, never shown to customers</span>
+        <span className="tabular text-[13px] text-subtle">{fin.paidPercent}% received · internal figures, never shown to customers</span>
       </div>
     </section>
   );
@@ -804,44 +804,44 @@ function FinancialDetail({ fin, status }: { fin: JobFinancials; status: string }
   return (
     <div className="grid gap-5 lg:grid-cols-3">
       <section className="panel px-5 py-5 sm:px-6">
-        <h2 className="text-[12.5px] font-medium text-subtle">Agreed contract value</h2>
+        <h2 className="text-[13.5px] font-medium text-subtle">Agreed contract value</h2>
         <div className="t-figure mt-1">{gbp(fin.contractValue)}</div>
-        <dl className="mt-4 space-y-2 text-[14px]">
+        <dl className="mt-4 space-y-2 text-[15px]">
           <div className="flex justify-between"><dt className="text-subtle">Agreed price</dt><dd className="tabular">{gbp(fin.price)}</dd></div>
           <div className="flex justify-between"><dt className="text-subtle">Approved variations</dt><dd className="tabular">{gbp(fin.approvedVariations)}</dd></div>
           <div className="flex justify-between border-t border-line pt-2"><dt className="text-subtle">Payments received</dt><dd className="tabular font-medium text-good-fg">{gbp(fin.received)}</dd></div>
           <div className="flex justify-between"><dt className="font-medium">Outstanding balance</dt><dd className="tabular font-semibold">{gbp(fin.outstanding)}</dd></div>
         </dl>
         <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-surface-3"><div className="h-full rounded-full bg-success" style={{ width: `${fin.paidPercent}%` }} /></div>
-        <p className="mt-1.5 text-[12px] text-subtle">{fin.paidPercent}% of the contract value received</p>
+        <p className="mt-1.5 text-[13px] text-subtle">{fin.paidPercent}% of the contract value received</p>
       </section>
       <section className="panel px-5 py-5 sm:px-6">
-        <h2 className="text-[12.5px] font-medium text-subtle">Recorded costs</h2>
+        <h2 className="text-[13.5px] font-medium text-subtle">Recorded costs</h2>
         <div className="t-figure mt-1">{gbp(fin.costs.total)}</div>
-        <dl className="mt-4 space-y-2 text-[14px]">
+        <dl className="mt-4 space-y-2 text-[15px]">
           {costRows.map(([label, v, gap]) => (
             <div key={label} className="flex items-center justify-between gap-2">
               <dt className="text-subtle">{label}</dt>
-              <dd className="tabular">{gap ? <span className="text-[13px] font-medium text-warn-fg">Not recorded</span> : gbp(v)}</dd>
+              <dd className="tabular">{gap ? <span className="text-[14px] font-medium text-warn-fg">Not recorded</span> : gbp(v)}</dd>
             </div>
           ))}
         </dl>
       </section>
       <section className="panel px-5 py-5 sm:px-6">
-        <h2 className="text-[12.5px] font-medium text-subtle">{fin.basis === "actual" ? "Actual profit" : "Estimated profit"}</h2>
+        <h2 className="text-[13.5px] font-medium text-subtle">{fin.basis === "actual" ? "Actual profit" : "Estimated profit"}</h2>
         {fin.profit === null ? (
           <>
             <div className="t-figure mt-1 text-subtle">—</div>
-            <p className="mt-3 text-[14px] text-subtle">No costs are recorded on this job yet, so Bob can&apos;t work out a profit. Add labour, materials and subcontractor costs (or link supplier bills) to see it.</p>
+            <p className="mt-3 text-[15px] text-subtle">No costs are recorded on this job yet, so Bob can&apos;t work out a profit. Add labour, materials and subcontractor costs (or link supplier bills) to see it.</p>
           </>
         ) : (
           <>
             <div className={cn("t-figure mt-1", fin.profit < 0 && "text-danger-fg")}>{gbp(fin.profit)}</div>
             <div className="mt-4 flex items-baseline gap-2">
               <span className={cn("t-figure-sm", fin.margin! < 0 ? "text-danger-fg" : fin.margin! < 15 || fin.missing.length ? "text-warn-fg" : "text-good-fg")}>{fin.margin}%</span>
-              <span className="text-[13px] text-subtle">margin</span>
+              <span className="text-[14px] text-subtle">margin</span>
             </div>
-            <p className="mt-3 text-[13px] text-subtle">
+            <p className="mt-3 text-[14px] text-subtle">
               Contract value less recorded costs.{" "}
               {fin.missing.length ? `Incomplete: no ${fin.missing.join(" or ")} costs recorded, so the real figure is likely lower.` : status === "completed" ? "Based on all costs recorded." : "Will change as more costs are recorded."}
             </p>
@@ -894,12 +894,12 @@ function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) 
     <div className="panel max-w-2xl px-5 py-5 sm:px-6">
       <div className="flex flex-wrap items-center gap-2.5">
         <h2 className="t-section">Customer handover</h2>
-        <span data-testid="handover-status" className={cn("rounded-full px-2.5 py-0.5 text-[12.5px] font-semibold", tone)}>{status === "changes" ? "Completed" : HANDOVER_STATUS_LABEL[status]}</span>
-        {status === "changes" ? <span className="rounded-full bg-amber-500/12 px-2.5 py-0.5 text-[12.5px] font-semibold text-warn-fg">Unpublished changes</span> : null}
+        <span data-testid="handover-status" className={cn("rounded-full px-2.5 py-0.5 text-[13.5px] font-semibold", tone)}>{status === "changes" ? "Completed" : HANDOVER_STATUS_LABEL[status]}</span>
+        {status === "changes" ? <span className="rounded-full bg-amber-500/12 px-2.5 py-0.5 text-[13.5px] font-semibold text-warn-fg">Unpublished changes</span> : null}
       </div>
 
       {finished && report ? (
-        <dl className="mt-3 space-y-1.5 text-[14.5px]">
+        <dl className="mt-3 space-y-1.5 text-[15px]">
           <div className="flex flex-wrap gap-x-2">
             <dt className="text-muted-foreground">Completed</dt>
             <dd className="font-medium text-heading">
@@ -928,7 +928,7 @@ function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) 
       )}
 
       {status === "changes" ? (
-        <p role="status" className="mt-3 rounded-xl bg-amber-500/10 px-3.5 py-2.5 text-[14px] text-warn-fg ring-1 ring-amber-500/25">
+        <p role="status" className="mt-3 rounded-xl bg-amber-500/10 px-3.5 py-2.5 text-[15px] text-warn-fg ring-1 ring-amber-500/25">
           The report has been edited since version {pub?.version} was finished. Those changes aren&apos;t in the PDF yet — open the handover and Finish it again to publish them.
         </p>
       ) : null}
@@ -962,7 +962,7 @@ function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) 
       </div>
       {sending ? <SendToCustomer job={job} onClose={() => setSending(false)} /> : null}
       <FollowUpTrail job={job} />
-      {versions.length > 1 ? <p className="mt-2 text-[13px] text-subtle">{versions.length} versions kept — all are listed in the handover.</p> : null}
+      {versions.length > 1 ? <p className="mt-2 text-[14px] text-subtle">{versions.length} versions kept — all are listed in the handover.</p> : null}
     </div>
   );
 }

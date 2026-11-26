@@ -20,7 +20,7 @@ import { cn, todayKey } from "@/lib/utils";
 import { PageHeader, pageActionClass, pageSecondaryClass } from "@/components/common/bits";
 import { NativeSelect } from "@/components/ui/input";
 import { Onboarding } from "@/components/common/onboarding";
-import { DatePicker, ViewSwitch, firstName, useBookingMover, useJobsAndPeople } from "@/components/diary/shared";
+import { AskBobDiaryBar, DatePicker, ViewSwitch, firstName, useBookingMover, useJobsAndPeople } from "@/components/diary/shared";
 import { WeekView } from "@/components/diary/week-view";
 import { TeamView } from "@/components/diary/team-view";
 import { MonthView } from "@/components/diary/month-view";
@@ -170,7 +170,7 @@ function Diary() {
             {can("schedule.read") ? (
               <Link href="/team?view=holidays" className={cn(pageSecondaryClass, "px-3")}>
                 <CalendarOff className="size-4 text-subtle" aria-hidden /> <span className="hidden sm:inline">Holidays</span>
-                {pending ? <span className="tabular text-[12.5px] font-semibold text-warn-fg">{pending}</span> : null}
+                {pending ? <span className="tabular text-[13.5px] font-semibold text-warn-fg">{pending}</span> : null}
               </Link>
             ) : null}
             {manage ? (
@@ -186,32 +186,32 @@ function Diary() {
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Diary controls">
-        <div className="flex h-9 items-center rounded-lg bg-card ring-1 ring-line-strong">
-          <button type="button" aria-label={view === "month" ? "Previous month" : "Previous week"} onClick={() => step(-1)} className="grid h-full w-9 place-items-center rounded-l-lg text-muted-foreground hover:bg-surface-2 hover:text-foreground">
-            <ChevronLeft className="size-4" aria-hidden />
+        <div className="flex h-11 items-center rounded-lg bg-card ring-1 ring-line-strong">
+          <button type="button" aria-label={view === "month" ? "Previous month" : "Previous week"} onClick={() => step(-1)} className="grid h-full w-11 place-items-center rounded-l-lg text-muted-foreground hover:bg-surface-2 hover:text-foreground">
+            <ChevronLeft className="size-5" aria-hidden />
           </button>
-          <button type="button" onClick={() => goTo(null)} aria-pressed={isCurrent} className={cn("h-full border-x border-line px-3 text-[13.5px] font-medium", isCurrent ? "text-copper-600" : "text-foreground hover:bg-surface-2")}>
+          <button type="button" onClick={() => goTo(null)} aria-pressed={isCurrent} className={cn("h-full border-x border-line px-3 text-[14.5px] font-medium", isCurrent ? "text-copper-600" : "text-foreground hover:bg-surface-2")}>
             Today
           </button>
-          <button type="button" aria-label={view === "month" ? "Next month" : "Next week"} onClick={() => step(1)} className="grid h-full w-9 place-items-center rounded-r-lg text-muted-foreground hover:bg-surface-2 hover:text-foreground">
-            <ChevronRight className="size-4" aria-hidden />
+          <button type="button" aria-label={view === "month" ? "Next month" : "Next week"} onClick={() => step(1)} className="grid h-full w-11 place-items-center rounded-r-lg text-muted-foreground hover:bg-surface-2 hover:text-foreground">
+            <ChevronRight className="size-5" aria-hidden />
           </button>
         </div>
         <DatePicker value={anchor} today={today} label={label} mode={view} onPick={(d) => goTo(d)} />
 
         <div className="ml-auto hidden items-center gap-2 lg:flex">
           {view !== "team" ? (
-            <label className="flex w-[200px] items-center">
+            <label className="flex w-[210px] items-center">
               <span className="sr-only">Show work for</span>
               <span className="relative w-full">
-                <Users className="pointer-events-none absolute left-2.5 top-1/2 z-10 size-4 -translate-y-1/2 text-subtle" aria-hidden />
-                <NativeSelect value={personFilter} onChange={(e) => setParams({ person: e.target.value || null })} className="h-9 pl-8 text-[13.5px] lg:h-9">
+                <Users className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-subtle" aria-hidden />
+                <NativeSelect value={personFilter} onChange={(e) => setParams({ person: e.target.value || null })} className="h-9 pl-8 text-[14.5px] lg:h-9">
                   {filterOptions}
                 </NativeSelect>
               </span>
             </label>
           ) : null}
-          <label className="flex h-9 cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 text-[13.5px] font-medium text-muted-foreground hover:bg-surface-3">
+          <label className="flex h-9 cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 text-[14.5px] font-medium text-muted-foreground hover:bg-surface-3">
             <input type="checkbox" checked={weekendsPref === "show"} onChange={(e) => saveWeekends(e.target.checked ? "show" : "hide")} className="size-4 accent-[#1a1a1a]" />
             Weekends
           </label>
@@ -221,6 +221,9 @@ function Diary() {
 
       {/* Desktop and tablet */}
       <div className="hidden lg:block">
+        <div className="mb-4">
+          <AskBobDiaryBar />
+        </div>
         {view === "week" ? (
           <WeekView days={days} today={today} bookings={visible} absences={leave} jobs={jobs} people={people} team={active} conflicts={conflicts} manage={manage} onOpen={openBooking} onAdd={(d) => add(d)} onMove={(id, shift) => move(id, { shift })} />
         ) : view === "team" ? (
@@ -232,6 +235,9 @@ function Diary() {
 
       {/* Phone: team filter chips, then the agenda */}
       <div className="lg:hidden">
+        <div className="mb-3">
+          <AskBobDiaryBar compact />
+        </div>
         <div role="radiogroup" aria-label="Show work for" className="scrollbar-none -mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 sm:-mx-6 sm:px-6">
           {[{ id: "", label: "Everyone" }, ...active.map((p) => ({ id: p.id, label: firstName(p.name) })), { id: "unassigned", label: "Needs someone" }].map((o) => (
             <button
@@ -240,7 +246,7 @@ function Diary() {
               role="radio"
               aria-checked={personFilter === o.id}
               onClick={() => setParams({ person: o.id || null })}
-              className={cn("h-9 shrink-0 rounded-full px-3.5 text-[14px] font-medium ring-1 transition-colors", personFilter === o.id ? "bg-[#1a1a1a] text-white ring-[#1a1a1a]" : "bg-card text-muted-foreground ring-line-strong")}
+              className={cn("h-10 shrink-0 rounded-full px-4 text-[15px] font-medium ring-1 transition-colors", personFilter === o.id ? "bg-selected font-semibold text-accent-fg ring-copper-500/50" : "bg-card text-muted-foreground ring-line-strong")}
             >
               {o.label}
             </button>

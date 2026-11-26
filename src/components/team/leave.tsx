@@ -60,17 +60,17 @@ export function HolidaysView() {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2">
             <span className="text-[15.5px] font-semibold text-heading">{p?.name ?? "Someone"}</span>
-            <span className="text-[14px] text-muted-foreground">{ABSENCE_LABEL[a.kind]}</span>
+            <span className="text-[15px] text-muted-foreground">{ABSENCE_LABEL[a.kind]}</span>
           </div>
           <div className="text-[15px] tabular text-foreground">
             {absenceRange(a)} <span className="text-muted-foreground">· {leaveDays(a)} working day{leaveDays(a) === 1 ? "" : "s"}</span>
           </div>
-          <div className="mt-0.5 flex flex-wrap gap-x-3 text-[13.5px] text-muted-foreground">
+          <div className="mt-0.5 flex flex-wrap gap-x-3 text-[14.5px] text-muted-foreground">
             <StatusText tone={STATUS[a.status].tone}>{STATUS[a.status].label}</StatusText>
             <span>{a.kind === "unavailable" && a.status === "approved" && a.decidedBy === a.requestedBy ? "Added" : "Requested"} by {a.requestedBy}</span>
             {a.decidedBy && a.status !== "pending" && a.decidedBy !== a.requestedBy ? <span>{a.status === "approved" ? "Approved" : a.status === "declined" ? "Declined" : "Decided"} by {a.decidedBy}</span> : null}
           </div>
-          {a.reason ? <p className="mt-1 text-[14px] text-foreground/85">“{a.reason}” <span className="text-[12.5px] text-subtle">· private</span></p> : null}
+          {a.reason ? <p className="mt-1 text-[15px] text-foreground/85">“{a.reason}” <span className="text-[13.5px] text-subtle">· private</span></p> : null}
         </div>
         {actionsSlot ? <div className="flex flex-wrap gap-2">{actionsSlot}</div> : null}
       </li>
@@ -80,7 +80,7 @@ export function HolidaysView() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-[14.5px] text-muted-foreground">
+        <p className="max-w-2xl text-[15px] text-muted-foreground">
           Approved leave and unavailability show on the Diary, and Bob warns before anyone is booked during them. Policy: {selfApprove ? "Luke and Ryan can record their own leave as approved and approve crew requests" : "a main user's own leave needs approving by the other main user"} — change it in Settings.
         </p>
         <Button onClick={() => setAdding(true)}>
@@ -93,7 +93,7 @@ export function HolidaysView() {
           <p className="flex items-center gap-2 text-[15px] font-semibold text-warn-fg">
             <AlertTriangle className="size-4" aria-hidden /> {affected.name} is booked during this leave
           </p>
-          <ul className="mt-1.5 list-disc space-y-0.5 pl-6 text-[14.5px]">
+          <ul className="mt-1.5 list-disc space-y-0.5 pl-6 text-[15px]">
             {affected.list.map((b) => (
               <li key={b.bookingId}>
                 <AffectedLink b={b} />
@@ -208,7 +208,7 @@ export function LeaveForm({ personId, onClose, onSaved }: { personId?: string; o
       <DialogContent title={manage ? "Record leave or unavailability" : "Request leave"} description={manage ? "Recorded leave is approved straight away and shows on the Diary." : "Luke or Ryan approve it. You'll see the answer in My work."}>
         <form onSubmit={submit} className="space-y-3" noValidate>
           {errors._ ? (
-            <p role="alert" className="text-[14px] text-danger-fg">
+            <p role="alert" className="text-[15px] text-danger-fg">
               {errors._}
             </p>
           ) : null}
@@ -244,16 +244,16 @@ export function LeaveForm({ personId, onClose, onSaved }: { personId?: string; o
           </div>
           {single ? (
             <fieldset>
-              <legend className="mb-1.5 text-[14px] font-medium text-foreground/90">How long</legend>
+              <legend className="mb-1.5 text-[15px] font-medium text-foreground/90">How long</legend>
               <div className="inline-flex gap-1 rounded-xl bg-surface-3 p-1">
                 {([["full", "Full day"], ["am", "Morning"], ["pm", "Afternoon"]] as const).map(([val, label]) => (
-                  <label key={val} className={cn("flex h-9 cursor-pointer items-center rounded-lg px-3 text-[14.5px] font-semibold", v.part === val ? "bg-card text-heading ring-1 ring-line" : "text-muted-foreground")}>
+                  <label key={val} className={cn("flex h-9 cursor-pointer items-center rounded-lg px-3 text-[15px] font-semibold", v.part === val ? "bg-card text-heading ring-1 ring-line" : "text-muted-foreground")}>
                     <input type="radio" name="lv-part" value={val} checked={v.part === val} onChange={() => setV({ ...v, part: val })} className="sr-only" />
                     {label}
                   </label>
                 ))}
               </div>
-              {errors.part ? <p className="mt-1 text-[14px] text-danger-fg">{errors.part}</p> : null}
+              {errors.part ? <p className="mt-1 text-[15px] text-danger-fg">{errors.part}</p> : null}
             </fieldset>
           ) : null}
           <Field label="Reason (optional, private)" htmlFor="lv-reason" hint="Only the person and Luke/Ryan see this." error={errors.reason}>
@@ -284,7 +284,7 @@ export function PersonLeave({ person }: { person: Person }) {
       <div className="flex items-center justify-between gap-2">
         <h3 className="t-eyebrow">{person.kind === "subcontractor" ? "Unavailable" : "Holidays & leave"}</h3>
         {can("team.manage") && !person.archivedAt ? (
-          <button type="button" onClick={() => setAdding(true)} className="h-9 px-1 text-[14px] font-semibold text-accent-fg">
+          <button type="button" onClick={() => setAdding(true)} className="h-9 px-1 text-[15px] font-semibold text-accent-fg">
             + Add
           </button>
         ) : null}

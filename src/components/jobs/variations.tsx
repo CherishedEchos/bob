@@ -33,7 +33,7 @@ export function VariationsPanel({ job }: { job: Job }) {
             <li key={x.id} className="flex items-center gap-3 py-2.5">
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-medium">{x.description}</span>
-                <span className="mt-0.5 flex flex-wrap gap-x-3 text-[13.5px] text-muted-foreground">
+                <span className="mt-0.5 flex flex-wrap gap-x-3 text-[14.5px] text-muted-foreground">
                   <StatusText tone={x.status === "approved" ? "green" : x.status === "proposed" ? "amber" : "neutral"}>{x.status === "approved" ? "Approved" : x.status === "proposed" ? "Proposed" : "Declined"}</StatusText>
                   <span>{VAT[x.amountsAre]}</span>
                   <span>{x.invoiceId ? `Billed on ${invoices.find((i) => i.id === x.invoiceId)?.number ?? invoices.find((i) => i.id === x.invoiceId)?.draftRef ?? "an invoice"}` : "Not billed yet"}</span>
@@ -44,7 +44,7 @@ export function VariationsPanel({ job }: { job: Job }) {
             </li>
           ))}
         </ul>
-      ) : !adding ? <p className="mt-1 text-[14.5px] text-muted-foreground">No variations. Add one when the customer agrees a change to the work or price.</p> : null}
+      ) : !adding ? <p className="mt-1 text-[15px] text-muted-foreground">No variations. Add one when the customer agrees a change to the work or price.</p> : null}
       {adding ? (
         <form
           className="mt-3 grid gap-3 sm:grid-cols-2"
@@ -64,7 +64,7 @@ export function VariationsPanel({ job }: { job: Job }) {
           <Field label="VAT" htmlFor="var-vat"><NativeSelect id="var-vat" value={v.amountsAre} onChange={(e) => setV({ ...v, amountsAre: e.target.value as Variation["amountsAre"] })}><option value="no_vat">No VAT</option><option value="inclusive">Including VAT</option><option value="exclusive">Plus VAT</option></NativeSelect></Field>
           <Field label="Status" htmlFor="var-status"><NativeSelect id="var-status" value={v.status} onChange={(e) => setV({ ...v, status: e.target.value as Variation["status"] })}><option value="approved">Approved by the customer</option><option value="proposed">Proposed</option><option value="declined">Declined</option></NativeSelect></Field>
           <Field label="Billed on invoice (optional)" htmlFor="var-inv" error={errors.invoiceId}><NativeSelect id="var-inv" value={v.invoiceId} onChange={(e) => setV({ ...v, invoiceId: e.target.value })}><option value="">Not billed yet</option>{invoices.map((i) => <option key={i.id} value={i.id}>{i.number ?? i.draftRef} · {gbp(i.total)}</option>)}</NativeSelect></Field>
-          {errors._ ? <p role="alert" className="text-[14px] text-danger-fg sm:col-span-2">{errors._}</p> : null}
+          {errors._ ? <p role="alert" className="text-[15px] text-danger-fg sm:col-span-2">{errors._}</p> : null}
           <div className="flex gap-2 sm:col-span-2"><Button type="submit" size="sm">Save variation</Button><Button size="sm" variant="ghost" onClick={() => { setAdding(false); setErrors({}); }}>Cancel</Button></div>
         </form>
       ) : null}

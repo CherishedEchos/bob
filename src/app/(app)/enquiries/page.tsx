@@ -8,7 +8,7 @@ import { pageSecondaryClass } from "@/components/common/bits";
 import { toast } from "@/components/ui/toaster";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
-import { useIsDesktop } from "@/lib/use-media";
+import { useMediaQuery } from "@/lib/use-media";
 import { ENQUIRY_SOURCES, ENQUIRY_STATUSES, ENQUIRY_STATUS_LABEL, SOURCE_LABEL, followUpDue, isOpenEnquiry, needsReply, needsWrittenReply, sortEnquiries, wantsCallback } from "@/lib/derive";
 import type { Enquiry, EnquirySource, EnquiryStatus } from "@/lib/types";
 import { cn, timeAgo } from "@/lib/utils";
@@ -35,7 +35,8 @@ function EnquiriesInner() {
   const { data, actions, can } = useStore();
   const ui = useUI();
   const params = useSearchParams();
-  const desktop = useIsDesktop();
+  // Side-by-side inbox only where there is room for both a readable list and a readable message.
+  const desktop = useMediaQuery("(min-width: 1280px)");
   const [syncing, setSyncing] = React.useState(false);
   const inbox = data.connections.find((c) => c.kind === "email" && (c.status === "connected" || c.status === "demo"));
   const initial = params.get("tab") as Tab | null;
@@ -85,10 +86,10 @@ function EnquiriesInner() {
 
   return (
     <>
-      <div className="mb-4 flex items-end justify-between gap-3">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="t-page">Enquiries</h1>
-          <p className="t-meta mt-0.5 lg:text-[15px]">{waiting ? `${waiting} waiting for your reply` : "Nobody is waiting for a reply"}</p>
+          <p className="t-meta mt-1">{waiting ? `${waiting} waiting for your reply` : "Nobody is waiting for a reply"}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {inbox && can("enquiries.write") ? (
@@ -96,7 +97,7 @@ function EnquiriesInner() {
               type="button"
               aria-label={inbox.status === "demo" ? "Check demo inbox" : "Check inbox"}
               title={inbox.status === "demo" ? "Check demo inbox" : "Check inbox"}
-              className="grid size-11 place-items-center rounded-xl text-muted-foreground transition hover:bg-surface-3 hover:text-foreground disabled:opacity-50"
+              className="grid size-11 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface-3 hover:text-foreground disabled:opacity-50"
               disabled={syncing}
               onClick={async () => {
                 setSyncing(true);
@@ -119,10 +120,10 @@ function EnquiriesInner() {
         </div>
       </div>
 
-      <div className="lg:grid lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start lg:gap-5 xl:grid-cols-[460px_minmax(0,1fr)]">
+      <div className="xl:grid xl:grid-cols-[minmax(340px,400px)_minmax(0,1fr)] xl:items-start xl:gap-6 2xl:grid-cols-[400px_minmax(0,1000px)]">
         <div className="min-w-0">
-          <div className="mb-3 flex items-center gap-2">
-            <div role="tablist" aria-label="Enquiry lists" className="scrollbar-none flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-xl bg-surface-3 p-1">
+          <div className="mb-3 flex items-start gap-2">
+            <div role="tablist" aria-label="Enquiry lists" className="flex min-w-0 flex-1 flex-wrap gap-1.5">
               {TABS.map((t) => {
                 const count = data.enquiries.filter(t.test).length;
                 const active = tab === t.value;
@@ -136,12 +137,12 @@ function EnquiriesInner() {
                       setSelected(null);
                     }}
                     className={cn(
-                      "flex h-10 shrink-0 grow items-center justify-center gap-1 whitespace-nowrap rounded-lg px-2 text-[14px] font-semibold transition active:bg-surface-2",
-                      active ? "bg-card text-heading shadow-[0_1px_2px_rgb(16_24_40/0.08)] ring-1 ring-line" : "text-muted-foreground hover:text-foreground",
+                      "flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[14.5px] font-medium ring-1 transition-colors xl:h-9",
+                      active ? "bg-selected font-semibold text-accent-fg ring-copper-500/45" : "bg-card text-muted-foreground ring-line-strong hover:text-foreground",
                     )}
                   >
                     {t.short}
-                    <span className={cn("tabular text-[12.5px]", active && t.value === "reply" && count ? "text-accent-fg" : "text-subtle")}>{count}</span>
+                    <span className={cn("tabular text-[13.5px]", active && t.value === "reply" && count ? "text-accent-fg" : "text-subtle")}>{count}</span>
                   </button>
                 );
               })}
@@ -151,11 +152,11 @@ function EnquiriesInner() {
               aria-label={`Filters${activeFilters ? ` (${activeFilters} on)` : ""}`}
               aria-expanded={filtersOpen}
               onClick={() => setFiltersOpen((o) => !o)}
-              className={cn("flex h-11 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[14px] font-medium ring-1 transition-colors", filtersOpen || activeFilters ? "bg-[#1a1a1a] text-white ring-[#1a1a1a]" : "bg-card text-muted-foreground ring-line-strong hover:text-foreground")}
+              className={cn("flex h-11 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[15px] font-medium ring-1 transition-colors", filtersOpen || activeFilters ? "bg-selected text-accent-fg ring-copper-500/45" : "bg-card text-muted-foreground ring-line-strong hover:text-foreground")}
             >
               <SlidersHorizontal className="size-[18px]" />
               <span className="hidden sm:inline lg:hidden 2xl:inline">Filters</span>
-              {activeFilters ? <span className="tabular text-[12.5px] text-white/70">{activeFilters}</span> : null}
+              {activeFilters ? <span className="tabular text-[13.5px] text-accent-fg">{activeFilters}</span> : null}
             </button>
           </div>
 
@@ -199,7 +200,7 @@ function EnquiriesInner() {
           ) : null}
 
           {tab === "reply" && toDraft > 0 && can("enquiries.write") ? (
-            <Link href="/replies" className="mb-3 flex min-h-11 items-center justify-between gap-3 rounded-lg bg-card px-4 text-[14px] font-medium text-foreground ring-1 ring-line-strong transition-colors hover:bg-raised-hover">
+            <Link href="/replies" className="mb-3 flex min-h-11 items-center justify-between gap-3 rounded-lg bg-card px-4 text-[15px] font-medium text-foreground ring-1 ring-line-strong transition-colors hover:bg-raised-hover">
               <span className="flex items-center gap-2">
                 <Sparkles className="size-4 text-copper-500" aria-hidden /> Let Bob draft {toDraft} {toDraft === 1 ? "reply" : "replies"}
               </span>
@@ -219,7 +220,7 @@ function EnquiriesInner() {
         </div>
 
         {desktop ? (
-          <aside aria-label="Selected enquiry" className="panel sticky top-4 hidden h-[calc(100dvh-11rem)] min-h-[520px] flex-col overflow-hidden lg:flex">
+          <aside aria-label="Selected enquiry" className="panel sticky top-0 hidden h-[calc(100dvh-8.5rem)] min-h-[560px] flex-col overflow-hidden xl:flex">
             {current ? (
               <EnquiryDetail key={current.id} id={current.id} inline />
             ) : (
@@ -230,7 +231,7 @@ function EnquiriesInner() {
       </div>
 
       {mobileId && data.enquiries.some((x) => x.id === mobileId) ? (
-        <div role="dialog" aria-modal="true" aria-label="Enquiry" className="absolute inset-0 z-40 flex flex-col bg-card lg:hidden">
+        <div role="dialog" aria-modal="true" aria-label="Enquiry" className="absolute inset-0 z-40 flex flex-col bg-card xl:hidden">
           <EnquiryDetail id={mobileId} onBack={closeMobile} backLabel="Back to inbox" />
         </div>
       ) : null}
@@ -261,13 +262,13 @@ function InboxRow({ e, tab, selected, onOpen }: { e: Enquiry; tab: Tab; selected
       >
         <span className="flex items-baseline justify-between gap-3">
           <span className="t-name truncate">{e.customerName}</span>
-          <span className="shrink-0 text-[13px] tabular text-muted-foreground">{timeAgo(e.receivedAt)}</span>
+          <span className="shrink-0 text-[14px] tabular text-muted-foreground">{timeAgo(e.receivedAt)}</span>
         </span>
-        <span className="mt-0.5 block truncate text-[14.5px]">
+        <span className="mt-0.5 block truncate text-[15px]">
           <span className="text-foreground">{e.title}</span>
           <span className="text-muted-foreground"> · {e.location}</span>
         </span>
-        <span className="mt-0.5 line-clamp-1 text-[14px] text-muted-foreground">{preview}</span>
+        <span className="mt-0.5 line-clamp-1 text-[15px] text-muted-foreground">{preview}</span>
         {showState || state.high || callback ? (
           <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
             {callback ? <StatusText tone="amber">Call back requested</StatusText> : showState ? <StatusText tone={state.main.tone}>{state.main.label}</StatusText> : null}

@@ -116,21 +116,21 @@ export function SendToCustomer({ job, onClose }: { job: Job; onClose: () => void
   return (
     <Panel onClose={onClose}>
       {c.alreadySent ? (
-        <p role="status" className="mb-4 rounded-xl bg-emerald-500/10 px-4 py-3 text-[14.5px] text-good-fg ring-1 ring-emerald-500/25">
+        <p role="status" className="mb-4 rounded-xl bg-emerald-500/10 px-4 py-3 text-[15px] text-good-fg ring-1 ring-emerald-500/25">
           Version {c.alreadySent.version} was already sent on {day(c.alreadySent.at)}{c.alreadySent.by ? ` (approved by ${c.alreadySent.by})` : ""}. To send an update, edit the handover and finish it again.
         </p>
       ) : null}
       <div className="space-y-3">
         <div>
-          <label htmlFor="stc-to" className="mb-1 block text-[14px] font-medium">To</label>
+          <label htmlFor="stc-to" className="mb-1 block text-[15px] font-medium">To</label>
           <input id="stc-to" className={field} type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="customer@example.com" />
         </div>
         <div>
-          <label htmlFor="stc-subject" className="mb-1 block text-[14px] font-medium">Subject</label>
+          <label htmlFor="stc-subject" className="mb-1 block text-[15px] font-medium">Subject</label>
           <input id="stc-subject" className={field} value={subject} onChange={(e) => setSubject(e.target.value)} />
         </div>
         <div>
-          <label htmlFor="stc-body" className="mb-1 block text-[14px] font-medium">Message</label>
+          <label htmlFor="stc-body" className="mb-1 block text-[15px] font-medium">Message</label>
           <textarea
             id="stc-body"
             rows={11}
@@ -143,7 +143,7 @@ export function SendToCustomer({ job, onClose }: { job: Job; onClose: () => void
           />
         </div>
         {c.attachment ? (
-          <a href={fileUrl(c.attachment.fileId, { download: true })} className="flex min-h-12 items-center gap-2.5 rounded-xl bg-surface-2 px-3.5 text-[14.5px] ring-1 ring-line hover:bg-surface-3">
+          <a href={fileUrl(c.attachment.fileId, { download: true })} className="flex min-h-12 items-center gap-2.5 rounded-xl bg-surface-2 px-3.5 text-[15px] ring-1 ring-line hover:bg-surface-3">
             <Paperclip className="size-4 shrink-0 text-subtle" aria-hidden />
             <span className="min-w-0 flex-1 truncate font-medium">{c.attachment.filename}</span>
             <Download className="size-4 shrink-0 text-subtle" aria-hidden />
@@ -153,15 +153,15 @@ export function SendToCustomer({ job, onClose }: { job: Job; onClose: () => void
           <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl bg-card px-3.5 py-2.5 ring-1 ring-line">
             <input type="checkbox" className="size-6 shrink-0 accent-[var(--color-copper-500)]" checked={review} onChange={(e) => void toggleReview(e.target.checked)} />
             <Star className="size-5 shrink-0 text-accent-icon" aria-hidden />
-            <span className="min-w-0 text-[14.5px]">
+            <span className="min-w-0 text-[15px]">
               <span className="block font-semibold text-heading">Ask for a Google review</span>
               <span className="block text-muted-foreground">An honest review, the same wording for every customer. Bob only asks once.</span>
             </span>
           </label>
         ) : c.reviewAlreadyRequested ? (
-          <p className="text-[13.5px] text-muted-foreground">A review was already requested on {day(c.reviewAlreadyRequested)}, so this email won&apos;t ask again.</p>
+          <p className="text-[14.5px] text-muted-foreground">A review was already requested on {day(c.reviewAlreadyRequested)}, so this email won&apos;t ask again.</p>
         ) : (
-          <p className="text-[13.5px] text-muted-foreground">Review requests are off. Switch them on in Settings → Customer follow-ups.</p>
+          <p className="text-[14.5px] text-muted-foreground">Review requests are off. Switch them on in Settings → Customer follow-ups.</p>
         )}
       </div>
 
@@ -170,16 +170,16 @@ export function SendToCustomer({ job, onClose }: { job: Job; onClose: () => void
           <button type="button" disabled={!!busy || !!c.alreadySent} onClick={() => void run(false)} className={cn(btn, "w-full bg-copper-500 text-white hover:bg-copper-600")}>
             {busy === "send" ? <Loader2 className="animate-spin" /> : <Send />} {c.mailbox.simulated ? "Approve & send (demo)" : "Approve & send"}
           </button>
-          <p className="mt-2 text-[13px] text-subtle">
+          <p className="mt-2 text-[14px] text-subtle">
             {c.mailbox.simulated ? "Demo workspace: nothing is really sent — the send is simulated and recorded." : `Sends from your ${c.mailbox.label} account with the PDF attached. Your name is recorded as approving it.`}
           </p>
-          <button type="button" disabled={!!busy} onClick={() => void run(true)} className="mt-1 h-11 text-[14.5px] font-semibold text-accent-fg">
+          <button type="button" disabled={!!busy} onClick={() => void run(true)} className="mt-1 h-11 text-[15px] font-semibold text-accent-fg">
             Save as draft instead
           </button>
         </div>
       ) : (
         <div className="mt-5">
-          <p className="mb-3 rounded-xl bg-surface-2 px-4 py-3 text-[14px] text-muted-foreground">No email account is connected, so Bob doesn&apos;t send it. Save the draft, then send it from your own email with the PDF attached.</p>
+          <p className="mb-3 rounded-xl bg-surface-2 px-4 py-3 text-[15px] text-muted-foreground">No email account is connected, so Bob doesn&apos;t send it. Save the draft, then send it from your own email with the PDF attached.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <button type="button" disabled={!!busy} onClick={() => void run(true)} className={cn(btn, "bg-copper-500 text-white hover:bg-copper-600")}>
               {busy === "draft" ? <Loader2 className="animate-spin" /> : <Check />} {draft ? "Update draft" : "Save draft"}
@@ -215,7 +215,7 @@ function Panel({ children, onClose }: { children: React.ReactNode; onClose: () =
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h3 className="text-[17px] font-semibold text-heading">Send to customer</h3>
-          <p className="text-[14px] text-muted-foreground">A thank-you email with the handover report. Check it, change anything, then send.</p>
+          <p className="text-[15px] text-muted-foreground">A thank-you email with the handover report. Check it, change anything, then send.</p>
         </div>
         <button type="button" onClick={onClose} aria-label="Close" className="grid size-11 shrink-0 place-items-center rounded-xl text-subtle hover:bg-surface-2">
           <X className="size-5" />
@@ -245,7 +245,7 @@ export function FollowUpTrail({ job }: { job: Job }) {
   const Row = ({ ok, label, children }: { ok: boolean | null; label: string; children: React.ReactNode }) => (
     <li className="flex gap-3 py-2">
       <span className={cn("mt-0.5 grid size-6 shrink-0 place-items-center rounded-full", ok ? "bg-emerald-600 text-white" : ok === null ? "bg-copper-500/15 text-accent-fg" : "bg-surface-3 text-subtle")}>{ok ? <Check className="size-3.5" strokeWidth={3} /> : <span className="size-1.5 rounded-full bg-current" />}</span>
-      <span className="min-w-0 flex-1 text-[14.5px]">
+      <span className="min-w-0 flex-1 text-[15px]">
         <span className="block font-medium text-heading">{label}</span>
         <span className="block text-muted-foreground">{children}</span>
       </span>

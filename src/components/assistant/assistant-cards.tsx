@@ -41,7 +41,7 @@ export function AssistantCard({ card, onNavigate }: { card: Card; onNavigate?: (
               <SourceIcon source={e.source} provider={e.provider} />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-semibold">{e.customerName}</div>
-                <div className="truncate text-[13.5px] text-muted-foreground">
+                <div className="truncate text-[14.5px] text-muted-foreground">
                   {e.title} · {e.location} · {timeAgo(e.receivedAt)}
                 </div>
               </div>
@@ -69,10 +69,10 @@ export function AssistantCard({ card, onNavigate }: { card: Card; onNavigate?: (
                   {card.show === "progress" && money ? (
                     <div className="mt-1.5 flex items-center gap-2">
                       <ProgressBar value={f.paidPercent} className="flex-1" />
-                      <span className="tabular text-[13px] text-muted-foreground">{f.paidPercent}% paid</span>
+                      <span className="tabular text-[14px] text-muted-foreground">{f.paidPercent}% paid</span>
                     </div>
                   ) : (
-                    <div className="truncate text-[13.5px] text-muted-foreground">
+                    <div className="truncate text-[14.5px] text-muted-foreground">
                       {j.location}
                       {j.startDate ? ` · starts ${formatDateInline(j.startDate)}` : ""}
                     </div>
@@ -83,12 +83,12 @@ export function AssistantCard({ card, onNavigate }: { card: Card; onNavigate?: (
                     f.depositOutstanding > 0 ? (
                       <>
                         <div className="tabular text-[15px] font-semibold">{gbp(f.depositOutstanding)}</div>
-                        <div className={cn("text-[13px]", f.depositOverdue ? "text-danger-fg" : "text-warn-fg")}>
+                        <div className={cn("text-[14px]", f.depositOverdue ? "text-danger-fg" : "text-warn-fg")}>
                           {f.depositOverdue ? "Overdue" : j.depositDueDate ? `Due ${formatDateInline(j.depositDueDate)}` : "Deposit due"}
                         </div>
                       </>
                     ) : (
-                      <div className="text-[13.5px] text-good-fg">Deposit paid</div>
+                      <div className="text-[14.5px] text-good-fg">Deposit paid</div>
                     )
                   ) : (
                     <JobStatusBadge status={j.status} />
@@ -112,7 +112,7 @@ export function AssistantCard({ card, onNavigate }: { card: Card; onNavigate?: (
               <div className="truncate text-[16px] font-semibold">
                 {j.title} – {j.customerName}
               </div>
-              <div className="text-[14px] text-muted-foreground">
+              <div className="text-[15px] text-muted-foreground">
                 {j.location} · {JOB_STATUS_LABEL[j.status]}
               </div>
             </div>
@@ -144,14 +144,14 @@ export function AssistantCard({ card, onNavigate }: { card: Card; onNavigate?: (
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[15px] font-semibold">{c?.name ?? "Customer"}</div>
-                  <div className="truncate text-[13.5px] text-muted-foreground">
+                  <div className="truncate text-[14.5px] text-muted-foreground">
                     {i.number ?? i.draftRef}
                     {i.dueDate ? ` · due ${formatDateInline(i.dueDate)}` : ""}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="tabular text-[15px] font-semibold">{gbp(i.status === "draft" ? i.total : invoiceBalance(i))}</div>
-                  <div className={cn("text-[13px]", label === "Overdue" ? "text-danger-fg" : label === "Paid" ? "text-good-fg" : "text-muted-foreground")}>{label}</div>
+                  <div className={cn("text-[14px]", label === "Overdue" ? "text-danger-fg" : label === "Paid" ? "text-good-fg" : "text-muted-foreground")}>{label}</div>
                 </div>
               </button>
             );
@@ -171,7 +171,7 @@ export function AssistantCard({ card, onNavigate }: { card: Card; onNavigate?: (
               </span>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-semibold">{c.name}</div>
-                <div className="truncate text-[13.5px] text-muted-foreground">{[c.town, c.phone, c.email].filter(Boolean).join(" · ") || "No contact details"}</div>
+                <div className="truncate text-[14.5px] text-muted-foreground">{[c.town, c.phone, c.email].filter(Boolean).join(" · ") || "No contact details"}</div>
               </div>
               <ChevronRight className="size-4 text-subtle" />
             </button>
@@ -202,7 +202,7 @@ export function AssistantCard({ card, onNavigate }: { card: Card; onNavigate?: (
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[15px] font-medium">{p.title}</div>
-                  <div className="truncate text-[13.5px] text-muted-foreground">{p.detail}</div>
+                  <div className="truncate text-[14.5px] text-muted-foreground">{p.detail}</div>
                 </div>
                 <ChevronRight className="size-4 text-subtle" />
               </button>
@@ -221,7 +221,7 @@ export function AssistantCard({ card, onNavigate }: { card: Card; onNavigate?: (
                 <AlarmClock className="size-4" />
               </span>
               <span className={cn("min-w-0 flex-1 truncate text-[15px]", r.done && "text-muted-foreground line-through")}>{r.title}</span>
-              <span className="text-[13.5px] text-muted-foreground">{formatDateKey(r.dueDate)}</span>
+              <span className="text-[14.5px] text-muted-foreground">{formatDateKey(r.dueDate)}</span>
             </Link>
           ))}
         </CardShell>
@@ -231,23 +231,23 @@ export function AssistantCard({ card, onNavigate }: { card: Card; onNavigate?: (
       return (
         <CardShell className="p-3.5">
           <div className="flex items-baseline justify-between gap-3">
-            <span className="text-[14px] font-semibold uppercase tracking-wider text-accent-fg">{card.title}</span>
-            {card.period ? <span className="text-right text-[13px] text-subtle">{card.period}</span> : null}
+            <span className="text-[15px] font-semibold uppercase tracking-wider text-accent-fg">{card.title}</span>
+            {card.period ? <span className="text-right text-[14px] text-subtle">{card.period}</span> : null}
           </div>
           <dl className="mt-2">
             {card.rows.map((r) => (
               <div key={r.label} className="flex items-center justify-between border-b border-line py-1.5 last:border-0">
-                <dt className="text-[14.5px] text-muted-foreground">{r.label}</dt>
+                <dt className="text-[15px] text-muted-foreground">{r.label}</dt>
                 <dd className={cn("tabular text-[15px] font-semibold", r.tone === "warn" && "text-warn-fg", r.tone === "good" && "text-good-fg")}>{r.value}</dd>
               </div>
             ))}
           </dl>
-          {card.footnote ? <p className="mt-2 text-[13px] leading-snug text-subtle">{card.footnote}</p> : null}
+          {card.footnote ? <p className="mt-2 text-[14px] leading-snug text-subtle">{card.footnote}</p> : null}
         </CardShell>
       );
     case "warning":
       return (
-        <div role="note" className="mt-2.5 flex gap-2.5 rounded-2xl bg-amber-400/10 p-3 text-[14px] leading-snug text-warn-fg ring-1 ring-amber-400/30">
+        <div role="note" className="mt-2.5 flex gap-2.5 rounded-2xl bg-amber-400/10 p-3 text-[15px] leading-snug text-warn-fg ring-1 ring-amber-400/30">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warn-fg" />
           <span>{card.text}</span>
         </div>
@@ -255,9 +255,9 @@ export function AssistantCard({ card, onNavigate }: { card: Card; onNavigate?: (
     case "draft":
       return (
         <CardShell className="p-4">
-          <div className="mb-1 text-[13px] font-medium uppercase tracking-wider text-accent-fg">Draft · not sent</div>
-          {card.to ? <div className="text-[13.5px] text-muted-foreground">To: {card.to}</div> : null}
-          <div className="mb-2 text-[13.5px] text-muted-foreground">Subject: {card.subject}</div>
+          <div className="mb-1 text-[14px] font-medium uppercase tracking-wider text-accent-fg">Draft · not sent</div>
+          {card.to ? <div className="text-[14.5px] text-muted-foreground">To: {card.to}</div> : null}
+          <div className="mb-2 text-[14.5px] text-muted-foreground">Subject: {card.subject}</div>
           <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-foreground/90">{card.body}</p>
           <Button
             size="sm"
@@ -270,7 +270,7 @@ export function AssistantCard({ card, onNavigate }: { card: Card; onNavigate?: (
           >
             <Copy /> Copy
           </Button>
-          {card.note ? <p className="mt-2 text-[13px] text-subtle">{card.note}</p> : null}
+          {card.note ? <p className="mt-2 text-[14px] text-subtle">{card.note}</p> : null}
         </CardShell>
       );
   }
@@ -339,15 +339,15 @@ export function ActionCard({
     >
       <div className="flex items-center justify-between gap-2 px-3.5 pt-3">
         <span className="text-[15px] font-semibold text-heading">{action.title}</span>
-        {external && action.status === "pending" ? <span className="text-[12.5px] font-medium text-accent-fg">Needs your OK</span> : null}
+        {external && action.status === "pending" ? <span className="text-[13.5px] font-medium text-accent-fg">Needs your OK</span> : null}
       </div>
       <div className="px-3.5 pb-3 pt-1">
         {action.lines.length ? (
           <dl>
             {action.lines.map((l) => (
               <div key={l.label} className="flex items-start justify-between gap-4 py-1">
-                <dt className="text-[13.5px] text-muted-foreground">{l.label}</dt>
-                <dd className={cn("tabular text-right text-[14px]", l.emphasis ? "font-semibold" : "font-medium")}>{l.value}</dd>
+                <dt className="text-[14.5px] text-muted-foreground">{l.label}</dt>
+                <dd className={cn("tabular text-right text-[15px]", l.emphasis ? "font-semibold" : "font-medium")}>{l.value}</dd>
               </div>
             ))}
           </dl>
@@ -355,7 +355,7 @@ export function ActionCard({
 
         {invoice ? (
           <div className="mt-2 rounded-xl bg-surface-2 p-3 ring-1 ring-line">
-            <div className="text-[14.5px]">{invoice.description}</div>
+            <div className="text-[15px]">{invoice.description}</div>
             <MoneyRow label={invoice.amountsAre === "no_vat" ? "Amount (no VAT)" : "Net"} value={gbp(invoice.subtotal)} />
             {invoice.amountsAre !== "no_vat" ? <MoneyRow label={`VAT ${invoice.vatRate}%`} value={gbp(invoice.vat)} /> : null}
             <MoneyRow label="Total" value={gbp(invoice.total)} strong />
@@ -366,7 +366,7 @@ export function ActionCard({
           <div className="mt-2 rounded-xl bg-surface-2 p-3 ring-1 ring-line">
             {editing ? (
               <>
-                <label className="text-[13px] text-muted-foreground" htmlFor={`subj-${action.id}`}>
+                <label className="text-[14px] text-muted-foreground" htmlFor={`subj-${action.id}`}>
                   Subject
                 </label>
                 <input
@@ -375,7 +375,7 @@ export function ActionCard({
                   onChange={(e) => setSubject(e.target.value)}
                   className="mb-2 mt-1 h-9 w-full rounded-lg bg-surface-2 px-2.5 text-[15px] outline-none ring-1 ring-line focus:ring-copper-500/60"
                 />
-                <label className="text-[13px] text-muted-foreground" htmlFor={`body-${action.id}`}>
+                <label className="text-[14px] text-muted-foreground" htmlFor={`body-${action.id}`}>
                   Message
                 </label>
                 <textarea
@@ -388,7 +388,7 @@ export function ActionCard({
               </>
             ) : (
               <>
-                <div className="text-[13.5px] text-muted-foreground">Subject: {subject}</div>
+                <div className="text-[14.5px] text-muted-foreground">Subject: {subject}</div>
                 <p className="mt-1.5 whitespace-pre-wrap text-[15px] leading-relaxed text-foreground/90">{body}</p>
               </>
             )}
@@ -409,7 +409,7 @@ export function ActionCard({
                 <Copy /> Copy text
               </Button>
             </div>
-            {email.channelNote ? <p className="mt-1 text-[13px] text-subtle">{email.channelNote}</p> : null}
+            {email.channelNote ? <p className="mt-1 text-[14px] text-subtle">{email.channelNote}</p> : null}
           </div>
         ) : null}
 
@@ -417,7 +417,7 @@ export function ActionCard({
           <div
             key={i}
             className={cn(
-              "mt-2 flex gap-2 rounded-xl px-3 py-2 text-[13.5px] leading-snug ring-1",
+              "mt-2 flex gap-2 rounded-xl px-3 py-2 text-[14.5px] leading-snug ring-1",
               n.tone === "warning"
                 ? "bg-amber-400/10 text-warn-fg ring-amber-400/25"
                 : n.tone === "demo"
@@ -446,14 +446,14 @@ export function ActionCard({
             </Button>
           </div>
         ) : action.status === "executing" ? (
-          <div className="mt-3 flex items-center gap-2 text-[14.5px] text-muted-foreground">
+          <div className="mt-3 flex items-center gap-2 text-[15px] text-muted-foreground">
             <Loader2 className="size-4 animate-spin" /> Working on it…
           </div>
         ) : (
           <div className="mt-3">
             <div
               className={cn(
-                "flex items-start gap-2 text-[14.5px]",
+                "flex items-start gap-2 text-[15px]",
                 action.status === "executed" && "text-good-fg",
                 (action.status === "cancelled" || action.status === "expired" || action.status === "undone") && "text-muted-foreground",
                 action.status === "failed" && "text-danger-fg",
@@ -478,7 +478,7 @@ export function ActionCard({
                         : `Not done: ${action.error ?? "something went wrong"}`}
               </span>
             </div>
-            {action.error && action.status === "executed" ? <p className="mt-1 text-[13.5px] text-danger-fg">{action.error}</p> : null}
+            {action.error && action.status === "executed" ? <p className="mt-1 text-[14.5px] text-danger-fg">{action.error}</p> : null}
             <div className="mt-2 flex flex-wrap gap-2">
               {action.status === "executed"
                 ? action.links?.map((l) => (

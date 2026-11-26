@@ -154,7 +154,7 @@ export function UploadQueue({
                   <div className="truncate text-[15px] font-medium" title={it.file.name}>
                     {it.file.name}
                   </div>
-                  <div className="text-[13px] text-muted-foreground">
+                  <div className="text-[14px] text-muted-foreground">
                     {formatBytes(it.file.size)}
                     {it.status === "uploading" ? ` · ${Math.round(it.progress * 100)}%` : it.status === "saved" ? " · Saved" : ""}
                   </div>
@@ -164,7 +164,7 @@ export function UploadQueue({
                     </div>
                   ) : null}
                   {it.error ? (
-                    <p role="alert" className="mt-1 text-[13.5px] text-danger-fg">
+                    <p role="alert" className="mt-1 text-[14.5px] text-danger-fg">
                       {it.error}
                     </p>
                   ) : null}
@@ -174,7 +174,7 @@ export function UploadQueue({
                 {it.status === "ready" && !revisionOf ? (
                   <label className="w-[170px]">
                     <span className="sr-only">What is {it.file.name}?</span>
-                    <NativeSelect value={it.category} onChange={(e) => patch(it.key, { category: e.target.value as FileCategory })} className="h-10 text-[14px]">
+                    <NativeSelect value={it.category} onChange={(e) => patch(it.key, { category: e.target.value as FileCategory })} className="h-10 text-[15px]">
                       {(worker ? (["progress", "completion", "other"] as FileCategory[]) : (["drawing", "progress", "completion", "other"] as FileCategory[])).map((c) => (
                         <option key={c} value={c}>
                           {CATEGORY_SINGULAR[c]}
@@ -231,7 +231,7 @@ export function UploadQueue({
         <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
           {done ? (
             <>
-              <p className="mr-auto text-[14.5px] text-muted-foreground" aria-live="polite">
+              <p className="mr-auto text-[15px] text-muted-foreground" aria-live="polite">
                 {savedCount} saved{failed.length ? ` · ${failed.length} not uploaded` : ""}
               </p>
               <Button onClick={onClose}>Done</Button>

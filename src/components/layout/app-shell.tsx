@@ -13,7 +13,7 @@ import { BobProvider } from "@/lib/bob/provider";
 import { ROLE_LABEL } from "@/lib/auth/permissions";
 import { needsReply, tasksDue } from "@/lib/derive";
 import { cn } from "@/lib/utils";
-import { BobLogo, OrgLogo } from "@/components/brand/logo";
+import { BobLogo, OrgLogo, OrgWordmark } from "@/components/brand/logo";
 import { InstallBob } from "@/components/common/install-bob";
 import { Toaster } from "@/components/ui/toaster";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -106,12 +106,11 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
           {assistant ? (
             children
           ) : (
-            <div className={cn("mx-auto w-full px-4 pt-3 sm:px-6 lg:px-8 lg:pt-7 2xl:px-10", focus ? "flex min-h-full flex-col pb-0 lg:pb-0" : "pb-[calc(112px+env(safe-area-inset-bottom))] lg:pb-24", pageWidth(pathname))}>{children}</div>
+            <div className={cn("mx-auto w-full px-4 pt-3 sm:px-6 lg:px-8 lg:pt-7 2xl:px-10", focus ? "flex min-h-full flex-col pb-0 lg:pb-0" : "pb-[calc(112px+env(safe-area-inset-bottom))] lg:pb-12", pageWidth(pathname))}>{children}</div>
           )}
         </main>
         {/* Ask Bob has its own back button and bottom controls. */}
         {!assistant && !focus ? <BottomNav /> : null}
-        {!assistant && !focus ? <DesktopAskBob /> : null}
       </div>
     </div>
   );
@@ -126,7 +125,7 @@ function DemoBanner() {
   const { org } = useStore();
   if (org.dataMode !== "sample") return null;
   return (
-    <div role="note" className="hidden h-8 shrink-0 items-center justify-center gap-2 border-b border-line bg-card px-3 text-[12.5px] text-subtle lg:flex">
+    <div role="note" className="hidden h-8 shrink-0 items-center justify-center gap-2 border-b border-line bg-card px-3 text-[13.5px] text-subtle lg:flex">
       <FlaskConical aria-hidden className="size-3.5 shrink-0" />
       <span>
         <strong className="font-medium text-foreground">Demo workspace</strong>
@@ -143,10 +142,7 @@ type NavItem = { href: string; label: string; icon: React.ComponentType<{ classN
 /** Grouped by how a trade business runs: plan the week, win and run the work, people and supplies, money. */
 const NAV_GROUPS: { label?: string; items: NavItem[] }[] = [
   {
-    items: [
-      { href: "/week", label: "Diary", icon: CalendarDays },
-      { href: "/assistant", label: "Ask Bob", icon: AudioLines },
-    ],
+    items: [{ href: "/week", label: "Diary", icon: CalendarDays }],
   },
   {
     label: "Work",
@@ -177,47 +173,60 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
   const pathname = usePathname();
   const counts = useNavCounts();
   const { org, can } = useStore();
+  const bobActive = pathname === "/assistant";
   return (
     <aside
       className={cn(
         "hidden shrink-0 flex-col border-r border-line bg-nav transition-[width] duration-200 ease-out lg:flex",
-        collapsed ? "w-[64px]" : "w-[236px]",
+        collapsed ? "w-[76px]" : "w-[244px]",
       )}
     >
-      {/* Workspace identity */}
-      <div className={cn("flex h-14 shrink-0 items-center", collapsed ? "justify-center px-2" : "gap-2.5 pl-4 pr-2")}>
-        <OrgLogo org={org} size={28} />
-        {collapsed ? null : (
-          <>
-            <span className="min-w-0 flex-1 leading-tight">
-              <span className="block truncate text-[13.5px] font-semibold tracking-[-0.01em] text-heading" title={org.name}>
-                {org.shortName || org.name}
+      {/* Workspace identity: the customer's brand, with Bob */}
+      <div className={cn("shrink-0", collapsed ? "flex flex-col items-center gap-3 px-2 pb-3 pt-5" : "px-5 pb-4 pt-6")}>
+        {collapsed ? (
+          <OrgLogo org={org} size={40} />
+        ) : (
+          <div className="flex items-start justify-between gap-2">
+            <Link href="/week" aria-label={`${org.name} — Diary`} className="min-w-0">
+              {org.wordmark?.onLight || org.wordmark?.onDark ? (
+                <OrgWordmark org={org} tone="light" height={34} className="max-w-[170px]" />
+              ) : (
+                <span className="flex items-center gap-2.5">
+                  <OrgLogo org={org} size={36} />
+                  <span className="truncate text-[17px] font-bold text-heading">{org.shortName}</span>
+                </span>
+              )}
+              <span className="mt-2 flex items-center gap-1.5 text-[13px] font-medium text-subtle">
+                with <BobLogo height={13} tone="dark" />
               </span>
-              <span className="flex items-center gap-1 text-[11.5px] text-subtle">
-                with <BobLogo height={9} tone="dark" />
-              </span>
-            </span>
+            </Link>
             <button
               type="button"
               onClick={onToggle}
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
-              className="grid size-7 place-items-center rounded-md text-subtle transition-colors hover:bg-nav-hover hover:text-foreground"
+              className="-mr-2 grid size-9 shrink-0 place-items-center rounded-lg text-subtle transition-colors hover:bg-nav-hover hover:text-foreground"
             >
-              <PanelLeftClose className="size-4" strokeWidth={1.75} />
+              <PanelLeftClose className="size-[18px]" strokeWidth={1.8} />
             </button>
-          </>
+          </div>
         )}
       </div>
-      <nav className={cn("scrollbar-none flex-1 overflow-y-auto pb-3 pt-1", collapsed ? "px-2" : "px-2.5")} aria-label="Main">
+
+      {/* Ask Bob: always one tap away, and unmistakably Bob. Opens beside the page, so Bob knows what's on screen. */}
+      <div className={cn("shrink-0", collapsed ? "px-3 pb-3" : "px-3.5 pb-4")}>
+        <AskBobSideButton collapsed={collapsed} active={bobActive} />
+      </div>
+
+      <nav className={cn("scrollbar-none flex-1 overflow-y-auto pb-4", collapsed ? "px-3" : "px-3.5")} aria-label="Main">
         {NAV_GROUPS.map((g, gi) => {
           const items = g.items.filter((i) => !i.perm || can(i.perm));
           if (!items.length) return null;
           return (
-            <div key={gi} className={cn(gi > 0 && "mt-4")}>
-              {g.label && !collapsed ? <div className="mb-1 px-2.5 text-[11.5px] font-medium text-subtle/80">{g.label}</div> : null}
-              {g.label && collapsed ? <div className="mx-auto mb-2 h-px w-5 bg-line-strong" /> : null}
-              <div className="space-y-px">
+            <div key={gi} className={cn(gi > 0 && "mt-5")}>
+              {g.label && !collapsed ? <div className="mb-1.5 px-3 text-[12.5px] font-semibold uppercase tracking-[0.06em] text-subtle/90">{g.label}</div> : null}
+              {g.label && collapsed ? <div className="mx-auto mb-2.5 h-px w-6 bg-line-strong" /> : null}
+              <div className="space-y-0.5">
                 {items.map((item) => (
                   <SideLink key={item.href} item={item} active={isActive(pathname, item.href)} count={item.badge ? counts[item.badge] : 0} collapsed={collapsed} />
                 ))}
@@ -225,20 +234,20 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
             </div>
           );
         })}
-        <div className="mt-4 space-y-px">
+        <div className="mt-5 space-y-0.5">
           <SideLink item={{ href: "/settings", label: "Settings", icon: Settings }} active={isActive(pathname, "/settings")} count={0} collapsed={collapsed} />
         </div>
       </nav>
-      <div className={cn("shrink-0 border-t border-line", collapsed ? "px-2 py-2.5" : "px-2.5 py-2.5")}>
+      <div className={cn("shrink-0 border-t border-line", collapsed ? "px-3 py-3" : "px-3.5 py-3")}>
         {collapsed ? (
           <button
             type="button"
             onClick={onToggle}
             aria-label="Expand sidebar"
             title="Expand sidebar"
-            className="mb-1.5 grid h-8 w-full place-items-center rounded-md text-subtle transition-colors hover:bg-nav-hover hover:text-foreground"
+            className="mb-2 grid h-9 w-full place-items-center rounded-lg text-subtle transition-colors hover:bg-nav-hover hover:text-foreground"
           >
-            <PanelLeftOpen className="size-4" strokeWidth={1.75} />
+            <PanelLeftOpen className="size-[18px]" strokeWidth={1.8} />
           </button>
         ) : null}
         <UserMenu collapsed={collapsed} />
@@ -247,27 +256,54 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
   );
 }
 
+function AskBobSideButton({ collapsed, active }: { collapsed: boolean; active: boolean }) {
+  const ui = useUI();
+  const label = ui.pageContext ? `Ask Bob about ${ui.pageContext.label}` : "Ask Bob";
+  return (
+    <button
+      type="button"
+      onClick={() => ui.setAssistantOpen(true)}
+      aria-label={label}
+      title={collapsed ? label : undefined}
+      className={cn(
+        "group flex w-full items-center rounded-xl bg-[#1d1b19] text-left text-white shadow-[0_6px_16px_-8px_rgb(0_0_0/0.45)] transition hover:bg-[#262320]",
+        collapsed ? "h-12 justify-center" : "h-[54px] gap-3 pl-2 pr-3",
+        active && "ring-2 ring-copper-500/70",
+      )}
+    >
+      <span className="relative grid size-9 shrink-0 place-items-center rounded-full bg-copper-500 shadow-[0_0_0_3px_rgb(243_135_53/0.18)]">
+        <Mic className="size-[18px]" strokeWidth={2.2} aria-hidden />
+      </span>
+      {collapsed ? null : (
+        <span className="min-w-0 leading-tight">
+          <span className="block text-[15.5px] font-semibold">Ask Bob</span>
+          <span className="block truncate text-[12.5px] text-white/60">{ui.pageContext ? `About ${ui.pageContext.label}` : "Talk or type"}</span>
+        </span>
+      )}
+    </button>
+  );
+}
+
 function SideLink({ item, active, count, collapsed }: { item: NavItem; active: boolean; count: number; collapsed: boolean }) {
-  const bob = item.href === "/assistant";
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
       title={collapsed ? item.label : undefined}
       className={cn(
-        "group relative flex h-8 items-center rounded-md text-[13.5px] font-medium transition-colors duration-100",
-        collapsed ? "justify-center" : "gap-2.5 px-2.5",
-        active ? "bg-card text-heading shadow-[0_0_0_1px_var(--color-line),0_1px_2px_rgb(17_17_17/0.04)]" : "text-muted-foreground hover:bg-nav-hover hover:text-heading",
+        "group relative flex h-11 items-center rounded-lg text-[15px] font-medium transition-colors duration-100",
+        collapsed ? "justify-center" : "gap-3 pl-3 pr-2.5",
+        active ? "bg-nav-active font-semibold text-heading" : "text-muted-foreground hover:bg-nav-hover hover:text-heading",
       )}
     >
-      {active && !collapsed ? <span aria-hidden className="absolute inset-y-2 -left-2.5 w-[2px] rounded-r bg-copper-500" /> : null}
-      <item.icon className={cn("size-4 shrink-0", active || bob ? "text-copper-500" : "text-subtle group-hover:text-foreground")} strokeWidth={1.75} />
+      {active ? <span aria-hidden className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-copper-500" /> : null}
+      <item.icon className={cn("size-5 shrink-0", active ? "text-copper-600" : "text-subtle group-hover:text-foreground")} strokeWidth={1.8} />
       {collapsed ? null : <span className="flex-1 truncate">{item.label}</span>}
       {count ? (
         collapsed ? (
-          <span className="absolute right-1.5 top-1 size-1.5 rounded-full bg-copper-500" aria-label={`${count} waiting`} />
+          <span className="absolute right-2 top-2 size-2 rounded-full bg-copper-500" aria-label={`${count} waiting`} />
         ) : (
-          <span className="tabular min-w-5 text-right text-[12px] font-medium text-subtle">{count}</span>
+          <span className={cn("tabular grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-[12.5px] font-semibold", active ? "bg-copper-500 text-white" : "bg-copper-500/12 text-accent-fg")}>{count}</span>
         )
       ) : null}
     </Link>
@@ -302,7 +338,7 @@ export function Avatar({ name, size = 32, className }: { name: string; size?: nu
   return (
     <span
       aria-hidden
-      className={cn("grid shrink-0 place-items-center rounded-full bg-[#ebe7e0] font-semibold text-[#3d3a35]", className)}
+      className={cn("grid shrink-0 place-items-center rounded-full bg-copper-500/15 font-semibold text-[#8a4a12]", className)}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}
     >
       {initials}
@@ -335,12 +371,12 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
         aria-haspopup="menu"
         className={cn("flex w-full items-center rounded-md text-left transition-colors hover:bg-nav-hover", collapsed ? "justify-center p-1" : "gap-2.5 px-1.5 py-1.5")}
       >
-        <Avatar name={user.name} size={28} />
+        <Avatar name={user.name} size={36} />
         {collapsed ? null : (
           <>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-medium text-heading">{user.name}</span>
-              <span className="block truncate text-[11.5px] text-subtle">{ROLE_LABEL[user.role]}</span>
+              <span className="block truncate text-[15px] font-semibold text-heading">{user.name}</span>
+              <span className="block truncate text-[13px] text-subtle">{ROLE_LABEL[user.role]} · {org.shortName || org.name}</span>
             </span>
             <ChevronsUpDown className="size-3.5 text-subtle" />
           </>
@@ -349,20 +385,20 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
       {open ? (
         <div role="menu" className={cn("absolute bottom-full z-50 mb-2 w-[248px] rounded-lg border border-line-strong bg-popover p-1 shadow-[var(--shadow-lg)]", collapsed ? "left-0" : "left-0 right-0 w-auto")}>
           <div className="px-2.5 pb-2 pt-1.5">
-            <div className="truncate text-[13.5px] font-medium text-heading">{user.name}</div>
-            <div className="truncate text-[12px] text-subtle">{user.email}</div>
+            <div className="truncate text-[14.5px] font-medium text-heading">{user.name}</div>
+            <div className="truncate text-[13px] text-subtle">{user.email}</div>
           </div>
           {orgs.length > 1 ? (
             <>
               <div className="my-1 h-px bg-line" />
-              <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-subtle">Business</div>
+              <div className="px-2.5 pb-1 pt-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-subtle">Business</div>
               {orgs.map((o) => (
                 <button
                   key={o.id}
                   role="menuitemradio"
                   aria-checked={o.id === org.id}
                   onClick={() => void switchOrg(o.id)}
-                  className="flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13.5px] text-foreground hover:bg-surface-2"
+                  className="flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[14.5px] text-foreground hover:bg-surface-2"
                 >
                   <Building2 className="size-4 text-subtle" />
                   <span className="flex-1 truncate">
@@ -375,15 +411,15 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
             </>
           ) : null}
           <div className="my-1 h-px bg-line" />
-          <Link role="menuitem" href="/settings" onClick={() => setOpen(false)} className="flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] text-foreground hover:bg-surface-2">
+          <Link role="menuitem" href="/settings" onClick={() => setOpen(false)} className="flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[14.5px] text-foreground hover:bg-surface-2">
             <Settings className="size-4 text-subtle" /> Settings
           </Link>
           {data?.mode.platformAdmin ? (
-            <Link role="menuitem" href="/cresaro" onClick={() => setOpen(false)} className="flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] text-foreground hover:bg-surface-2">
+            <Link role="menuitem" href="/cresaro" onClick={() => setOpen(false)} className="flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[14.5px] text-foreground hover:bg-surface-2">
               <Gauge className="size-4 text-subtle" /> Cresaro admin
             </Link>
           ) : null}
-          <button role="menuitem" onClick={() => void signOut()} className="flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13.5px] text-foreground hover:bg-surface-2">
+          <button role="menuitem" onClick={() => void signOut()} className="flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[14.5px] text-foreground hover:bg-surface-2">
             <LogOut className="size-4 text-subtle" /> Sign out
           </button>
         </div>
@@ -420,8 +456,8 @@ function MobileHeader() {
       <Link href="/week" aria-label="Diary" className="flex min-w-0 items-center gap-2.5">
         <OrgLogo org={org} size={30} />
         <span className="min-w-0 leading-tight">
-          <span className="block truncate text-[14px] font-semibold text-heading">{org.shortName || org.name}</span>
-          <span className="flex items-center gap-1 text-[11.5px] text-subtle">
+          <span className="block truncate text-[15px] font-semibold text-heading">{org.shortName || org.name}</span>
+          <span className="flex items-center gap-1 text-[12.5px] text-subtle">
             with <BobLogo height={9.5} tone="dark" />
           </span>
         </span>
@@ -429,7 +465,7 @@ function MobileHeader() {
       )}
       <div className="flex items-center gap-1.5">
         {sample ? (
-          <span role="note" title="Fictional sample data. Nothing is sent to anyone." className="inline-flex h-6 items-center gap-1 rounded-full bg-surface-3 px-2 text-[11.5px] font-medium text-muted-foreground">
+          <span role="note" title="Fictional sample data. Nothing is sent to anyone." className="inline-flex h-6 items-center gap-1 rounded-full bg-surface-3 px-2 text-[12.5px] font-medium text-muted-foreground">
             <FlaskConical aria-hidden className="size-3" /> Demo
           </span>
         ) : null}
@@ -465,7 +501,7 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
           <Avatar name={user.name} size={44} />
           <div className="min-w-0 flex-1">
             <div className="truncate text-[16px] font-semibold">{user.name}</div>
-            <div className="truncate text-[13.5px] text-subtle">
+            <div className="truncate text-[14.5px] text-subtle">
               {ROLE_LABEL[user.role]} · {org.name}
             </div>
           </div>
@@ -481,13 +517,13 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
                 onClick={() => onOpenChange(false)}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "relative flex aspect-[1.15] flex-col items-center justify-center gap-2 rounded-2xl text-[13.5px] font-medium ring-1 transition active:scale-[0.97]",
+                  "relative flex aspect-[1.15] flex-col items-center justify-center gap-2 rounded-2xl text-[14.5px] font-medium ring-1 transition active:scale-[0.97]",
                   active ? "bg-copper-500/10 text-accent-fg ring-copper-500/40" : "bg-card text-foreground ring-line shadow-[var(--shadow-xs)]",
                 )}
               >
                 <l.icon className={cn("size-[22px]", active ? "text-accent-icon" : "text-foreground/70")} />
                 {l.label}
-                {l.count ? <span className="tabular absolute right-2 top-2 grid h-5 min-w-5 place-items-center rounded-full bg-copper-500 px-1.5 text-[11px] font-semibold text-white">{l.count}</span> : null}
+                {l.count ? <span className="tabular absolute right-2 top-2 grid h-5 min-w-5 place-items-center rounded-full bg-copper-500 px-1.5 text-[12px] font-semibold text-white">{l.count}</span> : null}
               </Link>
             );
           })}
@@ -497,7 +533,7 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
         </div>
         {orgs.length > 1 ? (
           <>
-            <div className="mt-5 text-[11.5px] font-medium uppercase tracking-[0.08em] text-subtle">Switch business</div>
+            <div className="mt-5 text-[12.5px] font-medium uppercase tracking-[0.08em] text-subtle">Switch business</div>
             <div className="mt-2 space-y-1.5">
               {orgs.map((o) => (
                 <button
@@ -535,7 +571,7 @@ function BottomNav() {
       <Link
         href={href}
         aria-current={active ? "page" : undefined}
-        className={cn("relative flex h-full flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors", active ? "text-copper-400" : "text-white/60 active:text-white")}
+        className={cn("relative flex h-full flex-col items-center justify-center gap-1 text-[12px] font-medium transition-colors", active ? "text-copper-400" : "text-white/60 active:text-white")}
       >
         <span className="relative">
           <Icon className="size-[22px]" strokeWidth={active ? 2 : 1.7} />
@@ -566,7 +602,7 @@ function BottomNav() {
           type="button"
           onClick={() => setMoreOpen(true)}
           aria-label="More"
-          className={cn("flex h-full flex-col items-center justify-center gap-1 text-[11px] font-medium", onMore ? "text-copper-400" : "text-white/60")}
+          className={cn("flex h-full flex-col items-center justify-center gap-1 text-[12px] font-medium", onMore ? "text-copper-400" : "text-white/60")}
         >
           <MoreHorizontal className="size-[22px]" strokeWidth={onMore ? 2 : 1.7} />
           More
@@ -574,25 +610,6 @@ function BottomNav() {
       </div>
       <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} />
     </nav>
-  );
-}
-
-/** Desktop: Ask Bob from any page, in a side panel that knows which record is on screen. */
-function DesktopAskBob() {
-  const ui = useUI();
-  if (ui.assistantOpen) return null;
-  return (
-    <button
-      type="button"
-      onClick={() => ui.setAssistantOpen(true)}
-      aria-label={ui.pageContext ? `Ask Bob about ${ui.pageContext.label}` : "Ask Bob"}
-      className="absolute bottom-6 right-6 z-30 hidden h-11 items-center gap-2 rounded-full bg-[#1a1a1a] pl-1.5 pr-4 text-[14px] font-medium text-white shadow-[0_8px_24px_-10px_rgb(0_0_0/0.45)] transition-colors hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex"
-    >
-      <span className="grid size-8 place-items-center rounded-full bg-copper-500">
-        <Mic className="size-4" aria-hidden />
-      </span>
-      Ask Bob
-    </button>
   );
 }
 

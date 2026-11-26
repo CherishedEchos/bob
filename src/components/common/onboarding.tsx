@@ -51,7 +51,7 @@ export function Onboarding() {
   };
   return (
     <section aria-labelledby="ob-title" className="panel relative px-4 py-4 lg:px-5">
-      <button type="button" onClick={skip} className="absolute right-2 top-2 flex h-10 items-center gap-1 rounded-lg px-2 text-[13.5px] font-medium text-muted-foreground hover:bg-surface-2" aria-label="Skip getting started">
+      <button type="button" onClick={skip} className="absolute right-2 top-2 flex h-10 items-center gap-1 rounded-lg px-2 text-[14.5px] font-medium text-muted-foreground hover:bg-surface-2" aria-label="Skip getting started">
         Skip <X className="size-4" aria-hidden />
       </button>
       <h2 id="ob-title" className="t-section pr-20">
@@ -72,7 +72,7 @@ export function Onboarding() {
                 s.done ? "bg-surface-2 text-muted-foreground ring-line" : i === next ? "bg-primary text-white ring-transparent hover:bg-copper-600" : "bg-card ring-line-strong hover:bg-surface-2",
               )}
             >
-              <span className={cn("grid size-6 shrink-0 place-items-center rounded-full text-[12.5px] font-semibold", s.done ? "bg-emerald-600 text-white" : i === next ? "bg-white/25" : "bg-surface-3")}>
+              <span className={cn("grid size-6 shrink-0 place-items-center rounded-full text-[13.5px] font-semibold", s.done ? "bg-emerald-600 text-white" : i === next ? "bg-white/25" : "bg-surface-3")}>
                 {s.done ? <Check className="size-3.5" aria-hidden /> : i + 1}
               </span>
               <span className={cn(s.done && "line-through")}>{s.label}</span>

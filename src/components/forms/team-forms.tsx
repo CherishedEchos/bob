@@ -31,7 +31,7 @@ function useForm<T extends Record<string, string>>(initial: T) {
 
 function FormError({ errors }: { errors: FieldErrors }) {
   return errors._ ? (
-    <p role="alert" className="rounded-xl bg-red-500/10 px-3 py-2 text-[14.5px] text-danger-fg ring-1 ring-red-500/25">
+    <p role="alert" className="rounded-xl bg-red-500/10 px-3 py-2 text-[15px] text-danger-fg ring-1 ring-red-500/25">
       {errors._} <span className="text-muted-foreground">Your details are still here.</span>
     </p>
   ) : null;
@@ -154,14 +154,14 @@ export function BookingForm({ prefill }: { prefill: Extract<FormPrefill, { form:
           </Field>
         ) : (
           <div className="flex items-end">
-            <button type="button" onClick={() => setMultiDay(true)} className="h-12 text-[14.5px] font-semibold text-accent-fg">
+            <button type="button" onClick={() => setMultiDay(true)} className="h-12 text-[15px] font-semibold text-accent-fg">
               + More than one day
             </button>
           </div>
         )}
       </div>
       <fieldset>
-        <legend className="mb-1.5 text-[14px] font-medium text-foreground/90">Time</legend>
+        <legend className="mb-1.5 text-[15px] font-medium text-foreground/90">Time</legend>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex h-12 items-center gap-2 rounded-xl px-3 text-[15px] ring-1 ring-line-strong">
             <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} className="size-4 accent-[#d4621a]" /> All day
@@ -185,13 +185,13 @@ export function BookingForm({ prefill }: { prefill: Extract<FormPrefill, { form:
           ) : null}
         </div>
         {errors.startTime || errors.endTime ? (
-          <p role="alert" className="mt-1.5 text-[14px] text-danger-fg">
+          <p role="alert" className="mt-1.5 text-[15px] text-danger-fg">
             {errors.startTime ?? errors.endTime}
           </p>
         ) : null}
       </fieldset>
       <fieldset ref={peopleRef} className={cn("rounded-xl", prefill.focus === "people" && !who.length && "-m-2 bg-amber-500/[0.07] p-2 ring-1 ring-amber-500/30")}>
-        <legend className="mb-1.5 text-[14px] font-medium text-foreground/90">
+        <legend className="mb-1.5 text-[15px] font-medium text-foreground/90">
           Who&apos;s on it{prefill.focus === "people" && !who.length ? <span className="ml-2 font-semibold text-warn-fg">Unassigned — choose someone</span> : null}
         </legend>
         {people.length ? (
@@ -208,28 +208,28 @@ export function BookingForm({ prefill }: { prefill: Extract<FormPrefill, { form:
                     setWho((w) => (on ? w.filter((x) => x !== p.id) : [...w, p.id]));
                   }}
                   className={cn(
-                    "flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-left text-[14.5px] ring-1 transition",
+                    "flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-left text-[15px] ring-1 transition",
                     on ? "bg-selected font-semibold text-accent-fg ring-copper-500/50" : "bg-card text-foreground ring-line-strong hover:bg-surface-2",
                   )}
                 >
                   {on ? <Check className="size-4" aria-hidden /> : null}
                   <span>
                     {p.name}
-                    <span className="block text-[12.5px] font-normal text-muted-foreground">{p.kind === "subcontractor" ? `Sub · ${p.trade ?? p.company ?? ""}` : p.trade ?? "Employee"}</span>
+                    <span className="block text-[13.5px] font-normal text-muted-foreground">{p.kind === "subcontractor" ? `Sub · ${p.trade ?? p.company ?? ""}` : p.trade ?? "Employee"}</span>
                   </span>
                 </button>
               );
             })}
           </div>
         ) : (
-          <p className="text-[14.5px] text-muted-foreground">
+          <p className="text-[15px] text-muted-foreground">
             No one in your team yet.{" "}
             <button type="button" className="font-semibold text-accent-fg" onClick={() => ui.openForm({ form: "person" })}>
               Add person
             </button>
           </p>
         )}
-        {!who.length && people.length ? <p className="mt-1.5 text-[13.5px] text-muted-foreground">You can save it without anyone and assign people later.</p> : null}
+        {!who.length && people.length ? <p className="mt-1.5 text-[14.5px] text-muted-foreground">You can save it without anyone and assign people later.</p> : null}
       </fieldset>
       <Field label="Instructions for the team (optional)" htmlFor="bk-notes" hint="Shown to the people booked, in My work.">
         <Textarea id="bk-notes" value={values.notes} onChange={set("notes")} className="min-h-20" />
@@ -239,7 +239,7 @@ export function BookingForm({ prefill }: { prefill: Extract<FormPrefill, { form:
           <p className="flex items-start gap-2 text-[15px] font-semibold text-warn-fg">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden /> {clashes.every((c) => c.kind === "absence") ? "Clashes with leave" : clashes.some((c) => c.kind === "absence") ? "Double booking and leave" : "Double booking"}
           </p>
-          <ul className="mt-1 space-y-1 pl-6 text-[14.5px] text-foreground">
+          <ul className="mt-1 space-y-1 pl-6 text-[15px] text-foreground">
             {clashes.map((c, i) => (
               <li key={i}>
                 {c.kind === "absence" ? (
@@ -264,10 +264,10 @@ export function BookingForm({ prefill }: { prefill: Extract<FormPrefill, { form:
           </div>
         </div>
       ) : null}
-      <p className="text-[13px] text-muted-foreground">Nobody is notified automatically. People with access see the change next time they open My work.</p>
+      <p className="text-[14px] text-muted-foreground">Nobody is notified automatically. People with access see the change next time they open My work.</p>
       {existing && confirmDelete ? (
         <div className="rounded-xl bg-red-500/[0.06] p-3 ring-1 ring-red-500/25">
-          <p className="text-[14.5px]">Cancel this booking? The job stays; only this slot goes, and it disappears from people&apos;s My work and calendar feeds.</p>
+          <p className="text-[15px]">Cancel this booking? The job stays; only this slot goes, and it disappears from people&apos;s My work and calendar feeds.</p>
           <div className="mt-2 flex gap-2">
             <Button type="button" size="sm" variant="secondary" onClick={() => setConfirmDelete(false)}>
               Keep booking
@@ -318,7 +318,7 @@ export function PersonForm({ prefill }: { prefill: Extract<FormPrefill, { form: 
         <Input id="pf-name" value={values.name} onChange={set("name")} autoFocus aria-invalid={!!errors.name} />
       </Field>
       <fieldset>
-        <legend className="mb-1.5 text-[14px] font-medium text-foreground/90">They are</legend>
+        <legend className="mb-1.5 text-[15px] font-medium text-foreground/90">They are</legend>
         <div className="grid grid-cols-2 gap-2">
           {(["employee", "subcontractor"] as const).map((k) => (
             <label key={k} className={cn("flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl text-[15px] font-medium ring-1", values.kind === k ? "bg-selected text-accent-fg ring-copper-500/50" : "ring-line-strong")}>
@@ -429,7 +429,7 @@ export function MaterialForm({ prefill }: { prefill: Extract<FormPrefill, { form
           </NativeSelect>
         </Field>
       </div>
-      {!values.merchantId && values.supplier ? <p className="-mt-2 text-[13.5px] text-muted-foreground">Supplier noted as “{values.supplier}”. Choose a merchant to link it.</p> : null}
+      {!values.merchantId && values.supplier ? <p className="-mt-2 text-[14.5px] text-muted-foreground">Supplier noted as “{values.supplier}”. Choose a merchant to link it.</p> : null}
       <Field label="Status" htmlFor="mf-status">
         <NativeSelect id="mf-status" value={values.status} onChange={set("status")}>
           {(Object.keys(MATERIAL_STATUS_LABEL) as MaterialStatus[]).map((st) => (
@@ -452,7 +452,7 @@ export function MaterialForm({ prefill }: { prefill: Extract<FormPrefill, { form
           </Field>
         </div>
       ) : (
-        <button type="button" onClick={() => setMore(true)} className="h-10 text-[14.5px] font-semibold text-accent-fg">
+        <button type="button" onClick={() => setMore(true)} className="h-10 text-[15px] font-semibold text-accent-fg">
           + Order reference, delivery date and notes
         </button>
       )}
@@ -573,7 +573,7 @@ export function MerchantForm({ prefill }: { prefill: Extract<FormPrefill, { form
         </Field>
       </div>
       <fieldset className="rounded-2xl p-4 ring-1 ring-line">
-        <legend className="px-1 text-[14px] font-semibold">Account & access · owner and office only</legend>
+        <legend className="px-1 text-[15px] font-semibold">Account & access · owner and office only</legend>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Trade account reference" htmlFor="mm-acc" error={errors.accountRef}>
             <Input id="mm-acc" value={values.accountRef} onChange={set("accountRef")} aria-invalid={!!errors.accountRef} />

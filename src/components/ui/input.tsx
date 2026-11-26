@@ -3,11 +3,11 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
-  "w-full rounded-lg bg-field px-3 text-[16px] text-foreground ring-1 ring-input placeholder:text-subtle outline-none transition-shadow hover:ring-foreground/30 focus:ring-2 focus:ring-copper-500/60 lg:text-[14.5px] disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:ring-destructive/70";
+  "w-full rounded-lg bg-field px-3.5 text-[16px] text-foreground ring-1 ring-input placeholder:text-subtle outline-none transition-shadow hover:ring-foreground/30 focus:ring-2 focus:ring-copper-500/60 lg:text-[15.5px] disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:ring-destructive/70";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (
-    <input ref={ref} className={cn(fieldBase, "h-11 lg:h-9", className)} {...props} />
+    <input ref={ref} className={cn(fieldBase, "h-11", className)} {...props} />
   ),
 );
 Input.displayName = "Input";
@@ -27,7 +27,7 @@ Textarea.displayName = "Textarea";
 export const NativeSelect = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
   ({ className, children, ...props }, ref) => (
     <span className="relative block w-full min-w-0">
-      <select ref={ref} className={cn(fieldBase, "h-11 cursor-pointer lg:h-9 appearance-none pr-10 disabled:cursor-not-allowed [&>option]:bg-card", className)} {...props}>
+      <select ref={ref} className={cn(fieldBase, "h-11 cursor-pointer appearance-none pr-10 disabled:cursor-not-allowed [&>option]:bg-card", className)} {...props}>
         {children}
       </select>
       <ChevronDown aria-hidden className={cn("pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground", props.disabled && "opacity-40")} />
@@ -37,7 +37,7 @@ export const NativeSelect = React.forwardRef<HTMLSelectElement, React.SelectHTML
 NativeSelect.displayName = "NativeSelect";
 
 export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
-  return <label className={cn("mb-1.5 block text-[13.5px] font-medium text-foreground/85", className)} {...props} />;
+  return <label className={cn("mb-1.5 block text-[14.5px] font-medium text-foreground/85", className)} {...props} />;
 }
 
 export function Field({
@@ -60,11 +60,11 @@ export function Field({
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
       {error ? (
-        <p role="alert" className="mt-1.5 text-[14px] text-danger-fg">
+        <p role="alert" className="mt-1.5 text-[15px] text-danger-fg">
           {error}
         </p>
       ) : hint ? (
-        <p className="mt-1.5 text-[13px] text-subtle">{hint}</p>
+        <p className="mt-1.5 text-[14px] text-subtle">{hint}</p>
       ) : null}
     </div>
   );

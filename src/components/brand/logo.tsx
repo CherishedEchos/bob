@@ -37,7 +37,7 @@ export function BobLogo({
       <span className={cn("inline-flex flex-col items-start gap-[3px]", className)}>
         <BobLogo height={height} tone={tone} title={title} />
         <span
-          className="text-[11px] font-medium leading-none"
+          className="text-[12px] font-medium leading-none"
           style={{ color: tone === "light" ? WORDMARK_COLORS.bylineOnDark : WORDMARK_COLORS.bylineOnLight }}
         >
           by Cresaro
@@ -69,7 +69,7 @@ export function BobWordmark({ className, org, compact }: { className?: string; o
   return (
     <div className={cn("flex items-end gap-2", className)}>
       <BobLogo height={compact ? 22 : 24} />
-      {org ? <span className="pb-[1px] text-[13.5px] leading-none text-muted-foreground">for {org.shortName}</span> : null}
+      {org ? <span className="pb-[1px] text-[14.5px] leading-none text-muted-foreground">for {org.shortName}</span> : null}
     </div>
   );
 }

@@ -110,7 +110,7 @@ export function SourceIcon({ source, provider, className }: { source: EnquirySou
 export function SourceChip({ source, className }: { source: EnquirySource; className?: string }) {
   const Icon = SOURCE_ICON[source];
   return (
-    <span className={cn("inline-flex h-6 items-center gap-1.5 rounded-md px-2 text-[12.5px] font-medium ring-1", SOURCE_STYLE[source].chip, className)}>
+    <span className={cn("inline-flex h-6 items-center gap-1.5 rounded-md px-2 text-[13.5px] font-medium ring-1", SOURCE_STYLE[source].chip, className)}>
       <Icon className="size-3.5" aria-hidden />
       {source === "manual" ? "Manual" : SOURCE_LABEL[source]}
     </span>
@@ -137,7 +137,7 @@ export function enquiryState(e: { status: EnquiryStatus; draftReply?: string; pr
 /** "High priority": a small flag and the word. Red is kept for overdue money. */
 export function HighPriority({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-1 whitespace-nowrap text-[13.5px] font-medium text-foreground", className)}>
+    <span className={cn("inline-flex items-center gap-1 whitespace-nowrap text-[14.5px] font-medium text-foreground", className)}>
       <Flag className="size-3.5 fill-current text-accent-icon" aria-hidden /> High priority
     </span>
   );

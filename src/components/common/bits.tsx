@@ -20,7 +20,7 @@ export function SectionHeader({
     <div className={cn("mb-3 flex items-center justify-between", className)}>
       <h2 className="t-section">{title}</h2>
       {href ? (
-        <Link href={href} className="flex h-9 items-center gap-0.5 rounded-md px-1 text-[14.5px] font-medium text-accent-fg hover:text-copper-700">
+        <Link href={href} className="flex h-9 items-center gap-0.5 rounded-md px-1 text-[15px] font-medium text-accent-fg hover:text-copper-700">
           {linkLabel} <ChevronRight className="size-4" />
         </Link>
       ) : null}
@@ -55,15 +55,15 @@ export function FilterChips<T extends string>({
             aria-checked={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              "flex h-10 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[14px] font-medium ring-1 transition-colors active:bg-surface-3 lg:h-9",
+              "flex h-10 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[15px] font-medium ring-1 transition-colors active:bg-surface-3 lg:h-9",
               active
-                ? "bg-[#1a1a1a] text-white ring-[#1a1a1a]"
+                ? "bg-selected text-accent-fg ring-copper-500/45"
                 : "bg-card text-muted-foreground ring-line-strong hover:bg-surface-2 hover:text-foreground",
             )}
           >
             {o.label}
             {typeof o.count === "number" ? (
-              <span className={cn("tabular text-[12.5px]", active ? "text-white/60" : "text-subtle")}>
+              <span className={cn("tabular text-[13.5px]", active ? "text-accent-fg/70" : "text-subtle")}>
                 {o.count}
               </span>
             ) : null}
@@ -127,7 +127,7 @@ export function ListPanel({
       <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 sm:flex-nowrap sm:py-2 lg:px-5">
         <h2 id={id} className="t-section">
           {title}
-          {typeof count === "number" && count > 0 ? <span className="ml-2 text-[14px] font-normal text-subtle tabular">{count}</span> : null}
+          {typeof count === "number" && count > 0 ? <span className="ml-2 text-[15px] font-normal text-subtle tabular">{count}</span> : null}
         </h2>
         {action ? <div className="basis-full sm:basis-auto">{action}</div> : null}
       </div>
@@ -139,11 +139,11 @@ export function ListPanel({
 
 /** Quiet, tappable amber action used at the end of a row ("Draft reply", "Chase deposit"). */
 export const rowActionClass =
-  "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-card px-3.5 text-[14px] font-medium text-foreground ring-1 ring-line-strong transition-colors hover:bg-raised-hover active:bg-surface-3 disabled:opacity-50 lg:h-9";
+  "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-card px-3.5 text-[15px] font-medium text-foreground ring-1 ring-line-strong transition-colors hover:bg-raised-hover active:bg-surface-3 disabled:opacity-50 lg:h-9";
 
 /** Text link-button for panel headers/footers ("Show all 12", "View all"). */
 export const textActionClass =
-  "inline-flex h-10 items-center gap-1 rounded-md px-1 text-[14px] font-medium text-accent-fg transition-colors hover:text-copper-700";
+  "inline-flex h-10 items-center gap-1 rounded-md px-1 text-[15px] font-medium text-accent-fg transition-colors hover:text-copper-700";
 
 /**
  * One record in a list: leading mark, name, a short detail that may wrap, an
@@ -178,9 +178,9 @@ export function ListRow({
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-3">
           <span className="t-name line-clamp-2 min-w-0 break-words">{title}</span>
-          {aside ? <span className="shrink-0 text-[13.5px] tabular text-muted-foreground">{aside}</span> : null}
+          {aside ? <span className="shrink-0 text-[14.5px] tabular text-muted-foreground">{aside}</span> : null}
         </span>
-        {meta ? <span className="mt-0.5 block text-[13.5px] leading-snug text-subtle">{meta}</span> : null}
+        {meta ? <span className="mt-0.5 block text-[14.5px] leading-snug text-subtle">{meta}</span> : null}
       </span>
     </>
   );
@@ -207,11 +207,11 @@ export function ListRow({
 
 /** Primary page action ("Add new…", "Create invoice draft"): orange, compact. */
 export const pageActionClass =
-  "flex h-11 shrink-0 items-center gap-1.5 rounded-lg bg-primary px-4 text-[15px] font-medium tracking-[-0.006em] text-white shadow-[0_1px_1px_rgb(180_82_15/0.18)] transition-colors hover:bg-copper-600 active:bg-copper-700 lg:h-9 lg:px-3.5 lg:text-[14px]";
+  "flex h-11 shrink-0 items-center gap-2 rounded-lg bg-primary px-4 text-[15.5px] font-semibold tracking-[-0.006em] text-white shadow-[0_1px_2px_rgb(180_82_15/0.25),inset_0_1px_0_rgb(255_255_255/0.15)] transition-colors hover:bg-copper-600 active:bg-copper-700 lg:px-5";
 
 /** Secondary page action: white, bordered. */
 export const pageSecondaryClass =
-  "flex h-11 shrink-0 items-center gap-1.5 rounded-lg bg-card px-4 text-[15px] font-medium tracking-[-0.006em] text-foreground ring-1 ring-line-strong transition-colors hover:bg-raised-hover active:bg-surface-3 lg:h-9 lg:px-3.5 lg:text-[14px]";
+  "flex h-11 shrink-0 items-center gap-2 rounded-lg bg-card px-4 text-[15.5px] font-semibold tracking-[-0.006em] text-foreground ring-1 ring-line-strong transition-colors hover:bg-raised-hover active:bg-surface-3";
 
 /** One page header everywhere: strong title, a quiet summary line, actions on the right. */
 export function PageHeader({ title, subtitle, actions, className }: { title: React.ReactNode; subtitle?: React.ReactNode; actions?: React.ReactNode; className?: string }) {
@@ -219,7 +219,7 @@ export function PageHeader({ title, subtitle, actions, className }: { title: Rea
     <header className={cn("grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 lg:items-end", className)}>
       <h1 className="t-page min-w-0 lg:col-start-1 lg:row-start-1">{title}</h1>
       {actions ? <div className="col-start-2 row-start-1 flex shrink-0 flex-wrap items-center justify-end gap-2 lg:row-span-2">{actions}</div> : null}
-      {subtitle ? <p className="col-span-2 text-[13.5px] text-subtle lg:col-span-1 lg:text-[14px]">{subtitle}</p> : null}
+      {subtitle ? <p className="col-span-2 text-[14.5px] text-subtle lg:col-span-1 lg:text-[15px]">{subtitle}</p> : null}
     </header>
   );
 }
@@ -240,9 +240,9 @@ export function StatCard({ label, value, sub, tone, accent: _accent, onClick, ac
         accent && "bg-sidebar text-white ring-0",
       )}
     >
-      <span className={cn("text-[12px] font-medium leading-tight sm:text-[12.5px]", accent ? "text-white/60" : "text-subtle")}>{label}</span>
+      <span className={cn("text-[13px] font-medium leading-tight sm:text-[13.5px]", accent ? "text-white/60" : "text-subtle")}>{label}</span>
       <span className={cn("mt-1 truncate text-[22px] font-semibold tabular leading-tight tracking-[-0.025em] sm:text-[24px]", accent ? "text-white" : toneCls)}>{value}</span>
-      {sub ? <span className={cn("mt-1 line-clamp-2 text-[12px] leading-snug sm:text-[12.5px]", accent ? "text-white/55" : "text-subtle")}>{sub}</span> : null}
+      {sub ? <span className={cn("mt-1 line-clamp-2 text-[13px] leading-snug sm:text-[13.5px]", accent ? "text-white/55" : "text-subtle")}>{sub}</span> : null}
     </Comp>
   );
 }
@@ -255,7 +255,7 @@ export function EmptyState({ icon: Icon, title, body, action, className, bare }:
         <Icon className="size-[22px]" />
       </span>
       <p className="mt-4 text-[15px] font-semibold text-heading">{title}</p>
-      {body ? <p className="mt-1 max-w-sm text-[14px] text-subtle">{body}</p> : null}
+      {body ? <p className="mt-1 max-w-sm text-[15px] text-subtle">{body}</p> : null}
       {action ? <div className="mt-5">{action}</div> : null}
     </div>
   );
@@ -286,7 +286,7 @@ export function DemoTag({ detail, className }: { detail?: string; className?: st
   return (
     <span
       title={detail ?? "Fictional sample data. Nothing is sent to real customers."}
-      className={cn("inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-md bg-surface-3 px-2 text-[12.5px] font-medium text-muted-foreground", className)}
+      className={cn("inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-md bg-surface-3 px-2 text-[13.5px] font-medium text-muted-foreground", className)}
     >
       <FlaskConical aria-hidden className="size-3" /> Demo · sample data
     </span>
@@ -296,7 +296,7 @@ export function DemoTag({ detail, className }: { detail?: string; className?: st
 /** A specific explanation of a simulated action ("Simulated — nothing is sent"). */
 export function DemoNote({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={cn("flex items-start gap-2 text-[13.5px] leading-snug text-muted-foreground", className)}>
+    <p className={cn("flex items-start gap-2 text-[14.5px] leading-snug text-muted-foreground", className)}>
       <FlaskConical aria-hidden className="mt-0.5 size-3.5 shrink-0 text-subtle" />
       <span>{children}</span>
     </p>
@@ -333,7 +333,7 @@ export function Disclosure({
         >
           <span className="min-w-0 flex-1">
             <span className="t-section block">{title}</span>
-            {summary && !open ? <span className="mt-0.5 block truncate text-[14px] text-muted-foreground">{summary}</span> : null}
+            {summary && !open ? <span className="mt-0.5 block truncate text-[15px] text-muted-foreground">{summary}</span> : null}
           </span>
           <ChevronRight className={cn("size-5 shrink-0 text-subtle transition-transform", open && "rotate-90")} />
         </button>
@@ -352,7 +352,7 @@ export function StatusText({ tone, children, className }: { tone: "neutral" | "a
   const dot = { neutral: "bg-subtle", amber: "bg-warning", green: "bg-success", red: "bg-destructive", blue: "bg-info", violet: "bg-violet-500" }[tone];
   const text = { neutral: "text-muted-foreground", amber: "text-warn-fg", green: "text-good-fg", red: "text-danger-fg", blue: "text-info-fg", violet: "text-violet-fg" }[tone];
   return (
-    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap text-[13.5px] font-medium", text, className)}>
+    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap text-[14.5px] font-medium", text, className)}>
       <span aria-hidden className={cn("size-1.5 rounded-full", dot)} />
       {children}
     </span>
@@ -362,7 +362,7 @@ export function StatusText({ tone, children, className }: { tone: "neutral" | "a
 /** Simple segmented tabs for a page's main lists (2–4 options). */
 export function Tabs<T extends string>({ label, value, onChange, options, className }: { label: string; value: T; onChange: (v: T) => void; options: { value: T; label: string; count?: number; highlight?: boolean }[]; className?: string }) {
   return (
-    <div role="tablist" aria-label={label} className={cn("scrollbar-none inline-flex min-w-0 max-w-full gap-0.5 overflow-x-auto rounded-lg bg-[#ededea] p-[3px]", className)}>
+    <div role="tablist" aria-label={label} className={cn("inline-flex min-w-0 max-w-full flex-wrap gap-0.5 rounded-lg bg-[#efeae2] p-1", className)}>
       {options.map((o) => {
         const active = value === o.value;
         return (
@@ -373,12 +373,12 @@ export function Tabs<T extends string>({ label, value, onChange, options, classN
             aria-selected={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              "flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[8px] px-3 text-[14px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:h-8 lg:text-[13.5px]",
+              "flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3.5 text-[15px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active ? "bg-card font-semibold text-heading shadow-[0_1px_2px_rgb(24_24_27/0.08),0_0_0_0.5px_rgb(24_24_27/0.06)]" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {o.label}
-            {typeof o.count === "number" ? <span className={cn("tabular text-[12.5px]", active && o.highlight && o.count ? "text-accent-fg" : "text-subtle")}>{o.count}</span> : null}
+            {typeof o.count === "number" ? <span className={cn("tabular text-[13.5px]", active && o.highlight && o.count ? "text-accent-fg" : "text-subtle")}>{o.count}</span> : null}
           </button>
         );
       })}

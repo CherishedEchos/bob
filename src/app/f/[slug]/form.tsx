@@ -87,7 +87,7 @@ export function EnquiryForm({ slug, name, shortName, logoUrl, services, embed }:
           <input id="website" name="website" tabIndex={-1} autoComplete="off" />
         </div>
         {errors._ ? (
-          <p role="alert" className="text-[14.5px] text-[#c2410c]">
+          <p role="alert" className="text-[15px] text-[#c2410c]">
             {errors._}
           </p>
         ) : null}
@@ -98,7 +98,7 @@ export function EnquiryForm({ slug, name, shortName, logoUrl, services, embed }:
         >
           {busy ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-4" />} Send enquiry
         </button>
-        <p className="text-center text-[12.5px] text-[#8a8178]">
+        <p className="text-center text-[13.5px] text-[#8a8178]">
           Your details go to {shortName} only, to reply to your enquiry. Enquiries managed with bob.
         </p>
       </form>
@@ -109,11 +109,11 @@ export function EnquiryForm({ slug, name, shortName, logoUrl, services, embed }:
 function Row({ label, id, error, children }: { label: string; id: string; error?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-[14px] font-medium text-[#44403c]">
+      <label htmlFor={id} className="mb-1.5 block text-[15px] font-medium text-[#44403c]">
         {label}
       </label>
       {children}
-      {error ? <p className="mt-1 text-[13.5px] text-[#c2410c]">{error}</p> : null}
+      {error ? <p className="mt-1 text-[14.5px] text-[#c2410c]">{error}</p> : null}
     </div>
   );
 }

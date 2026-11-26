@@ -60,13 +60,13 @@ export function InstallBob({ compact = false }: { compact?: boolean }) {
           <Download /> Install Bob
         </Button>
       ) : ios ? (
-        <ol className="mt-3 space-y-1.5 text-[14.5px] text-foreground/90">
+        <ol className="mt-3 space-y-1.5 text-[15px] text-foreground/90">
           <li className="flex items-center gap-2">
-            <span className="grid size-6 shrink-0 place-items-center rounded-md bg-raised text-[12px] font-semibold ring-1 ring-line-strong">1</span>
+            <span className="grid size-6 shrink-0 place-items-center rounded-md bg-raised text-[13px] font-semibold ring-1 ring-line-strong">1</span>
             Tap <Share className="mx-0.5 inline size-4 text-info-fg" aria-label="Share" /> <strong className="font-semibold">Share</strong> in Safari
           </li>
           <li className="flex items-center gap-2">
-            <span className="grid size-6 shrink-0 place-items-center rounded-md bg-raised text-[12px] font-semibold ring-1 ring-line-strong">2</span>
+            <span className="grid size-6 shrink-0 place-items-center rounded-md bg-raised text-[13px] font-semibold ring-1 ring-line-strong">2</span>
             Choose <SquarePlus className="mx-0.5 inline size-4" aria-hidden /> <strong className="font-semibold">Add to Home Screen</strong>
           </li>
         </ol>

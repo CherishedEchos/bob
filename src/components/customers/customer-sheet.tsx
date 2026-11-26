@@ -49,7 +49,7 @@ function CustomerDetail({ id }: { id: string }) {
             <MapPin className="size-3.5 text-accent-icon" /> {c.address ?? c.town}
           </p>
         ) : null}
-        <p className="mt-1 text-[13.5px] text-subtle">Customer since {timeAgo(c.createdAt)}</p>
+        <p className="mt-1 text-[14.5px] text-subtle">Customer since {timeAgo(c.createdAt)}</p>
         {/* Everyday actions first: get in touch. */}
         <div className="mt-4 grid grid-cols-2 gap-2">
           {c.phone ? (
@@ -82,7 +82,7 @@ function CustomerDetail({ id }: { id: string }) {
             <AlarmClock /> Add reminder
           </Button>
         </div>
-        <dl className="mt-4 space-y-1 text-[14.5px] text-muted-foreground">
+        <dl className="mt-4 space-y-1 text-[15px] text-muted-foreground">
           {c.phone ? <div>Phone: <span className="text-foreground/90">{c.phone}</span></div> : null}
           {c.email ? <div>Email: <span className="text-foreground/90">{c.email}</span></div> : null}
           {can("finance.read") && owed ? <div>Owes on invoices: <span className="font-semibold text-warn-fg">{gbp(owed)}</span></div> : null}
@@ -97,7 +97,7 @@ function CustomerDetail({ id }: { id: string }) {
                 <button onClick={() => ui.openJob(j.id)} className="group flex w-full items-center justify-between gap-2 rounded-lg py-3 text-left transition hover:bg-surface-2 active:bg-surface-3">
                   <div className="min-w-0">
                     <div className="truncate text-[15px] font-medium">{j.title}</div>
-                    <div className="text-[13.5px] text-muted-foreground">
+                    <div className="text-[14.5px] text-muted-foreground">
                       {j.location}
                       {can("finance.read") ? ` · ${gbp(j.quotedValue)} · ${jobFinance(j, data.payments).paidPercent}% paid` : ""}
                     </div>
@@ -123,7 +123,7 @@ function CustomerDetail({ id }: { id: string }) {
                 <button onClick={() => ui.openEnquiry(e.id)} className="group flex w-full items-center justify-between gap-2 rounded-lg py-3 text-left transition hover:bg-surface-2 active:bg-surface-3">
                   <div className="min-w-0">
                     <div className="truncate text-[15px] font-medium">{e.title}</div>
-                    <div className="text-[13.5px] text-muted-foreground">{timeAgo(e.receivedAt)}</div>
+                    <div className="text-[14.5px] text-muted-foreground">{timeAgo(e.receivedAt)}</div>
                   </div>
                   <span className="flex shrink-0 items-center gap-2">
                     <EnquiryStatusBadge status={e.status} />
@@ -145,7 +145,7 @@ function CustomerDetail({ id }: { id: string }) {
               <li key={i.id} className="flex items-center justify-between py-3">
                 <div>
                   <div className="text-[15px] font-medium">{i.number ?? i.draftRef}</div>
-                  <div className="text-[13.5px] text-muted-foreground">{invoiceStatusLabel(i)}</div>
+                  <div className="text-[14.5px] text-muted-foreground">{invoiceStatusLabel(i)}</div>
                 </div>
                 <span className="tabular text-[16px] font-semibold">{gbp(i.total)}</span>
               </li>
@@ -171,7 +171,7 @@ function CustomerDetail({ id }: { id: string }) {
             </Button>
           ) : (
             <div className="rounded-2xl bg-red-500/[0.06] p-3.5 ring-1 ring-red-500/25">
-              <p className="text-[14.5px]">
+              <p className="text-[15px]">
                 This removes {c.name}&apos;s contact details, notes, enquiries and reminders. Invoices and payments are kept but anonymised, because UK tax rules
                 require you to keep financial records. This can&apos;t be undone.
               </p>

@@ -202,11 +202,11 @@ function ReviewReplies() {
     <div className="mx-auto max-w-3xl pb-4">
       <div className="mb-4">
         <div className="flex items-center justify-between gap-3">
-          <Link href="/enquiries" className="-ml-1 inline-flex h-10 items-center gap-1.5 rounded-lg px-1 text-[14.5px] font-medium text-muted-foreground hover:text-foreground">
+          <Link href="/enquiries" className="-ml-1 inline-flex h-10 items-center gap-1.5 rounded-lg px-1 text-[15px] font-medium text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" aria-hidden /> Enquiries
           </Link>
           <div className="flex items-center gap-2" aria-live="polite">
-            <span className="text-[13.5px] text-muted-foreground">Needs reply</span>
+            <span className="text-[14.5px] text-muted-foreground">Needs reply</span>
             <span className={cn("tabular text-[20px] font-semibold leading-none", outstanding ? "text-warn-fg" : "text-good-fg")} data-testid="outstanding-count">
               {outstanding}
             </span>
@@ -238,17 +238,17 @@ function ReviewReplies() {
                 </li>
               ))}
             </ol>
-            <p className="mt-1 text-[13.5px] text-muted-foreground" aria-live="polite">
+            <p className="mt-1 text-[14.5px] text-muted-foreground" aria-live="polite">
               {counts.approved} approved · {counts.skipped} skipped · {counts.review} to review{counts.done ? ` · ${counts.done} done` : ""}
             </p>
           </>
         ) : null}
-        <p className="mt-2 flex items-start gap-2 text-[14px] leading-snug text-muted-foreground">
+        <p className="mt-2 flex items-start gap-2 text-[15px] leading-snug text-muted-foreground">
           <FlaskConical aria-hidden className="mt-0.5 size-4 shrink-0 text-subtle" /> {modeNote}
         </p>
-        {batch.alreadyReplied.length ? <p className="mt-1 text-[14px] text-muted-foreground">Left out — already replied: {batch.alreadyReplied.map((a) => a.customerName).join(", ")}.</p> : null}
+        {batch.alreadyReplied.length ? <p className="mt-1 text-[15px] text-muted-foreground">Left out — already replied: {batch.alreadyReplied.map((a) => a.customerName).join(", ")}.</p> : null}
         {callbacks.length ? (
-          <p className="mt-1 flex items-start gap-2 text-[14px] leading-snug text-muted-foreground">
+          <p className="mt-1 flex items-start gap-2 text-[15px] leading-snug text-muted-foreground">
             <Phone aria-hidden className="mt-0.5 size-4 shrink-0 text-subtle" />
             <span>
               Not in this batch: {callbacks.map((c) => firstName(c.customerName)).join(", ")} asked for a call back — {callbacks.length === 1 ? "it's" : "they're"} on Today as a call.
@@ -282,7 +282,7 @@ function ReviewReplies() {
                 <dd className={cn("tabular text-[24px] font-semibold leading-tight", x.cls)} data-testid={`total-${x.label.toLowerCase().replace(" ", "-")}`}>
                   {x.value}
                 </dd>
-                <dt className="text-[13.5px] text-muted-foreground">{x.label}</dt>
+                <dt className="text-[14.5px] text-muted-foreground">{x.label}</dt>
               </div>
             ))}
           </dl>
@@ -301,7 +301,7 @@ function ReviewReplies() {
                     )}
                     <StatusPill row={r} mode={mode} />
                   </div>
-                  <div className="truncate text-[14px] text-muted-foreground">
+                  <div className="truncate text-[15px] text-muted-foreground">
                     {r.result?.status === "failed" ? `Couldn't send: ${r.result.message}. Draft kept.` : r.result ? r.result.message : `${CHANNEL_LABEL[r.channel]}${r.to ? ` · ${r.to}` : ""}${sendable(r) ? "" : " — copy and send yourself"}`}
                   </div>
                 </div>
@@ -323,7 +323,7 @@ function ReviewReplies() {
                     ? `${outcome.ok} ${outcome.ok === 1 ? "reply" : "replies"} recorded as sent (simulated). Nothing was sent to anyone.`
                     : `${outcome.ok} ${outcome.ok === 1 ? "reply" : "replies"} sent.`}
               </p>
-              <p className="mt-0.5 pl-6 text-[14px] text-foreground">
+              <p className="mt-0.5 pl-6 text-[15px] text-foreground">
                 Needs reply: {outcome.before} → {outstanding}. Skipped and unreviewed drafts haven&apos;t changed.
               </p>
             </div>
@@ -384,7 +384,7 @@ function ReviewReplies() {
                 )}
               </div>
               {sendable(row) && row.decision === "approved" && !isDone(row) ? (
-                <button type="button" onClick={() => patch(row.enquiryId, { decision: "review" })} className="w-full text-left text-[13.5px] font-medium text-accent-fg sm:w-auto">
+                <button type="button" onClick={() => patch(row.enquiryId, { decision: "review" })} className="w-full text-left text-[14.5px] font-medium text-accent-fg sm:w-auto">
                   Undo approval
                 </button>
               ) : null}
@@ -394,7 +394,7 @@ function ReviewReplies() {
               <p className="text-[15.5px] font-semibold">
                 Send {approvedCount} {approvedCount === 1 ? "email" : "emails"} from {batch.providerLabel}?
               </p>
-              <p className="mt-1 text-[14px] text-muted-foreground">These go to real customers: {queue.map((r) => `${r.customerName} (${r.to})`).join(", ")}.</p>
+              <p className="mt-1 text-[15px] text-muted-foreground">These go to real customers: {queue.map((r) => `${r.customerName} (${r.to})`).join(", ")}.</p>
               <div className="mt-3 flex gap-2">
                 <Button variant="secondary" onClick={() => setConfirmLive(false)}>
                   Cancel
@@ -439,11 +439,11 @@ function ReviewReplies() {
                 )}
               </div>
               {mode === "simulate" && approvedCount && !running ? (
-                <p className="text-[13.5px] leading-snug text-muted-foreground">
+                <p className="text-[14.5px] leading-snug text-muted-foreground">
                   Records each approved email reply in Bob as sent (simulated), adds it to the enquiry&apos;s history and moves it out of Needs reply. Nothing is sent to anyone. Skipped and unreviewed drafts stay as they are.
                 </p>
               ) : !approvedCount && !outcome && mode !== "copy" ? (
-                <p className="text-[13.5px] text-muted-foreground">Nothing approved yet. Go back to a draft and tap Approve & next to include it.</p>
+                <p className="text-[14.5px] text-muted-foreground">Nothing approved yet. Go back to a draft and tap Approve & next to include it.</p>
               ) : null}
             </div>
           )}
@@ -509,10 +509,10 @@ function ReplyCard({
             </h2>
             <StatusPill row={row} mode={mode} />
           </div>
-          <div className="mt-0.5 text-[14px] text-muted-foreground">
+          <div className="mt-0.5 text-[15px] text-muted-foreground">
             {row.title} · {row.location} · {timeAgo(row.receivedAt)}
           </div>
-          <div className="mt-1 text-[14px] text-muted-foreground">
+          <div className="mt-1 text-[15px] text-muted-foreground">
             <span className="font-medium text-foreground">To: {CHANNEL_LABEL[row.channel]}</span>
             {row.to ? <span className="break-words"> · {row.to}</span> : null}
           </div>
@@ -521,7 +521,7 @@ function ReplyCard({
 
       <div className="space-y-3 px-4 pb-4 lg:px-5">
         <figure className="rounded-2xl border-l-[3px] border-[rgb(16_24_40/0.18)] bg-message px-4 py-3.5">
-          <figcaption className="mb-1 text-[14px] font-semibold text-foreground">
+          <figcaption className="mb-1 text-[15px] font-semibold text-foreground">
             Customer message{row.history.length ? ` · ${row.history.length} earlier` : ""}
           </figcaption>
           <blockquote className="whitespace-pre-line break-words text-[16px] leading-relaxed text-foreground">{row.original.body}</blockquote>
@@ -530,7 +530,7 @@ function ReplyCard({
         {row.flags.length && !done ? (
           <ul className="space-y-1.5">
             {row.flags.map((f, i) => (
-              <li key={i} className={cn("flex items-start gap-2 rounded-xl px-3 py-2 text-[14px] leading-snug", f.deferred ? "bg-message text-muted-foreground" : "bg-amber-500/10 text-warn-fg")}>
+              <li key={i} className={cn("flex items-start gap-2 rounded-xl px-3 py-2 text-[15px] leading-snug", f.deferred ? "bg-message text-muted-foreground" : "bg-amber-500/10 text-warn-fg")}>
                 {f.deferred ? <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-subtle" /> : <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />}
                 <span>
                   <span className={cn("font-semibold", f.deferred && "text-foreground")}>{FLAG_TITLE[f.kind]}.</span> {f.text}
@@ -541,12 +541,12 @@ function ReplyCard({
         ) : null}
 
         <div>
-          <div className="mb-1.5 flex items-center justify-between gap-3 text-[14px]">
+          <div className="mb-1.5 flex items-center justify-between gap-3 text-[15px]">
             <label htmlFor={`draft-${row.enquiryId}`} className="font-semibold text-foreground">
               {done ? "What was recorded" : row.savedDraft || edited ? "Edit your draft" : "Edit Bob's draft"}
             </label>
             {!done ? (
-              <span aria-live="polite" className="text-[13.5px] text-muted-foreground">
+              <span aria-live="polite" className="text-[14.5px] text-muted-foreground">
                 {row.save === "saving" ? "Saving…" : row.save === "error" ? <span className="text-danger-fg">Couldn&apos;t save — your edit is still here</span> : row.save === "unsaved" ? "Editing…" : edited || row.savedDraft ? <span className="text-good-fg">Edit saved as draft</span> : null}
               </span>
             ) : null}
@@ -563,7 +563,7 @@ function ReplyCard({
         </div>
 
         {row.result ? (
-          <p className={cn("flex items-start gap-2 text-[14px]", failed ? "text-danger-fg" : row.result.status === "already_replied" ? "text-muted-foreground" : "text-good-fg")} role={failed ? "alert" : undefined}>
+          <p className={cn("flex items-start gap-2 text-[15px]", failed ? "text-danger-fg" : row.result.status === "already_replied" ? "text-muted-foreground" : "text-good-fg")} role={failed ? "alert" : undefined}>
             {failed ? <AlertTriangle className="mt-0.5 size-4 shrink-0" /> : <Check className="mt-0.5 size-4 shrink-0" />}
             <span>{failed ? `Couldn't send: ${row.result.message}. Your draft is kept — nothing else was resent.` : row.result.message}</span>
           </p>
@@ -572,7 +572,7 @@ function ReplyCard({
         {!done ? (
           <>
             {manual ? (
-              <p className="flex items-start gap-2 text-[14px] leading-snug text-muted-foreground">
+              <p className="flex items-start gap-2 text-[15px] leading-snug text-muted-foreground">
                 <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-subtle" />
                 <span>
                   {row.channel === "instagram"
@@ -626,5 +626,5 @@ function StatusPill({ row, mode }: { row: Row; mode: Batch["mode"] }) {
                   : manual
                     ? ["Copy & send yourself", "bg-surface-2 text-muted-foreground ring-line"]
                     : ["To review", "bg-amber-500/10 text-warn-fg ring-amber-500/25"];
-  return <span className={cn("inline-flex h-6 items-center whitespace-nowrap rounded-md px-2 text-[12.5px] font-medium ring-1", cls)}>{label}</span>;
+  return <span className={cn("inline-flex h-6 items-center whitespace-nowrap rounded-md px-2 text-[13.5px] font-medium ring-1", cls)}>{label}</span>;
 }

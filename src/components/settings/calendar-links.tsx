@@ -52,9 +52,9 @@ export function CalendarLink({
           <p className="flex items-center gap-1.5 text-[15.5px] font-semibold">
             <CalendarDays className="size-4 text-subtle" aria-hidden /> {title}
           </p>
-          <p className="mt-0.5 text-[14px] text-muted-foreground">{body}</p>
+          <p className="mt-0.5 text-[15px] text-muted-foreground">{body}</p>
           {feed && !url ? (
-            <p className="mt-1 text-[13.5px] text-muted-foreground">
+            <p className="mt-1 text-[14.5px] text-muted-foreground">
               Link on · created {timeAgo(feed.createdAt)}
               {feed.lastFetchedAt ? ` · last checked by a calendar ${timeAgo(feed.lastFetchedAt)}` : " · not used by a calendar yet"}
             </p>
@@ -81,17 +81,17 @@ export function CalendarLink({
         </div>
       </div>
       {error ? (
-        <p role="alert" className="mt-2 text-[14px] text-danger-fg">
+        <p role="alert" className="mt-2 text-[15px] text-danger-fg">
           {error}
         </p>
       ) : null}
       {url ? (
         <div className="mt-3 rounded-xl bg-message p-3">
-          <label htmlFor={`feed-${scope}`} className="text-[13.5px] font-semibold">
+          <label htmlFor={`feed-${scope}`} className="text-[14.5px] font-semibold">
             Subscription link — private, treat it like a password
           </label>
           <div className="mt-1.5 flex gap-2">
-            <Input id={`feed-${scope}`} readOnly value={url} onFocus={(e) => e.currentTarget.select()} className="h-11 text-[13.5px]" />
+            <Input id={`feed-${scope}`} readOnly value={url} onFocus={(e) => e.currentTarget.select()} className="h-11 text-[14.5px]" />
             <Button
               size="sm"
               onClick={async () => {
@@ -104,13 +104,13 @@ export function CalendarLink({
               {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy link"}
             </Button>
           </div>
-          <ul className="mt-2 space-y-0.5 text-[13px] text-muted-foreground">
+          <ul className="mt-2 space-y-0.5 text-[14px] text-muted-foreground">
             <li>Google Calendar (computer): Other calendars → + → From URL → paste.</li>
             <li>iPhone / Mac: Settings → Calendar → Accounts → Add subscribed calendar (Mac: File → New Calendar Subscription).</li>
             <li>Outlook: Add calendar → Subscribe from web.</li>
             <li>Your calendar app decides how often it checks for changes — Google can take several hours; Apple and Outlook are usually quicker. Make changes in Bob, not in the calendar.</li>
           </ul>
-          <p className="mt-1.5 text-[13px] text-muted-foreground">Shown once. Making a new link turns the old one off.</p>
+          <p className="mt-1.5 text-[14px] text-muted-foreground">Shown once. Making a new link turns the old one off.</p>
         </div>
       ) : null}
     </div>

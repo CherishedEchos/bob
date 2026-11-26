@@ -98,14 +98,14 @@ export default function MyWorkPage() {
             <>
               {/* eslint-disable-next-line @next/next/no-img-element -- fixed-height brand image */}
               <img src={data.wordmarkOnDark} alt={data.businessName} className="block h-7 w-auto" />
-              <p className="mt-1 flex items-center gap-1 text-[12.5px] text-muted-foreground">
+              <p className="mt-1 flex items-center gap-1 text-[13.5px] text-muted-foreground">
                 with <BobLogo height={10} />
               </p>
             </>
           ) : (
             <>
               <BobLogo height={20} />
-              <p className="mt-1 truncate text-[13px] text-muted-foreground">{data ? data.businessName : " "}</p>
+              <p className="mt-1 truncate text-[14px] text-muted-foreground">{data ? data.businessName : " "}</p>
             </>
           )}
         </div>
@@ -131,7 +131,7 @@ export default function MyWorkPage() {
             ) : null}
           </div>
           {data?.sample ? (
-            <span className="inline-flex h-6 items-center gap-1 rounded-md bg-surface-3 px-2 text-[12.5px] font-medium text-muted-foreground">
+            <span className="inline-flex h-6 items-center gap-1 rounded-md bg-surface-3 px-2 text-[13.5px] font-medium text-muted-foreground">
               <FlaskConical className="size-3" aria-hidden /> Demo · sample data
             </span>
           ) : null}
@@ -207,7 +207,7 @@ export default function MyWorkPage() {
                       </button>
                       <span className="min-w-0">
                         <span className="block text-[15.5px] font-medium leading-snug">{t.title}</span>
-                        <span className="block text-[13.5px] text-muted-foreground">Due {relativeDayInline(t.dueDate, data.today)}</span>
+                        <span className="block text-[14.5px] text-muted-foreground">Due {relativeDayInline(t.dueDate, data.today)}</span>
                       </span>
                     </li>
                   ))}
@@ -217,7 +217,7 @@ export default function MyWorkPage() {
 
             <TimeOff data={data} onChanged={load} />
 
-            <p className="mt-6 text-center text-[12.5px] text-subtle">
+            <p className="mt-6 text-center text-[13.5px] text-subtle">
               Updated {timeAgo(data.generatedAt)}. Changes from the office show here when you open or refresh.
             </p>
           </>
@@ -239,13 +239,13 @@ function BookingCard({ b, today, expanded = false, changed, files, updates, onUp
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-2 text-[15px] font-semibold text-accent-fg">
             {when} · {formatTimeRange(b.startTime, b.endTime)}
-            {changed ? <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[12px] font-semibold text-warn-fg">Changed</span> : null}
+            {changed ? <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[13px] font-semibold text-warn-fg">Changed</span> : null}
           </p>
           <h3 className={cn("mt-0.5 font-bold leading-tight text-heading", expanded ? "text-[21px]" : "text-[17px]")}>{b.job.title}</h3>
           <p className="mt-1 flex items-start gap-1.5 text-[15px] text-foreground">
             <MapPin className="mt-0.5 size-4 shrink-0 text-accent-icon" aria-hidden /> {b.job.siteAddress}
           </p>
-          {!open ? <p className="mt-0.5 text-[13px] text-muted-foreground">{formatDayLong(b.date)}</p> : null}
+          {!open ? <p className="mt-0.5 text-[14px] text-muted-foreground">{formatDayLong(b.date)}</p> : null}
         </div>
         <ChevronDown className={cn("mt-1 size-5 shrink-0 text-subtle transition", open && "rotate-180")} aria-hidden />
       </button>
@@ -261,17 +261,17 @@ function BookingCard({ b, today, expanded = false, changed, files, updates, onUp
           ) : null}
           {b.notes || b.job.instructions ? (
             <div className="rounded-xl bg-message px-3.5 py-3">
-              <h4 className="text-[13.5px] font-semibold">Instructions</h4>
+              <h4 className="text-[14.5px] font-semibold">Instructions</h4>
               {b.notes ? <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed">{b.notes}</p> : null}
               {b.job.instructions ? <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed">{b.job.instructions}</p> : null}
             </div>
           ) : null}
           {b.withPeople.length ? (
-            <p className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
+            <p className="flex items-center gap-1.5 text-[15px] text-muted-foreground">
               <Users className="size-4" aria-hidden /> With {b.withPeople.join(", ")}
             </p>
           ) : null}
-          {b.job.contactName ? <p className="text-[14px] text-muted-foreground">Customer: {b.job.contactName}</p> : null}
+          {b.job.contactName ? <p className="text-[15px] text-muted-foreground">Customer: {b.job.contactName}</p> : null}
           <WorkerUpdates jobId={b.job.id} jobTitle={b.job.title} updates={updates} files={files} onSaved={onUploaded} />
           <JobFilesForWorker jobId={b.job.id} files={files} onUploaded={onUploaded} />
         </div>
@@ -294,7 +294,7 @@ function WorkerUpdates({ jobId, jobTitle, updates, files, onSaved }: { jobId: st
           {recent.map((u) => {
             const n = files.filter((f) => f.updateId === u.id).length;
             return (
-              <li key={u.id} className="text-[14px]">
+              <li key={u.id} className="text-[15px]">
                 <span className="font-semibold">{formatDayShort(u.createdAt.slice(0, 10))}</span>
                 <span className="text-muted-foreground"> · {u.authorName}{u.stage ? ` · ${STAGE_LABEL[u.stage]}` : ""}{n ? ` · ${n} photo${n === 1 ? "" : "s"}` : ""}</span>
                 {u.note ? <span className="block text-foreground/90">{u.note}</span> : null}
@@ -321,7 +321,7 @@ function JobFilesForWorker({ jobId, files, onUploaded }: { jobId: string; files:
   return (
     <div className="border-t border-line pt-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h4 className="text-[14px] font-semibold">Drawings, files &amp; photos</h4>
+        <h4 className="text-[15px] font-semibold">Drawings, files &amp; photos</h4>
       </div>
       <UploadButtons onPick={setPicked} primaryLabel="Add photo or file" className="[&>label]:flex-1 [&>label]:justify-center" />
       {docs.length ? (
@@ -333,9 +333,9 @@ function JobFilesForWorker({ jobId, files, onUploaded }: { jobId: string; files:
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15px] font-medium">
                     {f.title ?? f.filename}
-                    {f.revision ? <span className="ml-1.5 rounded bg-surface-3 px-1.5 text-[12.5px] font-semibold">{f.revision}</span> : null}
+                    {f.revision ? <span className="ml-1.5 rounded bg-surface-3 px-1.5 text-[13.5px] font-semibold">{f.revision}</span> : null}
                   </span>
-                  <span className="block truncate text-[13px] text-muted-foreground">
+                  <span className="block truncate text-[14px] text-muted-foreground">
                     {CATEGORY_SINGULAR[f.category]}
                     {f.category === "drawing" ? " · current version" : ""}
                     {f.description ? ` · ${f.description}` : ""}
@@ -357,7 +357,7 @@ function JobFilesForWorker({ jobId, files, onUploaded }: { jobId: string; files:
           ))}
         </ul>
       ) : null}
-      {!docs.length && !photos.length ? <p className="mt-2 text-[14px] text-muted-foreground">No files shared on this job yet.</p> : null}
+      {!docs.length && !photos.length ? <p className="mt-2 text-[15px] text-muted-foreground">No files shared on this job yet.</p> : null}
       {picked ? (
         <UploadQueue
           worker
@@ -408,7 +408,7 @@ function TimeOff({ data, onChanged }: { data: MyWork; onChanged: () => Promise<v
                   {a.endDate !== a.startDate ? ` – ${formatDayShort(a.endDate)}` : ""}
                   {a.part ? ` · ${PART_LABEL[a.part]}` : ""}
                 </span>
-                <span className={cn("block text-[13.5px]", a.status === "pending" ? "text-warn-fg" : a.status === "declined" ? "text-danger-fg" : "text-good-fg")}>
+                <span className={cn("block text-[14.5px]", a.status === "pending" ? "text-warn-fg" : a.status === "declined" ? "text-danger-fg" : "text-good-fg")}>
                   {ABSENCE_LABEL[a.kind]} · {a.status === "pending" ? "Waiting for approval" : a.status === "declined" ? "Declined" : "Approved"}
                 </span>
               </span>
@@ -453,7 +453,7 @@ function TimeOffForm({ sub, today, onClose, onSaved }: { sub: boolean; today: st
           }}
         >
           {errors._ ? (
-            <p role="alert" className="text-[14px] text-danger-fg">
+            <p role="alert" className="text-[15px] text-danger-fg">
               {errors._}
             </p>
           ) : null}
@@ -467,10 +467,10 @@ function TimeOffForm({ sub, today, onClose, onSaved }: { sub: boolean; today: st
           </div>
           {single ? (
             <fieldset>
-              <legend className="mb-1.5 text-[14px] font-medium">How long</legend>
+              <legend className="mb-1.5 text-[15px] font-medium">How long</legend>
               <div className="inline-flex gap-1 rounded-xl bg-surface-3 p-1">
                 {([["full", "Full day"], ["am", "Morning"], ["pm", "Afternoon"]] as const).map(([val, label]) => (
-                  <label key={val} className={cn("flex h-10 cursor-pointer items-center rounded-lg px-3 text-[14.5px] font-semibold", v.part === val ? "bg-card text-heading ring-1 ring-line" : "text-muted-foreground")}>
+                  <label key={val} className={cn("flex h-10 cursor-pointer items-center rounded-lg px-3 text-[15px] font-semibold", v.part === val ? "bg-card text-heading ring-1 ring-line" : "text-muted-foreground")}>
                     <input type="radio" name="to-part" checked={v.part === val} onChange={() => setV({ ...v, part: val })} className="sr-only" />
                     {label}
                   </label>
@@ -508,14 +508,14 @@ function Materials({ data }: { data: MyWork }) {
       <div className="flex flex-col gap-2">
         {[...byJob].map(([jobId, items]) => (
           <div key={jobId} className="panel overflow-hidden">
-            <p className="border-b border-line px-4 py-2 text-[14px] font-semibold">{titles.get(jobId) ?? "Job"}</p>
+            <p className="border-b border-line px-4 py-2 text-[15px] font-semibold">{titles.get(jobId) ?? "Job"}</p>
             <ul className="divide-y divide-line">
               {items.map((m) => (
-                <li key={m.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-[14.5px]">
+                <li key={m.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-[15px]">
                   <span className="min-w-0">
                     {m.quantity} × {m.item}
                   </span>
-                  <span className={cn("shrink-0 rounded-md px-1.5 py-0.5 text-[12.5px] font-medium", m.status === "on_site" ? "bg-emerald-500/10 text-good-fg" : m.status === "ordered" ? "bg-sky-500/10 text-info-fg" : "bg-amber-500/10 text-warn-fg")}>
+                  <span className={cn("shrink-0 rounded-md px-1.5 py-0.5 text-[13.5px] font-medium", m.status === "on_site" ? "bg-emerald-500/10 text-good-fg" : m.status === "ordered" ? "bg-sky-500/10 text-info-fg" : "bg-amber-500/10 text-warn-fg")}>
                     {MAT_LABEL[m.status]}
                   </span>
                 </li>

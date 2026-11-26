@@ -53,7 +53,7 @@ export function ComposerStatus({
       role="status"
       aria-live="polite"
       className={cn(
-        "mt-2 px-0.5 text-[14px] leading-snug",
+        "mt-2 px-0.5 text-[15px] leading-snug",
         tone === "live" && (dark ? "text-white" : "text-foreground"),
         tone === "muted" && (dark ? "text-white/70" : "text-muted-foreground"),
         tone === "warn" && "text-warn-fg",
@@ -82,7 +82,7 @@ export function SpeakRepliesToggle({ className, withLabel = true }: { className?
       }}
       className={cn(
         withLabel
-          ? cn("inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium ring-1 transition", speakReplies ? "bg-copper-500/12 text-accent-fg ring-copper-500/40" : "text-muted-foreground ring-line-strong hover:text-foreground")
+          ? cn("inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[14px] font-medium ring-1 transition", speakReplies ? "bg-copper-500/12 text-accent-fg ring-copper-500/40" : "text-muted-foreground ring-line-strong hover:text-foreground")
           : cn("grid size-11 shrink-0 place-items-center rounded-full transition hover:bg-surface-3", speakReplies ? "text-[#FAF9F6]" : "text-white/45"),
         className,
       )}
@@ -114,7 +114,7 @@ export function ReadAloudButton({ message, request }: { message: BobMessage; req
           }
         }}
         className={cn(
-          "inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-[13.5px] font-medium transition",
+          "inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-[14.5px] font-medium transition",
           speaking || loading ? "bg-copper-500/12 text-accent-fg" : "text-subtle hover:text-foreground",
         )}
       >
@@ -122,11 +122,11 @@ export function ReadAloudButton({ message, request }: { message: BobMessage; req
         {loading ? "Getting Bob's voice…" : speaking ? "Stop speaking" : "Read aloud"}
       </button>
       {played ? (
-        <span data-voice={played} className={cn("rounded-md px-1.5 py-0.5 text-[12px] font-medium", played === "elevenlabs" ? "bg-copper-500/12 text-accent-fg" : "bg-surface-3 text-subtle")}>
+        <span data-voice={played} className={cn("rounded-md px-1.5 py-0.5 text-[13px] font-medium", played === "elevenlabs" ? "bg-copper-500/12 text-accent-fg" : "bg-surface-3 text-subtle")}>
           {played === "elevenlabs" ? "ElevenLabs voice" : "Device voice (fallback)"}
         </span>
       ) : null}
-      {played === "browser" && out.fallbackReason ? <span className="w-full text-[12px] text-subtle">Why: {out.fallbackReason}</span> : null}
+      {played === "browser" && out.fallbackReason ? <span className="w-full text-[13px] text-subtle">Why: {out.fallbackReason}</span> : null}
     </div>
   );
 }

@@ -97,22 +97,22 @@ function InvoicesInner() {
       <Tip id="money">Invoices you create are saved as drafts — nothing goes to a customer until you send it. Ask Bob to “invoice Sophie for the final balance”.</Tip>
       <section aria-label="Headline figures" className="panel grid overflow-hidden sm:grid-cols-3">
         <button type="button" onClick={() => { setView("invoices"); setFilter("outstanding"); }} className="group px-5 py-4 text-left transition-colors hover:bg-surface-2 sm:px-6">
-          <span className="block text-[12.5px] font-medium text-subtle">Owed to you</span>
+          <span className="block text-[13.5px] font-medium text-subtle">Owed to you</span>
           <span className="t-figure mt-1 block">{gbp(owed)}</span>
-          <span className="mt-1 block text-[12.5px] text-subtle">{outstandingCount} unpaid invoice{outstandingCount === 1 ? "" : "s"}</span>
+          <span className="mt-1 block text-[13.5px] text-subtle">{outstandingCount} unpaid invoice{outstandingCount === 1 ? "" : "s"}</span>
         </button>
         <button type="button" aria-pressed={view === "invoices" && filter === "overdue"} onClick={() => { setView("invoices"); setFilter("overdue"); }} className="border-t border-line px-5 py-4 text-left transition-colors hover:bg-surface-2 sm:border-l sm:border-t-0 sm:px-6">
-          <span className="block text-[12.5px] font-medium text-subtle">Overdue</span>
+          <span className="block text-[13.5px] font-medium text-subtle">Overdue</span>
           <span className={cn("t-figure mt-1 block", overdue ? "text-danger-fg" : "text-subtle")}>{gbp(overdue)}</span>
-          <span className="mt-1 block text-[12.5px] text-subtle">{overdue ? `Part of the ${gbp(owed)} owed · ${overdueCount} past due` : "Nothing overdue"}</span>
+          <span className="mt-1 block text-[13.5px] text-subtle">{overdue ? `Part of the ${gbp(owed)} owed · ${overdueCount} past due` : "Nothing overdue"}</span>
         </button>
         <div className="relative border-t border-line px-5 py-4 sm:border-l sm:border-t-0 sm:px-6">
-          <span className="block text-[12.5px] font-medium text-subtle">Received</span>
+          <span className="block text-[13.5px] font-medium text-subtle">Received</span>
           <span className="t-figure mt-1 block text-good-fg">{gbp(received)}</span>
-          <span className="mt-1 block text-[12.5px] tabular text-subtle">{rangeLabel}</span>
+          <span className="mt-1 block text-[13.5px] tabular text-subtle">{rangeLabel}</span>
           <label className="absolute right-4 top-3.5">
             <span className="sr-only">Period</span>
-            <select value={period} onChange={(e) => setPeriod(e.target.value as typeof period)} className="h-7 rounded-md bg-card px-1.5 text-[12.5px] font-medium text-foreground ring-1 ring-line-strong outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <select value={period} onChange={(e) => setPeriod(e.target.value as typeof period)} className="h-7 rounded-md bg-card px-1.5 text-[13.5px] font-medium text-foreground ring-1 ring-line-strong outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <option value="7">7 days</option>
               <option value="30">30 days</option>
               <option value="month">This month</option>
@@ -137,7 +137,7 @@ function InvoicesInner() {
         <div className="grid gap-4 lg:grid-cols-2">
           <ReceivedChart payments={data.payments} />
           <section className="rounded-2xl bg-card px-5 py-4 ring-1 ring-line">
-            <h2 className="text-[12.5px] font-medium text-subtle">At a glance</h2>
+            <h2 className="text-[13.5px] font-medium text-subtle">At a glance</h2>
             <MoneyRow label="Owed on sent invoices" value={gbp(owed)} />
             <MoneyRow label="Overdue (part of that)" value={gbp(overdue)} />
             <MoneyRow label={`Drafts not sent yet (${drafts.length})`} value={gbp(draftTotal)} />
@@ -172,7 +172,7 @@ function InvoicesInner() {
 
         {list.length ? (
           <div className="panel overflow-hidden">
-            <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_140px_120px_130px_24px] gap-4 border-b border-line bg-[#faf9f6] px-5 py-2 text-[12px] font-medium text-subtle lg:grid">
+            <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_140px_120px_130px_24px] gap-4 border-b border-line bg-[#faf9f6] px-5 py-2 text-[13px] font-medium text-subtle lg:grid">
               <span>Customer</span>
               <span>Job</span>
               <span>Status</span>
@@ -235,7 +235,7 @@ function ReceivedChart({ payments }: { payments: { amount: number; receivedAt: s
   return (
     <section className="rounded-2xl bg-card px-5 py-4 shadow-[var(--shadow-xs)] ring-1 ring-line" aria-label="Payments received, last six months">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-[12.5px] font-medium text-subtle">Received · 6 months</h2>
+        <h2 className="text-[13.5px] font-medium text-subtle">Received · 6 months</h2>
         <span className="text-[15px] font-semibold tabular text-heading">{gbp(total)}</span>
       </div>
       <div className="mt-3 flex h-[84px] items-end gap-2">
@@ -244,7 +244,7 @@ function ReceivedChart({ payments }: { payments: { amount: number; receivedAt: s
             <div className="flex h-[64px] w-full items-end">
               <div className={cn("w-full rounded-[5px]", i === months.length - 1 ? "bg-copper-500" : "bg-[#e7e4de]")} style={{ height: `${Math.max(4, (m.total / max) * 100)}%` }} />
             </div>
-            <span className="text-[11px] text-subtle">{m.label}</span>
+            <span className="text-[12px] text-subtle">{m.label}</span>
           </div>
         ))}
       </div>
@@ -271,7 +271,7 @@ function BillsView() {
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[14px] text-subtle">What the business owes suppliers and subcontractors.</p>
+        <p className="text-[15px] text-subtle">What the business owes suppliers and subcontractors.</p>
         {can("payments.record") ? (
           <button type="button" onClick={() => ui.openForm({ form: "bill" })} className={pageActionClass}>
             <Plus className="size-[17px]" aria-hidden /> Add bill
@@ -284,7 +284,7 @@ function BillsView() {
         <StatCard label="Due in 7 days" value={total(week)} tone={week.length ? "warn" : "muted"} sub={`${week.length} coming up`} />
       </div>
       <DemoNote className="-mb-3">Bob doesn&apos;t pay bills or move money. Pay as you normally do (bank app, card), then use Record payment to log it here.</DemoNote>
-      <p className="mb-4 pl-[22px] text-[13.5px] text-muted-foreground">
+      <p className="mb-4 pl-[22px] text-[14.5px] text-muted-foreground">
         QuickBooks:{" "}
         {qb?.status === "connected"
           ? `connected${qb.accountLabel ? ` (${qb.accountLabel})` : ""}${qb.lastSyncAt ? ` · last synced ${timeAgo(qb.lastSyncAt)}` : ""}. Bills here aren't synced to QuickBooks yet.`
@@ -303,7 +303,7 @@ function BillsView() {
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="t-name line-clamp-2 break-words">{b.supplier}</div>
-                    <div className="text-[14px] text-muted-foreground">
+                    <div className="text-[15px] text-muted-foreground">
                       {b.description}
                       {b.reference ? ` · ${b.reference}` : ""}
                       {j ? ` · ${j.title}` : ""}
@@ -332,13 +332,13 @@ function BillsView() {
                         toast(`${b.supplier} ${gbp(b.amount)} recorded as paid`, "success", { action: { label: "Undo", run: () => void actions.run("setBillPaid", { id: b.id, paid: false }) } });
                       }}
                     >
-                      <p className="text-[14.5px] font-semibold">Record a payment you&apos;ve already made</p>
+                      <p className="text-[15px] font-semibold">Record a payment you&apos;ve already made</p>
                       <div className="mt-2 grid grid-cols-2 gap-2">
-                        <label className="text-[13.5px] font-medium">
+                        <label className="text-[14.5px] font-medium">
                           Paid on
                           <Input type="date" value={payment.paidOn} max={todayKey()} onChange={(e) => setPayment({ ...payment, paidOn: e.target.value })} className="mt-1 h-11" />
                         </label>
-                        <label className="text-[13.5px] font-medium">
+                        <label className="text-[14.5px] font-medium">
                           How
                           <NativeSelect value={payment.paymentMethod} onChange={(e) => setPayment({ ...payment, paymentMethod: e.target.value })} className="mt-1 h-11">
                             <option value="bank_transfer">Bank transfer</option>
@@ -350,7 +350,7 @@ function BillsView() {
                         </label>
                       </div>
                       {payError ? (
-                        <p role="alert" className="mt-2 text-[14px] text-danger-fg">
+                        <p role="alert" className="mt-2 text-[15px] text-danger-fg">
                           {payError}
                         </p>
                       ) : null}
@@ -383,7 +383,7 @@ function BillsView() {
               <li key={b.id} className="flex items-center justify-between gap-3 px-4 py-3 lg:px-5">
                 <span className="min-w-0">
                   <span className="block truncate text-[15px] font-medium">{b.supplier}</span>
-                  <span className="block text-[13.5px] text-muted-foreground">{b.description}</span>
+                  <span className="block text-[14.5px] text-muted-foreground">{b.description}</span>
                 </span>
                 <span className="text-right">
                   <span className="tabular block text-[15px]">{gbp(b.amount)}</span>
@@ -412,18 +412,18 @@ function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expa
     <li className={cn(expanded && "bg-surface-2")}>
       <button onClick={onToggle} aria-expanded={expanded} className="grid w-full grid-cols-[minmax(0,1fr)_auto_18px] items-center gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2 active:bg-surface-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_140px_120px_130px_24px] lg:gap-4 lg:px-5">
         <div className="min-w-0">
-          <div className="truncate text-[14.5px] font-semibold text-heading">{customer?.name ?? "Customer"}</div>
-          <div className="truncate text-[13px] text-subtle">
+          <div className="truncate text-[15px] font-semibold text-heading">{customer?.name ?? "Customer"}</div>
+          <div className="truncate text-[14px] text-subtle">
             {i.number ? `${i.number} · ` : ""}
             {i.draftRef}
             <span className="lg:hidden"> · {i.lines[0]?.description}</span>
           </div>
         </div>
-        <div className="hidden min-w-0 truncate text-[13.5px] text-muted-foreground lg:block">{job ? job.title : i.lines[0]?.description}</div>
+        <div className="hidden min-w-0 truncate text-[14.5px] text-muted-foreground lg:block">{job ? job.title : i.lines[0]?.description}</div>
         <div className="hidden lg:block">
           <InvoiceStatusPill label={label} />
         </div>
-        <div className="hidden text-[13.5px] tabular text-muted-foreground lg:block">{i.dueDate ? formatDateInline(i.dueDate) : "—"}</div>
+        <div className="hidden text-[14.5px] tabular text-muted-foreground lg:block">{i.dueDate ? formatDateInline(i.dueDate) : "—"}</div>
         <div className="text-right">
           <div className="tabular text-[15px] font-semibold text-heading">{gbp(i.status === "draft" || i.status === "paid" ? i.total : invoiceBalance(i))}</div>
           <div className="mt-0.5 lg:hidden">
@@ -441,7 +441,7 @@ function InvoiceRow({ invoice: i, expanded, onToggle }: { invoice: Invoice; expa
               <MoneyRow label="Total" value={gbp(i.total)} strong />
               {i.amountPaid ? <MoneyRow label="Paid" value={gbp(i.amountPaid)} tone="green" /> : null}
             </div>
-            <dl className="mt-2 space-y-1 text-[14px] text-muted-foreground sm:mt-0">
+            <dl className="mt-2 space-y-1 text-[15px] text-muted-foreground sm:mt-0">
               {job ? (
                 <div>
                   Job:{" "}
@@ -539,7 +539,7 @@ function InvoiceStatusPill({ label }: { label: string }) {
             ? "bg-surface-3 text-subtle line-through"
             : "bg-info/10 text-info-fg";
   const text = label === "Sent" ? "Awaiting payment" : label;
-  return <span className={cn("inline-flex h-[22px] items-center rounded-full px-2 text-[12px] font-medium", cls)}>{text}</span>;
+  return <span className={cn("inline-flex h-[22px] items-center rounded-full px-2 text-[13px] font-medium", cls)}>{text}</span>;
 }
 
 export default function InvoicesPage() {
