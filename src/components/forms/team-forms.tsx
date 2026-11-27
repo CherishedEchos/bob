@@ -579,7 +579,7 @@ export function MerchantForm({ prefill }: { prefill: Extract<FormPrefill, { form
             <Input id="mm-acc" value={values.accountRef} onChange={set("accountRef")} aria-invalid={!!errors.accountRef} />
           </Field>
           <Field label="Login managed by" htmlFor="mm-who">
-            <Input id="mm-who" value={values.accessManagedBy} onChange={set("accessManagedBy")} placeholder="e.g. Luke" />
+            <Input id="mm-who" value={values.accessManagedBy} onChange={set("accessManagedBy")} placeholder="e.g. the owner" />
           </Field>
           <Field label="Password manager link" htmlFor="mm-pm" error={errors.passwordManagerUrl} className="sm:col-span-2" hint="A link to the entry in your password manager — never the password itself.">
             <Input id="mm-pm" value={values.passwordManagerUrl} onChange={set("passwordManagerUrl")} placeholder="https://" aria-invalid={!!errors.passwordManagerUrl} />

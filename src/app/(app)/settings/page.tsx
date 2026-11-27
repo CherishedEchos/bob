@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { Bot, Building2, CalendarDays, Star, CreditCard, UserRound, ChevronRight, Copy, Smartphone, Download, ExternalLink, Globe, Link2, PoundSterling, RotateCcw, ShieldCheck, Unlink, Users } from "lucide-react";
+import { Bot, BookOpen, Building2, CalendarDays, LifeBuoy, Star, CreditCard, UserRound, ChevronRight, Copy, Smartphone, Download, ExternalLink, Globe, Link2, PoundSterling, RotateCcw, ShieldCheck, Unlink, Users } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import type { Connection, OrgConfig, Snapshot } from "@/lib/types";
 import { ROLE_LABEL } from "@/lib/auth/permissions";
@@ -97,6 +97,9 @@ function Section({ icon: Icon, title, subtitle, children, defaultOpen = false }:
     </li>
   );
 }
+
+/** The customer user guide, served from /public so it works for everyone signed in. */
+const GUIDE_URL = "/guide/getting-started-with-bob.pdf";
 
 function SettingsInner() {
   const { data, org, can, setSnapshot, user } = useStore();
@@ -212,6 +215,36 @@ function SettingsInner() {
           </p>
         </Section>
         <PrivacySection org={org} owner={can("data.delete")} save={save} />
+      </Group>
+
+      <Group title="Help & support">
+        <Section icon={BookOpen} title="User guide" subtitle="Getting started with Bob — a step-by-step guide to every part of Bob." defaultOpen={params.get("open") === "help"}>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild>
+              <a href={GUIDE_URL} target="_blank" rel="noreferrer">
+                <BookOpen /> Open the user guide
+              </a>
+            </Button>
+            <Button asChild variant="secondary">
+              <a href={GUIDE_URL} download>
+                <Download /> Download PDF
+              </a>
+            </Button>
+          </div>
+        </Section>
+        <Section icon={LifeBuoy} title="Getting help" subtitle="Forgotten passwords, the microphone, and who to contact.">
+          <ul className="space-y-2.5 text-[15.5px] leading-relaxed">
+            <li>
+              <strong className="font-semibold">Forgotten your password?</strong> Ask your workspace owner to set a new one in Settings → User accounts & roles, or contact Cresaro.
+            </li>
+            <li>
+              <strong className="font-semibold">Microphone not working?</strong> Allow microphone access for this site in your browser or phone settings, then tap Bob&apos;s microphone again. You can always type instead.
+            </li>
+            <li>
+              <strong className="font-semibold">Something not right?</strong> Contact Cresaro using the details in your welcome email. Tell us what you were doing and, if you can, send a screenshot.
+            </li>
+          </ul>
+        </Section>
       </Group>
     </div>
   );

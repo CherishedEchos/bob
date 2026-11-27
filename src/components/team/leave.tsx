@@ -81,7 +81,7 @@ export function HolidaysView() {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-2xl text-[15px] text-muted-foreground">
-          Approved leave and unavailability show on the Diary, and Bob warns before anyone is booked during them. Policy: {selfApprove ? "Luke and Ryan can record their own leave as approved and approve crew requests" : "a main user's own leave needs approving by the other main user"} — change it in Settings.
+          Approved leave and unavailability show on the Diary, and Bob warns before anyone is booked during them. Policy: {selfApprove ? "owners and admins can record their own leave as approved and approve team requests" : "an owner or admin's own leave needs approving by another owner or admin"} — change it in Settings.
         </p>
         <Button onClick={() => setAdding(true)}>
           <Plus /> {manage ? "Record leave" : "Request leave"}
@@ -205,7 +205,7 @@ export function LeaveForm({ personId, onClose, onSaved }: { personId?: string; o
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title={manage ? "Record leave or unavailability" : "Request leave"} description={manage ? "Recorded leave is approved straight away and shows on the Diary." : "Luke or Ryan approve it. You'll see the answer in My work."}>
+      <DialogContent title={manage ? "Record leave or unavailability" : "Request leave"} description={manage ? "Recorded leave is approved straight away and shows on the Diary." : "An owner or admin approves it. You'll see the answer in My work."}>
         <form onSubmit={submit} className="space-y-3" noValidate>
           {errors._ ? (
             <p role="alert" className="text-[15px] text-danger-fg">
@@ -256,7 +256,7 @@ export function LeaveForm({ personId, onClose, onSaved }: { personId?: string; o
               {errors.part ? <p className="mt-1 text-[15px] text-danger-fg">{errors.part}</p> : null}
             </fieldset>
           ) : null}
-          <Field label="Reason (optional, private)" htmlFor="lv-reason" hint="Only the person and Luke/Ryan see this." error={errors.reason}>
+          <Field label="Reason (optional, private)" htmlFor="lv-reason" hint="Only the person and the owners and admins see this." error={errors.reason}>
             <Textarea id="lv-reason" rows={2} value={v.reason} maxLength={300} onChange={(e) => setV({ ...v, reason: e.target.value })} />
           </Field>
           <div className="flex justify-end gap-2 pt-1">

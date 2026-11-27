@@ -396,6 +396,12 @@ export function AskBobDiaryBar({ compact }: { compact?: boolean }) {
   const ui = useUI();
   const bob = useBob();
   const router = useRouter();
+  const { data } = useStore();
+  // Examples in this business's own words: a real team member and a real job.
+  const person = data.people.find((p) => !p.archivedAt && p.kind === "employee" && !p.userId) ?? data.people.find((p) => !p.archivedAt);
+  const job = data.jobs.find((j) => j.status === "in_progress") ?? data.jobs.find((j) => !["completed", "lost", "quoted"].includes(j.status));
+  const who = firstName(person?.name) || "Sam";
+  const moveExample = `“Move ${who} onto the ${job ? job.title.toLowerCase() : "kitchen job"} tomorrow”`;
   const ask = (text: string) => {
     ui.setAssistantOpen(true);
     void bob.send(text, "text");
@@ -411,7 +417,7 @@ export function AskBobDiaryBar({ compact }: { compact?: boolean }) {
       </button>
       <div className="min-w-0 flex-1 xl:min-w-[300px]">
         <p className="text-[15.5px] font-semibold leading-tight">{compact ? "Ask Bob about the diary" : "Talk to Bob about the diary"}</p>
-        <p className="truncate text-[13.5px] text-white/60">{compact ? "“Move Liam onto the Copthorne kitchen tomorrow”" : "“Move Liam onto the Copthorne kitchen tomorrow” · “Book Ryan in for a site visit on Friday”"}</p>
+        <p className="truncate text-[13.5px] text-white/60">{compact ? moveExample : `${moveExample} · “Book ${who} in for a site visit on Friday”`}</p>
       </div>
       {compact ? null : (
         <div className="hidden shrink-0 flex-wrap justify-end gap-2 xl:flex">

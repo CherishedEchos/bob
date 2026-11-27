@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  AudioLines, Building2, CalendarDays, House, LayoutGrid, Check, CheckSquare, ChevronLeft, ChevronsUpDown, FlaskConical, Package, Store, UsersRound, HardHat, History, Inbox, LogOut,
+  AudioLines, BookOpen, Building2, CalendarDays, House, LayoutGrid, Check, CheckSquare, ChevronLeft, ChevronsUpDown, FlaskConical, Package, Store, UsersRound, HardHat, History, Inbox, LogOut,
   Gauge, Mic, PanelLeftClose, PanelLeftOpen, ReceiptText, Settings, Users,
 } from "lucide-react";
 import { StoreProvider, api, useStore } from "@/lib/store/store";
@@ -416,6 +416,9 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
             </>
           ) : null}
           <div className="my-1 h-px bg-line" />
+          <a role="menuitem" href="/guide/getting-started-with-bob.pdf" target="_blank" rel="noreferrer" onClick={() => setOpen(false)} className="flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[15px] text-foreground hover:bg-surface-2">
+            <BookOpen className="size-4 text-subtle" /> Help & user guide
+          </a>
           <Link role="menuitem" href="/settings" onClick={() => setOpen(false)} className="flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[14.5px] text-foreground hover:bg-surface-2">
             <Settings className="size-4 text-subtle" /> Settings
           </Link>
@@ -499,6 +502,7 @@ function MoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
     ...(can("finance.read") ? [{ href: "/invoices", label: "Money", icon: ReceiptText, count: 0 }] : []),
     ...(can("activity.read") ? [{ href: "/activity", label: "Activity", icon: History, count: 0 }] : []),
     { href: "/settings", label: "Settings", icon: Settings, count: 0 },
+    { href: "/settings?open=help", label: "Help", icon: BookOpen, count: 0 },
   ];
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

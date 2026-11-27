@@ -435,7 +435,7 @@ function TimeOffForm({ sub, today, onClose, onSaved }: { sub: boolean; today: st
   const single = !v.endDate || v.endDate === v.startDate;
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title={sub ? "Dates you can't work" : "Request time off"} description={sub ? "The office sees these on the diary straight away." : "Luke or Ryan will approve it. The answer shows here."}>
+      <DialogContent title={sub ? "Dates you can't work" : "Request time off"} description={sub ? "The office sees these on the diary straight away." : "The office will approve it. The answer shows here."}>
         <form
           className="space-y-3"
           noValidate
@@ -478,7 +478,7 @@ function TimeOffForm({ sub, today, onClose, onSaved }: { sub: boolean; today: st
               </div>
             </fieldset>
           ) : null}
-          <Field label="Reason (optional, private)" htmlFor="to-reason" hint="Only you and Luke/Ryan see this.">
+          <Field label="Reason (optional, private)" htmlFor="to-reason" hint="Only you and the office see this.">
             <Textarea id="to-reason" rows={2} maxLength={300} value={v.reason} onChange={(e) => setV({ ...v, reason: e.target.value })} />
           </Field>
           <div className="flex justify-end gap-2">
