@@ -19,7 +19,7 @@ import { prime, stopSpeaking } from "@/lib/voice/speech-output";
 import { addDays, formatTimeRange } from "@/lib/dates";
 import { byStartTime, jobTown, liveAbsence } from "@/lib/diary";
 import { bookingEndDate } from "@/lib/schedule";
-import { invoiceBalance, isInvoiceOutstanding, isInvoiceOverdue, needsReply, tasksDue } from "@/lib/derive";
+import { invoiceBalance, isInvoiceOutstanding, isInvoiceOverdue, needsReply } from "@/lib/derive";
 import type { Booking } from "@/lib/types";
 import { cn, gbp, todayKey } from "@/lib/utils";
 import { PeopleStack, jobTone } from "@/components/common/people";
@@ -56,7 +56,7 @@ export default function HomePage() {
   const waiting = data.enquiries.filter(needsReply);
   const openTasks = data.tasks.filter((t) => !t.done);
   const overdueTasks = openTasks.filter((t) => t.dueDate && t.dueDate < today).length;
-  const dueTasks = tasksDue(data.tasks).length;
+  const dueToday = openTasks.filter((t) => t.dueDate === today).length;
   const toOrder = data.materials.filter((m) => m.status === "to_order");
   const owed = data.invoices.filter(isInvoiceOutstanding).reduce((s, i) => s + invoiceBalance(i), 0);
   const overdue = data.invoices.filter(isInvoiceOverdue).reduce((s, i) => s + invoiceBalance(i), 0);
@@ -83,7 +83,7 @@ export default function HomePage() {
   const tiles = [
     { key: "jobs", icon: HardHat, label: "Active jobs", value: String(activeJobs.length), sub: `${inProgress} in progress`, href: "/jobs", show: true },
     { key: "enq", icon: Inbox, label: "Enquiries", value: String(waiting.length), sub: waiting.length ? `${waiting.length === 1 ? "customer" : "customers"} waiting for a reply` : "Nobody waiting", href: "/enquiries", show: true, alert: waiting.length > 0 },
-    { key: "tasks", icon: CheckSquare, label: "To-do list", value: String(openTasks.length), sub: overdueTasks ? `${overdueTasks} overdue · ${dueTasks} due today or late` : dueTasks ? `${dueTasks} due today` : "Nothing due today", href: "/tasks", show: true, alert: overdueTasks > 0 },
+    { key: "tasks", icon: CheckSquare, label: "To-do list", value: String(openTasks.length), sub: [overdueTasks ? `${overdueTasks} overdue` : "", dueToday ? `${dueToday} due today` : ""].filter(Boolean).join(" · ") || "Nothing due today", href: "/tasks", show: true, alert: overdueTasks > 0 },
     { key: "mat", icon: Package, label: "Materials", value: String(toOrder.length), sub: toOrder.length ? `${toOrder.length === 1 ? "item" : "items"} to order` : "Nothing to order", href: "/materials?status=to_order", show: true },
     { key: "money", icon: PoundSterling, label: "Money owed", value: gbp(owed), sub: overdue ? `${gbp(overdue)} overdue` : "Nothing overdue", href: overdue ? "/invoices?filter=overdue" : "/invoices", show: can("finance.read"), alert: overdue > 0 },
     { key: "team", icon: UsersRound, label: "Team today", value: `${working}/${team.length}`, sub: offToday.length ? `${offToday.length} off — ${offToday.map((a) => firstName(people.get(a.personId)?.name)).join(", ")}` : "working · nobody off", href: "/week?view=team", show: can("schedule.read") },

@@ -50,6 +50,11 @@ Then **Save Changes** → **Manual Deploy → Deploy latest commit**.
 
 ## 3. Suggested walkthrough (about 12 minutes)
 
+0. **Home (the first screen after signing in).**
+   - "Good morning, Luke." Today's work with who's where, and the business at a glance: active jobs, enquiries waiting, to-do list, materials to order, money owed and who's working. Each figure opens its list.
+   - Press **Hear today's briefing**, or **Ask Bob**.
+   - The quick actions are Add job, Schedule work, Add task and Add enquiry. The logo at the top left always comes back here.
+
 1. **Luke's phone, from the home-screen icon.**
    - The Diary opens on today: a day-by-day agenda with who's where, directions, and holidays (shown in violet).
    - Tap a name in the chips to see one person's week.
@@ -116,6 +121,10 @@ Ask Bob's actions are tested against a scripted model (no API spend):
 - follow-ups that keep context
 - workspace isolation and role permissions
 - a cancelled preview that can't be approved later
+
+## 4b. The customer guide
+
+`docs/manual/Getting-started-with-Bob.pdf` is a 41-page guide built from the fictional Ridgeway workspace, so it can go to any customer. There is an editable Word version beside it. In Bob, open it from **Help & user guide** in the account menu, **More → Help**, or **Settings → Help & support**. `docs/manual/README.md` explains how to update it.
 
 ## 5. Needs a manual check
 
