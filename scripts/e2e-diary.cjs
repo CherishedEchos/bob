@@ -37,7 +37,9 @@ async function drag(p, from, to) {
   luke.on('pageerror', (e) => errors.push(e.message));
   await luke.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
   await luke.goto(BASE + '/');
-  await luke.waitForURL('**/week');
+  await luke.waitForURL('**/home');
+  check('Signing in lands on Home', await luke.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ }).waitFor({ timeout: 60000 }).then(() => true, () => false));
+  await luke.goto(BASE + '/week');
   await luke.getByRole('region', { name: 'Week' }).waitFor({ timeout: 60000 });
   const sub = await luke.locator('header p').first().innerText();
   check('Diary summary: sites · people scheduled · off', /\d+ active sites? · \d+ (people|person) scheduled/.test(sub), sub);
@@ -113,10 +115,10 @@ async function drag(p, from, to) {
   check('Phone: agenda, not a squeezed calendar', (await phone.getByRole('region', { name: 'Week' }).isVisible().catch(() => false)) === false);
   check('Phone: cards have directions and the job', (await agenda.getByRole('link', { name: 'Directions' }).count()) > 0 && (await agenda.getByRole('button', { name: /Open job/ }).count()) > 0);
   check('Phone: Schedule work is prominent', await phone.getByRole('button', { name: 'Schedule work', exact: true }).isVisible());
-  await phone.getByRole('radio', { name: 'Callum' }).tap();
+  await phone.getByRole('combobox', { name: 'Show work for' }).selectOption({ label: 'Callum Price' });
   await phone.waitForTimeout(500);
   const labels = await agenda.getByRole('button', { name: /^Booking: / }).count();
-  check('Phone: team filter narrows to one person', labels > 0 && (await agenda.innerText()).includes('Callum'));
+  check('Phone: the person dropdown narrows to one person', labels > 0 && (await agenda.innerText()).includes('Callum'));
   const ov = await phone.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   check('Phone: no sideways scrolling', ov <= 1, String(ov));
   await phone.screenshot({ path: path.join(OUT, 'diary-phone.png') });

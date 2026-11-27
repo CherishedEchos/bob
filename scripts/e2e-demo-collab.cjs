@@ -25,7 +25,7 @@ async function signIn(browser, who, opts) {
   await p.getByLabel('Email', { exact: true }).fill(who.email);
   await p.getByLabel('Password', { exact: true }).fill(who.password);
   await p.getByRole('button', { name: /^Sign in$/ }).click();
-  await p.waitForURL('**/week', { timeout: 60000 });
+  await p.waitForURL('**/home', { timeout: 60000 });
   return p;
 }
 
@@ -101,17 +101,17 @@ async function signIn(browser, who, opts) {
 
   /* 3. Ryan updates the job and sets Luke a task; Luke sees both */
   await ryan.goto(BASE + '/jobs/n93_job_mediawall_reigate');
-  await ryan.getByRole('button', { name: 'Update', exact: true }).click();
-  await ryan.getByRole('textbox', { name: 'Next step' }).fill('Confirm TV bracket position with the customer');
-  await ryan.getByRole('button', { name: /^Save$/ }).click();
+  await ryan.getByRole('button', { name: 'Edit dates' }).click();
+  await ryan.getByLabel('Finish date').fill('2026-12-18');
+  await ryan.getByRole('button', { name: 'Save dates' }).click();
   await ryan.waitForTimeout(800);
-  const nextNow = (await snap(ryan)).jobs.find((j) => j.id === 'n93_job_mediawall_reigate').nextAction;
-  check('Ryan saves a new next step on the job', /Confirm TV bracket position/.test(nextNow || ''), nextNow);
+  const endNow = (await snap(ryan)).jobs.find((j) => j.id === 'n93_job_mediawall_reigate').endDate;
+  check("Ryan sets the job's finish date", endNow === '2026-12-18', endNow);
   const t = await ryan.evaluate(async (due) => (await fetch('/api/ops', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'createTask', args: { input: { title: 'Ring the customer about the TV bracket', dueDate: due, relatedType: 'job', relatedId: 'n93_job_mediawall_reigate', assignedUserId: 'usr_n93_owner' } } }) })).json(), london(0));
   check('Ryan sets Luke a task', t.ok === true, t.error || '');
   await luke.goto(BASE + '/jobs/n93_job_mediawall_reigate');
   const lukeJob = (await snap(luke)).jobs.find((j) => j.id === 'n93_job_mediawall_reigate');
-  check("Luke's session has Ryan's updated next step", /Confirm TV bracket position/.test(lukeJob.nextAction || ''));
+  check("Luke's session has Ryan's new finish date", lukeJob.endDate === '2026-12-18', lukeJob.endDate);
   // An open task on the job is shown as its next step, so Luke sees the task Ryan just set.
   check("Luke's job page shows the job's new next step (Ryan's task)", /Ring the customer about the TV bracket/.test(await luke.locator('main').innerText()));
   await luke.goto(BASE + '/tasks');

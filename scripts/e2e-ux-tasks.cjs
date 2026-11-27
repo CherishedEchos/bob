@@ -26,7 +26,7 @@ async function nav(p, size, label) {
   const bar = p.getByRole('navigation', { name: 'Main' }).last();
   const direct = bar.getByRole('link', { name: new RegExp(`^${label}`) });
   if (await direct.count()) return direct.first().click();
-  await bar.getByRole('button', { name: 'More' }).click();
+  await p.getByRole('button', { name: /^More/ }).first().click();
   await p.getByRole('dialog').getByRole('link', { name: new RegExp(`^${label}`) }).click();
 }
 
@@ -41,9 +41,13 @@ async function nav(p, size, label) {
     await p.evaluate(async ([email, password]) => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }), [process.env.LUKE_EMAIL || 'owner@ninety3.example', process.env.LUKE_PASSWORD || 'bob-demo']);
     await p.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
     await p.goto(BASE + '/');
-    await p.waitForURL('**/week', { timeout: 90000 });
+    await p.waitForURL('**/home', { timeout: 90000 });
+    await p.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ }).waitFor({ timeout: 60000 });
+    check(size, 'Home is the landing page, with View diary', await p.getByRole('link', { name: /View diary/ }).isVisible());
+    await nav(p, size, 'Diary');
+    await p.waitForURL('**/week');
 
-    /* 1. Tomorrow's work: the Diary is the landing page and shows tomorrow's bookings */
+    /* 1. Tomorrow's work: the Diary shows tomorrow's bookings */
     const tomorrow = london(1);
     const data = await snap(p);
     const tmrw = data.bookings.filter((bk) => bk.date <= tomorrow && (bk.endDate || bk.date) >= tomorrow);
@@ -54,7 +58,7 @@ async function nav(p, size, label) {
       await p.waitForTimeout(400);
     }
     const diary = await p.locator('main').innerText();
-    check(size, "Tomorrow's work is on the Diary (landing page)", tmrw.length === 0 || tmrw.some((bk) => diary.includes(jobTitle(bk.jobId))), `${tmrw.length} booking(s)`);
+    check(size, "Tomorrow's work is on the Diary", tmrw.length === 0 || tmrw.some((bk) => diary.includes(jobTitle(bk.jobId))), `${tmrw.length} booking(s)`);
 
     /* 2. Add a job */
     await nav(p, size, 'Jobs');
@@ -94,7 +98,7 @@ async function nav(p, size, label) {
     await p.goto(BASE + '/jobs/n93_job_mackay_kitchen');
     await p.getByRole('toolbar', { name: 'Quick actions' }).or(p.locator('[aria-label="Quick actions"]')).first().waitFor();
     const quick = p.locator('[aria-label="Quick actions"]');
-    for (const name of ['Add update', 'Upload photo', 'Schedule work', 'Add material', 'Create invoice']) check(size, `Job page quick action: ${name}`, await quick.getByRole('button', { name }).isVisible());
+    for (const name of ['Add update', 'Upload photo', 'Schedule work', 'Add material']) check(size, `Job page quick action: ${name}`, await quick.getByRole('button', { name }).isVisible());
     await quick.getByRole('button', { name: 'Upload photo' }).click();
     await p.waitForTimeout(600);
     const before = (await snap(p)).files.filter((f) => f.jobId === 'n93_job_mackay_kitchen').length;

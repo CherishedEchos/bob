@@ -28,10 +28,10 @@ function london(offsetDays) {
   await o.goto(BASE + '/login');
   await o.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
   await o.goto(BASE + '/');
-  await o.waitForURL('**/week');
-  check(1, 'Signing in lands on the Diary', await o.getByRole('heading', { name: 'Diary', level: 1 }).waitFor().then(() => true));
+  await o.waitForURL('**/home');
+  check(1, 'Signing in lands on Home', await o.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ }).waitFor().then(() => true));
   await o.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
-  await o.reload();
+  await o.goto(BASE + '/week');
   // Add a person (no login)
   await o.goto(BASE + '/team');
   await o.getByRole('button', { name: 'Add person' }).first().click();
@@ -213,7 +213,7 @@ function london(offsetDays) {
   watch(s, 'sam');
   await s.goto(BASE + '/login');
   await s.evaluate(() => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'sam@so-plastering.example', password: 'bob-demo' }) }));
-  for (const path of ['/week', '/jobs', '/customers', '/invoices', '/team', '/enquiries', '/assistant']) {
+  for (const path of ['/home', '/week', '/jobs', '/customers', '/invoices', '/team', '/enquiries', '/assistant']) {
     await s.goto(BASE + path);
     check(8, `Direct link ${path} sends the subcontractor to My work`, s.url().endsWith('/my-work'));
   }
@@ -266,7 +266,7 @@ function london(offsetDays) {
     await p.goto(BASE + '/login');
     await p.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
     await p.goto(BASE + '/');
-    await p.waitForURL('**/week');
+    await p.waitForURL('**/home');
     const pages = [
       ['/week', /Diary/, /Schedule work/],
       ['/enquiries', /Enquiries/, /Add enquiry|Add/],
