@@ -21,6 +21,7 @@ import { denied, fail, ok, type Ctx, type Result } from "@/server/context";
 import { audit } from "./records";
 import { FILE_CATEGORY_LABEL } from "./files";
 import { buildZip, type ZipEntry } from "@/server/zip";
+import { printableLogoUrl } from "@/server/brand";
 
 const MAX_HANDOVER_BYTES = 1024 * 1024 * 1024;
 const FOLDER: Record<FileCategory, string> = { drawing: "Drawings", progress: "Progress photos", completion: "Completion photos", other: "Documents" };
@@ -178,7 +179,7 @@ export function buildHandoverZip(ctx: Ctx, id: string): Result<{ filename: strin
     else entries.push({ name: i.zipPath, data: row.data });
   }
   if (missing.length) return fail("unavailable", `Couldn't find ${missing.length === 1 ? `"${missing[0]}"` : `${missing.length} files`} in storage. Nothing was downloaded — contact support.`);
-  const logo = logoBytes(ctx.org.wordmark?.onLight ?? ctx.org.logoUrl);
+  const logo = logoBytes(printableLogoUrl(ctx.org));
   if (logo) entries.unshift({ name: logo.name, data: logo.data });
   entries.unshift({ name: "Start here - index.html", data: Buffer.from(handoverIndexHtml(ctx, h, logo?.name), "utf8") });
   const data = buildZip(entries);

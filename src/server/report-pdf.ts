@@ -17,6 +17,7 @@ import path from "node:path";
 import PDFDocument from "pdfkit";
 import type { CostLine, OrgConfig, ReportContent } from "@/lib/types";
 import { gbp } from "@/lib/utils";
+import { printableLogoUrl } from "@/server/brand";
 
 export interface PdfImage {
   data: Buffer;
@@ -57,7 +58,7 @@ function brandColour(org: OrgConfig) {
 }
 
 function logoBuffer(org: OrgConfig): Buffer | null {
-  const url = org.wordmark?.onLight ?? org.logoUrl;
+  const url = printableLogoUrl(org);
   if (!url || !/^\/brand\/[\w.-]+\.(png|jpe?g)$/i.test(url)) return null;
   try {
     return fs.readFileSync(path.join(process.cwd(), "public", url));

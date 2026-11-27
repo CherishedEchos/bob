@@ -201,8 +201,10 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
                   <span className="truncate text-[17px] font-bold text-heading">{org.shortName}</span>
                 </span>
               )}
-              <span className="mt-2 flex items-center gap-1.5 text-[13px] font-medium text-subtle">
-                with <BobLogo height={13} tone="dark" />
+              {/* Fixed, whole-pixel sizes so the small Bob mark lands on the pixel grid and stays crisp. */}
+              <span className="mt-2 flex h-4 items-end text-[13px] font-medium leading-4 text-subtle">
+                <span className="inline-block w-[34px]">with</span>
+                <BobLogo height={15} tone="dark" />
               </span>
             </Link>
             <button

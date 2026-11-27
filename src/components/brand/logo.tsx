@@ -51,8 +51,9 @@ export function BobLogo({
   return (
     <svg
       viewBox={vb}
-      width={Math.round(vw * scale * 10) / 10}
-      height={Math.round(vh * scale * 10) / 10}
+      // Whole-pixel box: a fractional width or height puts the edges between pixels and blurs small sizes.
+      width={Math.round(vw * scale)}
+      height={Math.round(vh * scale)}
       role="img"
       aria-label={byline ? `${title} by Cresaro` : title}
       className={cn("block shrink-0 overflow-visible", className)}

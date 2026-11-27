@@ -407,15 +407,20 @@ function migrateJobPhotos(db: DatabaseSync) {
 }
 
 /**
- * Ninety3 workspaces created before the wordmark existed (the live one and the
- * demo) get it once. Only sets a missing field; nothing else in the config changes.
+ * Ninety3 workspaces get the wordmark once, and any still pointing at the old
+ * PNG files move to the sharp SVG versions. Nothing else in the config changes.
  */
 function addNinety3Wordmark(db: DatabaseSync) {
+  const SVG = { onDark: "/brand/ninety3-wordmark-white.svg", onLight: "/brand/ninety3-wordmark.svg" };
+  const OLD_PNG = new Set(["/brand/ninety3-wordmark-white.png", "/brand/ninety3-wordmark.png"]);
   const rows = db.prepare("SELECT id, config FROM orgs").all() as { id: string; config: string }[];
   for (const r of rows) {
-    const c = JSON.parse(r.config) as { logoUrl?: string; wordmark?: unknown; brandColor?: string };
-    if (c.logoUrl !== "/brand/ninety3-logo.png" || (c.wordmark && c.brandColor)) continue;
-    const next = { ...c, wordmark: c.wordmark ?? { onDark: "/brand/ninety3-wordmark-white.png", onLight: "/brand/ninety3-wordmark.png" }, brandColor: c.brandColor ?? "#7B2001" };
+    const c = JSON.parse(r.config) as { logoUrl?: string; wordmark?: { onDark?: string; onLight?: string }; brandColor?: string };
+    if (c.logoUrl !== "/brand/ninety3-logo.png") continue;
+    // The original PNG wordmarks looked soft when scaled down; the SVG versions stay sharp.
+    const stalePng = !!c.wordmark && (OLD_PNG.has(c.wordmark.onDark ?? "") || OLD_PNG.has(c.wordmark.onLight ?? ""));
+    if (c.wordmark && c.brandColor && !stalePng) continue;
+    const next = { ...c, wordmark: !c.wordmark || stalePng ? SVG : c.wordmark, brandColor: c.brandColor ?? "#7B2001" };
     db.prepare("UPDATE orgs SET config = ? WHERE id = ?").run(JSON.stringify(next), r.id);
   }
 }
