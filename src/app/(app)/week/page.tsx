@@ -20,7 +20,7 @@ import { cn, todayKey } from "@/lib/utils";
 import { PageHeader, pageActionClass, pageSecondaryClass } from "@/components/common/bits";
 import { NativeSelect } from "@/components/ui/input";
 import { Onboarding } from "@/components/common/onboarding";
-import { AskBobDiaryBar, DatePicker, ViewSwitch, firstName, useBookingMover, useJobsAndPeople } from "@/components/diary/shared";
+import { AskBobDiaryBar, DatePicker, ViewSwitch, useBookingMover, useJobsAndPeople } from "@/components/diary/shared";
 import { WeekView } from "@/components/diary/week-view";
 import { TeamView } from "@/components/diary/team-view";
 import { MonthView } from "@/components/diary/month-view";
@@ -185,15 +185,15 @@ function Diary() {
       <Onboarding />
 
       {/* Controls */}
-      <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Diary controls">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2" role="toolbar" aria-label="Diary controls">
         <div className="flex h-11 items-center rounded-lg bg-card ring-1 ring-line-strong">
-          <button type="button" aria-label={view === "month" ? "Previous month" : "Previous week"} onClick={() => step(-1)} className="grid h-full w-11 place-items-center rounded-l-lg text-muted-foreground hover:bg-surface-2 hover:text-foreground">
+          <button type="button" aria-label={view === "month" ? "Previous month" : "Previous week"} onClick={() => step(-1)} className="grid h-full w-10 place-items-center rounded-l-lg sm:w-11 text-muted-foreground hover:bg-surface-2 hover:text-foreground">
             <ChevronLeft className="size-5" aria-hidden />
           </button>
           <button type="button" onClick={() => goTo(null)} aria-pressed={isCurrent} className={cn("h-full border-x border-line px-3 text-[14.5px] font-medium", isCurrent ? "text-copper-600" : "text-foreground hover:bg-surface-2")}>
             Today
           </button>
-          <button type="button" aria-label={view === "month" ? "Next month" : "Next week"} onClick={() => step(1)} className="grid h-full w-11 place-items-center rounded-r-lg text-muted-foreground hover:bg-surface-2 hover:text-foreground">
+          <button type="button" aria-label={view === "month" ? "Next month" : "Next week"} onClick={() => step(1)} className="grid h-full w-10 place-items-center rounded-r-lg sm:w-11 text-muted-foreground hover:bg-surface-2 hover:text-foreground">
             <ChevronRight className="size-5" aria-hidden />
           </button>
         </div>
@@ -238,20 +238,15 @@ function Diary() {
         <div className="mb-3">
           <AskBobDiaryBar compact />
         </div>
-        <div role="radiogroup" aria-label="Show work for" className="scrollbar-none -mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 sm:-mx-6 sm:px-6">
-          {[{ id: "", label: "Everyone" }, ...active.map((p) => ({ id: p.id, label: firstName(p.name) })), { id: "unassigned", label: "Needs someone" }].map((o) => (
-            <button
-              key={o.id || "all"}
-              type="button"
-              role="radio"
-              aria-checked={personFilter === o.id}
-              onClick={() => setParams({ person: o.id || null })}
-              className={cn("h-10 shrink-0 rounded-full px-4 text-[15px] font-medium ring-1 transition-colors", personFilter === o.id ? "bg-selected font-semibold text-accent-fg ring-copper-500/50" : "bg-card text-muted-foreground ring-line-strong")}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
+        <label className="mb-3 block">
+          <span className="sr-only">Show work for</span>
+          <span className="relative block">
+            <Users className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-[18px] -translate-y-1/2 text-subtle" aria-hidden />
+            <NativeSelect value={personFilter} onChange={(e) => setParams({ person: e.target.value || null })} className="h-12 pl-11 text-[16px] font-medium">
+              {filterOptions}
+            </NativeSelect>
+          </span>
+        </label>
         <Agenda
           days={allWeek}
           today={today}

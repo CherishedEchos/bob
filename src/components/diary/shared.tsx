@@ -305,7 +305,7 @@ export function DatePicker({ value, today, label, mode, onPick }: { value: strin
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="flex h-11 items-center gap-2 rounded-lg px-3 text-[17px] font-semibold tracking-[-0.01em] text-heading transition-colors hover:bg-surface-3"
+        className="flex h-11 items-center gap-1.5 rounded-lg px-2 text-[15.5px] font-semibold tracking-[-0.01em] text-heading transition-colors hover:bg-surface-3 sm:gap-2 sm:px-3 sm:text-[17px]"
       >
         <CalendarDays aria-hidden className="size-[18px] text-subtle" />
         <span className="tabular" aria-live="polite">

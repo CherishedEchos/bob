@@ -1,16 +1,21 @@
 "use client";
 
-/** Month: what's coming up and who's off, a day per cell. Click a day number to open its week. */
+/**
+ * Month: a calm overview. Each booking is one bar in its job's colour across
+ * the days it's booked, showing only the job name; holidays are violet bars.
+ * Click a bar for the full booking, or a day number to open that week.
+ */
 import * as React from "react";
-import { formatDayLong } from "@/lib/dates";
-import { byStartTime, liveAbsence, monthWeeks } from "@/lib/diary";
+import { formatDayLong, formatDayShort } from "@/lib/dates";
+import { byStartTime, layoutSegments, liveAbsence, monthWeeks } from "@/lib/diary";
 import { bookingEndDate } from "@/lib/schedule";
 import type { Absence, Booking, Job, Person } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { jobTone } from "@/components/common/people";
 import { absenceText, dayNum, firstName } from "./shared";
 
-const MAX = 3;
+const MAX_LANES = 4;
+type Item = { kind: "leave"; a: Absence } | { kind: "booking"; b: Booking };
 
 export function MonthView({
   anchor,
@@ -38,68 +43,96 @@ export function MonthView({
   const heads = showWeekends ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] : ["Mon", "Tue", "Wed", "Thu", "Fri"];
   const cols = `repeat(${heads.length}, minmax(0, 1fr))`;
   const live = absences.filter(liveAbsence);
+  const items: Item[] = [...live.map((a) => ({ kind: "leave" as const, a })), ...bookings.map((b) => ({ kind: "booking" as const, b }))];
+  const range = (i: Item): [string, string] => (i.kind === "leave" ? [i.a.startDate, i.a.endDate] : [i.b.date, bookingEndDate(i.b)]);
+  const order = (x: Item, y: Item) => (x.kind === "leave" ? -1 : y.kind === "leave" ? 1 : byStartTime(x.b, y.b));
   return (
     <section aria-label="Month" className="panel overflow-hidden">
       <div className="grid border-b border-line" style={{ gridTemplateColumns: cols }}>
         {heads.map((h, i) => (
-          <div key={h} className={cn("px-3 py-2 text-[13px] font-semibold uppercase tracking-[0.04em] text-subtle", i && "border-l border-line")}>
+          <div key={h} className={cn("px-3 py-2.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-subtle", i && "border-l border-line")}>
             {h}
           </div>
         ))}
       </div>
-      {weeks.map((w) => (
-        <div key={w[0]} className="grid border-b border-line last:border-b-0" style={{ gridTemplateColumns: cols }}>
-          {w.map((d, i) => {
-            const inMonth = d.slice(0, 7) === month;
-            const list = bookings.filter((b) => b.date <= d && bookingEndDate(b) >= d).sort(byStartTime);
-            const off = live.filter((a) => a.startDate <= d && a.endDate >= d);
-            const shown = list.slice(0, Math.max(0, MAX - Math.min(off.length, 1)));
-            const more = list.length - shown.length;
-            return (
-              <div key={d} className={cn("flex min-h-[132px] min-w-0 flex-col gap-1 p-1.5", i && "border-l border-line", !inMonth && "bg-[#fbfaf8]", d === today && "bg-copper-50/60")}>
-                <button
-                  type="button"
-                  onClick={() => onDay(d)}
-                  aria-label={`Open the week of ${formatDayLong(d)}`}
-                  className={cn(
-                    "tabular grid size-6 place-items-center self-start rounded-md text-[13.5px] font-semibold transition-colors hover:bg-surface-3",
-                    inMonth ? "text-heading" : "text-subtle/70",
-                    d === today && "bg-copper-500 text-white hover:bg-copper-600",
-                  )}
-                >
-                  {dayNum(d)}
-                </button>
-                {off.length ? (
-                  <span title={off.map((a) => absenceText(a, people)).join("\n")} className="truncate rounded px-1.5 py-0.5 text-[12.5px] font-medium text-violet-800 bg-violet-50">
-                    {off.map((a) => firstName(people.get(a.personId)?.name)).join(", ")} off
-                  </span>
-                ) : null}
-                {shown.map((b) => {
-                  const tone = jobTone(b.jobId);
-                  const job = jobs.get(b.jobId);
-                  return (
-                    <button
-                      key={b.id}
-                      type="button"
-                      onClick={() => onOpen(b)}
-                      title={`${job?.title ?? "Job"} · ${job?.customerName ?? ""}`}
-                      className={cn("flex min-w-0 items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-[12.5px] font-medium ring-1", b.personIds.length ? tone.card : "bg-[#fffbf2] ring-warning/50")}
-                    >
-                      <span className={cn("size-1.5 shrink-0 rounded-full", b.personIds.length ? tone.dot : "bg-warning")} />
-                      <span className={cn("truncate", b.personIds.length ? tone.text : "text-[#7a5410]")}>{job?.title ?? "Job"}</span>
-                    </button>
-                  );
-                })}
-                {more > 0 ? (
-                  <button type="button" onClick={() => onDay(d)} className="self-start rounded px-1.5 text-[12.5px] font-medium text-subtle hover:text-foreground">
-                    +{more} more
+      {weeks.map((w) => {
+        const { segments } = layoutSegments(items, w, range, order);
+        const shown = segments.filter((s) => s.lane < MAX_LANES);
+        const hiddenOn = (i: number) => segments.filter((s) => s.lane >= MAX_LANES && s.col <= i && s.col + s.span - 1 >= i).length;
+        return (
+          <div key={w[0]} className="relative grid border-b border-line last:border-b-0" style={{ gridTemplateColumns: cols, gridTemplateRows: `36px repeat(${MAX_LANES}, 30px) 28px` }}>
+            {w.map((d, i) => {
+              const inMonth = d.slice(0, 7) === month;
+              const more = hiddenOn(i);
+              return (
+                <div key={d} style={{ gridColumn: i + 1, gridRow: "1 / -1" }} className={cn("relative", i && "border-l border-line", !inMonth && "bg-[#fbf9f6]", d === today && "bg-copper-50/60")}>
+                  <button
+                    type="button"
+                    onClick={() => onDay(d)}
+                    aria-label={`Open the week of ${formatDayLong(d)}`}
+                    className={cn(
+                      "tabular absolute left-2 top-2 grid size-7 place-items-center rounded-full text-[14px] font-semibold transition-colors hover:bg-surface-3",
+                      inMonth ? "text-heading" : "text-subtle/70",
+                      d === today && "bg-copper-500 text-white hover:bg-copper-600",
+                    )}
+                  >
+                    {dayNum(d)}
                   </button>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      ))}
+                  {more ? (
+                    <button type="button" onClick={() => onDay(d)} className="absolute bottom-1 left-2 text-[13px] font-semibold text-subtle hover:text-foreground">
+                      +{more} more
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
+            {shown.map((s) => {
+              const style = { gridColumn: `${s.col + 1} / span ${s.span}`, gridRow: s.lane + 2 };
+              if (s.item.kind === "leave") {
+                const a = s.item.a;
+                return (
+                  <div key={`l-${a.id}-${s.col}`} style={style} className="relative z-10 px-1 py-[3px]">
+                    <div
+                      title={absenceText(a, people)}
+                      className={cn(
+                        "flex h-full items-center truncate rounded px-2 text-[13px] font-semibold",
+                        a.status === "pending" ? "border border-dashed border-violet-300 bg-white text-violet-700" : "bg-violet-100 text-violet-800",
+                        s.continuesBefore && "rounded-l-none",
+                        s.continuesAfter && "rounded-r-none",
+                      )}
+                    >
+                      {firstName(people.get(a.personId)?.name)} off
+                    </div>
+                  </div>
+                );
+              }
+              const b = s.item.b;
+              const job = jobs.get(b.jobId);
+              const tone = jobTone(b.jobId);
+              const end = bookingEndDate(b);
+              const dates = end !== b.date ? `${formatDayShort(b.date)} – ${formatDayShort(end)}` : formatDayShort(b.date);
+              return (
+                <div key={`b-${b.id}-${s.col}`} style={style} className="relative z-10 px-1 py-[3px]">
+                  <button
+                    type="button"
+                    onClick={() => onOpen(b)}
+                    title={`${job?.title ?? "Job"} · ${dates}`}
+                    aria-label={`${job?.title ?? "Job"}, ${dates}`}
+                    className={cn(
+                      "flex h-full w-full items-center gap-1.5 truncate rounded px-2 text-left text-[13px] font-semibold text-white transition-[filter] hover:brightness-95",
+                      b.personIds.length ? tone.bar : "bg-warning",
+                      s.continuesBefore && "rounded-l-none",
+                      s.continuesAfter && "rounded-r-none",
+                    )}
+                  >
+                    <span className="truncate">{job?.title ?? "Job"}</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
     </section>
   );
 }

@@ -12,7 +12,7 @@ import { byStartTime, jobTown, liveAbsence, type Conflict } from "@/lib/diary";
 import { bookingDays, bookingEndDate } from "@/lib/schedule";
 import type { Absence, Booking, Job, Person } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { PeopleStack, jobTone } from "@/components/common/people";
+import { jobTone } from "@/components/common/people";
 import { LeaveBlock, dayNum, dow, firstName } from "./shared";
 
 export function Agenda({
@@ -137,34 +137,20 @@ function AgendaCard({ booking: b, day, job, people, clash, onOpen, onJob }: { bo
   const address = job?.siteAddress || job?.location || "";
   const maps = address ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}` : null;
   return (
-    <div className={cn("relative overflow-hidden rounded-lg bg-card ring-1", clash ? "ring-2 ring-destructive/60" : "ring-line")}>
-      <span aria-hidden className={cn("absolute inset-y-0 left-0 w-1", who.length ? tone.bar : "bg-warning")} />
-      <button type="button" onClick={onOpen} className="block w-full py-3 pl-4 pr-3 text-left" aria-label={`Booking: ${job?.title ?? "job"}, ${formatTimeRange(b.startTime, b.endTime)}`}>
-        <span className="flex items-start justify-between gap-3">
-          <span className="min-w-0">
-            <span className="block truncate text-[17px] font-semibold text-heading">{job?.title ?? "Job"}</span>
-            <span className="mt-0.5 block truncate text-[15px] text-muted-foreground">
-              {job?.customerName}
-              {jobTown(job) ? ` · ${jobTown(job)}` : ""}
-            </span>
-          </span>
-          <span className="tabular flex shrink-0 items-center gap-1 pt-0.5 text-[13.5px] font-medium text-foreground/80">
-            <Clock className="size-3.5 text-subtle" aria-hidden />
-            {formatTimeRange(b.startTime, b.endTime)}
-          </span>
+    <div className={cn("relative overflow-hidden rounded-xl bg-card ring-1", clash ? "ring-2 ring-destructive/60" : "ring-line")}>
+      <span aria-hidden className={cn("absolute inset-y-0 left-0 w-1.5", who.length ? tone.bar : "bg-warning")} />
+      <button type="button" onClick={onOpen} className="block w-full py-3.5 pl-5 pr-4 text-left" aria-label={`Booking: ${job?.title ?? "job"}, ${formatTimeRange(b.startTime, b.endTime)}`}>
+        <span className="flex items-center gap-2 text-[14.5px] font-semibold tabular text-foreground/80">
+          <Clock className="size-4 text-subtle" aria-hidden />
+          {formatTimeRange(b.startTime, b.endTime)}
+          {days.length > 1 ? <span className="font-medium text-subtle">· day {days.indexOf(day) + 1} of {days.length}</span> : null}
         </span>
-        <span className="mt-2.5 flex items-center gap-2">
-          {who.length ? (
-            <>
-              <PeopleStack people={who} size={24} max={3} />
-              <span className="truncate text-[13.5px] text-foreground/80">{who.map((p) => firstName(p.name)).join(", ")}</span>
-            </>
-          ) : (
-            <span className="rounded-md bg-warning/12 px-2 py-0.5 text-[12.5px] font-semibold text-warn-fg">Needs someone</span>
-          )}
-          {days.length > 1 ? <span className="ml-auto shrink-0 text-[12.5px] text-subtle">Day {days.indexOf(day) + 1} of {days.length}</span> : null}
+        <span className="mt-1 block text-[18px] font-bold leading-snug text-heading">{job?.title ?? "Job"}</span>
+        {jobTown(job) ? <span className="mt-0.5 block text-[15.5px] text-muted-foreground">{jobTown(job)}</span> : null}
+        <span className="mt-2 block text-[15.5px] font-medium text-foreground">
+          {who.length ? who.map((p) => firstName(p.name)).join(", ") : <span className="font-semibold text-warn-fg">Needs someone</span>}
         </span>
-        {clash ? <span className="mt-2 block text-[13px] font-medium text-danger-fg">{clash} — tap to sort it</span> : null}
+        {clash ? <span className="mt-2 block text-[14.5px] font-medium text-danger-fg">{clash} — tap to sort it</span> : null}
       </button>
       <div className="flex border-t border-line">
         {maps ? (
