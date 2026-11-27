@@ -18,7 +18,18 @@ export default function TasksPage() {
   const ui = useUI();
   const [view, setView] = React.useState<View>("today");
   const [who, setWho] = React.useState("");
-  const forWho = (t: Task) => !who || (who === "office" ? !t.assignedPersonId && !t.assignedUserId : t.assignedPersonId === who || t.assignedUserId === who);
+  // Home's "View all" opens the list for one person (?who=<person or login id>).
+  React.useEffect(() => {
+    const w = new URLSearchParams(window.location.search).get("who");
+    if (w) setWho(w);
+  }, []);
+  // A person in Team may also have a login: tasks assigned to either count as theirs.
+  const whoPerson = data.people.find((p) => p.id === who || (!!p.userId && p.userId === who));
+  const forWho = (t: Task) =>
+    !who ||
+    (who === "office"
+      ? !t.assignedPersonId && !t.assignedUserId
+      : t.assignedPersonId === who || t.assignedUserId === who || (!!whoPerson && (t.assignedPersonId === whoPerson.id || (!!whoPerson.userId && t.assignedUserId === whoPerson.userId))));
   const open = data.tasks.filter((t) => !t.done && forWho(t)).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const overdue = open.filter((t) => daysFromToday(t.dueDate) < 0);
   const today = open.filter((t) => daysFromToday(t.dueDate) === 0);
@@ -71,6 +82,7 @@ export default function TasksPage() {
           <NativeSelect value={who} onChange={(e) => setWho(e.target.value)}>
             <option value="">Everyone</option>
             <option value="office">Office</option>
+            {who && who !== "office" && !people.some((p) => p.id === who) ? <option value={who}>{data.members.find((m) => m.id === who)?.name ?? "Me"}</option> : null}
             {people.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}

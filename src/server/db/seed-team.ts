@@ -210,6 +210,23 @@ export function buildTeamScenario(orgId: string, timeZone = DEFAULT_TIME_ZONE) {
     { id: `${k}_task_paint`, title: "Get paint colour samples to the Horsham wardrobes customer", dueDate: day(2), done: false, relatedType: "job", relatedId: job("wardrobes_horsham"), assignedPersonId: pid("ellie"), createdAt: now, createdBy: "Luke" },
     { id: `${k}_task_beads`, title: "Check angle beads are on site before skimming", dueDate: day(3), done: false, relatedType: "job", relatedId: job("extension_copthorne"), assignedPersonId: pid("sam"), createdAt: now, createdBy: "Luke" },
   ];
+  // Personal to-dos for the people who sign in (Luke and Ryan in the Ninety3 demo), relative to today:
+  // a mix of overdue, due today and upcoming so Home's "Your to-do list" has something real to show.
+  const mine = (key: string, who: string, title: string, due: number, jobKey?: string): Task => ({
+    id: `${k}_task_${key}`, title, dueDate: addDays(today, due), done: false, relatedType: jobKey ? "job" : undefined, relatedId: jobKey ? job(jobKey) : undefined,
+    assignedPersonId: pid(who), createdAt: now, createdBy: who === "luke" ? "Ryan" : "Luke",
+  });
+  if (cast.people.some((p) => p.key === "luke") && cast.people.some((p) => p.key === "ryan"))
+    tasks.push(
+      mine("luke_snag", "luke", "Sign off the snag list on the Oak Road kitchen", -2, "kitchen_copthorne"),
+      mine("luke_shelving", "luke", "Price the extra shelving for the Reigate media wall", 0, "mediawall_reigate"),
+      mine("luke_veneer", "luke", "Pick up the oak veneer from Crawley Timber", 1, "mediawall_reigate"),
+      mine("ryan_cert", "ryan", "Chase Davies Electrical for the extension first-fix certificate", -1, "extension_copthorne"),
+      mine("ryan_skip", "ryan", "Confirm Friday's skip swap with Sussex Skip Hire", 0, "extension_copthorne"),
+      mine("ryan_template", "ryan", "Send the Patels their worktop templating date", 0, "kitchen_crawley"),
+      mine("ryan_skim", "ryan", "Book Sam Okoro in for the Copthorne skim", 0, "extension_copthorne"),
+      mine("ryan_quote", "ryan", "Send the decking quote to Dave", 2),
+    );
 
   const merchants = cast.merchants.map((x) => ({ id: `${k}_mer_${x.key}`, name: x.name, branch: x.branch, phone: x.phone, email: x.email, website: x.website, accountRef: x.accountRef?.replace(/^N93/, k.toUpperCase()), passwordManagerUrl: x.passwordManagerUrl, accessManagedBy: x.accessManagedBy, notes: x.notes, createdAt: now }));
   return { cast, people, bookings, materials, bills, tasks, merchants, sites: cast.sites, jobId: job, personId: pid };
