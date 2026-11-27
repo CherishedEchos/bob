@@ -45,6 +45,11 @@ export default function MaterialsPage() {
   const { data, actions, can } = useStore();
   const ui = useUI();
   const [status, setStatus] = React.useState<StatusFilter>("to_order");
+  // Links from Home can open a particular list (?status=to_order|ordered|on_site|all).
+  React.useEffect(() => {
+    const s = new URLSearchParams(window.location.search).get("status");
+    if (s === "to_order" || s === "ordered" || s === "on_site" || s === "all") setStatus(s);
+  }, []);
   const [job, setJob] = React.useState("");
   const [merchant, setMerchant] = React.useState("");
   const [when, setWhen] = React.useState<When>("any");
