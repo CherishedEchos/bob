@@ -4,7 +4,7 @@
 
 /** The job's updates, newest first: note, stage, photos with captions, who and when. */
 import * as React from "react";
-import { Camera, Pencil, Trash2 } from "lucide-react";
+import { NotebookPen, Pencil, Trash2 } from "lucide-react";
 import type { Job, JobFile, JobUpdate } from "@/lib/types";
 import { api, useStore } from "@/lib/store/store";
 import { fileUrl } from "@/lib/files/upload";
@@ -22,7 +22,7 @@ export function AddUpdateButton({ job, className, label = "Add update", variant,
   return (
     <>
       <Button className={className} variant={variant} size={size} onClick={() => setOpen(true)}>
-        <Camera /> {label}
+        <NotebookPen /> {label}
       </Button>
       {open ? <AddUpdateDialog jobId={job.id} jobTitle={job.title} onClose={() => setOpen(false)} onSaved={refresh} /> : null}
     </>

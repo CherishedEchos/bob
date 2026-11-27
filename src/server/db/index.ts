@@ -23,7 +23,7 @@ type ColType = "text" | "real" | "bool" | "json";
 export const TABLES = {
   customers: {
     name: "text", email: "text", phone: "text", instagramHandle: "text", address: "text", town: "text",
-    notes: "json", createdAt: "text",
+    notes: "json", createdAt: "text", kind: "text", contactName: "text", contacts: "json",
   },
   enquiries: {
     customerId: "text", customerName: "text", email: "text", phone: "text", instagramHandle: "text",
@@ -34,7 +34,7 @@ export const TABLES = {
   },
   jobs: {
     customerId: "text", title: "text", description: "text", location: "text", kind: "text",
-    quotedValue: "real", depositRequired: "real", status: "text", startDate: "text", depositDueDate: "text",
+    quotedValue: "real", depositRequired: "real", status: "text", startDate: "text", depositDueDate: "text", endDate: "text",
     nextAction: "text", notes: "json", enquiryId: "text", lastChasedAt: "text", createdAt: "text",
     siteAddress: "text", what3words: "text", sharedNotes: "text", accessNote: "text",
   },

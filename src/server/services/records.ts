@@ -309,6 +309,7 @@ export function createJob(ctx: Ctx, input: unknown): Result<Job> {
       depositRequired: v.depositRequired,
       status: v.status,
       startDate: v.startDate,
+      endDate: v.endDate,
       depositDueDate: v.depositDueDate,
       nextAction: v.nextAction,
       notes: [],
@@ -342,6 +343,9 @@ export function updateJob(ctx: Ctx, id: string, patch: unknown): Result<Job> {
   const quoted = (p.quotedValue as number | undefined) ?? j.quotedValue;
   const deposit = (p.depositRequired as number | undefined) ?? j.depositRequired;
   if (deposit > quoted) return fail("invalid", "Deposit can't be more than the quote", { depositRequired: "Deposit can't be more than the quote" });
+  const start = p.startDate === undefined ? j.startDate : (p.startDate as string | null) ?? undefined;
+  const end = p.endDate === undefined ? j.endDate : (p.endDate as string | null) ?? undefined;
+  if (start && end && end < start) return fail("invalid", "The finish date can't be before the start", { endDate: "The finish date can't be before the start" });
   const updated = tx(() => {
     scoped(ctx).update<Job>("jobs", id, p as Partial<Job>);
     audit(ctx, "job.updated", `Updated ${j.customerName}'s ${j.title.toLowerCase()}`, "job", id);

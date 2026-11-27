@@ -254,6 +254,7 @@ export function seedTeam(db: DatabaseSync, insert: InsertFn, orgId: string, time
   seedUpdatesAndVariations(db, insert, orgId, s.cast.key);
   seedSophieMackay(db, insert, orgId, s.cast.key);
   seedIllustrations(db, insert, orgId, s.cast.key);
+  seedJobDatesAndCustomerTypes(db, insert, orgId, s.cast.key, now);
   applyDemoPhotos(db, orgId, s.cast.key);
   // An invite that's been sent but not accepted (its link is not known to anyone).
   if (s.cast.pendingInvite) {
@@ -331,4 +332,37 @@ function upgradeMerchants(db: DatabaseSync, insert: InsertFn, orgId: string, tim
     db.exec("ROLLBACK");
     throw e;
   }
+}
+
+/**
+ * Demo only: start and finish dates from each job's booked days (where the job
+ * doesn't already say), the demo customers marked as domestic, and one
+ * fictional commercial customer with contacts. Real workspaces are never
+ * classified automatically.
+ */
+function seedJobDatesAndCustomerTypes(db: DatabaseSync, insert: InsertFn, orgId: string, k: string, now: string) {
+  const rows = db.prepare("SELECT job_id AS jobId, MIN(date) AS first, MAX(COALESCE(end_date, date)) AS last FROM bookings WHERE org_id = ? GROUP BY job_id").all(orgId) as { jobId: string; first: string; last: string }[];
+  for (const r of rows)
+    db.prepare(
+      "UPDATE jobs SET start_date = CASE WHEN start_date IS NULL OR start_date > ? THEN ? ELSE start_date END, end_date = CASE WHEN end_date IS NULL OR end_date < ? THEN ? ELSE end_date END WHERE org_id = ? AND id = ?",
+    ).run(r.first, r.first, r.last, r.last, orgId, r.jobId);
+  db.prepare("UPDATE customers SET kind = 'domestic' WHERE org_id = ? AND kind IS NULL").run(orgId);
+  const id = `${k}_cus_brookside`;
+  if (!db.prepare("SELECT 1 FROM customers WHERE org_id = ? AND id = ?").get(orgId, id))
+    insert(db, "customers", orgId, {
+      id,
+      name: "Brookside Lettings Ltd",
+      kind: "commercial",
+      contactName: "Hannah Price",
+      email: "maintenance@brookside-lettings.example",
+      phone: "01632 960 580",
+      address: "Unit 4, Brookside Business Park, Crawley",
+      town: "Crawley",
+      contacts: [
+        { name: "Hannah Price", role: "Maintenance manager", phone: "07700 900 581", email: "hannah@brookside-lettings.example" },
+        { name: "Tom Ellis", role: "Accounts", email: "accounts@brookside-lettings.example" },
+      ],
+      notes: [],
+      createdAt: now,
+    } as { id: string });
 }

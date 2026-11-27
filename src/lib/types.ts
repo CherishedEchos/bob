@@ -77,9 +77,26 @@ export interface Note {
   author: string;
 }
 
+export type CustomerKind = "domestic" | "commercial";
+
+/** Someone else to contact at a commercial customer. */
+export interface CustomerContact {
+  name: string;
+  role?: string;
+  phone?: string;
+  email?: string;
+}
+
 export interface Customer {
   id: ID;
+  /** A person's name (domestic) or the company name (commercial). */
   name: string;
+  /** Not set until someone classifies the customer: never guessed. */
+  kind?: CustomerKind;
+  /** Commercial: the main person to deal with. */
+  contactName?: string;
+  /** Commercial: other contacts. */
+  contacts?: CustomerContact[];
   email?: string;
   phone?: string;
   instagramHandle?: string;
@@ -153,6 +170,8 @@ export interface Job {
   depositRequired: number; // pounds
   status: JobStatus;
   startDate?: string; // YYYY-MM-DD
+  /** Expected finish, YYYY-MM-DD. Optional: left blank when it isn't known. */
+  endDate?: string;
   depositDueDate?: string; // YYYY-MM-DD
   nextAction?: string;
   notes: Note[];

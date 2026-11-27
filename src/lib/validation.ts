@@ -33,8 +33,18 @@ export const money = z.coerce
 const positiveMoney = money.refine((n) => n > 0, "Amount must be more than £0");
 const id = z.string().min(1).max(80);
 
+const customerContactSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  role: optStr(80),
+  phone: optStr(30),
+  email: optEmail,
+});
+
 export const customerInputSchema = z.object({
   name: z.string().trim().min(2, "Customer name is required").max(120),
+  kind: z.enum(["domestic", "commercial"]).optional(),
+  contactName: optStr(120),
+  contacts: z.array(customerContactSchema).max(10).optional(),
   email: optEmail,
   phone: optStr(30),
   instagramHandle: optStr(60),
@@ -86,6 +96,7 @@ export const jobInputSchema = z
     depositRequired: money.default(0),
     status: jobStatusSchema.default("quoted"),
     startDate: optDate,
+    endDate: optDate,
     depositDueDate: optDate,
     nextAction: optStr(240),
     enquiryId: id.optional(),
@@ -98,6 +109,7 @@ export const jobInputSchema = z
     accessNote: optStr(500),
   })
   .refine((v) => v.depositRequired <= v.quotedValue, { message: "Deposit can't be more than the quote", path: ["depositRequired"] })
+  .refine((v) => !v.startDate || !v.endDate || v.endDate >= v.startDate, { message: "The finish date can't be before the start", path: ["endDate"] })
   .refine((v) => v.customerId || (v.customerName && v.customerName.length >= 2), {
     message: "Customer name is required",
     path: ["customerName"],
@@ -110,6 +122,7 @@ export const jobPatchSchema = z.object({
   location: z.string().trim().min(2).max(120).optional(),
   nextAction: z.string().trim().max(240).optional(),
   startDate: z.union([dateKey, z.null()]).optional(),
+  endDate: z.union([dateKey, z.null()]).optional(),
   depositDueDate: z.union([dateKey, z.null()]).optional(),
   quotedValue: money.optional(),
   depositRequired: money.optional(),

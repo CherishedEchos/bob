@@ -114,6 +114,7 @@ function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }
     depositRequired: v.depositRequired ?? "",
     status: "quoted",
     startDate: "",
+    endDate: "",
     depositDueDate: "",
     siteAddress: v.siteAddress ?? "",
     what3words: v.what3words ?? "",
@@ -217,6 +218,9 @@ function JobForm({ prefill }: { prefill: Extract<FormPrefill, { form: "job" }> }
         </Field>
         <Field label="Start date (optional)" htmlFor="jf-start" error={errors.startDate}>
           <Input id="jf-start" type="date" value={values.startDate} onChange={set("startDate")} />
+        </Field>
+        <Field label="Finish date (optional)" htmlFor="jf-end" error={errors.endDate}>
+          <Input id="jf-end" type="date" value={values.endDate} onChange={set("endDate")} />
         </Field>
         {parseFloat(values.depositRequired || "0") > 0 ? (
           <Field label="Deposit due (optional)" htmlFor="jf-ddue" error={errors.depositDueDate}>

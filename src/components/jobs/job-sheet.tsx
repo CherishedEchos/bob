@@ -8,27 +8,24 @@ import { AddUpdateButton, UpdatesTimeline } from "@/components/updates/updates-t
 import { HANDOVER_STATUS_LABEL, downloadFile, handoverStatus, isFinished, longDate, publishedVersion, type HandoverStatus } from "@/components/reports/handover-wizard";
 import { fileUrl } from "@/lib/files/upload";
 import { FollowUpTrail, SendToCustomer } from "@/components/reports/send-to-customer";
-import { Tip } from "@/components/common/tip";
 import { VariationsPanel } from "@/components/jobs/variations";
 
 import * as React from "react";
 import { PackageCheck } from "lucide-react";
-import { AlarmClock, CalendarClock, Download, FileArchive, Loader2, Mail, CalendarPlus, Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, Lock, Hammer, Inbox, MapPin, MoreHorizontal, Navigation, Package, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
+import { AlarmClock, Camera, Download, FileArchive, Loader2, Mail, CalendarPlus, Check, ChevronDown, ChevronLeft, ChevronRight, Lock, Hammer, Inbox, MapPin, MoreHorizontal, Navigation, Package, Pencil, Phone, PoundSterling, ReceiptText, Trash2, UserRound } from "lucide-react";
 import type { JobTab } from "@/lib/store/ui";
-import { formatTimeRange, relativeDayInline } from "@/lib/dates";
-import { nextBookingForJob, peopleOnJob } from "@/lib/schedule";
 import { jobFinancials, type JobFinancials } from "@/lib/job-financials";
 import { JobCover, jobCovers } from "@/components/jobs/job-cover";
-import { PeopleStack } from "@/components/common/people";
+import { JOB_STATUS_STYLE } from "@/components/jobs/job-status";
 import { JobCrew, JobMaterials, JobSchedule, JobTasks, SharedInstructions } from "./job-parts";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import {
-  EXPENSE_CATEGORY_LABEL, JOB_STATUSES, JOB_STATUS_LABEL, PAYMENT_METHOD_LABEL, PAYMENT_TYPE_LABEL, invoiceStatusLabel, jobFinance, jobNextStep, paymentsForJob,
+  EXPENSE_CATEGORY_LABEL, JOB_STATUSES, JOB_STATUS_LABEL, PAYMENT_METHOD_LABEL, PAYMENT_TYPE_LABEL, invoiceStatusLabel, jobFinance, paymentsForJob,
 } from "@/lib/derive";
 import { addDaysKey, cn, firstName, formatDateKey, gbp, timeAgo, todayKey } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input, NativeSelect } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
 import { Badge } from "@/components/ui/badge";
 import { Menu, type MenuItem } from "@/components/ui/menu";
@@ -80,8 +77,6 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
   const payments = paymentsForJob(data.payments, j.id);
   const expenses = data.expenses.filter((e) => e.jobId === j.id);
   const invoices = data.invoices.filter((i) => i.jobId === j.id);
-  const [nextAction, setNextAction] = React.useState(j.nextAction ?? "");
-  const [editingNext, setEditingNext] = React.useState(false);
   const router = useRouter();
   const manager = user.role === "owner" || user.role === "office";
   const allowed = (t?: JobTab): JobTab => {
@@ -101,31 +96,21 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
     router.replace(`/jobs/${encodeURIComponent(id)}${t === "overview" ? "" : `?tab=${t}`}`, { scroll: false });
   };
   const today = todayKey();
-  const nextBooking = nextBookingForJob(data.bookings, j.id, today);
   const jobFiles = data.files.filter((x) => x.jobId === id && !x.deletedAt);
   const photoCount = new Set(jobFiles.filter((x) => x.category === "progress" || x.category === "completion").map((x) => x.groupId)).size;
   const docCount = new Set(jobFiles.filter((x) => x.category === "drawing" || x.category === "other").map((x) => x.groupId)).size;
   const tabs: { value: JobTab; label: string; count?: number }[] = [
     { value: "overview", label: "Overview" },
-    { value: "schedule", label: "Schedule", count: data.bookings.filter((b) => b.jobId === j.id && (b.endDate ?? b.date) >= today).length },
-    { value: "updates", label: "Updates & photos", count: data.updates.filter((u) => u.jobId === j.id).length + photoCount },
+    { value: "updates", label: "Progress & photos", count: data.updates.filter((u) => u.jobId === j.id).length + photoCount },
     { value: "documents", label: "Documents", count: docCount },
+    { value: "schedule", label: "Schedule", count: data.bookings.filter((b) => b.jobId === j.id && (b.endDate ?? b.date) >= today).length },
     { value: "materials", label: "Materials & tasks", count: data.materials.filter((m) => m.jobId === j.id && m.status === "to_order").length + data.tasks.filter((t) => !t.done && t.relatedType === "job" && t.relatedId === j.id).length },
     ...(money ? [{ value: "financials" as const, label: "Financials" }] : []),
     ...(manager ? [{ value: "handover" as const, label: "Handover" }] : []),
   ];
   const fin = jobFinancials(j, data);
   const covers = jobCovers(data.files);
-  const crew = peopleOnJob(data.bookings, data.people, j.id, today);
   const mapsHref = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(j.siteAddress || j.location)}`;
-  const activity = jobActivity(data, j.id);
-
-  React.useEffect(() => setNextAction(j.nextAction ?? ""), [j.id, j.nextAction]);
-  const saveNext = async () => {
-    const res = await actions.updateJob(j.id, { nextAction: nextAction.trim() });
-    toast(res.ok ? "Next step updated" : Object.values(res.errors)[0] ?? "Couldn't save", res.ok ? "success" : "error");
-    if (res.ok) setEditingNext(false);
-  };
 
   const reminder = () =>
     ui.openForm({ form: "reminder", title: j.nextAction ?? `Check in on ${j.customerName}'s ${j.title.toLowerCase()}`, dueDate: addDaysKey(1), customerId: j.customerId, relatedType: "job", relatedId: j.id });
@@ -159,97 +144,85 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
   ];
 
   const hStatus = handoverStatus(data.reports.find((r) => r.jobId === j.id), data.reportVersions.filter((v) => v.jobId === j.id));
-  // One clear primary action: finished jobs go to handover; otherwise schedule or edit the next booking.
+  // One clear primary action for finished jobs: the handover.
   const primary =
     (j.status === "completed" || j.status === "snagging") && manager ? (
       <Button asChild variant={isFinished(hStatus) ? "secondary" : "default"} className="w-full sm:w-auto">
         <Link href={`/jobs/${encodeURIComponent(j.id)}/handover${isFinished(hStatus) ? "?step=5" : ""}`}>
-          <PackageCheck /> {hStatus === "not_started" ? "Create handover report" : isFinished(hStatus) ? "View handover" : "Continue handover report"}
+          <PackageCheck /> {hStatus === "not_started" ? "Create handover" : isFinished(hStatus) ? "View handover" : "Continue handover"}
         </Link>
       </Button>
-    ) : j.status === "completed" || j.status === "lost" ? null : can("schedule.manage") ? (
-      nextBooking ? (
-        <Button variant="secondary" className="w-full sm:w-auto" onClick={() => ui.openForm({ form: "booking", bookingId: nextBooking.id })}>
-          <CalendarClock /> Edit booking
-        </Button>
-      ) : null
     ) : null;
 
   const goPhotos = () => {
     setTab("updates");
     setTimeout(() => document.getElementById("job-photos")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
   };
-  // Phones: a 3-up grid of icon-over-label buttons (no sideways scrolling). Wider screens: one row.
-  const quickBtn = "h-auto min-h-[58px] flex-col gap-1 px-1.5 py-2 text-[13.5px] leading-tight sm:min-h-0 sm:h-9 sm:flex-row sm:gap-1.5 sm:px-3 sm:text-[14.5px]";
+  // Four everyday actions, large enough to hit on site. Money actions live in Financials.
+  const quickBtn = "h-auto min-h-[64px] flex-col gap-1.5 px-2 py-2.5 text-[14.5px] leading-tight sm:min-h-0 sm:h-11 sm:flex-row sm:gap-2 sm:px-4 sm:text-[15px]";
   const quick = [
-    can("notes.write") ? <AddUpdateButton key="u" job={j} variant="secondary" size="sm" className={quickBtn} /> : null,
+    can("notes.write") ? <AddUpdateButton key="u" job={j} variant="secondary" className={quickBtn} /> : null,
     can("notes.write") ? (
-      <Button key="p" size="sm" variant="secondary" className={quickBtn} onClick={goPhotos}>
-        <ImagePlus /> Upload photo
+      <Button key="p" variant="secondary" className={quickBtn} onClick={goPhotos}>
+        <Camera /> Upload photo
       </Button>
     ) : null,
     can("schedule.manage") && j.status !== "completed" && j.status !== "lost" ? (
-      <Button key="s" size="sm" variant="secondary" className={quickBtn} onClick={() => ui.openForm({ form: "booking", jobId: j.id })}>
+      <Button key="s" variant="secondary" className={quickBtn} onClick={() => ui.openForm({ form: "booking", jobId: j.id })}>
         <CalendarPlus /> Schedule work
       </Button>
     ) : null,
     can("materials.write") ? (
-      <Button key="m" size="sm" variant="secondary" className={quickBtn} onClick={() => ui.openForm({ form: "material", jobId: j.id })}>
+      <Button key="m" variant="secondary" className={quickBtn} onClick={() => ui.openForm({ form: "material", jobId: j.id })}>
         <Package /> Add material
-      </Button>
-    ) : null,
-    money && can("invoices.draft") ? (
-      <Button key="i" size="sm" variant="secondary" className={quickBtn} onClick={invoice}>
-        <ReceiptText /> Create invoice
       </Button>
     ) : null,
   ].filter(Boolean);
 
-  const upcoming = data.bookings.filter((b) => b.jobId === j.id && (b.endDate ?? b.date) >= today).sort((x, y) => x.date.localeCompare(y.date)).slice(0, 3);
+  const latestUpdate = data.updates.filter((u) => u.jobId === j.id).sort((x, y) => y.createdAt.localeCompare(x.createdAt))[0];
+  const updateCount = data.updates.filter((u) => u.jobId === j.id).length;
   const openTasks = data.tasks.filter((t) => !t.done && t.relatedType === "job" && t.relatedId === j.id);
   const toOrder = data.materials.filter((m) => m.jobId === j.id && m.status === "to_order");
 
   return (
     <div className="mx-auto w-full max-w-[1480px]">
-      <Link href="/jobs" className="mb-3 hidden h-9 items-center lg:inline-flex gap-1 rounded-lg pr-2 text-[14.5px] font-medium text-subtle hover:text-foreground">
+      <Link href="/jobs" className="mb-3 hidden h-9 items-center gap-1 rounded-lg pr-2 text-[15px] font-medium text-subtle hover:text-foreground lg:inline-flex">
         <ChevronLeft className="size-4" aria-hidden /> Jobs
       </Link>
 
-      {/* Project header: compact — photo, name, customer, site and status, then the key facts */}
+      {/* The job at a glance: what, who, where, status, when — and how to update it. */}
       <header className="overflow-hidden rounded-2xl bg-card ring-1 ring-line">
-        <div className="flex flex-col gap-4 p-4 sm:p-5 xl:flex-row xl:items-start">
+        <div className="flex flex-col gap-4 p-4 sm:p-6 xl:flex-row xl:items-start">
           <div className="flex min-w-0 flex-1 gap-4">
-            <JobCover job={j} file={covers.get(j.id)} className="h-[72px] w-[96px] shrink-0 rounded-lg ring-1 ring-line sm:h-[84px] sm:w-[112px]" small />
+            <JobCover job={j} file={covers.get(j.id)} className="hidden h-[92px] w-[124px] shrink-0 rounded-lg ring-1 ring-line sm:block" small />
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Badge tone={j.status === "completed" ? "green" : j.status === "in_progress" ? "copper" : j.status === "snagging" ? "violet" : j.status === "lost" ? "neutral" : "blue"}>{JOB_STATUS_LABEL[j.status]}</Badge>
-                {paymentStatus && paymentStatus.tone !== "neutral" ? <Badge tone={paymentStatus.tone === "red" ? "red" : paymentStatus.tone === "green" ? "green" : "amber"}>{paymentStatus.text}</Badge> : null}
-              </div>
-              <h1 className="mt-1.5 text-[22px] font-semibold leading-tight tracking-[-0.022em] text-heading sm:text-[24px]">{j.title}</h1>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[15px] text-muted-foreground">
-                <button className="flex items-center gap-1.5 font-medium text-foreground hover:text-accent-fg" onClick={() => ui.openCustomer(j.customerId)}>
+              <StatusControl job={j} />
+              <h1 className="mt-2 text-[26px] font-bold leading-tight tracking-[-0.025em] text-heading sm:text-[30px]">{j.title}</h1>
+              <div className="mt-1.5 flex flex-col gap-1 text-[15.5px] text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
+                <button className="flex items-center gap-1.5 self-start font-semibold text-foreground hover:text-accent-fg" onClick={() => ui.openCustomer(j.customerId)}>
                   <UserRound className="size-4 text-subtle" aria-hidden /> {j.customerName}
                 </button>
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <MapPin className="size-4 shrink-0 text-subtle" aria-hidden /> <span className="truncate">{j.siteAddress || j.location}</span>
+                <span className="flex min-w-0 items-start gap-1.5">
+                  <MapPin className="mt-1 size-4 shrink-0 text-subtle" aria-hidden /> <span>{j.siteAddress || j.location}</span>
                 </span>
                 {j.what3words ? (
-                  <a href={`https://what3words.com/${encodeURIComponent(j.what3words)}`} target="_blank" rel="noopener noreferrer" className="font-medium text-[#c8161d] hover:underline">
+                  <a href={`https://what3words.com/${encodeURIComponent(j.what3words)}`} target="_blank" rel="noopener noreferrer" className="self-start font-semibold text-[#c8161d] hover:underline">
                     {"///"}
                     {j.what3words}
                   </a>
                 ) : null}
               </div>
+              <JobDates job={j} />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2 sm:flex sm:shrink-0 sm:flex-wrap sm:items-center xl:justify-end [&>*]:min-w-0">
-            <Button asChild variant="secondary" size="sm">
+            <Button asChild variant="secondary">
               <a href={mapsHref} target="_blank" rel="noopener noreferrer">
                 <Navigation /> Directions
               </a>
             </Button>
             {j.customerPhone ? (
-              <Button asChild variant="secondary" size="sm">
+              <Button asChild variant="secondary">
                 <a href={`tel:${j.customerPhone.replace(/\s/g, "")}`}>
                   <Phone /> <span className="truncate">Call<span className="hidden sm:inline"> {firstName(j.customerName)}</span></span>
                 </a>
@@ -258,7 +231,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             <Menu
               label="More actions"
               items={[{ label: "Add task", icon: AlarmClock, onSelect: reminder }, ...more]}
-              triggerClassName="flex h-10 w-full items-center justify-center sm:w-auto gap-1.5 rounded-lg bg-card px-3 text-[15px] font-medium text-foreground ring-1 ring-line-strong transition-colors hover:bg-raised-hover lg:h-9 lg:text-[14.5px]"
+              triggerClassName="flex h-11 w-full items-center justify-center sm:w-auto gap-1.5 rounded-lg bg-card px-4 text-[15px] font-semibold text-foreground ring-1 ring-line-strong transition-colors hover:bg-raised-hover"
               trigger={
                 <>
                   <MoreHorizontal className="size-4" aria-hidden /> More
@@ -268,103 +241,36 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             {primary ? <div className="col-span-3 [&>*]:w-full">{primary}</div> : null}
           </div>
         </div>
-
-        {/* Key facts */}
-        <dl className="grid grid-cols-2 gap-px border-t border-line bg-line sm:grid-cols-[repeat(auto-fit,minmax(150px,1fr))] [&>div]:bg-card [&>div]:px-4 [&>div]:py-3 sm:[&>div]:px-5">
-          {money ? (
-            <div>
-              <dt className="text-[13px] font-medium text-subtle">Contract value</dt>
-              <dd className="mt-0.5 text-[17px] font-semibold tabular tracking-[-0.02em] text-heading">{gbp(fin.contractValue)}</dd>
-            </div>
-          ) : null}
-          <div>
-            <dt className="text-[13px] font-medium text-subtle">Next visit</dt>
-            <dd className="mt-0.5 truncate text-[15px] font-medium text-heading">
-              {nextBooking ? (
-                <>
-                  {nextBooking.date <= today ? "Today" : relativeDayInline(nextBooking.date, today).replace(/^./, (c) => c.toUpperCase())}
-                  <span className="font-normal tabular text-subtle"> · {formatTimeRange(nextBooking.startTime, nextBooking.endTime)}</span>
-                </>
-              ) : (
-                <span className="font-normal text-subtle">Not scheduled</span>
-              )}
-            </dd>
-          </div>
-          <div className="col-span-2 sm:col-span-1">
-            <dt className="text-[13px] font-medium text-subtle">Assigned team</dt>
-            <dd className="mt-0.5 flex h-6 items-center gap-2">
-              {crew.length ? (
-                <>
-                  <PeopleStack people={crew} size={22} max={4} />
-                  <span className="truncate text-[14px] text-muted-foreground">{crew.map((p) => firstName(p.name)).join(", ")}</span>
-                </>
-              ) : (
-                <span className="text-[15px] text-subtle">{nextBooking ? "Needs someone" : "—"}</span>
-              )}
-            </dd>
-          </div>
-          <div className="col-span-2 sm:col-span-1">
-            <dt className="text-[13px] font-medium text-subtle">Next action</dt>
-            <dd className="mt-0.5">
-              <button
-                type="button"
-                disabled={!can("jobs.write")}
-                onClick={() => {
-                  setTab("overview");
-                  setEditingNext(true);
-                }}
-                title={jobNextStep(j, data, money)}
-                className="block max-w-full truncate text-left text-[15px] font-medium text-heading enabled:hover:text-accent-fg disabled:cursor-default"
-              >
-                {jobNextStep(j, data, money)}
-              </button>
-            </dd>
-          </div>
-          {j.customerPhone || j.customerEmail ? (
-            <div className="hidden xl:block">
-              <dt className="text-[13px] font-medium text-subtle">Contact</dt>
-              <dd className="mt-0.5 truncate text-[15px] font-medium text-heading">
-                {j.customerPhone ? (
-                  <a href={`tel:${j.customerPhone.replace(/\s/g, "")}`} className="tabular hover:text-accent-fg">
-                    {j.customerPhone}
-                  </a>
-                ) : (
-                  <a href={`mailto:${j.customerEmail}`} className="hover:text-accent-fg">
-                    {j.customerEmail}
-                  </a>
-                )}
-              </dd>
-            </div>
-          ) : null}
-        </dl>
         {quick.length ? (
-          <div className="grid grid-cols-3 gap-2 border-t border-line bg-[#fbfaf8] px-4 py-2.5 sm:flex sm:flex-wrap sm:px-5" aria-label="Quick actions">
+          <div className="grid grid-cols-2 gap-2 border-t border-line bg-[#fbf8f4] px-4 py-3 sm:flex sm:flex-wrap sm:px-6" aria-label="Quick actions">
             {quick}
           </div>
         ) : null}
       </header>
 
-      {/* Sections */}
-      {/* Phones: one clear section picker instead of a sideways-scrolling tab strip. */}
-      <div className="sticky top-0 z-10 -mx-4 mt-4 bg-background/90 px-4 py-2 backdrop-blur-xl sm:hidden">
-        <label className="relative block">
-          <span className="sr-only">Job section</span>
-          <select
-            value={tab}
-            onChange={(e) => setTab(e.target.value as JobTab)}
-            className="h-12 w-full appearance-none rounded-xl bg-card pl-4 pr-10 text-[16px] font-semibold text-heading shadow-[var(--shadow-xs)] outline-none ring-1 ring-line-strong focus-visible:ring-2 focus-visible:ring-ring"
+      {/* Sections: one at a time, each with a clear name. Phones get a grid of big buttons, not a sideways strip. */}
+      <nav aria-label="Job sections" className="mt-4 grid grid-cols-2 gap-2 sm:hidden">
+        {tabs.map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            aria-current={tab === t.value ? "page" : undefined}
+            onClick={() => {
+              setTab(t.value);
+              setTimeout(() => document.getElementById("job-tabpanel")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+            }}
+            className={cn(
+              "flex h-12 items-center justify-between gap-2 rounded-lg px-3.5 text-left text-[15px] font-semibold ring-1 transition-colors",
+              tab === t.value ? "bg-selected text-accent-fg ring-copper-500/50" : "bg-card text-foreground ring-line-strong",
+              t.value === "handover" && tabs.length % 2 === 1 && "col-span-2",
+            )}
           >
-            {tabs.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-                {t.count ? ` (${t.count})` : ""}
-              </option>
-            ))}
-          </select>
-          <ChevronDown aria-hidden className="pointer-events-none absolute right-3.5 top-1/2 size-5 -translate-y-1/2 text-subtle" />
-        </label>
-      </div>
-      <div role="tablist" aria-label="Job sections" className="scrollbar-none sticky top-0 z-10 -mx-4 mt-5 hidden gap-0.5 overflow-x-auto border-b border-line bg-background/90 px-4 backdrop-blur-xl sm:-mx-6 sm:flex sm:px-6 lg:mx-0 lg:px-0">
+            <span className="truncate">{t.label}</span>
+            {t.count ? <span className="tabular text-[13.5px] font-medium text-subtle">{t.count}</span> : null}
+          </button>
+        ))}
+      </nav>
+      <div role="tablist" aria-label="Job sections" className="sticky top-0 z-10 -mx-4 mt-5 hidden flex-wrap gap-1 border-b border-line bg-background/95 px-4 backdrop-blur-xl sm:-mx-6 sm:flex sm:px-6 lg:mx-0 lg:px-0">
         {tabs.map((t) => (
           <button
             key={t.value}
@@ -375,216 +281,52 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             aria-controls="job-tabpanel"
             onClick={() => setTab(t.value)}
             className={cn(
-              "relative flex h-11 shrink-0 items-center gap-1.5 px-3 text-[15px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-              tab === t.value ? "text-heading after:absolute after:inset-x-3 after:bottom-[-1px] after:h-[2px] after:rounded-full after:bg-copper-500" : "text-subtle hover:text-foreground",
+              "relative flex h-12 shrink-0 items-center gap-1.5 px-3.5 text-[15.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+              tab === t.value ? "font-semibold text-heading after:absolute after:inset-x-3 after:bottom-[-1px] after:h-[3px] after:rounded-full after:bg-copper-500" : "text-subtle hover:text-foreground",
             )}
           >
             {t.label}
-            {t.count ? <span className="tabular text-[13px] text-subtle">{t.count}</span> : null}
+            {t.count ? <span className="tabular text-[13.5px] text-subtle">{t.count}</span> : null}
           </button>
         ))}
       </div>
 
-      <div className="mt-4 empty:hidden">
-        <Tip id="job-page">On this page, Bob knows which job you mean — try “add another £450 for the shelving”.</Tip>
-      </div>
       <div id="job-tabpanel" role="tabpanel" style={{ scrollMarginTop: 72 }} aria-labelledby={`tab-${tab}`} className="mt-5">
         {tab === "overview" ? (
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
             <div className="flex min-w-0 flex-col gap-5">
-              <section aria-labelledby={`next-${j.id}`} className="panel px-5 py-4 sm:px-6">
-                <h2 id={`next-${j.id}`} className="t-eyebrow">
-                  Next step
-                </h2>
-                {editingNext ? (
-                  <form
-                    className="mt-2 flex gap-2"
-                    onSubmit={(ev) => {
-                      ev.preventDefault();
-                      void saveNext();
-                    }}
-                  >
-                    <Input autoFocus value={nextAction} onChange={(ev) => setNextAction(ev.target.value)} placeholder="What's the next thing to do?" aria-label="Next step" />
-                    <Button type="submit" disabled={(j.nextAction ?? "") === nextAction.trim()}>
-                      <Check /> Save
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setNextAction(j.nextAction ?? "");
-                        setEditingNext(false);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </form>
-                ) : (
-                  <div className="mt-1 flex flex-wrap items-start justify-between gap-2">
-                    <p className="min-w-0 text-[16px] font-semibold leading-snug tracking-[-0.01em] text-heading">{jobNextStep(j, data, money)}</p>
-                    {can("jobs.write") ? (
-                      <Button size="sm" variant="ghost" className="-mr-2" onClick={() => setEditingNext(true)}>
-                        <Pencil /> Update
-                      </Button>
-                    ) : null}
-                  </div>
-                )}
-              </section>
-
               {money ? <FinancialSummary fin={fin} onOpen={() => setTab("financials")} /> : null}
-
-              <section className="panel px-5 py-4 sm:px-6" aria-labelledby={`upd-${j.id}`}>
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <h2 id={`upd-${j.id}`} className="t-section">Recent updates</h2>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => setTab("updates")}>
-                      View all
-                    </Button>
-                    <AddUpdateButton job={j} />
-                  </div>
-                </div>
-                <UpdatesTimeline job={j} limit={3} />
-              </section>
-
-              <section className="panel px-5 py-4 sm:px-6" aria-labelledby={`desc-${j.id}`}>
-                <h2 id={`desc-${j.id}`} className="t-section">
-                  About the job
-                </h2>
-                <p className="reading mt-2 whitespace-pre-wrap text-[15px] leading-relaxed text-foreground/85">{j.description || "No description yet."}</p>
-              </section>
-
-              <div className="panel overflow-hidden [&>section:first-child]:border-t-0">
-                <SharedInstructions job={j} />
-              </div>
-
-              <section className="panel px-5 py-4 sm:px-6" aria-labelledby={`notes-${j.id}`}>
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <h2 id={`notes-${j.id}`} className="t-section">
-                    Internal notes
-                  </h2>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-[13px] font-medium text-muted-foreground">
-                    <Lock className="size-3" aria-hidden /> Office only — never shown to workers or customers
-                  </span>
-                </div>
-                <NotesPanel notes={j.notes} onAdd={(t) => actions.addJobNote(j.id, t)} />
-              </section>
+              <RecentUpdates job={j} latest={latestUpdate} count={updateCount} onViewAll={() => setTab("updates")} />
+              {manager ? <HandoverLine job={j} status={hStatus} onOpen={() => setTab("handover")} /> : null}
             </div>
-
             <aside className="flex min-w-0 flex-col gap-5">
-              <section className="panel px-5 py-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <h2 className="t-section">Coming up</h2>
-                  <Button size="sm" variant="ghost" className="-mr-2" onClick={() => setTab("schedule")}>
-                    Schedule
-                  </Button>
-                </div>
-                {upcoming.length ? (
-                  <ul className="space-y-2">
-                    {upcoming.map((b) => {
-                      const who = b.personIds.map((pid) => data.people.find((p) => p.id === pid)).filter(Boolean) as typeof data.people;
-                      return (
-                        <li key={b.id} className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-2.5">
-                          <div className="w-11 shrink-0 text-center">
-                            <div className="text-[12px] font-medium uppercase text-subtle">{new Date(`${b.date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short" })}</div>
-                            <div className="text-[17px] font-semibold tabular leading-tight text-heading">{Number(b.date.slice(8))}</div>
-                          </div>
-                          <div className="min-w-0 flex-1 text-[14.5px]">
-                            <div className="font-medium text-heading">{formatTimeRange(b.startTime, b.endTime)}</div>
-                            <div className="truncate text-subtle">{who.length ? who.map((p) => p.name.split(" ")[0]).join(", ") : "Unassigned"}</div>
-                          </div>
-                          <PeopleStack people={who} size={24} max={3} />
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="text-[15px] text-subtle">Nothing booked.</p>
-                )}
-              </section>
-
+              <div className="panel overflow-hidden [&>section:first-child]:border-t-0">
+                <JobCrew job={j} />
+              </div>
               {openTasks.length || toOrder.length ? (
                 <section className="panel px-5 py-4">
-                  <h2 className="t-section mb-2">Outstanding</h2>
-                  <ul className="space-y-1.5 text-[15px]">
-                    {openTasks.slice(0, 4).map((t) => (
+                  <div className="mb-2 flex items-center justify-between">
+                    <h2 className="t-section">Still to do</h2>
+                    <button type="button" onClick={() => setTab("materials")} className="text-[14.5px] font-semibold text-accent-fg">
+                      Open
+                    </button>
+                  </div>
+                  <ul className="space-y-2 text-[15px]">
+                    {openTasks.slice(0, 3).map((t) => (
                       <li key={t.id} className="flex items-center gap-2">
                         <AlarmClock className="size-4 shrink-0 text-subtle" aria-hidden />
                         <span className="min-w-0 flex-1 truncate">{t.title}</span>
-                        {t.dueDate ? <span className="shrink-0 text-[13.5px] text-subtle">{formatDateKey(t.dueDate)}</span> : null}
+                        {t.dueDate ? <span className="shrink-0 text-[14px] text-subtle">{formatDateKey(t.dueDate)}</span> : null}
                       </li>
                     ))}
                     {toOrder.length ? (
-                      <li>
-                        <button type="button" onClick={() => setTab("materials")} className="flex w-full items-center gap-2 text-left text-accent-fg hover:underline">
-                          <PackageCheck className="size-4 shrink-0" aria-hidden /> {toOrder.length} material{toOrder.length === 1 ? "" : "s"} to order
-                        </button>
+                      <li className="flex items-center gap-2 font-medium text-accent-fg">
+                        <Package className="size-4 shrink-0" aria-hidden /> {toOrder.length} material{toOrder.length === 1 ? "" : "s"} to order
                       </li>
                     ) : null}
                   </ul>
                 </section>
               ) : null}
-
-              <div className="panel overflow-hidden [&>section:first-child]:border-t-0">
-                <JobCrew job={j} />
-              </div>
-
-              <section className="panel px-5 py-4" aria-labelledby={`dates-${j.id}`}>
-                <h2 id={`dates-${j.id}`} className="t-section">
-                  Key dates
-                </h2>
-                <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[15px]">
-                  <dt className="text-subtle">Start</dt>
-                  <dd>{j.startDate ? formatDateKey(j.startDate) : "Not set"}</dd>
-                  <dt className="text-subtle">Next on site</dt>
-                  <dd>{nextBooking ? formatDateKey(nextBooking.date) : "Nothing booked"}</dd>
-                  {money ? (
-                    <>
-                      <dt className="text-subtle">Deposit due</dt>
-                      <dd>{j.depositDueDate ? formatDateKey(j.depositDueDate) : "Not set"}</dd>
-                    </>
-                  ) : null}
-                  <dt className="text-subtle">Added</dt>
-                  <dd>{formatDateKey(j.createdAt.slice(0, 10))}</dd>
-                </dl>
-                {can("jobs.write") ? (
-                  <label className="mt-3 block">
-                    <span className="mb-1 block text-[14px] font-medium text-subtle">Job status</span>
-                    <NativeSelect
-                      value={j.status}
-                      onChange={async (e) => {
-                        const st = e.target.value as (typeof JOB_STATUSES)[number];
-                        const res = await actions.setJobStatus(j.id, st);
-                        toast(res.ok ? `Moved to ${JOB_STATUS_LABEL[st]}` : Object.values(res.errors)[0] ?? "Couldn't update", res.ok ? "success" : "error");
-                      }}
-                    >
-                      {JOB_STATUSES.map((st) => (
-                        <option key={st} value={st}>
-                          {JOB_STATUS_LABEL[st]}
-                        </option>
-                      ))}
-                    </NativeSelect>
-                  </label>
-                ) : null}
-              </section>
-
-              <section className="panel px-5 py-4" aria-labelledby={`act-${j.id}`}>
-                <h2 id={`act-${j.id}`} className="t-section">
-                  Recent activity
-                </h2>
-                {activity.length ? (
-                  <ol className="mt-2 space-y-2.5">
-                    {activity.slice(0, 6).map((a) => (
-                      <li key={a.id} className="text-[14.5px] leading-snug">
-                        <span className="text-foreground">{a.summary}</span>
-                        <span className="block text-[13.5px] text-subtle">
-                          {a.actor} · {timeAgo(a.at)}
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                ) : (
-                  <p className="mt-2 text-[15px] text-subtle">{can("activity.read") ? "Nothing yet." : "Activity is visible to owners and admins."}</p>
-                )}
-              </section>
             </aside>
           </div>
         ) : null}
@@ -607,6 +349,17 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
         {tab === "documents" ? (
           <div className="panel px-4 py-4 sm:px-6 sm:py-5">
             <FilesPanel jobId={j.id} only={["drawing", "other"]} />
+            {manager ? (
+              <section className="mt-6 border-t border-line pt-5" aria-label="Internal notes">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-[16.5px] font-semibold text-heading">Internal notes</h3>
+                  <span className="inline-flex items-center gap-1 text-[13.5px] font-medium text-subtle">
+                    <Lock className="size-3.5" aria-hidden /> Office only — never shown to workers or customers
+                  </span>
+                </div>
+                <NotesPanel notes={j.notes} onAdd={(t) => actions.addJobNote(j.id, t)} />
+              </section>
+            ) : null}
             {money && invoices.length ? (
               <div className="mt-6 border-t border-line pt-5">
                 <h3 className="mb-2 text-[15px] font-semibold text-heading">Quotes and invoices</h3>
@@ -635,8 +388,13 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
             <div className="panel overflow-hidden">
               <JobSchedule job={j} />
             </div>
-            <div className="panel overflow-hidden [&>section:first-child]:border-t-0">
-              <JobCrew job={j} />
+            <div className="flex flex-col gap-5">
+              <div className="panel overflow-hidden [&>section:first-child]:border-t-0">
+                <JobCrew job={j} />
+              </div>
+              <div className="panel overflow-hidden [&>section:first-child]:border-t-0">
+                <SharedInstructions job={j} />
+              </div>
             </div>
           </div>
         ) : null}
@@ -852,11 +610,6 @@ function FinancialDetail({ fin, status }: { fin: JobFinancials; status: string }
   );
 }
 
-/** Activity about this job: its own entries plus its tasks', newest first. */
-function jobActivity(data: ReturnType<typeof useStore>["data"], jobId: string) {
-  const taskIds = new Set(data.tasks.filter((t) => t.relatedType === "job" && t.relatedId === jobId).map((t) => t.id));
-  return data.activity.filter((a) => (a.entityType === "job" && a.entityId === jobId) || (a.entityType === "task" && a.entityId && taskIds.has(a.entityId)));
-}
 
 /** The handover on the job page: its status, one main button, and — once finished — the PDF, the pack and Edit. */
 function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) {
@@ -964,5 +717,161 @@ function HandoverSummary({ job, status }: { job: Job; status: HandoverStatus }) 
       <FollowUpTrail job={job} />
       {versions.length > 1 ? <p className="mt-2 text-[14px] text-subtle">{versions.length} versions kept — all are listed in the handover.</p> : null}
     </div>
+  );
+}
+
+/* ------------------------------ Job header pieces ------------------------------ */
+
+/** The job's status as a big coloured control: tap to change it. */
+function StatusControl({ job: j }: { job: Job }) {
+  const { actions, can } = useStore();
+  const editable = can("jobs.write");
+  return (
+    <label className="relative inline-flex">
+      <span className="sr-only">Job status</span>
+      <select
+        value={j.status}
+        disabled={!editable}
+        onChange={async (e) => {
+          const st = e.target.value as (typeof JOB_STATUSES)[number];
+          const res = await actions.setJobStatus(j.id, st);
+          toast(res.ok ? `Status: ${JOB_STATUS_LABEL[st]}` : Object.values(res.errors)[0] ?? "Couldn't update", res.ok ? "success" : "error");
+        }}
+        className={cn("h-9 cursor-pointer appearance-none rounded-lg pl-3 text-[15px] font-bold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default", editable ? "pr-8" : "pr-3", JOB_STATUS_STYLE[j.status])}
+      >
+        {JOB_STATUSES.map((st) => (
+          <option key={st} value={st}>
+            {JOB_STATUS_LABEL[st]}
+          </option>
+        ))}
+      </select>
+      {editable ? <ChevronDown aria-hidden className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 opacity-80" /> : null}
+    </label>
+  );
+}
+
+/** Start and finish dates: shown plainly, edited in place, and fine to leave blank. */
+function JobDates({ job: j }: { job: Job }) {
+  const { actions, can } = useStore();
+  const [editing, setEditing] = React.useState(false);
+  const [start, setStart] = React.useState(j.startDate ?? "");
+  const [end, setEnd] = React.useState(j.endDate ?? "");
+  const [error, setError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    setStart(j.startDate ?? "");
+    setEnd(j.endDate ?? "");
+  }, [j.startDate, j.endDate]);
+  const show = (d?: string) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "Not set");
+  const save = async () => {
+    if (start && end && end < start) return setError("The finish date can't be before the start.");
+    const res = await actions.updateJob(j.id, { startDate: start || null, endDate: end || null });
+    if (!res.ok) return setError(Object.values(res.errors)[0] ?? "Couldn't save the dates");
+    toast("Dates saved", "success");
+    setError(null);
+    setEditing(false);
+  };
+  if (editing)
+    return (
+      <form
+        className="mt-3 flex flex-wrap items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <label className="block">
+          <span className="mb-1 block text-[13.5px] font-medium text-subtle">Start</span>
+          <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="w-[170px]" aria-label="Start date" />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[13.5px] font-medium text-subtle">Finish</span>
+          <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="w-[170px]" aria-label="Finish date" />
+        </label>
+        <Button type="submit">
+          <Check /> Save dates
+        </Button>
+        <Button variant="ghost" onClick={() => setEditing(false)}>
+          Cancel
+        </Button>
+        {error ? <p role="alert" className="w-full text-[14px] text-danger-fg">{error}</p> : <p className="w-full text-[13.5px] text-subtle">Leave a date empty if you don&apos;t know it yet.</p>}
+      </form>
+    );
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-[15.5px]">
+      <span>
+        <span className="text-subtle">Start </span>
+        <strong className={cn("font-semibold", j.startDate ? "text-heading" : "text-subtle")}>{show(j.startDate)}</strong>
+      </span>
+      <span>
+        <span className="text-subtle">Finish </span>
+        <strong className={cn("font-semibold", j.endDate ? "text-heading" : "text-subtle")}>{show(j.endDate)}</strong>
+      </span>
+      {can("jobs.write") ? (
+        <button type="button" onClick={() => setEditing(true)} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-[14.5px] font-semibold text-accent-fg hover:bg-copper-500/[0.08]">
+          <Pencil className="size-4" aria-hidden /> Edit dates
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/** The latest update in a line or two; open it for the last few, or go to the full timeline. */
+function RecentUpdates({ job, latest, count, onViewAll }: { job: Job; latest?: { note?: string; authorName: string; createdAt: string }; count: number; onViewAll: () => void }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <section className="panel overflow-hidden" aria-label="Recent updates">
+      <div className="flex items-center justify-between gap-2 px-5 pb-2 pt-4 sm:px-6">
+        <h2 className="t-section">
+          Recent updates
+          {count ? <span className="ml-2 text-[15px] font-medium text-subtle tabular">{count}</span> : null}
+        </h2>
+        <AddUpdateButton job={job} variant="ghost" />
+      </div>
+      {latest ? (
+        open ? (
+          <div className="px-5 pb-2 sm:px-6">
+            <UpdatesTimeline job={job} limit={3} />
+          </div>
+        ) : (
+          <button type="button" onClick={() => setOpen(true)} aria-expanded={false} className="block w-full px-5 pb-3 text-left sm:px-6">
+            <span className="block text-[13.5px] font-medium text-subtle">
+              {timeAgo(latest.createdAt)} · {latest.authorName}
+            </span>
+            <span className="mt-0.5 line-clamp-2 text-[15.5px] text-foreground">{latest.note || "Photos added"}</span>
+          </button>
+        )
+      ) : (
+        <p className="px-5 pb-4 text-[15px] text-subtle sm:px-6">No updates yet. Add one from site with a photo and a line about what&apos;s been done.</p>
+      )}
+      {latest ? (
+        <div className="flex items-center gap-1 border-t border-line px-3 py-1.5 sm:px-4">
+          <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="inline-flex h-10 items-center gap-1 rounded-lg px-2 text-[14.5px] font-semibold text-muted-foreground hover:text-foreground">
+            <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} aria-hidden /> {open ? "Show less" : "Show more"}
+          </button>
+          <button type="button" onClick={onViewAll} className="ml-auto inline-flex h-10 items-center gap-1 rounded-lg px-2 text-[14.5px] font-semibold text-accent-fg">
+            View all updates <ChevronRight className="size-4" aria-hidden />
+          </button>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+/** One line on the overview: where the customer handover is up to. */
+function HandoverLine({ job, status, onOpen }: { job: Job; status: HandoverStatus; onOpen: () => void }) {
+  const done = isFinished(status);
+  return (
+    <section className="panel flex flex-wrap items-center gap-3 px-5 py-4 sm:px-6" aria-label="Customer handover">
+      <PackageCheck className={cn("size-6 shrink-0", done ? "text-good-fg" : "text-subtle")} aria-hidden />
+      <div className="min-w-0 flex-1">
+        <h2 className="text-[16.5px] font-semibold text-heading">Customer handover</h2>
+        <p className="text-[14.5px] text-subtle">{HANDOVER_STATUS_LABEL[status]}</p>
+      </div>
+      {job.status === "completed" || job.status === "snagging" || status !== "not_started" ? (
+        <Button variant="secondary" onClick={onOpen}>
+          {status === "not_started" ? "Create handover" : done ? "View handover" : "Continue"}
+        </Button>
+      ) : null}
+    </section>
   );
 }
