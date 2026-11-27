@@ -11,6 +11,7 @@
  * sheet when opened from elsewhere (Today, Bob, a customer).
  */
 import * as React from "react";
+import Link from "next/link";
 import { AlarmClock, AlertTriangle, ArrowLeft, CalendarCheck, Check, CheckCheck, ChevronDown, Copy, FileText, HardHat, Info, Mail, Phone, PhoneCall, MapPinned, Reply, Save, Send, UserRound } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
@@ -351,6 +352,13 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
                 ) : null}
               </span>
             </div>
+            {canSend && !replied ? (
+              <p className="mb-2 flex flex-wrap items-center gap-x-2 text-[15px]">
+                <span className="text-subtle">To</span>
+                <span className="font-semibold text-heading">{e.customerName}</span>
+                <span className="text-muted-foreground">&lt;{e.email}&gt;</span>
+              </p>
+            ) : null}
             {!replied && suggestion.flags.length ? (
               <ul className="mb-2 space-y-1.5">
                 {suggestion.flags.map((f, i) => (
@@ -383,10 +391,19 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
                 <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-subtle" />
                 <span>
                   {canSend
-                    ? "Send… goes through your connected mailbox and always asks you to approve it first."
+                    ? `Send reply emails ${e.email} from your connected account. You'll see it once more and approve it before anything goes.`
                     : callback
                       ? `Prefer to text? Copy the message and paste it into a text to ${e.phone}. Nothing is sent from Bob.`
                       : route.how}
+                  {!canSend && !callback && e.email && !emailConnected && can("settings.manage") ? (
+                    <>
+                      {" "}
+                      <Link href="/settings?open=email" className="font-semibold text-accent-fg underline-offset-2 hover:underline">
+                        Connect Gmail or Outlook
+                      </Link>{" "}
+                      to send replies straight from Bob.
+                    </>
+                  ) : null}
                 </span>
               </p>
             ) : null}
@@ -531,6 +548,8 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
             {canSend ? (
               <Button
                 size="default"
+                className="flex-1 sm:flex-none"
+                disabled={!reply.trim() || !!pending}
                 onClick={async () => {
                   await save(true);
                   const r = await propose("send_email", { to: e.email, subject: `Re: ${e.title}`, body: reply, enquiryId: e.id, customerId: e.customerId, purpose: "reply" });
@@ -540,7 +559,7 @@ function Workspace({ e, onBack, backLabel, inline }: { e: Enquiry; onBack?: () =
                   } else toast(r.error, "error");
                 }}
               >
-                <Send /> Send…
+                <Send /> Send reply
               </Button>
             ) : null}
             {callback && e.phone && !replied ? (

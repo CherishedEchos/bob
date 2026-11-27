@@ -139,7 +139,7 @@ function SettingsInner() {
       </Group>
 
       <Group title="Connections">
-        <Section icon={Link2} title="Email & accounting" subtitle={connectedSummary}>
+        <Section icon={Link2} title="Email & accounting" subtitle={connectedSummary} defaultOpen={params.get("open") === "email"}>
           <p className="mb-3 text-[15px] text-muted-foreground">Connecting uses each service&apos;s own sign-in page — Bob never sees your password. You can disconnect at any time, and Bob deletes its access straight away.</p>
           <div className="space-y-2">
             {data.connections.map((c) => (
