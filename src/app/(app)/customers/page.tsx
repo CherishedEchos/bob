@@ -8,7 +8,7 @@ import { ENQUIRY_STATUS_LABEL, JOB_STATUS_LABEL, invoiceBalance, isActiveJob, ne
 import type { Snapshot } from "@/lib/types";
 import { gbp, timeAgo, todayKey } from "@/lib/utils";
 import { relativeDayInline } from "@/lib/dates";
-import { EmptyState, ListRow, StatusText, pageSecondaryClass } from "@/components/common/bits";
+import { EmptyState, ListRow, StatusText, Tabs, pageSecondaryClass } from "@/components/common/bits";
 import { Input } from "@/components/ui/input";
 import { PersonAvatar } from "@/components/common/people";
 
@@ -16,15 +16,20 @@ export default function CustomersPage() {
   const { data, can } = useStore();
   const ui = useUI();
   const [query, setQuery] = React.useState("");
+  const [kind, setKind] = React.useState<"all" | "domestic" | "commercial">("all");
   const q = query.trim().toLowerCase();
-  const list = data.customers.filter((c) => !q || [c.name, c.town, c.email, c.phone].some((s) => s?.toLowerCase().includes(q)));
+  // Unclassified customers only appear under All — they're never guessed into a type.
+  const list = data.customers
+    .filter((c) => kind === "all" || c.kind === kind)
+    .filter((c) => !q || [c.name, c.contactName, c.town, c.email, c.phone].some((s) => s?.toLowerCase().includes(q)));
+  const count = (k: "domestic" | "commercial") => data.customers.filter((c) => c.kind === k).length;
 
   return (
     <div className="max-w-[1100px]">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="t-page">Customers</h1>
-          <p className="t-meta mt-0.5 lg:text-[15px]">{data.customers.length} customers</p>
+          <p className="t-meta mt-1">{data.customers.length} customers</p>
         </div>
         {can("customers.write") ? (
           <button type="button" onClick={() => ui.openForm({ form: "customer" })} className={pageSecondaryClass}>
@@ -32,6 +37,17 @@ export default function CustomersPage() {
           </button>
         ) : null}
       </div>
+      <Tabs
+        label="Customer type"
+        className="mb-3"
+        value={kind}
+        onChange={setKind}
+        options={[
+          { value: "all", label: "All customers", count: data.customers.length },
+          { value: "domestic", label: "Domestic", count: count("domestic") },
+          { value: "commercial", label: "Commercial", count: count("commercial") },
+        ]}
+      />
       <div className="relative mb-3">
         <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-subtle" />
         <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, town, phone or email" aria-label="Search customers" className="pl-10" />
@@ -54,6 +70,7 @@ export default function CustomersPage() {
                 meta={
                   <>
                     <span className="block truncate">
+                      {c.kind === "commercial" ? `Commercial${c.contactName ? ` · ${c.contactName}` : ""} · ` : ""}
                       {c.town ?? "No town"} · {latestActivity(c.id, data, can("finance.read"))}
                     </span>
                     {openEnquiry ? <StatusText tone="amber" className="mt-1">{wantsCallback(openEnquiry) ? "Asked for a call back" : "Waiting for a reply"}</StatusText> : null}

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlarmClock, ChevronRight, HardHat, Mail, MapPin, Phone, ReceiptText, ShieldAlert } from "lucide-react";
+import { AlarmClock, ChevronRight, HardHat, Mail, MapPin, Phone, ReceiptText, ShieldAlert, Pencil } from "lucide-react";
 import { api, useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { invoiceBalance, invoiceStatusLabel, jobFinance } from "@/lib/derive";
@@ -43,7 +43,9 @@ function CustomerDetail({ id }: { id: string }) {
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="px-5 pb-5 pt-6 sm:px-6">
-        <h2 className="pr-12 text-[22px] font-bold leading-tight tracking-tight">{c.name}</h2>
+        {c.kind ? <p className="mb-1 text-[13.5px] font-semibold uppercase tracking-[0.05em] text-subtle">{c.kind === "commercial" ? "Commercial customer" : "Domestic customer"}</p> : null}
+        <h2 className="pr-12 text-[24px] font-bold leading-tight tracking-tight">{c.name}</h2>
+        {c.kind === "commercial" && c.contactName ? <p className="mt-1 text-[15.5px] text-foreground">Main contact: <span className="font-semibold">{c.contactName}</span></p> : null}
         {c.town || c.address ? (
           <p className="mt-1 flex items-center gap-1 text-[15px] text-muted-foreground">
             <MapPin className="size-3.5 text-accent-icon" /> {c.address ?? c.town}
@@ -78,15 +80,39 @@ function CustomerDetail({ id }: { id: string }) {
               <ReceiptText /> Invoice draft
             </Button>
           ) : null}
-          <Button size="sm" variant="secondary" onClick={() => ui.openForm({ form: "reminder", title: `Call ${c.name}`, dueDate: addDaysKey(1), customerId: c.id })}>
-            <AlarmClock /> Add reminder
+          <Button size="sm" variant="secondary" onClick={() => ui.openForm({ form: "reminder", title: `Call ${c.contactName || c.name}`, dueDate: addDaysKey(1), customerId: c.id })}>
+            <AlarmClock /> Add task
           </Button>
+          {can("customers.write") ? (
+            <Button size="sm" variant="secondary" onClick={() => ui.openForm({ form: "customer", customerId: c.id })}>
+              <Pencil /> Edit details
+            </Button>
+          ) : null}
         </div>
         <dl className="mt-4 space-y-1 text-[15px] text-muted-foreground">
           {c.phone ? <div>Phone: <span className="text-foreground/90">{c.phone}</span></div> : null}
           {c.email ? <div>Email: <span className="text-foreground/90">{c.email}</span></div> : null}
           {can("finance.read") && owed ? <div>Owes on invoices: <span className="font-semibold text-warn-fg">{gbp(owed)}</span></div> : null}
         </dl>
+        {c.kind === "commercial" && c.contacts?.length ? (
+          <div className="mt-4">
+            <h3 className="mb-2 text-[15px] font-semibold text-heading">Other contacts</h3>
+            <ul className="divide-y divide-line rounded-lg ring-1 ring-line">
+              {c.contacts.map((x, i) => (
+                <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-[15px]">
+                  <span className="min-w-0">
+                    <span className="font-semibold text-heading">{x.name}</span>
+                    {x.role ? <span className="text-subtle"> · {x.role}</span> : null}
+                  </span>
+                  <span className="flex gap-3 text-[14.5px]">
+                    {x.phone ? <a href={`tel:${x.phone.replace(/\s/g, "")}`} className="font-medium text-accent-fg">{x.phone}</a> : null}
+                    {x.email ? <a href={`mailto:${x.email}`} className="font-medium text-accent-fg">Email</a> : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
 
       <Section title={`Jobs (${jobs.length})`}>

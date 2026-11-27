@@ -12,7 +12,7 @@ export type FormPrefill =
   | { form: "payment"; jobId?: string; amount?: number }
   | { form: "reminder"; title?: string; dueDate?: string; customerId?: string; relatedType?: "enquiry" | "job"; relatedId?: string; assignedPersonId?: string }
   | { form: "enquiry" }
-  | { form: "customer" }
+  | { form: "customer"; customerId?: string }
   | { form: "invoice"; customerId?: string; jobId?: string; amount?: number }
   | { form: "expense"; jobId?: string }
   | { form: "quote"; customerId?: string; enquiryId?: string; jobId?: string }

@@ -5,7 +5,7 @@
  * All validation and permission checks happen again on the server.
  */
 import * as React from "react";
-import { Check } from "lucide-react";
+import { Check, Plus, Trash2 } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI, type FormPrefill } from "@/lib/store/ui";
 import {
@@ -14,7 +14,7 @@ import {
 } from "@/lib/derive";
 import type { ExpenseCategory, PaymentMethod, PaymentType, VatTreatment } from "@/lib/types";
 import type { FieldErrors } from "@/lib/validation";
-import { addDaysKey, gbp, todayKey, formatDateInline } from "@/lib/utils";
+import { addDaysKey, cn, gbp, todayKey, formatDateInline } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field, Input, NativeSelect, Textarea } from "@/components/ui/input";
@@ -28,7 +28,7 @@ const TITLES: Record<FormPrefill["form"], [string, string]> = {
   payment: ["Record a payment", "Log money you've already received against a job."],
   reminder: ["Add task", "A to-do for you or someone in the team. Link it to a job to see it there."],
   enquiry: ["Add an enquiry", "A call, message, email or form that came in. Use made-up details in the demo."],
-  customer: ["New customer", "Only add details you actually have."],
+  customer: ["Customer details", "Only add details you actually have."],
   invoice: ["Invoice draft", "Saved as a draft. Nothing is sent from here."],
   expense: ["Add a cost", "Record materials, labour or hire against a job."],
   quote: ["Record a quote", "Log a quote you've sent so Bob can chase it."],
@@ -50,7 +50,7 @@ export function FormHost() {
           {form.form === "payment" ? <PaymentForm prefill={form} /> : null}
           {form.form === "reminder" ? <ReminderForm prefill={form} /> : null}
           {form.form === "enquiry" ? <EnquiryForm /> : null}
-          {form.form === "customer" ? <CustomerForm /> : null}
+          {form.form === "customer" ? <CustomerForm customerId={form.customerId} /> : null}
           {form.form === "invoice" ? <InvoiceForm prefill={form} /> : null}
           {form.form === "expense" ? <ExpenseForm prefill={form} /> : null}
           {form.form === "quote" ? <QuoteForm prefill={form} /> : null}
@@ -477,42 +477,120 @@ function EnquiryForm() {
 
 /* -------------------------------- Customer -------------------------------- */
 
-function CustomerForm() {
-  const { actions } = useStore();
+type ContactRow = { name: string; role: string; phone: string; email: string };
+
+/**
+ * Add or edit a customer. Domestic: a person, their site address, phone and
+ * email. Commercial: the company, a main contact, business address, phone,
+ * email and other contacts. Type can be left unset — Bob never guesses it.
+ */
+function CustomerForm({ customerId }: { customerId?: string }) {
+  const { actions, data } = useStore();
   const ui = useUI();
-  const f = useFormState({ name: "", phone: "", email: "", town: "", address: "" });
+  const existing = customerId ? data.customers.find((c) => c.id === customerId) : undefined;
+  const f = useFormState({
+    kind: existing?.kind ?? "",
+    name: existing?.name ?? "",
+    contactName: existing?.contactName ?? "",
+    phone: existing?.phone ?? "",
+    email: existing?.email ?? "",
+    town: existing?.town ?? "",
+    address: existing?.address ?? "",
+  });
+  const [contacts, setContacts] = React.useState<ContactRow[]>((existing?.contacts ?? []).map((c) => ({ name: c.name, role: c.role ?? "", phone: c.phone ?? "", email: c.email ?? "" })));
   const { values, errors, set } = f;
+  const commercial = values.kind === "commercial";
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     f.setBusy(true);
-    const res = await actions.createCustomer(values);
+    const payload = {
+      ...values,
+      kind: values.kind || undefined,
+      contactName: commercial ? values.contactName : "",
+      contacts: commercial ? contacts.filter((c) => c.name.trim()).map((c) => ({ name: c.name.trim(), role: c.role, phone: c.phone, email: c.email })) : existing?.contacts?.length ? [] : undefined,
+    };
+    const res = existing ? await actions.updateCustomer(existing.id, payload) : await actions.createCustomer(payload);
     f.setBusy(false);
     if (!res.ok) return f.setErrors(res.errors);
-    toast(`${values.name} added`);
+    toast(existing ? `${values.name} updated` : `${values.name} added`);
     ui.closeForm();
-    ui.openCustomer(res.value.id);
+    if (!existing) ui.openCustomer((res.value as { id: string }).id);
   };
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
       <FormError errors={errors} />
-      <Field label="Name" htmlFor="cf-name" error={errors.name}>
-        <Input id="cf-name" value={values.name} onChange={set("name")} autoFocus aria-invalid={!!errors.name} />
+      <fieldset>
+        <legend className="mb-2 text-[14.5px] font-medium text-foreground/85">Type of customer</legend>
+        <div className="grid grid-cols-3 gap-2" role="radiogroup">
+          {(
+            [
+              ["domestic", "Domestic"],
+              ["commercial", "Commercial"],
+              ["", "Not set"],
+            ] as const
+          ).map(([v, label]) => (
+            <button
+              key={label}
+              type="button"
+              role="radio"
+              aria-checked={values.kind === v}
+              onClick={() => f.setValues((s) => ({ ...s, kind: v }))}
+              className={cn("h-11 rounded-lg text-[15px] font-semibold ring-1 transition-colors", values.kind === v ? "bg-selected text-accent-fg ring-copper-500/50" : "bg-card text-muted-foreground ring-line-strong")}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <Field label={commercial ? "Company name" : "Customer name"} htmlFor="cf-name" error={errors.name}>
+        <Input id="cf-name" value={values.name} onChange={set("name")} autoFocus={!existing} aria-invalid={!!errors.name} />
       </Field>
+      {commercial ? (
+        <Field label="Main contact" htmlFor="cf-contact" error={errors.contactName}>
+          <Input id="cf-contact" value={values.contactName} onChange={set("contactName")} placeholder="Who you deal with" />
+        </Field>
+      ) : null}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="Phone" htmlFor="cf-phone" error={errors.phone}>
+        <Field label={commercial ? "Telephone" : "Phone"} htmlFor="cf-phone" error={errors.phone}>
           <Input id="cf-phone" type="tel" value={values.phone} onChange={set("phone")} />
         </Field>
         <Field label="Email" htmlFor="cf-email" error={errors.email}>
           <Input id="cf-email" type="email" value={values.email} onChange={set("email")} aria-invalid={!!errors.email} />
         </Field>
+        <Field label={commercial ? "Business address" : "Site address"} htmlFor="cf-addr">
+          <Input id="cf-addr" value={values.address} onChange={set("address")} />
+        </Field>
         <Field label="Town" htmlFor="cf-town">
           <Input id="cf-town" value={values.town} onChange={set("town")} />
         </Field>
-        <Field label="Address" htmlFor="cf-addr">
-          <Input id="cf-addr" value={values.address} onChange={set("address")} />
-        </Field>
       </div>
-      <FormActions submitLabel="Add customer" onCancel={ui.closeForm} busy={f.busy} />
+      {commercial ? (
+        <fieldset className="space-y-2">
+          <legend className="mb-1 text-[14.5px] font-medium text-foreground/85">Other contacts</legend>
+          {contacts.map((c, i) => (
+            <div key={i} className="grid grid-cols-2 gap-2 rounded-lg bg-surface-2 p-2.5">
+              {(["name", "role", "phone", "email"] as const).map((k) => (
+                <Input
+                  key={k}
+                  aria-label={`Contact ${i + 1} ${k}`}
+                  placeholder={{ name: "Name", role: "Role", phone: "Phone", email: "Email" }[k]}
+                  value={c[k]}
+                  onChange={(e) => setContacts((list) => list.map((x, j) => (j === i ? { ...x, [k]: e.target.value } : x)))}
+                />
+              ))}
+              <Button variant="ghost" size="sm" className="col-span-2 justify-self-end" aria-label={`Remove contact ${i + 1}`} onClick={() => setContacts((list) => list.filter((_, j) => j !== i))}>
+                <Trash2 /> Remove
+              </Button>
+            </div>
+          ))}
+          {contacts.length < 10 ? (
+            <Button variant="secondary" size="sm" onClick={() => setContacts((list) => [...list, { name: "", role: "", phone: "", email: "" }])}>
+              <Plus /> Add a contact
+            </Button>
+          ) : null}
+        </fieldset>
+      ) : null}
+      <FormActions submitLabel={existing ? "Save changes" : "Add customer"} onCancel={ui.closeForm} busy={f.busy} />
     </form>
   );
 }
