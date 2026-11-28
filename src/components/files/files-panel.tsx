@@ -8,7 +8,7 @@
  * current version marked, and owner/admin controls.
  */
 import * as React from "react";
-import { ChevronLeft, ChevronRight, Download, FileImage, FileText, History, ImageOff, MoreHorizontal, Pencil, Search, Trash2, Upload } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, FileImage, FileText, History, ImageOff, PlayCircle, MoreHorizontal, Pencil, Search, Trash2, Upload } from "lucide-react";
 import type { FileCategory, JobFile } from "@/lib/types";
 import { api, useStore } from "@/lib/store/store";
 import { CATEGORY_LABEL, CATEGORY_SINGULAR, extOf, fileUrl, formatBytes } from "@/lib/files/upload";
@@ -33,7 +33,7 @@ export function groupRevisions(files: JobFile[]): { current: JobFile; history: J
   });
 }
 
-export function FilesPanel({ jobId, enquiryId, compact = false, only }: { jobId?: string; enquiryId?: string; compact?: boolean; only?: FileCategory[] }) {
+export function FilesPanel({ jobId, enquiryId, compact = false, only, allowVideo = false }: { jobId?: string; enquiryId?: string; compact?: boolean; only?: FileCategory[]; allowVideo?: boolean }) {
   const { data, refresh, can, user } = useStore();
   const all = data.files.filter((f) => (jobId ? f.jobId === jobId : f.enquiryId === enquiryId && !f.jobId) && !f.deletedAt && (!only || only.includes(f.category)));
   const ORDER = only ? ALL_ORDER.filter((c) => only.includes(c)) : ALL_ORDER;
@@ -78,7 +78,7 @@ export function FilesPanel({ jobId, enquiryId, compact = false, only }: { jobId?
     <div>
       {/* Toolbar: one primary action, search, compact filters */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        {canUpload ? <UploadButtons onPick={setPicked} primaryLabel={compact ? "Add files" : "Upload files"} /> : null}
+        {canUpload ? <UploadButtons allowVideo={allowVideo} onPick={setPicked} primaryLabel={compact ? "Add files" : "Upload files"} /> : null}
         {all.length ? (
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
             <div className="relative min-w-[200px] flex-1 lg:max-w-[280px]">
@@ -225,7 +225,7 @@ export function Thumb({ file, className }: { file: JobFile; className?: string }
   return (
     <span className={cn("grid place-items-center bg-surface-2 text-muted-foreground", className)}>
       <span className="flex flex-col items-center gap-1 text-[13px] font-semibold uppercase">
-        {file.mimeType.startsWith("image/") ? <ImageOff className="size-6" aria-hidden /> : <FileText className="size-6" aria-hidden />}
+        {file.mimeType.startsWith("video/") ? <PlayCircle className="size-6" aria-hidden /> : file.mimeType.startsWith("image/") ? <ImageOff className="size-6" aria-hidden /> : <FileText className="size-6" aria-hidden />}
         {extOf(file.filename)}
       </span>
     </span>
@@ -285,6 +285,8 @@ export function FileViewer({ list, index, onIndex, onClose }: { list: JobFile[];
       >
         {pdf ? (
           <iframe src={fileUrl(f.id)} title={f.title ?? f.filename} className="h-[70dvh] w-full rounded-xl bg-surface-2 ring-1 ring-line" />
+        ) : f.mimeType.startsWith("video/") ? (
+          <video src={fileUrl(f.id)} controls playsInline preload="metadata" className="mx-auto max-h-[70dvh] w-auto max-w-full rounded-xl bg-black ring-1 ring-line" />
         ) : f.previewable ? (
           <img src={fileUrl(f.id)} alt={f.description ?? f.title ?? f.filename} className="mx-auto max-h-[70dvh] w-auto max-w-full rounded-xl object-contain ring-1 ring-line" />
         ) : (

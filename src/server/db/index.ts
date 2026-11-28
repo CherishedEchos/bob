@@ -30,7 +30,7 @@ export const TABLES = {
     source: "text", provider: "text", externalThreadId: "text", title: "text", description: "text",
     location: "text", receivedAt: "text", status: "text", priority: "text", assignedUserId: "text",
     followUpDate: "text", lastContactAt: "text", jobId: "text", notes: "json", messages: "json",
-    draftReply: "text", suggestedReply: "text",
+    draftReply: "text", suggestedReply: "text", siteAddress: "text", measurements: "json", estimate: "json", pricingAt: "text",
   },
   jobs: {
     customerId: "text", title: "text", description: "text", location: "text", kind: "text",
@@ -96,7 +96,7 @@ export const TABLES = {
   },
   variations: {
     jobId: "text", description: "text", amount: "real", amountsAre: "text", status: "text", invoiceId: "text", approvedAt: "text",
-    createdAt: "text", createdBy: "text",
+    createdAt: "text", createdBy: "text", note: "text", fileId: "text", decidedBy: "text", decidedAt: "text", approvalVia: "text", decisionNote: "text",
   },
   handover_reports: {
     jobId: "text", selection: "json", content: "json", revision: "real", aiStatus: "text", aiNote: "text", createdBy: "text",
@@ -287,6 +287,22 @@ CREATE TABLE IF NOT EXISTS file_blobs (
   created_at TEXT NOT NULL,
   PRIMARY KEY (org_id, file_id, kind)
 );
+CREATE TABLE IF NOT EXISTS outbox (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  ref_id TEXT,
+  to_address TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  transport TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('sent','failed','not_configured')),
+  error TEXT,
+  provider_id TEXT,
+  created_by TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS outbox_org_ref_idx ON outbox(org_id, ref_id, created_at);
 CREATE TABLE IF NOT EXISTS counters (
   org_id TEXT NOT NULL,
   name TEXT NOT NULL,

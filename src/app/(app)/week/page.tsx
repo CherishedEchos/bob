@@ -25,6 +25,7 @@ import { WeekView } from "@/components/diary/week-view";
 import { TeamView } from "@/components/diary/team-view";
 import { MonthView } from "@/components/diary/month-view";
 import { Agenda } from "@/components/diary/agenda";
+import { WhoWhere } from "@/components/diary/who-where";
 
 export default function DiaryPage() {
   return (
@@ -68,7 +69,8 @@ function Diary() {
   const { move, dialog } = useBookingMover();
   const manage = can("schedule.manage");
 
-  const [savedView, saveView] = usePref<DiaryView>(`bob.diary.view.${user.id}`, "week", isDiaryView);
+  // The team view (people down the side, days across) is the default: it's the one Luke and Ryan use to see who's where.
+  const [savedView, saveView] = usePref<DiaryView>(`bob.diary.view.${user.id}`, "team", isDiaryView);
   const [weekendsPref, saveWeekends] = usePref<"show" | "hide">(`bob.diary.weekends.${user.id}`, "show", (v) => v === "show" || v === "hide");
   const urlView = params.get("view");
   const view: DiaryView = isDiaryView(urlView) ? urlView : savedView;
@@ -233,33 +235,65 @@ function Diary() {
         )}
       </div>
 
-      {/* Phone: team filter chips, then the agenda */}
+      {/* Phone: "Who's where" (the team view, one day at a time), or the week as a day-by-day agenda. */}
       <div className="lg:hidden">
-        <div className="mb-3">
+        <div className="mb-3 grid grid-cols-2 rounded-xl bg-surface-3 p-1" role="radiogroup" aria-label="Show">
+          {([
+            ["team", "Who's where"],
+            ["week", "By day"],
+          ] as const).map(([v, l]) => {
+            const on = v === "team" ? view === "team" : view !== "team";
+            return (
+              <button key={v} type="button" role="radio" aria-checked={on} onClick={() => chooseView(v)} className={cn("h-11 rounded-lg text-[15.5px] font-semibold transition", on ? "bg-card text-heading shadow-[var(--shadow-xs)]" : "text-subtle")}>
+                {l}
+              </button>
+            );
+          })}
+        </div>
+        {view === "team" ? (
+          <WhoWhere
+            days={allWeek}
+            today={today}
+            day={allWeek.includes(anchor) ? anchor : allWeek.includes(today) ? today : allWeek[0]}
+            onDay={(d) => goTo(d)}
+            bookings={data.bookings.filter((b) => inRange(b, allWeek[0], allWeek[6]))}
+            absences={data.absences}
+            jobs={jobs}
+            team={active}
+            manage={manage}
+            onOpen={openBooking}
+            onJob={(id) => ui.openJob(id)}
+            onAdd={(d, personId) => add(d, personId)}
+          />
+        ) : (
+          <>
+            <label className="mb-3 block">
+              <span className="sr-only">Show work for</span>
+              <span className="relative block">
+                <Users className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-[18px] -translate-y-1/2 text-subtle" aria-hidden />
+                <NativeSelect value={personFilter} onChange={(e) => setParams({ person: e.target.value || null })} className="h-12 pl-11 text-[16px] font-medium">
+                  {filterOptions}
+                </NativeSelect>
+              </span>
+            </label>
+            <Agenda
+              days={allWeek}
+              today={today}
+              bookings={data.bookings.filter((b) => inRange(b, allWeek[0], allWeek[6]) && filtered(b))}
+              absences={leave}
+              jobs={jobs}
+              people={people}
+              conflicts={conflicts}
+              manage={manage}
+              onOpen={openBooking}
+              onJob={(id) => ui.openJob(id)}
+              onAdd={(d) => add(d)}
+            />
+          </>
+        )}
+        <div className="mt-4">
           <AskBobDiaryBar compact />
         </div>
-        <label className="mb-3 block">
-          <span className="sr-only">Show work for</span>
-          <span className="relative block">
-            <Users className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-[18px] -translate-y-1/2 text-subtle" aria-hidden />
-            <NativeSelect value={personFilter} onChange={(e) => setParams({ person: e.target.value || null })} className="h-12 pl-11 text-[16px] font-medium">
-              {filterOptions}
-            </NativeSelect>
-          </span>
-        </label>
-        <Agenda
-          days={allWeek}
-          today={today}
-          bookings={data.bookings.filter((b) => inRange(b, allWeek[0], allWeek[6]) && filtered(b))}
-          absences={leave}
-          jobs={jobs}
-          people={people}
-          conflicts={conflicts}
-          manage={manage}
-          onOpen={openBooking}
-          onJob={(id) => ui.openJob(id)}
-          onAdd={(d) => add(d)}
-        />
       </div>
       {dialog}
     </div>

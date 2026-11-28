@@ -7,7 +7,8 @@ import "server-only";
 import type { BobMessage, BobTurnResponse, Card, Chip } from "@/lib/bob/types";
 import { uid } from "@/lib/utils";
 import { getDb } from "@/server/db";
-import type { Ctx } from "@/server/context";
+import { HttpError, type Ctx } from "@/server/context";
+import { can } from "@/lib/auth/permissions";
 import { getActionView } from "./actions";
 import { claudeConfigured, claudeTurn, noteClaudeFailure } from "./claude";
 import { spendStatus } from "@/server/services/ai-usage";
@@ -115,6 +116,9 @@ export function applyPageContext(ctx: Ctx, state: BobState, page?: PageRef) {
 }
 
 export async function handleTurn(ctx: Ctx, input: { conversationId?: string; text: string; via: "voice" | "text"; context?: PageRef }): Promise<BobTurnResponse> {
+  // Defence in depth (the route checks too): invited workers and subcontractors never reach Ask Bob,
+  // which reads company records — prices, customers and other jobs.
+  if (!can(ctx.role, "records.read")) throw new HttpError(403, "Ask Bob isn't available on your account. Open My work.");
   const bobCtx: Ctx = { ...ctx, via: "bob" };
   // An unknown or someone else's conversation id simply starts a fresh conversation.
   let conv = input.conversationId ? getConversation(bobCtx, input.conversationId) : undefined;

@@ -8,7 +8,7 @@ import { AddUpdateButton, UpdatesTimeline } from "@/components/updates/updates-t
 import { HANDOVER_STATUS_LABEL, downloadFile, handoverStatus, isFinished, longDate, publishedVersion, type HandoverStatus } from "@/components/reports/handover-wizard";
 import { fileUrl } from "@/lib/files/upload";
 import { FollowUpTrail, SendToCustomer } from "@/components/reports/send-to-customer";
-import { VariationsPanel } from "@/components/jobs/variations";
+import { ExtrasPanel } from "@/components/jobs/variations";
 
 import * as React from "react";
 import { PackageCheck } from "lucide-react";
@@ -80,8 +80,8 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
   const router = useRouter();
   const manager = user.role === "owner" || user.role === "office";
   const allowed = (t?: JobTab): JobTab => {
-    const v: JobTab | undefined = t === "money" ? "financials" : t === "report" ? "handover" : t === "files" || t === "photos" ? "updates" : t === "tasks" ? "materials" : t;
-    return !v || (v === "financials" && !money) || (v === "handover" && !manager) ? "overview" : v;
+    const v: JobTab | undefined = t === "money" ? "financials" : (t as string) === "variations" ? "extras" : t === "report" ? "handover" : t === "files" || t === "photos" ? "updates" : t === "tasks" ? "materials" : t;
+    return !v || ((v === "financials" || v === "extras") && !money) || (v === "handover" && !manager) ? "overview" : v;
   };
   const [tab, setTabState] = React.useState<JobTab>(allowed(initialTab));
   React.useEffect(() => setTabState(allowed(initialTab)), [initialTab, id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -105,7 +105,7 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
     { value: "documents", label: "Documents", count: docCount },
     { value: "schedule", label: "Schedule", count: data.bookings.filter((b) => b.jobId === j.id && (b.endDate ?? b.date) >= today).length },
     { value: "materials", label: "Materials & tasks", count: data.materials.filter((m) => m.jobId === j.id && m.status === "to_order").length + data.tasks.filter((t) => !t.done && t.relatedType === "job" && t.relatedId === j.id).length },
-    ...(money ? [{ value: "financials" as const, label: "Financials" }] : []),
+    ...(money ? [{ value: "extras" as const, label: "Extras", count: data.variations.filter((v) => v.jobId === j.id && v.status === "proposed").length || undefined }, { value: "financials" as const, label: "Financials" }] : []),
     ...(manager ? [{ value: "handover" as const, label: "Handover" }] : []),
   ];
   const fin = jobFinancials(j, data);
@@ -409,11 +409,18 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
           </div>
         ) : null}
 
+        {tab === "extras" && money ? <ExtrasPanel job={j} /> : null}
+
         {tab === "financials" && money ? (
           <div className="flex flex-col gap-5">
             <FinancialDetail fin={fin} status={j.status} />
             <div className="panel overflow-hidden">
-              <VariationsPanel job={j} />
+              <button type="button" onClick={() => setTab("extras")} className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left hover:bg-surface-2 sm:px-6">
+                <span className="text-[15px] font-semibold text-heading">Extras</span>
+                <span className="text-[15px] text-muted-foreground">
+                  {fin.approvedVariations ? `${gbp(fin.approvedVariations)} approved` : "None approved"} · open Extras
+                </span>
+              </button>
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4 sm:px-6">
                 <div className="flex items-center gap-3">
                   <span className="text-[15px] font-semibold text-heading">Payment</span>
@@ -566,7 +573,7 @@ function FinancialDetail({ fin, status }: { fin: JobFinancials; status: string }
         <div className="t-figure mt-1">{gbp(fin.contractValue)}</div>
         <dl className="mt-4 space-y-2 text-[15px]">
           <div className="flex justify-between"><dt className="text-subtle">Agreed price</dt><dd className="tabular">{gbp(fin.price)}</dd></div>
-          <div className="flex justify-between"><dt className="text-subtle">Approved variations</dt><dd className="tabular">{gbp(fin.approvedVariations)}</dd></div>
+          <div className="flex justify-between"><dt className="text-subtle">Approved extras</dt><dd className="tabular">{gbp(fin.approvedVariations)}</dd></div>
           <div className="flex justify-between border-t border-line pt-2"><dt className="text-subtle">Payments received</dt><dd className="tabular font-medium text-good-fg">{gbp(fin.received)}</dd></div>
           <div className="flex justify-between"><dt className="font-medium">Outstanding balance</dt><dd className="tabular font-semibold">{gbp(fin.outstanding)}</dd></div>
         </dl>

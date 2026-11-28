@@ -8,7 +8,10 @@
 import type { FileCategory, JobFile } from "@/lib/types";
 
 export const MAX_UPLOAD_MB = 25;
-export const ACCEPT = ".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.pdf,.doc,.docx,.xls,.xlsx,.dwg,.dxf,.txt,.csv,image/*,application/pdf";
+/** Short site videos (about a minute). */
+export const MAX_VIDEO_MB = 60;
+export const ACCEPT = ".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.mp4,.m4v,.mov,.webm,.pdf,.doc,.docx,.xls,.xlsx,.dwg,.dxf,.txt,.csv,image/*,video/*,application/pdf";
+export const isVideoName = (name: string) => ["mp4", "m4v", "mov", "webm"].includes((name.split(".").pop() ?? "").toLowerCase());
 const ALLOWED = new Set(ACCEPT.split(",").filter((x) => x.startsWith(".")).map((x) => x.slice(1)));
 
 export const CATEGORY_LABEL: Record<FileCategory, string> = { drawing: "Drawings", progress: "Progress photos", completion: "Completion", other: "Other" };
@@ -19,8 +22,9 @@ export const isImageName = (name: string) => ["jpg", "jpeg", "png", "webp", "gif
 
 /** Problems we can spot before sending anything. */
 export function precheck(file: File): string | null {
-  if (!ALLOWED.has(extOf(file.name))) return `${file.name}: this type of file isn't supported. Upload photos (JPG, PNG, HEIC), PDFs, Word/Excel documents or DWG/DXF drawings.`;
-  if (file.size > MAX_UPLOAD_MB * 1048576) return `${file.name} is ${(file.size / 1048576).toFixed(1)} MB — the limit is ${MAX_UPLOAD_MB} MB per file.`;
+  if (!ALLOWED.has(extOf(file.name))) return `${file.name}: this type of file isn't supported. Upload photos (JPG, PNG, HEIC), short videos (MP4, MOV), PDFs, Word/Excel documents or DWG/DXF drawings.`;
+  if (isVideoName(file.name) && file.size > MAX_VIDEO_MB * 1048576) return `${file.name} is ${(file.size / 1048576).toFixed(1)} MB — videos can be up to ${MAX_VIDEO_MB} MB. Keep it to about a minute, or trim it on your phone first.`;
+  if (!isVideoName(file.name) && file.size > MAX_UPLOAD_MB * 1048576) return `${file.name} is ${(file.size / 1048576).toFixed(1)} MB — the limit is ${MAX_UPLOAD_MB} MB per file.`;
   if (!file.size) return `${file.name} is empty.`;
   return null;
 }

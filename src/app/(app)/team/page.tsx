@@ -8,7 +8,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { HolidaysView, PersonLeave } from "@/components/team/leave";
-import { Archive, CalendarDays, CalendarOff, CalendarPlus, Check, Copy, Link2, Mail, Pencil, Phone, Search, ShieldOff, UserPlus, Users } from "lucide-react";
+import { FreshInvite, InviteSomeone, InviteStatusLine, type SentInvite } from "@/components/team/invite";
+import { Archive, CalendarDays, CalendarOff, CalendarPlus, Link2, Mail, Pencil, Phone, RefreshCw, Search, Send, ShieldOff, UserPlus, Users } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { addDays, formatDayShort, formatTimeRange, relativeDay, weekStart } from "@/lib/dates";
@@ -17,7 +18,7 @@ import { PersonAvatar } from "@/components/common/people";
 import { bookingEndDate, bookingsOnDay, initials } from "@/lib/schedule";
 import type { Booking, Person, PersonAccess } from "@/lib/types";
 import { cn, copyToClipboard, todayKey } from "@/lib/utils";
-import { EmptyState, PageHeader, StatusText, Tabs, pageActionClass } from "@/components/common/bits";
+import { EmptyState, PageHeader, StatusText, Tabs, pageActionClass, pageSecondaryClass } from "@/components/common/bits";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -51,6 +52,7 @@ function TeamInner() {
   const [filter, setFilter] = React.useState<Filter>("all");
   const [query, setQuery] = React.useState("");
   const [open, setOpen] = React.useState<string | null>(null);
+  const [inviting, setInviting] = React.useState(false);
   const today = todayKey();
   const manage = can("team.manage");
   const q = query.trim().toLowerCase();
@@ -78,9 +80,14 @@ function TeamInner() {
         }
         actions={
           manage && view === "people" ? (
-            <button type="button" className={pageActionClass} onClick={() => ui.openForm({ form: "person" })}>
-              <UserPlus className="size-[17px]" aria-hidden /> Add person
-            </button>
+            <>
+              <button type="button" className={pageSecondaryClass} onClick={() => ui.openForm({ form: "person" })}>
+                <UserPlus className="size-[17px] text-subtle" aria-hidden /> <span className="hidden sm:inline">Add person</span>
+              </button>
+              <button type="button" className={pageActionClass} onClick={() => setInviting(true)}>
+                <Send className="size-[17px]" aria-hidden /> Invite someone
+              </button>
+            </>
           ) : null
         }
       />
@@ -91,8 +98,16 @@ function TeamInner() {
         onChange={(v) => router.replace(v === "people" ? "/team" : "/team?view=holidays", { scroll: false })}
         options={[
           { value: "people", label: "People & availability" },
-          { value: "holidays", label: "Holidays", count: pendingLeave || undefined, highlight: true },
+          { value: "holidays", label: "Time off", count: pendingLeave || undefined, highlight: true },
         ]}
+      />
+      <InviteSomeone
+        open={inviting}
+        onClose={() => setInviting(false)}
+        onOpenPerson={(id) => {
+          setInviting(false);
+          setOpen(id);
+        }}
       />
       {view === "holidays" ? <HolidaysView /> : (
       <>
@@ -318,8 +333,8 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
   const { data, can, actions } = useStore();
   const ui = useUI();
   const p = data.people.find((x) => x.id === personId);
-  const [link, setLink] = React.useState<{ url: string; expiresAt: string } | null>(null);
-  const [copied, setCopied] = React.useState(false);
+  const [link, setLink] = React.useState<SentInvite | null>(null);
+  const [busy, setBusy] = React.useState(false);
   const [confirm, setConfirm] = React.useState<"revoke" | "archive" | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [inviteRole, setInviteRole] = React.useState<"worker" | "office">("worker");
@@ -341,19 +356,15 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
   const past = theirs.filter((b) => bookingEndDate(b) < today).sort((x, y) => y.date.localeCompare(x.date)).slice(0, 5);
   const jobs = new Map(data.jobs.map((j) => [j.id, j]));
 
-  const invite = async () => {
+  // Issues a fresh single-use link and emails it (when email is set up). The old link stops working.
+  const invite = async (resend = false) => {
     setError(null);
-    const r = await actions.run<{ path: string; expiresAt: string }>("createInvite", { personId: p.id, role: inviteRole });
-    if (!r.ok) return setError(r.errors._ || "Couldn't create the invite");
-    setLink({ url: `${window.location.origin}${r.value.path}`, expiresAt: r.value.expiresAt });
-    toast(`Invite link ready for ${p.name}`);
-  };
-  const copy = async () => {
-    if (!link) return;
-    const ok = await copyToClipboard(link.url);
-    if (!ok) return toast("Couldn't copy — select the link and copy it", "error");
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    setBusy(true);
+    const r = resend ? await actions.run<SentInvite>("resendInvite", { personId: p.id }) : await actions.run<SentInvite>("sendInvite", { personId: p.id, role: inviteRole });
+    setBusy(false);
+    if (!r.ok) return setError(r.errors._ || r.errors.email || "Couldn't create the invite");
+    setLink(r.value);
+    toast(r.value.emailStatus === "sent" ? `Invite emailed to ${r.value.email}` : r.value.emailStatus === "failed" ? "The invite email didn't go — try again or copy the link" : `Invite link ready for ${p.name}`, r.value.emailStatus === "failed" ? "error" : "success");
   };
   const BookingLine = ({ b }: { b: Booking }) => {
     const j = jobs.get(b.jobId);
@@ -472,27 +483,18 @@ function PersonSheet({ personId, onClose }: { personId: string | null; onClose: 
                   {error}
                 </p>
               ) : null}
-              {link ? (
-                <div className="mt-3 rounded-xl bg-message p-3">
-                  <label htmlFor="invite-link" className="text-[14.5px] font-semibold">
-                    Invite link for {a.email ?? p.email}
-                  </label>
-                  <div className="mt-1.5 flex gap-2">
-                    <Input id="invite-link" readOnly value={link.url} onFocus={(e) => e.currentTarget.select()} className="h-11 text-[15px]" />
-                    <Button size="sm" onClick={() => void copy()}>
-                      {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy link"}
-                    </Button>
-                  </div>
-                  <p className="mt-2 text-[14px] text-muted-foreground">
-                    Bob doesn&apos;t email this — send it by text, WhatsApp or email. It works once, only for {a.email ?? p.email}, and expires {formatDayShort(link.expiresAt.slice(0, 10))}. Save it now: it isn&apos;t shown again.
-                  </p>
-                </div>
-              ) : null}
+              {link ? <FreshInvite sent={link} name={p.name} busy={busy} onRetry={() => void invite(true)} /> : <InviteStatusLine a={a} />}
               <div className="mt-3 flex flex-wrap gap-2">
-                {!p.archivedAt && a.state !== "accepted" ? (
-                  <Button size="sm" variant={a.state === "pending" ? "secondary" : "default"} onClick={() => void invite()}>
-                    <Link2 /> {a.state === "pending" ? "New invite link" : a.state === "not_invited" ? "Invite to Bob" : "Invite again"}
-                  </Button>
+                {!p.archivedAt && a.state !== "accepted" && !(link && link.emailStatus === "failed") ? (
+                  a.state === "pending" || a.state === "expired" ? (
+                    <Button size="sm" variant={a.state === "expired" ? "default" : "secondary"} disabled={busy} onClick={() => void invite(true)}>
+                      <RefreshCw /> {a.state === "expired" ? "Send a new invite" : "Resend invite"}
+                    </Button>
+                  ) : (
+                    <Button size="sm" disabled={busy} onClick={() => void invite()}>
+                      <Link2 /> {a.state === "not_invited" ? "Invite to Bob" : "Invite again"}
+                    </Button>
+                  )
                 ) : null}
                 {a.state === "pending" && a.inviteId ? (
                   <Button

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Overview was renamed to Today. */
+/** Older links to /overview open the business overview (Home). */
 export default function OverviewRedirect() {
-  redirect("/week");
+  redirect("/home");
 }

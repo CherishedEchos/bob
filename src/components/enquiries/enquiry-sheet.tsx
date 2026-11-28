@@ -12,7 +12,7 @@
  */
 import * as React from "react";
 import Link from "next/link";
-import { AlarmClock, AlertTriangle, ArrowLeft, CalendarCheck, Check, CheckCheck, ChevronDown, Copy, FileText, HardHat, Info, Mail, Phone, PhoneCall, MapPinned, Reply, Save, Send, UserRound } from "lucide-react";
+import { AlarmClock, AlertTriangle, ArrowLeft, CalendarCheck, Check, CheckCheck, ChevronDown, ClipboardList, Copy, FileText, HardHat, Info, Mail, Phone, PhoneCall, MapPinned, Reply, Save, Send, UserRound } from "lucide-react";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
 import { ENQUIRY_STATUS_LABEL, PRIORITY_LABEL, SOURCE_LABEL, followUpDue, needsReply, wantsCallback } from "@/lib/derive";
@@ -657,6 +657,30 @@ function WonToJob({ e }: { e: Enquiry }) {
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
+        {can("enquiries.write") ? (
+          e.pricingAt ? (
+            <Button size="sm" variant="secondary" asChild>
+              <Link href={`/pricing/${e.id}`} onClick={() => ui.closeEnquiry()}>
+                <ClipboardList /> Open in jobs to price
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                const r = await actions.run("addToPricing", { id: e.id });
+                setBusy(false);
+                if (!r.ok) return setError(r.errors._ || "Couldn't add it to Jobs to price.");
+                toast(`Added to Jobs to price — ${e.title}`);
+              }}
+            >
+              <ClipboardList /> Add to jobs to price
+            </Button>
+          )
+        ) : null}
         {can("jobs.write") ? (
           <Button size="sm" disabled={busy} onClick={() => void win()}>
             <HardHat /> {busy ? "Creating job…" : "Won — create job"}

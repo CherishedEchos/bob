@@ -21,6 +21,8 @@ import { listVariations } from "./variations";
 import { listReportVersions, listReports } from "./handover-reports";
 import { listFollowUps } from "./followups";
 import { HttpError } from "@/server/context";
+import { storagePersistent } from "@/server/db/backup";
+import { mailStatus } from "@/server/mail";
 
 /**
  * Everything the dashboard needs, for the signed-in user's organisation only.
@@ -62,7 +64,13 @@ export function buildSnapshot(ctx: Ctx): Snapshot {
     followUps: listFollowUps(ctx),
     activity: can(ctx.role, "activity.read") ? scoped(ctx).list("activity", { order: "at DESC", limit: 150 }) : [],
     connections: listConnections(ctx),
-    mode: { database: "local-sqlite", aiEngine: activeEngine(), platformAdmin: isPlatformAdmin(ctx) || undefined },
+    mode: {
+      database: "local-sqlite",
+      aiEngine: activeEngine(),
+      platformAdmin: isPlatformAdmin(ctx) || undefined,
+      storageAtRisk: ctx.org.dataMode === "live" && can(ctx.role, "team.manage") && !storagePersistent() ? true : undefined,
+      inviteEmail: ctx.org.dataMode === "live" && mailStatus().configured ? true : undefined,
+    },
     generatedAt: new Date().toISOString(),
   };
 }

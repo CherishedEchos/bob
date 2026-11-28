@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
 
-/** Home (the business overview) is the landing page. Ask Bob lives at /assistant (and behind the mic on phones). */
-export default function HomePage() {
-  redirect("/home");
+/**
+ * The first screen for owners and admins is the team diary (people down the
+ * side, days across; "Who's where" on a phone). The business overview lives at
+ * /home ("Overview"). Invited workers and subcontractors are sent to My work by
+ * the app layout before this runs.
+ */
+export default function Landing() {
+  redirect("/week");
 }

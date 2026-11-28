@@ -41,11 +41,11 @@ export function reportCostSummary(job: Pick<Job, "id" | "quotedValue">, data: { 
   lines.push({ key: "agreed", label: "Agreed price", amount: round2(job.quotedValue), note: "as quoted" });
   for (const v of variations) {
     const billed = v.invoiceId ? data.invoices.find((i) => i.id === v.invoiceId) : undefined;
-    lines.push({ key: `var_${v.id}`, label: `Approved variation: ${v.description}`, amount: round2(v.amount), note: [VAT_NOTE[v.amountsAre], billed ? `billed on ${billed.number ?? "an invoice"}` : ""].filter(Boolean).join(" · ") });
+    lines.push({ key: `var_${v.id}`, label: `Extra: ${v.description}`, amount: round2(v.amount), note: [VAT_NOTE[v.amountsAre], billed ? `billed on ${billed.number ?? "an invoice"}` : ""].filter(Boolean).join(" · ") });
   }
   if (variations.length) {
     const plusVat = variations.some((v) => v.amountsAre === "exclusive");
-    lines.push({ key: "total", label: "Total agreed", amount: round2(job.quotedValue + variations.reduce((s, v) => s + v.amount, 0)), note: plusVat ? "VAT on variations marked plus VAT is added when invoiced" : undefined, strong: true });
+    lines.push({ key: "total", label: "Total agreed", amount: round2(job.quotedValue + variations.reduce((s, v) => s + v.amount, 0)), note: plusVat ? "VAT on extras marked plus VAT is added when invoiced" : undefined, strong: true });
   }
   const agreedTotal = lines.find((l) => l.key === "total")?.amount ?? lines[0].amount;
 

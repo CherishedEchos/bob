@@ -241,7 +241,7 @@ describe("page context (Ask Bob knows the record on screen)", () => {
     expect(sys[1]).toMatch(/looking at the job page for Sophie Mackay — Oak Road kitchen/);
     expect(sys[0]).not.toMatch(/looking at the job page/); // stays out of the cached block
     const action = r.messages.find((m) => m.action)?.action;
-    expect(action?.title).toBe("Record variation");
+    expect(action?.title).toBe("Add an extra");
     expect(action?.status).toBe("pending");
   });
 

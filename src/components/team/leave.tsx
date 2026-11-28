@@ -5,11 +5,12 @@
  * record or request leave. Dates are plain date keys (no time zones).
  */
 import * as React from "react";
-import { AlertTriangle, CalendarOff, Check, Plane, Plus, X } from "lucide-react";
+import { AlertTriangle, CalendarOff, Check, History, Info, Plane, Plus, X } from "lucide-react";
 import type { Absence, Person } from "@/lib/types";
 import { useStore } from "@/lib/store/store";
 import { useUI } from "@/lib/store/ui";
-import { ABSENCE_LABEL, PART_LABEL, leaveDays } from "@/lib/leave";
+import { ABSENCE_LABEL, PART_LABEL, bookedDaysInRange, lastMonthRange, leaveDays, leaveDaysInRange, overlapsRange, thisMonthRange } from "@/lib/leave";
+import { addDays, formatTimeRange } from "@/lib/dates";
 import { formatDayShort } from "@/lib/dates";
 import { cn, todayKey } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,6 @@ export function HolidaysView() {
   const manage = can("team.manage");
   const pending = data.absences.filter((a) => a.status === "pending").sort((a, b) => a.startDate.localeCompare(b.startDate));
   const upcoming = data.absences.filter((a) => a.status === "approved" && a.endDate >= today).sort((a, b) => a.startDate.localeCompare(b.startDate));
-  const past = data.absences.filter((a) => a.endDate < today || a.status === "declined" || a.status === "cancelled").sort((a, b) => b.startDate.localeCompare(a.startDate)).slice(0, 12);
   const selfApprove = org.leavePolicy?.managersSelfApprove ?? true;
 
   const decide = async (a: Absence, decision: "approve" | "decline") => {
@@ -151,12 +151,7 @@ export function HolidaysView() {
         )}
       </section>
 
-      {past.length ? (
-        <details className="panel px-4 py-3">
-          <summary className="cursor-pointer text-[15px] font-semibold text-heading">Past, declined and cancelled</summary>
-          <ul className="mt-2 divide-y divide-line">{past.map((a) => <Row key={a.id} a={a} />)}</ul>
-        </details>
-      ) : null}
+      <TimeOffHistory />
 
       {adding ? (
         <LeaveForm
@@ -304,6 +299,168 @@ export function PersonLeave({ person }: { person: Person }) {
         <p className="mt-2 text-[15px] text-muted-foreground">Nothing coming up.</p>
       )}
       {adding ? <LeaveForm personId={person.id} onClose={() => setAdding(false)} /> : null}
+    </section>
+  );
+}
+
+/** Requested, approved, declined and cancelled — distinct at a glance. */
+const HISTORY_STATUS: Record<Absence["status"], { label: string; tone: "amber" | "green" | "neutral" | "red" }> = {
+  pending: { label: "Requested", tone: "amber" },
+  approved: { label: "Approved", tone: "green" },
+  declined: { label: "Declined", tone: "red" },
+  cancelled: { label: "Cancelled", tone: "neutral" },
+};
+
+/** Subcontractors aren't on holiday: they're unavailable. */
+const leaveLabel = (a: Absence, p?: Person) => (p?.kind === "subcontractor" && a.kind === "holiday" ? "Unavailable" : ABSENCE_LABEL[a.kind]);
+const dayLabel = (d: number) => `${d % 1 ? d.toFixed(1) : d} working day${d === 1 ? "" : "s"}`;
+
+/**
+ * Time off, looking back as easily as forward: pick a person and a period
+ * ("Last month" is one tap). Only the part of each leave period inside the
+ * period counts. For one person it also lists the work they were BOOKED for,
+ * separately — a booking isn't proof they worked, and an empty day isn't a
+ * holiday. Bob doesn't track attendance, and says so.
+ */
+export function TimeOffHistory() {
+  const { data } = useStore();
+  const today = todayKey();
+  const [lmFrom, lmTo] = lastMonthRange(today);
+  const [who, setWho] = React.useState("");
+  const [from, setFrom] = React.useState(lmFrom);
+  const [to, setTo] = React.useState(lmTo);
+  const people = new Map(data.people.map((p) => [p.id, p]));
+  const jobs = new Map(data.jobs.map((j) => [j.id, j]));
+  const person = who ? people.get(who) : undefined;
+  const valid = from && to && from <= to;
+  const rows = valid
+    ? data.absences
+        .filter((a) => (!who || a.personId === who) && overlapsRange(a, from, to))
+        .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    : [];
+  const approvedDays = rows.filter((a) => a.status === "approved").reduce((n, a) => n + leaveDaysInRange(a, from, to), 0);
+  const booked = person && valid ? bookedDaysInRange(data.bookings, person.id, from, to) : [];
+  const bookedDates = new Set(booked.map((b) => b.date));
+  const quick = (f: string, t: string) => {
+    setFrom(f);
+    setTo(t);
+  };
+  const [tmFrom, tmTo] = thisMonthRange(today);
+  const active = data.people.filter((p) => !p.archivedAt || data.absences.some((a) => a.personId === p.id));
+
+  return (
+    <section aria-labelledby="hol-history" className="mt-2">
+      <h2 id="hol-history" className="mb-2 flex items-center gap-2 text-[16px] font-semibold text-heading">
+        <History className="size-[18px] text-subtle" aria-hidden /> Time off history
+      </h2>
+      <div className="panel flex flex-col gap-3 px-4 py-3.5 lg:px-5">
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+          <label className="block">
+            <span className="text-[14px] font-medium text-muted-foreground">Person</span>
+            <NativeSelect value={who} onChange={(e) => setWho(e.target.value)} className="mt-0.5" aria-label="Person">
+              <option value="">Everyone</option>
+              {active.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                  {p.kind === "subcontractor" ? " (subcontractor)" : ""}
+                </option>
+              ))}
+            </NativeSelect>
+          </label>
+          <label className="block">
+            <span className="text-[14px] font-medium text-muted-foreground">From</span>
+            <Input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="mt-0.5" aria-label="From" />
+          </label>
+          <label className="block">
+            <span className="text-[14px] font-medium text-muted-foreground">To</span>
+            <Input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="mt-0.5" aria-label="To" />
+          </label>
+        </div>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick periods">
+          {([
+            ["Last month", lmFrom, lmTo],
+            ["This month", tmFrom, tmTo],
+            ["Last 3 months", thisMonthRange(addDays(lmFrom, -45))[0], lmTo],
+          ] as const).map(([label, f, t]) => (
+            <button key={label} type="button" onClick={() => quick(f, t)} aria-pressed={from === f && to === t} className={cn("h-9 rounded-lg px-3 text-[14.5px] font-medium ring-1", from === f && to === t ? "bg-selected text-heading ring-accent/40" : "bg-card text-muted-foreground ring-line hover:text-foreground")}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {!valid ? <p className="text-[15px] text-danger-fg">Choose a start date before the end date.</p> : null}
+      </div>
+
+      {valid ? (
+        <div className="mt-3 flex flex-col gap-4">
+          <div>
+            <h3 className="mb-1.5 px-1 text-[15px] font-semibold text-heading">
+              Recorded time off{person ? ` — ${person.name}` : ""}{" "}
+              <span className="font-normal text-muted-foreground">
+                · {formatDayShort(from)} – {formatDayShort(to)} · {dayLabel(approvedDays)} approved
+              </span>
+            </h3>
+            {rows.length ? (
+              <ul className="panel divide-y divide-line overflow-hidden" aria-label="Time off in this period">
+                {rows.map((a) => {
+                  const p = people.get(a.personId);
+                  const inRange = leaveDaysInRange(a, from, to);
+                  const all = leaveDays(a);
+                  return (
+                    <li key={a.id} className="flex flex-col gap-0.5 px-4 py-3 lg:px-5" data-testid="history-row">
+                      <div className="flex flex-wrap items-center justify-between gap-x-3">
+                        <span className="text-[15.5px] font-semibold text-heading">
+                          {who ? leaveLabel(a, p) : `${p?.name ?? "Someone"} · ${leaveLabel(a, p)}`}
+                        </span>
+                        <StatusText tone={HISTORY_STATUS[a.status].tone}>{HISTORY_STATUS[a.status].label}</StatusText>
+                      </div>
+                      <span className="text-[15px] tabular">{absenceRange(a)}</span>
+                      <span className="text-[14.5px] text-muted-foreground">
+                        {dayLabel(inRange)} in this period{inRange !== all ? ` (of ${dayLabel(all)} in total)` : ""}
+                        {a.status === "declined" || a.status === "cancelled" ? " — not taken" : a.status === "pending" ? " — not approved yet" : ""}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="panel px-4 py-3 text-[15px] text-muted-foreground">No time off recorded{person ? ` for ${person.name}` : ""} in this period.</p>
+            )}
+          </div>
+
+          {person ? (
+            <div>
+              <h3 className="mb-1.5 px-1 text-[15px] font-semibold text-heading">
+                Booked work — {person.name}{" "}
+                <span className="font-normal text-muted-foreground">
+                  · {bookedDates.size} day{bookedDates.size === 1 ? "" : "s"} booked
+                </span>
+              </h3>
+              {booked.length ? (
+                <ul className="panel divide-y divide-line overflow-hidden" aria-label="Booked work in this period">
+                  {booked.map((b) => (
+                    <li key={`${b.bookingId}-${b.date}`} className="flex flex-wrap items-baseline justify-between gap-x-3 px-4 py-2.5 text-[15px] lg:px-5">
+                      <span className="tabular font-medium">{formatDayShort(b.date)}</span>
+                      <span className="min-w-0 flex-1 text-foreground/90">{jobs.get(b.jobId)?.title ?? "Job"}</span>
+                      <span className="tabular text-muted-foreground">{b.startTime ? formatTimeRange(b.startTime, b.endTime) : "All day"}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="panel px-4 py-3 text-[15px] text-muted-foreground">No work booked for {person.name} in this period.</p>
+              )}
+              <div className="mt-3 flex gap-2.5 rounded-xl bg-surface-2 p-3.5 text-[14.5px]" role="note" data-testid="attendance-note">
+                <Info className="mt-0.5 size-4 shrink-0 text-subtle" aria-hidden />
+                <p>
+                  <strong className="font-semibold">Bob doesn&apos;t track attendance.</strong> Booked days are what was planned — not proof {person.name.split(" ")[0]} worked them. A day with nothing booked or recorded isn&apos;t a holiday either. Check an invoice against your own records; Bob never works out a payable day.
+                  <span className="mt-1 block text-subtle">Decision for later: whether to add &ldquo;confirmed days worked&rdquo; to bookings.</span>
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="px-1 text-[14.5px] text-muted-foreground">Choose a person to see the work they were booked for alongside their time off — useful when checking a subcontractor&apos;s invoice.</p>
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }

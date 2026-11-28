@@ -1,6 +1,6 @@
 import { authed, fromResult } from "@/server/http";
 import { HttpError } from "@/server/context";
-import { MAX_FILE_BYTES, uploadFile } from "@/server/services/files";
+import { MAX_FILE_BYTES, MAX_VIDEO_BYTES, uploadFile } from "@/server/services/files";
 
 export const runtime = "nodejs";
 
@@ -12,7 +12,7 @@ export const runtime = "nodejs";
  */
 export const POST = authed(async (req, ctx) => {
   const len = Number(req.headers.get("content-length") ?? 0);
-  if (len > MAX_FILE_BYTES + 600_000) throw new HttpError(413, `That file is over the ${MAX_FILE_BYTES / 1048576} MB limit.`);
+  if (len > MAX_VIDEO_BYTES + 600_000) throw new HttpError(413, `That file is over the ${MAX_VIDEO_BYTES / 1048576} MB limit.`);
   let form: FormData;
   try {
     form = await req.formData();
@@ -21,7 +21,8 @@ export const POST = authed(async (req, ctx) => {
   }
   const file = form.get("file");
   if (!(file instanceof Blob)) throw new HttpError(400, "No file was attached.");
-  if (file.size > MAX_FILE_BYTES) throw new HttpError(413, `That file is over the ${MAX_FILE_BYTES / 1048576} MB limit.`);
+  // Per-type limits (25 MB, or 60 MB for a video) are checked in the service once the type is known.
+  if (file.size > Math.max(MAX_FILE_BYTES, MAX_VIDEO_BYTES)) throw new HttpError(413, `That file is over the ${MAX_VIDEO_BYTES / 1048576} MB limit.`);
   const thumb = form.get("thumb");
   const str = (k: string) => {
     const v = form.get(k);

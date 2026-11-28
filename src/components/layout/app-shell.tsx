@@ -4,7 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  AudioLines, BookOpen, Building2, CalendarDays, House, LayoutGrid, Check, CheckSquare, ChevronLeft, ChevronsUpDown, FlaskConical, Package, Store, UsersRound, HardHat, History, Inbox, LogOut,
+  AlertTriangle, ClipboardList,
+  AudioLines, BookOpen, Building2, CalendarDays, LayoutGrid, Check, CheckSquare, ChevronLeft, ChevronsUpDown, FlaskConical, Package, Store, UsersRound, HardHat, History, Inbox, LogOut,
   Gauge, Mic, PanelLeftClose, PanelLeftOpen, ReceiptText, Settings, Users,
 } from "lucide-react";
 import { StoreProvider, api, useStore } from "@/lib/store/store";
@@ -122,7 +123,17 @@ function ShellLayout({ children }: { children: React.ReactNode }) {
  * same label in the top bar instead.
  */
 function DemoBanner() {
-  const { org } = useStore();
+  const { org, data } = useStore();
+  // A live workspace on storage that isn't permanent yet: say so plainly (owners and admins only).
+  if (org.dataMode === "live" && data.mode.storageAtRisk)
+    return (
+      <div role="alert" className="flex shrink-0 items-center justify-center gap-2 border-b border-[rgb(180_83_9/0.25)] bg-[#fff7ed] px-4 py-1.5 text-center text-[13.5px] text-warn-fg">
+        <AlertTriangle aria-hidden className="size-3.5 shrink-0" />
+        <span>
+          <strong className="font-semibold">Storage isn&apos;t permanent on this server yet.</strong> Records and photos could be lost on the next update — don&apos;t add real work until Cresaro confirms it&apos;s set up.
+        </span>
+      </div>
+    );
   if (org.dataMode !== "sample") return null;
   return (
     <div role="note" className="hidden h-8 shrink-0 items-center justify-center gap-2 border-b border-line bg-card px-3 text-[13.5px] text-subtle lg:flex">
@@ -143,14 +154,15 @@ type NavItem = { href: string; label: string; icon: React.ComponentType<{ classN
 const NAV_GROUPS: { label?: string; items: NavItem[] }[] = [
   {
     items: [
-      { href: "/home", label: "Home", icon: House },
       { href: "/week", label: "Diary", icon: CalendarDays },
+      { href: "/home", label: "Overview", icon: Gauge },
     ],
   },
   {
     label: "Work",
     items: [
       { href: "/enquiries", label: "Enquiries", icon: Inbox, badge: "unanswered" },
+      { href: "/pricing", label: "Jobs to price", icon: ClipboardList },
       { href: "/jobs", label: "Jobs", icon: HardHat },
       { href: "/customers", label: "Customers", icon: Users },
       { href: "/tasks", label: "Tasks", icon: CheckSquare, badge: "due" },
@@ -187,12 +199,12 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
       {/* Workspace identity: the customer's brand, with Bob */}
       <div className={cn("shrink-0", collapsed ? "flex flex-col items-center gap-3 px-2 pb-3 pt-5" : "px-5 pb-4 pt-6")}>
         {collapsed ? (
-          <Link href="/home" aria-label={`${org.name} — Home`}>
+          <Link href="/" aria-label={`${org.name} — Diary`}>
             <OrgLogo org={org} size={40} />
           </Link>
         ) : (
           <div className="flex items-start justify-between gap-2">
-            <Link href="/home" aria-label={`${org.name} — Home`} className="min-w-0">
+            <Link href="/" aria-label={`${org.name} — Diary`} className="min-w-0">
               {org.wordmark?.onLight || org.wordmark?.onDark ? (
                 <OrgWordmark org={org} tone="light" height={34} className="max-w-[170px]" />
               ) : (
@@ -463,7 +475,7 @@ function MobileHeader() {
           <ChevronLeft className="size-5" aria-hidden /> {parent.label}
         </Link>
       ) : (
-      <Link href="/home" aria-label="Home" className="flex min-w-0 items-center gap-2.5">
+      <Link href="/" aria-label="Diary" className="flex min-w-0 items-center gap-2.5">
         <OrgLogo org={org} size={30} />
         <span className="min-w-0 leading-tight">
           <span className="block truncate text-[15px] font-semibold text-heading">{org.shortName || org.name}</span>
@@ -595,8 +607,8 @@ function BottomNav() {
   return (
     <nav aria-label="Main" className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-[max(10px,env(safe-area-inset-bottom))] lg:hidden">
       <div className="pointer-events-auto relative mx-auto grid h-[66px] max-w-md grid-cols-5 rounded-[26px] bg-sidebar/95 shadow-[0_12px_32px_-8px_rgb(0_0_0/0.45),0_0_0_1px_rgb(255_255_255/0.06)_inset] backdrop-blur-xl">
-        {side("/home", "Home", House)}
         {side("/week", "Diary", CalendarDays)}
+        {side("/home", "Overview", Gauge)}
         <div className="relative flex items-center justify-center">
           <Link
             href="/assistant?listen=1"

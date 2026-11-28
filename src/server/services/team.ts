@@ -21,6 +21,7 @@ import { getDb, scoped, tx } from "@/server/db";
 import { denied, fail, ok, type Ctx, type Result } from "@/server/context";
 import { hashPassword, randomToken, sha256, verifyPassword } from "@/server/auth/password";
 import { createSession } from "@/server/auth/session";
+import { latestDeliveries } from "@/server/mail";
 import { audit, getCustomer, getJob, listJobs } from "./records";
 import { ABSENCE_LABEL, absenceClashes, absenceWhen } from "./absences";
 
@@ -127,6 +128,7 @@ interface InviteRow {
   email: string;
   role: string;
   token_hash: string;
+  created_by: string;
   created_at: string;
   expires_at: string;
   accepted_at: string | null;
@@ -151,6 +153,7 @@ export function listAccess(ctx: Ctx): PersonAccess[] {
   const latest = new Map<string, InviteRow>();
   for (const r of rows) latest.set(r.person_id, r);
   const people = scoped(ctx).list<Person>("people");
+  const deliveries = latestDeliveries(ctx.orgId);
   return people.map((p) => {
     const r = latest.get(p.id);
     const role = p.userId ? memberRole(ctx.orgId, p.userId) : undefined;
@@ -158,7 +161,13 @@ export function listAccess(ctx: Ctx): PersonAccess[] {
     const state = inviteState(r);
     // An accepted invite whose login was later removed reads as "revoked".
     const effective = state === "accepted" && !p.userId ? "revoked" : state;
-    return { personId: p.id, state: effective, email: r.email, sentAt: r.created_at, expiresAt: r.expires_at, acceptedAt: r.accepted_at ?? undefined, inviteId: r.id, role: role ?? (effective === "pending" ? (r.role as Role) : undefined) };
+    const mail = deliveries.get(r.id);
+    return {
+      personId: p.id, state: effective, email: r.email, sentAt: r.created_at, expiresAt: r.expires_at, acceptedAt: r.accepted_at ?? undefined, inviteId: r.id,
+      role: role ?? (effective === "pending" ? (r.role as Role) : undefined),
+      invitedBy: r.created_by === "provisioning" ? undefined : r.created_by,
+      emailStatus: mail?.status, emailError: mail?.error, emailedAt: mail?.status === "sent" ? mail.at : undefined,
+    };
   });
 }
 

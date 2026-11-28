@@ -107,7 +107,7 @@ describe("Handover report", () => {
     const text = pdfText(pdf.data);
     expect(text).toContain("Garden room");
     expect(text).toContain("Claire Dawson");
-    expect(text).toMatch(/Approved variation: Cedar step and door canopy\s+£650/);
+    expect(text).toMatch(/Extra: Cedar step and door canopy\s+£650/);
     expect(text).toMatch(/Left to pay\s+£650/);
     expect(text).not.toMatch(/INTERNAL|7719|warranty on the cladding/);
     if (OUT) fs.writeFileSync(`${OUT}/sample-gardenroom.pdf`, pdf.data);

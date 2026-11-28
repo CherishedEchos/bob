@@ -510,7 +510,7 @@ const updateJob: ActionTool<JobEdit, { jobId: string; patch: Partial<Job>; statu
     }
     if (lines.length === 1) return clarify("Nothing to change there — what would you like updated on the job?");
     const notices: ActionNotice[] = [];
-    if (patch.quotedValue !== undefined) notices.push({ tone: "info", text: "This changes the agreed price used for billing. Approved variations stay separate." });
+    if (patch.quotedValue !== undefined) notices.push({ tone: "info", text: "This changes the agreed price used for billing. Approved extras stay separate." });
     return ready({ payload: { jobId: j.id, patch, status: a.status !== j.status ? a.status : undefined, previous }, title: "Update job", lines, notices, approveLabel: "Save changes" });
   },
   execute(ctx, a) {
@@ -536,7 +536,7 @@ const updateJob: ActionTool<JobEdit, { jobId: string; patch: Partial<Job>; statu
 const recordVariation: ActionTool<{ jobId: string; description: string; amount: number; amountsAre?: "inclusive" | "exclusive" | "no_vat"; approved?: boolean }> = {
   kind: "action",
   name: "record_variation",
-  description: "Record a variation (a change to the agreed work and price) on a job. approved true if the customer has agreed it; otherwise it's recorded as proposed. VAT treatment defaults to the company's settings.",
+  description: "Record an extra (a variation: a change to the agreed work and price) on a job — the same record as adding an Extra on the job page. approved true only if the user says the customer has agreed it (Bob records that the user logged the approval; it never claims the customer approved in Bob); otherwise it's recorded as proposed. Never invoices or emails. VAT treatment defaults to the company's settings.",
   category: "internal",
   permission: "jobs.write",
   confirmation: "always",
@@ -550,16 +550,16 @@ const recordVariation: ActionTool<{ jobId: string; description: string; amount: 
     const amountsAre = a.amountsAre ?? (fin.vatRegistered === false ? "no_vat" : fin.pricesAre ?? undefined);
     if (!amountsAre) return clarify("Is that plus VAT, including VAT, or no VAT?");
     const vat = { inclusive: "including VAT", exclusive: "plus VAT", no_vat: "no VAT" }[amountsAre];
-    return ready({ payload: { ...a, amountsAre }, title: "Record variation", lines: [{ label: "Job", value: jobLabel(j) }, { label: "Change", value: a.description, emphasis: true }, { label: "Amount", value: `${gbp(a.amount)} ${vat}`, emphasis: true }, { label: "Status", value: a.approved ? "Approved by the customer" : "Proposed (not yet agreed)" }], approveLabel: "Record it" });
+    return ready({ payload: { ...a, amountsAre }, title: "Add an extra", lines: [{ label: "Job", value: jobLabel(j) }, { label: "Extra", value: a.description, emphasis: true }, { label: "Amount", value: `${gbp(a.amount)} ${vat}`, emphasis: true }, { label: "Status", value: a.approved ? `Approved — recorded by ${ctx.userName}` : "Proposed (not agreed yet, not in the total)" }], approveLabel: "Add it" });
   },
   execute(ctx, a) {
     const r = saveVariation(ctx, { jobId: a.jobId, description: a.description, amount: a.amount, amountsAre: a.amountsAre, status: a.approved ? "approved" : "proposed" });
     if (!r.ok) return { ok: false, error: r.error };
-    return { ok: true, message: `Variation recorded${a.approved ? " and approved" : ""}.`, undo: { variationId: r.value.id }, links: [{ label: "Open job", kind: "job", id: a.jobId }] };
+    return { ok: true, message: `Extra added${a.approved ? " and the approval recorded" : " as proposed"}. No invoice or email was sent.`, undo: { variationId: r.value.id }, links: [{ label: "Open job", kind: "job", id: a.jobId }] };
   },
   undo(ctx, u) {
     const r = deleteVariation(ctx, (u as { variationId: string }).variationId);
-    return r.ok ? { ok: true, message: "Variation removed." } : { ok: false, error: r.error };
+    return r.ok ? { ok: true, message: "Extra removed." } : { ok: false, error: r.error };
   },
 };
 

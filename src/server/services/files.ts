@@ -26,6 +26,9 @@ import { workerJobIds } from "./team";
 import { getUpdateForUpload } from "./updates";
 
 export const MAX_FILE_BYTES = 25 * 1024 * 1024;
+/** Short site videos (about a minute on a phone). Larger files strain the server's memory and the database. */
+export const MAX_VIDEO_BYTES = 60 * 1024 * 1024;
+export const isVideoMime = (m?: string) => !!m && m.startsWith("video/");
 const MAX_THUMB_BYTES = 400 * 1024;
 export const FILE_CATEGORIES: FileCategory[] = ["drawing", "progress", "completion", "other"];
 export const FILE_CATEGORY_LABEL: Record<FileCategory, string> = { drawing: "Drawings", progress: "Progress photos", completion: "Completion", other: "Other" };
@@ -58,11 +61,15 @@ const EXT: Record<string, Kind> = {
   xlsx: { mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", previewable: false, label: "Excel spreadsheet" },
   dwg: { mime: "image/vnd.dwg", previewable: false, label: "DWG drawing" },
   dxf: { mime: "image/vnd.dxf", previewable: false, label: "DXF drawing" },
+  mp4: { mime: "video/mp4", previewable: true, label: "MP4 video" },
+  m4v: { mime: "video/mp4", previewable: true, label: "MP4 video" },
+  mov: { mime: "video/quicktime", previewable: true, label: "iPhone video (MOV)" },
+  webm: { mime: "video/webm", previewable: true, label: "WebM video" },
   txt: { mime: "text/plain", previewable: false, label: "Text file" },
   csv: { mime: "text/csv", previewable: false, label: "CSV file" },
 };
 
-export const ACCEPTED_TYPES_TEXT = "photos (JPG, PNG, WebP, HEIC), PDFs, Word or Excel documents and DWG/DXF drawings";
+export const ACCEPTED_TYPES_TEXT = "photos (JPG, PNG, WebP, HEIC), short videos (MP4, MOV), PDFs, Word or Excel documents and DWG/DXF drawings";
 
 const startsWith = (b: Buffer, sig: number[], at = 0) => sig.every((x, i) => b[at + i] === x);
 const ascii = (b: Buffer, from: number, to: number) => b.subarray(from, to).toString("latin1");
@@ -75,6 +82,11 @@ function sniff(b: Buffer): string | null {
   if (ascii(b, 0, 4) === "RIFF" && ascii(b, 8, 12) === "WEBP") return "webp";
   if (ascii(b, 0, 5) === "%PDF-") return "pdf";
   if (ascii(b, 4, 8) === "ftyp" && /^(heic|heix|hevc|heim|heis|mif1|msf1)$/.test(ascii(b, 8, 12))) return "heic";
+  if (ascii(b, 4, 8) === "ftyp" && ascii(b, 8, 12) === "qt  ") return "mov";
+  if (ascii(b, 4, 8) === "ftyp" && /^(isom|iso2|iso4|iso5|iso6|mp41|mp42|avc1|M4V |M4VH|M4VP|MSNV|dash|3gp4|3gp5|3g2a)$/.test(ascii(b, 8, 12))) return "mp4";
+  if (startsWith(b, [0x1a, 0x45, 0xdf, 0xa3])) return "webm";
+  // Older QuickTime files start with a moov/mdat/wide box rather than ftyp.
+  if (/^(moov|mdat|wide|free|skip)$/.test(ascii(b, 4, 8))) return "mov";
   if (startsWith(b, [0x50, 0x4b, 0x03, 0x04])) return "zip";
   if (startsWith(b, [0xd0, 0xcf, 0x11, 0xe0])) return "ole";
   if (ascii(b, 0, 4) === "AC10") return "dwg";
@@ -90,6 +102,9 @@ export function classify(filename: string, bytes: Buffer): { ok: true; kind: Kin
     ext === "jpg" || ext === "jpeg" ? found === "jpg"
     : ext === "png" || ext === "gif" || ext === "webp" || ext === "pdf" ? found === ext
     : ext === "heic" || ext === "heif" ? found === "heic"
+    : ext === "mp4" || ext === "m4v" ? found === "mp4" || found === "mov"
+    : ext === "mov" ? found === "mov" || found === "mp4"
+    : ext === "webm" ? found === "webm"
     : ext === "docx" || ext === "xlsx" ? found === "zip"
     : ext === "doc" || ext === "xls" ? found === "ole"
     : ext === "dwg" ? found === "dwg"
@@ -189,14 +204,17 @@ export function uploadFile(ctx: Ctx, input: UploadInput): Result<JobFile & { exi
 
   const filename = (clean(input.filename, 160) ?? "file").replace(/[\\/:*?"<>|]+/g, "-");
   if (!input.data.length) return fail("invalid", `${filename} is empty.`);
-  if (input.data.length > MAX_FILE_BYTES) return fail("invalid", `${filename} is ${(input.data.length / 1048576).toFixed(1)} MB — the limit is ${MAX_FILE_BYTES / 1048576} MB per file.`);
   const kind = classify(filename, input.data);
+  const limit = kind.ok && isVideoMime(kind.kind.mime) ? MAX_VIDEO_BYTES : MAX_FILE_BYTES;
+  if (input.data.length > limit) return fail("invalid", `${filename} is ${(input.data.length / 1048576).toFixed(1)} MB — the limit is ${limit / 1048576} MB per ${limit === MAX_VIDEO_BYTES ? "video (keep it to about a minute)" : "file"}.`);
   if (!kind.ok) return fail("invalid", kind.error);
 
   const requested = FILE_CATEGORIES.includes(input.category as FileCategory) ? (input.category as FileCategory) : kind.kind.mime.startsWith("image/") ? "progress" : "other";
   // Workers add site photos and documents; drawings come from the office.
   const category: FileCategory = worker && requested === "drawing" ? "other" : requested;
-  const visibility = worker ? "team" : input.visibility === "office" ? "office" : "team";
+  // Pricing photos and notes on an enquiry stay with the office by default, so they don't reach
+  // subcontractors when the enquiry becomes a job. Job uploads are shared with the crew unless marked office-only.
+  const visibility = worker ? "team" : input.visibility === "office" || (!job && input.visibility !== "team") ? "office" : "team";
   const description = clean(input.description, 500);
   const title = clean(input.title, 160);
   if ([description, title].some((t) => t && SECRETY.test(t))) return fail("invalid", "That looks like a password or entry code. Keep codes in your password manager, not in Bob.", { description: "Remove the code" });

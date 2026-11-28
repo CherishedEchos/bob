@@ -7,7 +7,7 @@
  * file is saved.
  */
 import * as React from "react";
-import { AlertCircle, Camera, CheckCircle2, FileText, Loader2, RotateCw, Upload, X } from "lucide-react";
+import { AlertCircle, Camera, CheckCircle2, FileText, Loader2, RotateCw, Upload, Video, X } from "lucide-react";
 import type { FileCategory, JobFile } from "@/lib/types";
 import { ACCEPT, CATEGORY_SINGULAR, formatBytes, guessCategory, newClientRef, precheck, uploadFile } from "@/lib/files/upload";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,7 @@ export interface UploadTarget {
 }
 
 /** Hidden pickers + the buttons that open them. Use `UploadButtons` to start. */
-export function UploadButtons({ onPick, allowCamera = true, primaryLabel = "Upload files", className }: { onPick: (files: File[]) => void; allowCamera?: boolean; primaryLabel?: string; className?: string }) {
+export function UploadButtons({ onPick, allowCamera = true, allowVideo = false, primaryLabel = "Upload files", className }: { onPick: (files: File[]) => void; allowCamera?: boolean; allowVideo?: boolean; primaryLabel?: string; className?: string }) {
   const id = React.useId();
   const pick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = [...(e.target.files ?? [])];
@@ -49,6 +49,12 @@ export function UploadButtons({ onPick, allowCamera = true, primaryLabel = "Uplo
         <label htmlFor={`${id}-camera`} className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-xl bg-card px-4 text-[15px] font-semibold text-foreground ring-1 ring-line-strong transition hover:bg-raised-hover focus-within:ring-2 focus-within:ring-ring sm:hidden">
           <Camera className="size-[18px]" aria-hidden /> Take photo
           <input id={`${id}-camera`} type="file" accept="image/*" capture="environment" className="sr-only" onChange={pick} />
+        </label>
+      ) : null}
+      {allowVideo ? (
+        <label htmlFor={`${id}-video`} className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-xl bg-card px-4 text-[15px] font-semibold text-foreground ring-1 ring-line-strong transition hover:bg-raised-hover focus-within:ring-2 focus-within:ring-ring sm:hidden">
+          <Video className="size-[18px]" aria-hidden /> Record video
+          <input id={`${id}-video`} type="file" accept="video/*" capture="environment" className="sr-only" onChange={pick} />
         </label>
       ) : null}
     </div>
@@ -84,7 +90,8 @@ export function UploadQueue({
   const [description, setDescription] = React.useState("");
   const [revision, setRevision] = React.useState("");
   const [title, setTitle] = React.useState(revisionOf?.title ?? "");
-  const [visibility, setVisibility] = React.useState<"team" | "office">("team");
+  // Pricing photos (on an enquiry) stay with the office unless shared; job uploads are shared with the crew by default.
+  const [visibility, setVisibility] = React.useState<"team" | "office">(target.enquiryId && !target.jobId ? "office" : "team");
   const [running, setRunning] = React.useState(false);
   const saved = React.useRef<JobFile[]>([]);
 

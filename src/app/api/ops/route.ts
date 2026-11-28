@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authed, fromResult, readJson } from "@/server/http";
+import { authed, fromResult, publicOrigin, readJson } from "@/server/http";
 import type { Ctx, Result } from "@/server/context";
 import * as R from "@/server/services/records";
 import * as F from "@/server/services/finance";
@@ -13,6 +13,9 @@ import * as Files from "@/server/services/files";
 import * as Var from "@/server/services/variations";
 import * as Rep from "@/server/services/handover-reports";
 import * as FU from "@/server/services/followups";
+import * as Inv from "@/server/services/invites";
+import * as Pr from "@/server/services/pricing";
+import * as Est from "@/server/services/estimates";
 
 export const runtime = "nodejs";
 
@@ -25,6 +28,18 @@ const s = (v: unknown) => (typeof v === "string" ? v : "");
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const OPS: Record<string, (ctx: Ctx, a: Record<string, any>) => Result<unknown> | Promise<Result<unknown>>> = {
   createEnquiry: (c, a) => R.createEnquiry(c, a.input),
+  // Jobs to price
+  addToPricing: (c, a) => Pr.addToPricing(c, s(a.id)),
+  createPricing: (c, a) => Pr.createPricing(c, a.input),
+  updatePricing: (c, a) => Pr.updatePricing(c, s(a.id), a.patch),
+  preparePricingQuote: (c, a) => Pr.preparePricingQuote(c, s(a.id), a),
+  markPricingQuoteSent: (c, a) => Pr.markPricingQuoteSent(c, s(a.id), s(a.quoteId), a.confirmed),
+  declinePricing: (c, a) => Pr.declinePricing(c, s(a.id)),
+  saveEstimate: (c, a) => Est.saveEstimate(c, s(a.id), a.estimate),
+  estimateToQuote: (c, a) => Est.estimateToQuote(c, s(a.id)),
+  saveRateCard: (c, a) => Est.saveRateCard(c, a.card),
+  setPilotFeature: (c, a) => Est.setPilotFeature(c, a.feature, a.on),
+  acceptPricing: (c, a) => Pr.acceptPricing(c, s(a.id), { quoteId: typeof a.quoteId === "string" ? a.quoteId : undefined, startDate: typeof a.startDate === "string" ? a.startDate : undefined }),
   updateEnquiry: (c, a) => R.updateEnquiry(c, s(a.id), a.patch),
   setEnquiryStatus: (c, a) => R.setEnquiryStatus(c, s(a.id), a.status),
   addEnquiryNote: (c, a) => R.addEnquiryNote(c, s(a.id), s(a.text)),
@@ -58,6 +73,10 @@ const OPS: Record<string, (ctx: Ctx, a: Record<string, any>) => Result<unknown> 
   revokeAccess: (c, a) => T.revokeAccess(c, s(a.personId)),
   createInvite: (c, a) => T.createInvite(c, s(a.personId), typeof a.email === "string" ? a.email : undefined, a.role === "office" ? "office" : "worker"),
   revokeInvite: (c, a) => T.revokeInvite(c, s(a.inviteId)),
+  // Invites are emailed when email delivery is set up; the link comes back either way.
+  sendInvite: (c, a) => Inv.sendInvite(c, { personId: s(a.personId), email: typeof a.email === "string" ? a.email : undefined, role: a.role === "office" ? "office" : "worker", origin: s(a.__origin) }),
+  inviteSomeone: (c, a) => Inv.inviteSomeone(c, { ...a, origin: s(a.__origin) }),
+  resendInvite: (c, a) => Inv.resendInvite(c, { personId: s(a.personId), origin: s(a.__origin) }),
   saveBooking: (c, a) => T.saveBooking(c, a.input),
   deleteBooking: (c, a) => T.deleteBooking(c, s(a.id)),
   saveMaterial: (c, a) => T.saveMaterial(c, a.input),
@@ -75,6 +94,7 @@ const OPS: Record<string, (ctx: Ctx, a: Record<string, any>) => Result<unknown> 
   updateFile: (c, a) => Files.updateFile(c, s(a.id), a.patch ?? {}),
   deleteFile: (c, a) => Files.deleteFile(c, s(a.id)),
   saveVariation: (c, a) => Var.saveVariation(c, a.input),
+  decideVariation: (c, a) => Var.decideVariation(c, s(a.id), a),
   deleteVariation: (c, a) => Var.deleteVariation(c, s(a.id)),
   createReport: (c, a) => Rep.createReport(c, a),
   saveReport: (c, a) => Rep.saveReport(c, a),
@@ -100,7 +120,8 @@ export const POST = authed(async (req, ctx) => {
   const body = await readJson(req);
   const op = OPS[s(body.op)];
   if (!op) return NextResponse.json({ error: "Unknown operation" }, { status: 400 });
-  const result = await op(ctx, (body.args as Record<string, unknown>) ?? {});
+  // The site's public address, for links in emails (BOB_PUBLIC_URL wins; never taken from the request body).
+  const result = await op(ctx, { ...((body.args as Record<string, unknown>) ?? {}), __origin: publicOrigin(req) });
   const res = fromResult(result);
   if (res instanceof Response) {
     // Booking clashes come back with the details so the planner can confirm.

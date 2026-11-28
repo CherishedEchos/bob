@@ -139,6 +139,7 @@ function SettingsInner() {
         <BusinessSection org={org} owner={owner} save={save} />
         <FinanceSection org={org} owner={owner} save={save} />
         <FollowUpSection org={org} owner={owner} save={save} />
+        <PricesSection open={params.get("open") === "prices"} />
       </Group>
 
       <Group title="Connections">
@@ -771,5 +772,81 @@ export default function SettingsPage() {
     <React.Suspense fallback={null}>
       <SettingsInner />
     </React.Suspense>
+  );
+}
+
+/**
+ * Prices for rough estimates: the business's own labour day rate and material
+ * prices. Bob only ever uses figures entered here (or typed on an estimate).
+ * The owner switches the rough-estimate pilot on or off.
+ */
+function PricesSection({ open }: { open: boolean }) {
+  const { org, can, actions } = useStore();
+  const card = org.pricing;
+  const [rate, setRate] = React.useState(card?.labourDayRate ? String(card.labourDayRate) : "");
+  const [items, setItems] = React.useState<{ id?: string; name: string; unit: string; price: string }[]>((card?.items ?? []).map((i) => ({ id: i.id, name: i.name, unit: i.unit, price: String(i.price) })));
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const manage = can("team.manage") && can("quotes.write");
+  const on = !!org.features?.roughEstimates;
+  const save = async () => {
+    const r = await actions.run("saveRateCard", { card: { labourDayRate: rate.trim() ? Number(rate) : null, items: items.filter((i) => i.name.trim()).map((i) => ({ id: i.id, name: i.name, unit: i.unit || "each", price: Number(i.price || 0) })) } });
+    if (!r.ok) return setErrors(r.errors);
+    setErrors({});
+    toast("Prices saved");
+  };
+  return (
+    <Section icon={PoundSterling} title="Prices for estimates" subtitle={on ? `Rough estimates on · ${card?.items.length ?? 0} prices${card?.labourDayRate ? ` · labour £${card.labourDayRate}/day` : ""}` : "Rough estimates (pilot) are off"} defaultOpen={open}>
+      {can("settings.manage") ? (
+        <label className="mb-4 flex items-start gap-3 rounded-xl bg-surface-2 p-3.5">
+          <input
+            type="checkbox"
+            checked={on}
+            onChange={async (e) => {
+              const r = await actions.run("setPilotFeature", { feature: "roughEstimates", on: e.target.checked });
+              toast(r.ok ? (e.target.checked ? "Rough estimates switched on" : "Rough estimates switched off") : "Couldn't change it", r.ok ? "success" : "error");
+            }}
+            className="mt-1 size-4 accent-[var(--color-accent)]"
+          />
+          <span>
+            <span className="block text-[15.5px] font-semibold">Rough estimates in Jobs to price (pilot)</span>
+            <span className="block text-[14.5px] text-muted-foreground">Fitted furniture first. Uses only the prices below; anything without a price is left out and flagged. Never sent to a customer.</span>
+          </span>
+        </label>
+      ) : null}
+      {can("settings.manage") ? (
+        <p className="-mt-2 mb-4 px-1 text-[14px] text-muted-foreground">
+          Concept designs (a picture of the finished idea from a site photo) aren&apos;t available yet: no image-generation service is set up for Bob. Nothing is sent anywhere.
+        </p>
+      ) : null}
+      <Field label="Labour day rate (£ per person per day)" htmlFor="pr-day" error={errors.labourDayRate}>
+        <Input id="pr-day" inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} disabled={!manage} className="max-w-[200px]" />
+      </Field>
+      <p className="mt-4 text-[15px] font-semibold">Materials and items</p>
+      <p className="text-[14px] text-muted-foreground">e.g. &ldquo;18mm MDF sheet&rdquo; per sheet, &ldquo;Shaker door&rdquo; each, &ldquo;Hinges and handles&rdquo; per door, &ldquo;Spray finish&rdquo; per unit.</p>
+      <div className="mt-2 flex flex-col gap-2">
+        {items.map((it, i) => (
+          <div key={it.id ?? `n${i}`} className="grid grid-cols-[1fr_90px_110px_auto] gap-2">
+            <Input value={it.name} onChange={(e) => setItems((x) => x.map((y, j) => (j === i ? { ...y, name: e.target.value } : y)))} placeholder="Item" aria-label={`Item ${i + 1}`} disabled={!manage} />
+            <Input value={it.unit} onChange={(e) => setItems((x) => x.map((y, j) => (j === i ? { ...y, unit: e.target.value } : y)))} placeholder="per" aria-label={`Unit for item ${i + 1}`} disabled={!manage} />
+            <Input value={it.price} inputMode="decimal" onChange={(e) => setItems((x) => x.map((y, j) => (j === i ? { ...y, price: e.target.value } : y)))} placeholder="£" aria-label={`Price for item ${i + 1}`} disabled={!manage} />
+            <Button type="button" variant="ghost" size="sm" onClick={() => setItems((x) => x.filter((_, j) => j !== i))} disabled={!manage} aria-label={`Remove item ${i + 1}`}>
+              Remove
+            </Button>
+          </div>
+        ))}
+      </div>
+      {errors._ ? <p className="mt-2 text-[14.5px] text-danger-fg">{errors._}</p> : null}
+      {manage ? (
+        <div className="mt-3 flex gap-2">
+          <Button type="button" variant="ghost" size="sm" onClick={() => setItems((x) => [...x, { name: "", unit: "each", price: "" }])}>
+            Add an item
+          </Button>
+          <Button type="button" size="sm" onClick={() => void save()}>
+            Save prices
+          </Button>
+        </div>
+      ) : null}
+      {card?.updatedBy ? <p className="mt-2 text-[13.5px] text-subtle">Last changed by {card.updatedBy}{card.updatedAt ? `, ${timeAgo(card.updatedAt)}` : ""}.</p> : null}
+    </Section>
   );
 }

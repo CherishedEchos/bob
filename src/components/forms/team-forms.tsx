@@ -5,7 +5,8 @@
  * on the server; on failure the form keeps everything that was typed.
  */
 import * as React from "react";
-import { AlertTriangle, Check, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, Clock, Navigation, Trash2, Users } from "lucide-react";
+import { formatTimeRange, formatDayShort } from "@/lib/dates";
 import { useStore } from "@/lib/store/store";
 import { useUI, type FormPrefill } from "@/lib/store/ui";
 import { isActiveJob } from "@/lib/derive";
@@ -134,6 +135,7 @@ export function BookingForm({ prefill }: { prefill: Extract<FormPrefill, { form:
       }}
     >
       <FormError errors={errors} />
+      {existing ? <BookingSummary bookingId={existing.id} /> : null}
       <Field label="Job" htmlFor="bk-job" error={errors.jobId}>
         <NativeSelect id="bk-job" value={values.jobId} onChange={set("jobId")} aria-invalid={!!errors.jobId}>
           <option value="">Choose a job…</option>
@@ -588,5 +590,36 @@ export function MerchantForm({ prefill }: { prefill: Extract<FormPrefill, { form
       </fieldset>
       <Actions label={m ? "Save merchant" : "Add merchant"} busy={f.busy} onCancel={ui.closeForm} />
     </form>
+  );
+}
+
+/** Opening a booking: the job, where it is (with directions), when, and who's on it — before the edit fields. */
+function BookingSummary({ bookingId }: { bookingId: string }) {
+  const { data } = useStore();
+  const ui = useUI();
+  const b = data.bookings.find((x) => x.id === bookingId);
+  const job = b ? data.jobs.find((j) => j.id === b.jobId) : undefined;
+  if (!b || !job) return null;
+  const address = job.siteAddress || job.location;
+  const crew = b.personIds.map((id) => data.people.find((p) => p.id === id)?.name).filter(Boolean);
+  return (
+    <div className="rounded-xl bg-surface-2 p-3.5" data-testid="booking-summary">
+      <button type="button" onClick={() => ui.openJob(job.id)} className="text-left text-[17px] font-bold leading-snug text-heading hover:text-accent-fg">
+        {job.title}
+      </button>
+      <p className="text-[15px] text-muted-foreground">{job.customerName}</p>
+      <p className="mt-1.5 flex items-center gap-1.5 text-[15px]">
+        <Clock className="size-4 text-subtle" aria-hidden /> {formatDayShort(b.date)}
+        {b.endDate ? ` – ${formatDayShort(b.endDate)}` : ""} · {b.startTime ? formatTimeRange(b.startTime, b.endTime) : "All day"}
+      </p>
+      <p className="mt-1 flex items-start gap-1.5 text-[15px]">
+        <Users className="mt-0.5 size-4 shrink-0 text-subtle" aria-hidden /> {crew.length ? crew.join(", ") : <span className="font-semibold text-warn-fg">Nobody assigned yet</span>}
+      </p>
+      {address ? (
+        <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`} target="_blank" rel="noreferrer" className="mt-1 flex items-start gap-1.5 text-[15px] font-medium text-accent-fg hover:underline">
+          <Navigation className="mt-0.5 size-4 shrink-0" aria-hidden /> <span className="break-words">{address}</span>
+        </a>
+      ) : null}
+    </div>
   );
 }

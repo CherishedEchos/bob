@@ -59,6 +59,27 @@ export interface OrgConfig {
    * leave as approved and approve crew requests.
    */
   leavePolicy?: { managersSelfApprove: boolean };
+  /** Prices Bob may use for rough estimates (Settings → Prices for estimates). Nothing is assumed when unset. */
+  pricing?: RateCard;
+  /** Optional pilot features, off unless switched on for this workspace. */
+  features?: { roughEstimates?: boolean; conceptDesigns?: boolean };
+}
+
+/** A workspace's own prices. Every figure is entered by the business; Bob never invents one. */
+export interface RateCard {
+  /** Labour per person per day, as the business prices it (before VAT when VAT registered and prices are exclusive). */
+  labourDayRate?: number | null;
+  items: RateItem[];
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface RateItem {
+  id: ID;
+  name: string;
+  /** e.g. "sheet", "m", "each", "day". */
+  unit: string;
+  price: number;
 }
 
 export interface AppUser {
@@ -149,6 +170,49 @@ export interface Enquiry {
   messages: EnquiryMessage[];
   draftReply?: string;
   suggestedReply: string;
+  /** Jobs to price: where the work is (carried to the job), measurements from the visit and the rough estimate. */
+  siteAddress?: string;
+  measurements?: Measurement[];
+  estimate?: RoughEstimate;
+  /** When it was added to Jobs to price. */
+  pricingAt?: string;
+}
+
+export interface Measurement {
+  id: ID;
+  label: string;
+  /** As written on site, e.g. "2400 mm" or "1.2 m x 0.6 m". */
+  value: string;
+}
+
+/** Where a figure in a rough estimate came from. */
+export type EstimateSource = "rate_card" | "entered" | "allowance" | "missing";
+
+export interface EstimateLine {
+  id: ID;
+  label: string;
+  qty: number;
+  unit: string;
+  /** null = no price yet: the line is left out of the total and flagged. */
+  rate: number | null;
+  source: EstimateSource;
+  /** The rate-card item this came from, if any. */
+  rateItemId?: ID;
+  note?: string;
+}
+
+/** A rough, editable estimate on a pricing record. Arithmetic is deterministic (src/lib/estimate.ts). */
+export interface RoughEstimate {
+  kind: "fitted_furniture";
+  description: string;
+  lines: EstimateLine[];
+  /** Optional ± range the user chooses to show (e.g. 10 = ±10%). Only used when every line is priced. */
+  rangePercent?: number | null;
+  /** Things Bob noticed are missing (short questions), set by the user or Bob's suggestions. */
+  questions?: string[];
+  quoteId?: ID;
+  updatedAt: string;
+  updatedBy: string;
 }
 
 export type JobStatus = "quoted" | "awaiting_deposit" | "scheduled" | "in_progress" | "snagging" | "completed" | "lost";
@@ -323,6 +387,12 @@ export interface PersonAccess {
   inviteId?: ID;
   /** Their login's role in this business (accepted), or the role a pending invite grants. */
   role?: Role;
+  /** Who sent the latest invite. */
+  invitedBy?: string;
+  /** What happened to the invite email: sent, failed (retry), or not sent because email isn't set up here. */
+  emailStatus?: "sent" | "failed" | "not_configured";
+  emailError?: string;
+  emailedAt?: string;
 }
 
 /**
@@ -442,6 +512,10 @@ export interface ModeInfo {
   aiEngine: "rules" | "claude";
   /** A Cresaro platform administrator (sees the restricted admin area). */
   platformAdmin?: boolean;
+  /** Live workspace on storage that isn't declared permanent: records could be lost on a redeploy. Owners/admins only. */
+  storageAtRisk?: boolean;
+  /** Invite emails are delivered by this server (otherwise the inviter shares the link). */
+  inviteEmail?: boolean;
 }
 
 /** Everything the dashboard needs for one organisation, scoped server-side. */
@@ -523,7 +597,19 @@ export interface Variation {
   approvedAt?: string;
   createdAt: string;
   createdBy: string;
+  /** Optional detail of the extra work. */
+  note?: string;
+  /** Optional photo (a job file). */
+  fileId?: ID;
+  /** Who recorded the approval or decline in Bob, when, how the customer said so, and any note. */
+  decidedBy?: string;
+  decidedAt?: string;
+  approvalVia?: ApprovalVia;
+  decisionNote?: string;
 }
+
+/** How a customer's yes/no reached the business. Bob records it; it never claims the customer approved in Bob. */
+export type ApprovalVia = "phone" | "email" | "text" | "in_person" | "written" | "other";
 
 /* ------------------------------ Handover report ------------------------------ */
 

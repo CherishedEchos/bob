@@ -71,3 +71,16 @@ export function fromResult<T>(r: Result<T>) {
 }
 
 export { checkOrigin };
+
+/**
+ * The site's public address for links we send (invite emails). BOB_PUBLIC_URL
+ * when set; otherwise the address the request came in on (behind Render's
+ * proxy, from the forwarded host).
+ */
+export function publicOrigin(req: Request): string {
+  const env = process.env.BOB_PUBLIC_URL?.trim();
+  if (env) return env.replace(/\/$/, "");
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const proto = req.headers.get("x-forwarded-proto") ?? new URL(req.url).protocol.replace(":", "");
+  return host ? `${proto}://${host}` : new URL(req.url).origin;
+}
