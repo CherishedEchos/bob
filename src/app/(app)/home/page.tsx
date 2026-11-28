@@ -135,7 +135,7 @@ export default function HomePage() {
               <h2 id="today-h" className="t-section">
                 {shownDay === today ? "Today's work" : shownDay ? `Next up: ${dayName(shownDay, today)}` : "Today's work"}
               </h2>
-              <Link href="/week" className="inline-flex h-10 items-center gap-1 rounded-lg px-2 text-[15px] font-semibold text-accent-fg hover:bg-copper-500/[0.08]">
+              <Link href="/week?view=team" className="inline-flex h-10 items-center gap-1 rounded-lg px-2 text-[15px] font-semibold text-accent-fg hover:bg-copper-500/[0.08]">
                 View diary <ArrowRight className="size-4" aria-hidden />
               </Link>
             </div>
@@ -238,7 +238,7 @@ export default function HomePage() {
           <h2 id="coming-h" className="t-section">
             Coming up
           </h2>
-          <Link href="/week" className="inline-flex h-10 items-center gap-1 rounded-lg px-2 text-[15px] font-semibold text-accent-fg hover:bg-copper-500/[0.08]">
+          <Link href="/week?view=team" className="inline-flex h-10 items-center gap-1 rounded-lg px-2 text-[15px] font-semibold text-accent-fg hover:bg-copper-500/[0.08]">
             Open diary <ArrowRight className="size-4" aria-hidden />
           </Link>
         </div>

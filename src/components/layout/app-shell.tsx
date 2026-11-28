@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   AlertTriangle, ClipboardList,
-  AudioLines, BookOpen, Building2, CalendarDays, LayoutGrid, Check, CheckSquare, ChevronLeft, ChevronsUpDown, FlaskConical, Package, Store, UsersRound, HardHat, History, Inbox, LogOut,
+  AudioLines, BookOpen, Building2, CalendarDays, House, LayoutGrid, Check, CheckSquare, ChevronLeft, ChevronsUpDown, FlaskConical, Package, Store, UsersRound, HardHat, History, Inbox, LogOut,
   Gauge, Mic, PanelLeftClose, PanelLeftOpen, ReceiptText, Settings, Users,
 } from "lucide-react";
 import { StoreProvider, api, useStore } from "@/lib/store/store";
@@ -154,8 +154,8 @@ type NavItem = { href: string; label: string; icon: React.ComponentType<{ classN
 const NAV_GROUPS: { label?: string; items: NavItem[] }[] = [
   {
     items: [
-      { href: "/week", label: "Diary", icon: CalendarDays },
       { href: "/home", label: "Overview", icon: Gauge },
+      { href: "/week", label: "Diary", icon: CalendarDays },
     ],
   },
   {
@@ -199,12 +199,12 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
       {/* Workspace identity: the customer's brand, with Bob */}
       <div className={cn("shrink-0", collapsed ? "flex flex-col items-center gap-3 px-2 pb-3 pt-5" : "px-5 pb-4 pt-6")}>
         {collapsed ? (
-          <Link href="/" aria-label={`${org.name} — Diary`}>
+          <Link href="/home" aria-label={`${org.name} — Overview`}>
             <OrgLogo org={org} size={40} />
           </Link>
         ) : (
           <div className="flex items-start justify-between gap-2">
-            <Link href="/" aria-label={`${org.name} — Diary`} className="min-w-0">
+            <Link href="/home" aria-label={`${org.name} — Overview`} className="min-w-0">
               {org.wordmark?.onLight || org.wordmark?.onDark ? (
                 <OrgWordmark org={org} tone="light" height={34} className="max-w-[170px]" />
               ) : (
@@ -475,7 +475,7 @@ function MobileHeader() {
           <ChevronLeft className="size-5" aria-hidden /> {parent.label}
         </Link>
       ) : (
-      <Link href="/" aria-label="Diary" className="flex min-w-0 items-center gap-2.5">
+      <Link href="/home" aria-label="Overview" className="flex min-w-0 items-center gap-2.5">
         <OrgLogo org={org} size={30} />
         <span className="min-w-0 leading-tight">
           <span className="block truncate text-[15px] font-semibold text-heading">{org.shortName || org.name}</span>
@@ -607,8 +607,8 @@ function BottomNav() {
   return (
     <nav aria-label="Main" className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-[max(10px,env(safe-area-inset-bottom))] lg:hidden">
       <div className="pointer-events-auto relative mx-auto grid h-[66px] max-w-md grid-cols-5 rounded-[26px] bg-sidebar/95 shadow-[0_12px_32px_-8px_rgb(0_0_0/0.45),0_0_0_1px_rgb(255_255_255/0.06)_inset] backdrop-blur-xl">
+        {side("/home", "Home", House)}
         {side("/week", "Diary", CalendarDays)}
-        {side("/home", "Overview", Gauge)}
         <div className="relative flex items-center justify-center">
           <Link
             href="/assistant?listen=1"

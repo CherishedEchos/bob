@@ -11,7 +11,7 @@ import { AlertTriangle, Calculator, FileText, Plus, Trash2, Wand2 } from "lucide
 import Link from "next/link";
 import { useStore } from "@/lib/store/store";
 import type { Enquiry, EstimateLine, RoughEstimate } from "@/lib/types";
-import { estimateTotals, lineTotal, suggestFittedFurniture, type FittedFurnitureInput } from "@/lib/estimate";
+import { estimateTotals, lineTotal, savedEstimate, suggestFittedFurniture, type FittedFurnitureInput } from "@/lib/estimate";
 import { cn, gbp } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
@@ -25,14 +25,15 @@ const newId = () => `new_${Date.now().toString(36)}_${(k++).toString(36)}`;
 
 export function EstimatePanel({ enquiry }: { enquiry: Enquiry }) {
   const { data, actions, org } = useStore();
-  const saved = enquiry.estimate;
+  const saved = savedEstimate(enquiry);
   const [desc, setDesc] = React.useState(saved?.description ?? enquiry.description ?? "");
   const [lines, setLines] = React.useState<EstimateLine[]>(saved?.lines ?? []);
   const [range, setRange] = React.useState<string>(saved?.rangePercent ? String(saved.rangePercent) : "");
   const [questions, setQuestions] = React.useState<string[]>(saved?.questions ?? []);
   const [dirty, setDirty] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
-  const [ff, setFf] = React.useState<FittedFurnitureInput>({ units: 2, widthMm: 0, heightMm: 0, depthMm: 0, shelvesPerUnit: 3, doorsPerUnit: 2, days: 0, people: 1, finish: "" });
+  // Resume what was measured last time (older drafts didn't keep it).
+  const [ff, setFf] = React.useState<FittedFurnitureInput>({ units: 2, widthMm: 0, heightMm: 0, depthMm: 0, shelvesPerUnit: 3, doorsPerUnit: 2, days: 0, people: 1, finish: "", ...(saved?.inputs as Partial<FittedFurnitureInput> | undefined) });
   const card = org.pricing;
   const totals = estimateTotals({ lines, rangePercent: range ? Number(range) : null }, org.finance);
   const quote = saved?.quoteId ? data.quotes.find((q) => q.id === saved.quoteId) : undefined;
@@ -49,7 +50,7 @@ export function EstimatePanel({ enquiry }: { enquiry: Enquiry }) {
   };
   const save = async () => {
     setBusy(true);
-    const est: Omit<RoughEstimate, "updatedAt" | "updatedBy" | "kind"> = { description: desc, lines: lines.map((l) => ({ ...l, id: l.id.startsWith("new_") ? (undefined as unknown as string) : l.id })), rangePercent: range ? Number(range) : null, questions };
+    const est: Omit<RoughEstimate, "updatedAt" | "updatedBy" | "kind"> = { description: desc, lines: lines.map((l) => ({ ...l, id: l.id.startsWith("new_") ? (undefined as unknown as string) : l.id })), rangePercent: range ? Number(range) : null, questions, inputs: { ...ff } as unknown as Record<string, number | string> };
     const r = await actions.run("saveEstimate", { id: enquiry.id, estimate: est });
     setBusy(false);
     if (!r.ok) return toast(Object.values(r.errors)[0] ?? "Couldn't save the estimate", "error");
@@ -94,12 +95,12 @@ export function EstimatePanel({ enquiry }: { enquiry: Enquiry }) {
             ] as const).map(([key, label]) => (
               <label key={key} className="block">
                 <span className="text-[13.5px] font-medium text-muted-foreground">{label}</span>
-                <Input inputMode="decimal" value={ff[key] ? String(ff[key]) : ""} onChange={(e) => setFf((x) => ({ ...x, [key]: num(e.target.value) }))} className="mt-0.5 h-11" aria-label={label} />
+                <Input inputMode="decimal" value={ff[key] ? String(ff[key]) : ""} onChange={(e) => (setFf((x) => ({ ...x, [key]: num(e.target.value) })), setDirty(true))} className="mt-0.5 h-11" aria-label={label} />
               </label>
             ))}
             <label className="col-span-2 block">
               <span className="text-[13.5px] font-medium text-muted-foreground">Finish</span>
-              <Input value={ff.finish ?? ""} onChange={(e) => setFf((x) => ({ ...x, finish: e.target.value }))} placeholder="e.g. painted, oiled oak" className="mt-0.5 h-11" aria-label="Finish" />
+              <Input value={ff.finish ?? ""} onChange={(e) => (setFf((x) => ({ ...x, finish: e.target.value })), setDirty(true))} placeholder="e.g. painted, oiled oak" className="mt-0.5 h-11" aria-label="Finish" />
             </label>
           </div>
           <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={suggest}>
@@ -214,9 +215,10 @@ export function EstimatePanel({ enquiry }: { enquiry: Enquiry }) {
         </dl>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" onClick={() => void save()} disabled={busy || !dirty}>
-            {busy ? "Saving…" : dirty ? "Save estimate" : "Saved"}
+          <Button type="button" onClick={() => void save()} disabled={busy}>
+            {busy ? "Saving…" : "Save estimate"}
           </Button>
+          {!dirty && saved ? <span className="text-[14px] text-subtle" role="status">All changes saved</span> : null}
           {quote ? (
             <span className="text-[15px] text-muted-foreground">
               <FileText className="mr-1 inline size-4" aria-hidden />

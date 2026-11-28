@@ -117,8 +117,10 @@ const shot = (p, name, full = true) => p.screenshot({ path: path.join(OUT, `${na
 
   // Landing: the team diary.
   await luke.goto(BASE + '/');
-  await luke.waitForURL('**/week');
-  check('Owner lands on the team diary', await luke.getByRole('region', { name: 'Team schedule' }).waitFor({ timeout: 60000 }).then(() => true, () => false));
+  await luke.waitForURL('**/home');
+  check('Owner lands on Overview', await luke.getByRole('heading', { name: /^Good (morning|afternoon|evening), Luke/ }).waitFor({ timeout: 60000 }).then(() => true, () => false));
+  await luke.getByRole('link', { name: /View diary/ }).click();
+  check('…and the team calendar is one tap away', await luke.getByRole('region', { name: 'Team schedule' }).waitFor({ timeout: 60000 }).then(() => true, () => false));
   check('Live workspace: no demo strip, no storage warning (declared persistent)', !(await luke.getByText('Demo workspace').count()) && !(await luke.getByText("Storage isn't permanent").count()));
 
   // Fictional work: the Oak Road kitchen, Sam (already on the crew) booked on Friday.
@@ -204,26 +206,31 @@ const shot = (p, name, full = true) => p.screenshot({ path: path.join(OUT, `${na
   lukePhone.on('pageerror', (e) => errors.push('luke phone: ' + e.message));
   await lukePhone.goto(`${BASE}/pricing/${enq.id}`);
   await lukePhone.getByRole('heading', { name: 'Alcove units' }).waitFor({ timeout: 60000 });
+  // Address: the small "Add address" action opens the field.
+  // An enquiry brings its town across, so it's "Change" here (a blank record shows "Add address").
+  await lukePhone.getByRole('button', { name: 'Add address' }).or(lukePhone.getByRole('button', { name: 'Change' })).first().click();
   await lukePhone.getByLabel('Site address').fill('4 Fictional Close, Horley, RH6 7AA');
-  await lukePhone.getByLabel('Site address').blur();
-  await lukePhone.getByText("Saved. It carries to the job").waitFor({ timeout: 10000 });
-  await lukePhone.locator('input[type=file][multiple]').first().setInputFiles([{ name: 'alcove-left.jpg', mimeType: 'image/jpeg', buffer: JPEG }, { name: 'walkround.mp4', mimeType: 'video/mp4', buffer: MP4 }]);
+  await lukePhone.getByRole('button', { name: 'Save address' }).click();
+  await lukePhone.getByRole('link', { name: /4 Fictional Close/ }).waitFor({ timeout: 10000 });
+  // Photo and video through "Upload files" (videos, drawings and documents live there).
+  await lukePhone.locator('input[aria-label="Upload files"]').setInputFiles([{ name: 'alcove-left.jpg', mimeType: 'image/jpeg', buffer: JPEG }, { name: 'walkround.mp4', mimeType: 'video/mp4', buffer: MP4 }]);
   const upDlg = lukePhone.getByRole('dialog');
   await shot(lukePhone, '06a-upload-queue-375', false);
   await upDlg.getByRole('button', { name: /^Upload 2 files/ }).click();
   await upDlg.getByRole('button', { name: 'Done' }).click({ timeout: 30000 });
   await lukePhone.getByText('walkround.mp4').first().waitFor({ timeout: 15000 });
-  await lukePhone.getByRole('button', { name: 'Add measurement' }).click();
-  await lukePhone.getByLabel('Measurement 1 name').fill('Left alcove width');
-  await lukePhone.getByLabel('Measurement 1 value').fill('1020 mm');
-  await lukePhone.getByRole('button', { name: 'Add measurement' }).click();
-  await lukePhone.getByLabel('Measurement 2 name').fill('Height');
-  await lukePhone.getByLabel('Measurement 2 value').fill('2210 mm');
-  await lukePhone.getByRole('button', { name: 'Save measurements' }).click();
-  await lukePhone.getByRole('button', { name: 'Saved' }).first().waitFor({ timeout: 10000 });
-  await lukePhone.getByLabel('New note').fill('Chimney breast not square — scribe the backs. Allow an extra day.');
+  for (const [what, size] of [['Left alcove width', '1020'], ['Height', '2210']]) {
+    await lukePhone.getByRole('button', { name: 'Add measurement' }).click();
+    await lukePhone.getByLabel('What you measured').fill(what);
+    await lukePhone.getByLabel('Size').fill(size);
+    await lukePhone.getByLabel('Unit').selectOption('mm');
+    await lukePhone.getByRole('button', { name: 'Save measurement' }).click();
+    await lukePhone.getByRole('list', { name: 'Measurements' }).getByText(`${size} mm`).waitFor({ timeout: 10000 });
+  }
   await lukePhone.getByRole('button', { name: 'Add note' }).click();
-  await lukePhone.getByText('scribe the backs').waitFor({ timeout: 10000 });
+  await lukePhone.getByLabel('Note', { exact: true }).fill('Chimney breast not square — scribe the backs. Allow an extra day.');
+  await lukePhone.getByRole('button', { name: 'Save note' }).click();
+  await lukePhone.getByRole('list', { name: 'Notes' }).getByText('scribe the backs').waitFor({ timeout: 10000 });
   await lukePhone.evaluate(() => window.scrollTo(0, 0));
   await sleep(4500); // let the "saved" toasts fade
   await shot(lukePhone, '06-pricing-record-375');
@@ -232,7 +239,7 @@ const shot = (p, name, full = true) => p.screenshot({ path: path.join(OUT, `${na
   await lukePhone.getByRole('link', { name: /Alcove units/ }).click();
   await lukePhone.getByRole('heading', { name: 'Alcove units' }).waitFor();
   const rec = await lukePhone.locator('main').innerText();
-  check('Coming back later: address, photo, video, measurements and note are all still there', rec.includes('walkround.mp4') && rec.includes('alcove-left.jpg') && (await lukePhone.getByLabel('Measurement 1 value').inputValue()) === '1020 mm' && rec.includes('scribe the backs') && (await lukePhone.getByLabel('Site address').inputValue()).includes('Horley'));
+  check('Coming back later: address, photo, video, measurements and note are all still there', rec.includes('walkround.mp4') && (await lukePhone.getByRole('list', { name: 'Photos' }).locator('li').count()) >= 1 && rec.includes('1020 mm') && rec.includes('scribe the backs') && rec.includes('4 Fictional Close'));
   await lukePhone.getByRole('button', { name: 'Customer accepted' }).click();
   await lukePhone.getByRole('button', { name: 'Create the job' }).click();
   await lukePhone.waitForURL('**/jobs/**', { timeout: 30000 });
@@ -291,6 +298,8 @@ const shot = (p, name, full = true) => p.screenshot({ path: path.join(OUT, `${na
   await op(luke, 'saveRateCard', { card: { labourDayRate: 280, items: [{ name: '18mm MDF sheet', unit: 'sheet', price: 42 }, { name: 'Shaker door', unit: 'each', price: 65 }] } });
   const enq2 = (await op(luke, 'createPricing', { input: { customerName: 'Wardrobe Fictional', phone: '07700 900888', title: 'Alcove units', siteAddress: '8 Test Lane, Crawley, RH10 1AA' } })).body.value;
   await luke.goto(`${BASE}/pricing/${enq2.id}`);
+  await luke.getByTestId('estimate-action').last().click();
+  await luke.waitForURL('**/estimate');
   await luke.getByRole('heading', { name: /Rough estimate/ }).waitFor({ timeout: 30000 });
   for (const [label, v] of [['Width (mm)', '1000'], ['Height (mm)', '2200'], ['Depth (mm)', '350'], ['Days to make & fit', '4']]) await luke.getByLabel(label, { exact: true }).fill(v);
   await luke.getByRole('button', { name: 'Suggest lines from my prices' }).click();
@@ -301,7 +310,7 @@ const shot = (p, name, full = true) => p.screenshot({ path: path.join(OUT, `${na
   const total2 = await luke.getByTestId('estimate-total').innerText();
   check('Correcting a quantity updates the total (labour 4 → 5 days adds £280)', total1 !== total2 && /1,828/.test(total2) && /1,548/.test(total1), `${total1} → ${total2}`);
   await luke.getByRole('button', { name: 'Save estimate' }).click();
-  await luke.getByRole('button', { name: 'Saved' }).first().waitFor({ timeout: 10000 });
+  await luke.getByText('All changes saved').waitFor({ timeout: 10000 });
   check('Turn into a quote is held back while lines are unpriced', await luke.getByRole('button', { name: 'Turn into a quote draft' }).isDisabled());
   await luke.getByTestId('estimate-total').scrollIntoViewIfNeeded();
   await sleep(4000);

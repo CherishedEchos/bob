@@ -41,8 +41,8 @@ async function nav(p, size, label) {
     await p.evaluate(async ([email, password]) => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }), [process.env.LUKE_EMAIL || 'owner@ninety3.example', process.env.LUKE_PASSWORD || 'bob-demo']);
     await p.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
     await p.goto(BASE + '/');
-    await p.waitForURL('**/week', { timeout: 90000 });
-    check(size, 'The team diary is the landing page', await p.getByRole('region', { name: size === 'desktop' ? 'Team schedule' : "Who's where" }).or(p.getByRole('region', { name: 'Team schedule' })).or(p.getByRole('region', { name: "Who's where" })).first().waitFor({ timeout: 60000 }).then(() => true, () => false));
+    await p.waitForURL('**/home', { timeout: 90000 });
+    check(size, 'Overview is the landing page, with View diary', await p.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ }).waitFor({ timeout: 60000 }).then(async () => p.getByRole('link', { name: /View diary/ }).isVisible(), () => false));
     await nav(p, size, 'Diary');
     await p.waitForURL('**/week');
 
