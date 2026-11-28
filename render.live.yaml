@@ -1,0 +1,54 @@
+# Reference config for the LIVE Ninety3 service (bob.cresaro.co). Separate from the
+# sales demo in render.yaml, which is untouched. Nothing here is applied automatically:
+# use it as the checklist for New → Web Service, or create a Blueprint from this file
+# (Blueprint file path: render.live.yaml). A disk needs a paid instance; check Render's
+# current pricing before choosing. Full steps: docs/LIVE-DEPLOYMENT.md
+services:
+  - type: web
+    name: bob-ninety3
+    runtime: node
+    plan: starter
+    region: frankfurt
+    branch: main
+    buildCommand: npm ci && npm run build
+    startCommand: npx next start -p $PORT -H 0.0.0.0
+    healthCheckPath: /login
+    disk:
+      name: bob-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Records AND uploaded photos/videos live in this one SQLite file on the disk.
+      - key: BOB_DB_PATH
+        value: /var/data/bob.sqlite
+      - key: BOB_PERSISTENT_STORAGE
+        value: "true"
+      # Live-only: no fictional workspaces, no demo logins, no "Try the demo".
+      - key: BOB_DEMO_WORKSPACES
+        value: "off"
+      - key: BOB_SHOW_DEMO_LOGINS
+        value: "false"
+      - key: BOB_PUBLIC_URL
+        value: https://bob.cresaro.co
+      # Secret File named workspaces.json (Environment → Secret Files).
+      - key: BOB_WORKSPACES_FILE
+        value: /etc/secrets/workspaces.json
+      - key: BOB_ENCRYPTION_KEY
+        generateValue: true
+      - key: BOB_PLATFORM_ADMINS
+        sync: false
+      # Optional
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: BOB_MAIL_TRANSPORT
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: BOB_MAIL_FROM
+        sync: false
+      - key: BOB_MAIL_ALLOWED_RECIPIENTS
+        sync: false
