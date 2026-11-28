@@ -1,0 +1,19 @@
+[
+  {
+    "slug": "ninety3-build",
+    "name": "Ninety3 Carpentry & Build",
+    "shortName": "Ninety3",
+    "tradeType": "Carpentry & building",
+    "logoUrl": "/brand/ninety3-logo.png",
+    "wordmark": { "onDark": "/brand/ninety3-wordmark-white.svg", "onLight": "/brand/ninety3-wordmark.svg" },
+    "accent": "#E4752F",
+    "brandColor": "#7B2001",
+    "timeZone": "Europe/London",
+    "contact": { "email": "hello@ninety3ltd.co.uk" },
+    "signOff": "Thanks,\nNinety3 Carpentry & Build",
+    "users": [
+      { "name": "Luke", "role": "owner", "email": "LUKE_LOGIN_EMAIL" },
+      { "name": "Ryan", "role": "office", "email": "RYAN_LOGIN_EMAIL" }
+    ]
+  }
+]

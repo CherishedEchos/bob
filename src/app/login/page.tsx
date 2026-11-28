@@ -3,6 +3,7 @@ import { DEMO_PASSWORD } from "@/server/db/seed";
 import { getContext } from "@/server/auth/session";
 import { demoAccountsConfigured } from "@/server/db/demo-accounts";
 import { redirect } from "next/navigation";
+import { demoWorkspacesEnabled } from "@/server/db";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,8 @@ export const dynamic = "force-dynamic";
  */
 export default async function LoginPage() {
   if (await getContext()) redirect("/");
-  const showDemo = process.env.BOB_SHOW_DEMO_LOGINS !== "false";
+  // Never offered on a live-only server (no demo workspaces exist there).
+  const showDemo = process.env.BOB_SHOW_DEMO_LOGINS !== "false" && demoWorkspacesEnabled();
   // Luke and Ryan sign in with their own credentials once they're configured; no shared-password button for them.
   const own = demoAccountsConfigured();
   const demo = showDemo

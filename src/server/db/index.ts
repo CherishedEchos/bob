@@ -322,6 +322,15 @@ function defaultPath(): string {
   return path.join(process.cwd(), ".data", "bob.sqlite");
 }
 
+/**
+ * The fictional demo workspaces (and their logins, password "bob-demo") are
+ * created on a new database unless BOB_DEMO_WORKSPACES=off. A live customer
+ * server sets it off; the sales demo leaves it unset.
+ */
+export function demoWorkspacesEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return !["off", "false", "0", "no"].includes((env.BOB_DEMO_WORKSPACES ?? "").trim().toLowerCase());
+}
+
 /** Open (and migrate/seed on first use) the local database. */
 export function getDb(): DatabaseSync {
   if (globalThis.__bobDb) return globalThis.__bobDb;
@@ -348,7 +357,10 @@ export function initDb(db: DatabaseSync) {
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS report_versions_num_idx ON report_versions(org_id, report_id, version)");
   db.exec("CREATE INDEX IF NOT EXISTS absences_person_idx ON absences(org_id, person_id, start_date)");
   const row = db.prepare("SELECT COUNT(*) AS n FROM orgs").get() as { n: number };
-  if (row.n === 0) {
+  if (!demoWorkspacesEnabled()) {
+    // Live-only server (BOB_DEMO_WORKSPACES=off): no fictional workspaces or demo
+    // logins are ever created. Existing records are left exactly as they are.
+  } else if (row.n === 0) {
     seedAll(db, insertRaw);
   } else {
     // Existing databases: give sample workspaces the new demo records (team,
