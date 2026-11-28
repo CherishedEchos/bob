@@ -207,7 +207,8 @@ const shot = (p, name, full = true) => p.screenshot({ path: path.join(OUT, `${na
   await lukePhone.goto(`${BASE}/pricing/${enq.id}`);
   await lukePhone.getByRole('heading', { name: 'Alcove units' }).waitFor({ timeout: 60000 });
   // Address: the small "Add address" action opens the field.
-  await lukePhone.getByRole('button', { name: 'Add address' }).click();
+  // An enquiry brings its town across, so it's "Change" here (a blank record shows "Add address").
+  await lukePhone.getByRole('button', { name: 'Add address' }).or(lukePhone.getByRole('button', { name: 'Change' })).first().click();
   await lukePhone.getByLabel('Site address').fill('4 Fictional Close, Horley, RH6 7AA');
   await lukePhone.getByRole('button', { name: 'Save address' }).click();
   await lukePhone.getByRole('link', { name: /4 Fictional Close/ }).waitFor({ timeout: 10000 });
