@@ -66,7 +66,7 @@ function london(offsetDays) {
       await p.goto(url);
       await p.getByLabel('Choose a password').fill(password);
       await p.getByRole('button', { name: /Set up my login|Accept/ }).click();
-      await p.waitForURL(/\/(week|my-work)/, { timeout: 30000 });
+      await p.waitForURL(/\/(week|my-work)/, { timeout: 120000 }); // first compile on a dev server can be slow
       return { ctx, p };
     };
     const ops = (p, op, args) => p.evaluate(async ([op, args]) => {

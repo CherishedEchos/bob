@@ -82,7 +82,7 @@ function TeamInner() {
           manage && view === "people" ? (
             <>
               <button type="button" className={pageSecondaryClass} onClick={() => ui.openForm({ form: "person" })}>
-                <UserPlus className="size-[17px] text-subtle" aria-hidden /> <span className="hidden sm:inline">Add person</span>
+                <UserPlus className="size-[17px] text-subtle" aria-hidden /> Add person
               </button>
               <button type="button" className={pageActionClass} onClick={() => setInviting(true)}>
                 <Send className="size-[17px]" aria-hidden /> Invite someone

@@ -104,7 +104,7 @@ void zlib;
   await dlg.getByLabel(/What is Canopy plan/).selectOption('drawing');
   await dlg.getByLabel('Drawing revision (optional)').fill('Rev A');
   await dlg.getByRole('button', { name: /Upload 2 files/ }).click();
-  const retry = dlg.getByRole('button', { name: 'Retry' });
+  const retry = dlg.getByRole('button', { name: 'Retry', exact: true });
   const sawRetry = await retry.waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
   check(4, 'A failed upload shows a per-file error with Retry', sawRetry && /interrupted/i.test(await dlg.innerText()));
   if (sawRetry) await retry.click();

@@ -61,12 +61,12 @@ export function FreshInvite({ sent, name, onRetry, busy }: { sent: SentInvite; n
         <p className="text-[15px] font-semibold">Email isn&apos;t set up here yet, so nothing was sent. Send {name.split(/\s+/)[0]} this link yourself:</p>
       )}
       <label htmlFor={`invite-link-${sent.inviteId}`} className={cn("mt-2 block text-[14px] font-medium text-muted-foreground", sent.emailStatus === "not_configured" && "sr-only")}>
-        {sent.emailStatus === "sent" ? "Or copy the link" : "Invite link"}
+        Invite link for {sent.email}
       </label>
       <div className="mt-1 flex gap-2">
         <Input id={`invite-link-${sent.inviteId}`} readOnly value={url} onFocus={(e) => e.currentTarget.select()} className="h-11 text-[15px]" />
         <Button size="sm" onClick={() => void copy()}>
-          {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy"}
+          {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy link"}
         </Button>
       </div>
       <p className="mt-2 text-[14px] text-muted-foreground">
@@ -193,16 +193,19 @@ export function InviteSomeone({ open, onClose, onOpenPerson }: { open: boolean; 
                       const a = access.get(p.id);
                       return (
                         <li key={p.id}>
-                          <button type="button" onClick={() => choose(p)} className="flex w-full items-center justify-between gap-3 rounded-lg bg-card px-3 py-2.5 text-left ring-1 ring-line hover:ring-accent/40">
+                          <button type="button" disabled={a?.state === "accepted"} onClick={() => choose(p)} className="flex w-full items-center justify-between gap-3 rounded-lg bg-card px-3 py-2.5 text-left ring-1 ring-line hover:ring-accent/40 disabled:cursor-default disabled:hover:ring-line">
                             <span className="min-w-0">
                               <span className="block text-[15.5px] font-medium">{p.name}</span>
                               <span className="block text-[14px] text-muted-foreground">
                                 {p.kind === "subcontractor" ? "Subcontractor" : "Employee"}
                                 {p.trade ? ` · ${p.trade}` : ""}
-                                {a?.state === "accepted" ? " · already has access" : ""}
                               </span>
                             </span>
-                            <span className="shrink-0 text-[14.5px] font-semibold text-accent-fg">Invite {p.name.split(/\s+/)[0]}</span>
+                            {a?.state === "accepted" ? (
+                              <span className="shrink-0 text-[14.5px] font-medium text-good-fg">Has access</span>
+                            ) : (
+                              <span className="shrink-0 text-[14.5px] font-semibold text-accent-fg">Invite {p.name.split(/\s+/)[0]}</span>
+                            )}
                           </button>
                         </li>
                       );

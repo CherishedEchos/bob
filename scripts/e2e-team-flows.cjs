@@ -29,7 +29,7 @@ function london(offsetDays) {
   await o.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
   await o.goto(BASE + '/');
   await o.waitForURL('**/week');
-  check(1, 'Signing in lands on Home', await o.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ }).waitFor().then(() => true));
+  check(1, 'Signing in lands on the team diary', await o.getByRole('region', { name: 'Team schedule' }).waitFor({ timeout: 60000 }).then(() => true, () => false));
   await o.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
   await o.goto(BASE + '/week');
   // Add a person (no login)
@@ -293,6 +293,8 @@ function london(offsetDays) {
     if (label.startsWith('phone')) {
       await p.goto(BASE + '/week');
       await p.getByRole('heading', { name: 'Diary', level: 1 }).waitFor();
+      check(9, "phone: Diary opens on Who's where", await p.getByRole('region', { name: "Who's where" }).waitFor({ timeout: 30000 }).then(() => true, () => false));
+      await p.getByRole('radio', { name: 'By day' }).click();
       const agendaFirst = await p.getByRole('region', { name: /^Agenda/ }).locator('h2').first().innerText();
       check(9, 'phone: Diary agenda starts with today', /^Today/.test(agendaFirst), agendaFirst);
       check(9, 'phone: bottom navigation present', await p.getByRole('navigation', { name: 'Main' }).last().waitFor().then(() => true));

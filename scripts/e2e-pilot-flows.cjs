@@ -29,7 +29,7 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
   await o.goto(BASE + '/');
   await o.waitForURL('**/week');
   await o.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
-  await o.goto(BASE + '/week');
+  await o.goto(BASE + '/week?view=week');
   await o.getByRole('heading', { name: 'Diary', level: 1 }).waitFor();
   check(1, 'Sidebar and page call it Diary', await o.getByRole('link', { name: 'Diary' }).first().isVisible());
   const main = await o.locator('main').innerText();
@@ -303,7 +303,7 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
       check(8, `${label}: ${path}`, title.test(h) && action.test(await p.locator('body').innerText()) && ov <= 1, `${h}${ov > 1 ? ` overflow ${ov}` : ''}`);
     }
     if (label === '1920' || label === '1280') {
-      await p.goto(BASE + '/week');
+      await p.goto(BASE + '/week?view=week');
       await p.locator('section[aria-label="Week"]').waitFor({ timeout: 30000 });
       await p.waitForTimeout(500);
       const geo = await p.evaluate(() => {
@@ -316,9 +316,10 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
       await p.screenshot({ path: `${OUT}/pilot-diary-${label}.png` });
     }
     if (label === '390') {
-      await p.goto(BASE + '/week');
+      await p.goto(BASE + '/week?view=week'); await p.getByRole('radio', { name: 'By day' }).click();
       await p.getByRole('heading', { name: 'Diary' }).waitFor();
       check(8, '390: agenda starts with today and Schedule work is visible', /^Today/.test(await p.getByRole('region', { name: /^Agenda/ }).locator('h2').first().innerText()) && (await p.getByRole('button', { name: 'Schedule work', exact: true }).isVisible()));
+      { const e = p.getByRole('button', { name: /Show earlier this week/ }); if (await e.isVisible().catch(() => false)) await e.click(); }
       await p.getByRole('region', { name: /^Agenda/ }).getByRole('button', { name: /^Booking: / }).first().tap();
       const dd = p.getByRole('dialog', { name: 'Schedule work' });
       await dd.waitFor();

@@ -315,8 +315,10 @@ const shot = (p, name, full = true) => p.screenshot({ path: path.join(OUT, `${na
   // The week with Sam's booking in it: Friday, grouped by person, with directions.
   if (friday > addDays(todayKey(), 6 - ((new Date(`${todayKey()}T12:00:00Z`).getUTCDay() + 6) % 7))) await lukePhone.getByRole('button', { name: 'Next week' }).click();
   await lukePhone.getByRole('tab', { name: /^Friday/ }).click();
-  await lukePhone.getByText('Sam Fictional').first().waitFor({ timeout: 10000 });
-  check("Phone: Who's where shows Sam at Oak Road with directions", (await lukePhone.getByRole('region', { name: "Who's where" }).innerText()).includes('12 Oak Road'));
+  await lukePhone.getByRole('region', { name: "Who's where" }).getByText('Sam Fictional').first().waitFor({ timeout: 10000 });
+  await sleep(800); // let the day strip finish its colour transition
+  const ww = await lukePhone.getByRole('region', { name: "Who's where" }).innerText();
+  check("Phone: Who's where shows Sam at Oak Road with directions", ww.includes('Oak Road kitchen') && ww.includes('12 Oak Road'), ww.replace(/\n/g, ' | ').slice(0, 500));
   await shot(lukePhone, '11b-whos-where-friday-375');
   await luke.goto(BASE + '/week');
   await luke.getByRole('region', { name: 'Team schedule' }).waitFor({ timeout: 30000 });

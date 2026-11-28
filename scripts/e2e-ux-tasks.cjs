@@ -22,12 +22,12 @@ const JPEG = Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP////////////////////
 
 /** Go somewhere the way a person would: the sidebar on desktop, the tab bar or More sheet on a phone. */
 async function nav(p, size, label) {
-  if (size === 'desktop') return p.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: new RegExp(`^${label}`) }).first().click();
+  if (size === 'desktop') return p.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: new RegExp(`^${label}(\\s*\\d+)?$`) }).first().click();
   const bar = p.getByRole('navigation', { name: 'Main' }).last();
-  const direct = bar.getByRole('link', { name: new RegExp(`^${label}`) });
+  const direct = bar.getByRole('link', { name: new RegExp(`^${label}(\\s*\\d+)?$`) });
   if (await direct.count()) return direct.first().click();
   await p.getByRole('button', { name: /^More/ }).first().click();
-  await p.getByRole('dialog').getByRole('link', { name: new RegExp(`^${label}`) }).click();
+  await p.getByRole('dialog').getByRole('link', { name: new RegExp(`^${label}(\\s*\\d+)?$`) }).click();
 }
 
 (async () => {
