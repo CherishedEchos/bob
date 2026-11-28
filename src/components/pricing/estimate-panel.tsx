@@ -138,7 +138,13 @@ export function EstimatePanel({ enquiry }: { enquiry: Enquiry }) {
                       <Trash2 className="size-4" aria-hidden />
                     </button>
                     <div className="col-span-2 flex flex-wrap items-center gap-2 text-[15px]">
-                      <Input inputMode="decimal" value={String(l.qty)} onChange={(e) => edit(l.id, { qty: num(e.target.value) })} className="h-10 w-20 tabular" aria-label={`Quantity for ${l.label}`} />
+                      <Input
+                        inputMode="decimal"
+                        value={String(l.qty)}
+                        onChange={(e) => edit(l.id, { qty: num(e.target.value), note: l.note && !l.note.startsWith("You changed") ? `You changed the quantity (suggested: ${l.note})` : l.note })}
+                        className="h-10 w-20 tabular"
+                        aria-label={`Quantity for ${l.label}`}
+                      />
                       <span className="text-muted-foreground">{l.unit} ×</span>
                       <span className="relative">
                         <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>

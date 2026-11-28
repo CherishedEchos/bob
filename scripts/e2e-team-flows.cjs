@@ -28,7 +28,7 @@ function london(offsetDays) {
   await o.goto(BASE + '/login');
   await o.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
   await o.goto(BASE + '/');
-  await o.waitForURL('**/home');
+  await o.waitForURL('**/week');
   check(1, 'Signing in lands on Home', await o.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ }).waitFor().then(() => true));
   await o.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
   await o.goto(BASE + '/week');
@@ -266,7 +266,7 @@ function london(offsetDays) {
     await p.goto(BASE + '/login');
     await p.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
     await p.goto(BASE + '/');
-    await p.waitForURL('**/home');
+    await p.waitForURL('**/week');
     const pages = [
       ['/week', /Diary/, /Schedule work/],
       ['/enquiries', /Enquiries/, /Add enquiry|Add/],

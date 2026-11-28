@@ -27,6 +27,24 @@ services:
         sync: false
       - key: BOB_PUBLIC_URL
         sync: false
+      # Live data needs a persistent disk (paid instance): mount it at /var/data, then set
+      # BOB_DB_PATH=/var/data/bob.sqlite and BOB_PERSISTENT_STORAGE=true. Until then a live
+      # workspace shows its owner a "storage isn't permanent" warning. docs/PILOT-PRODUCTION-CHECKLIST.md
+      - key: BOB_DB_PATH
+        sync: false
+      - key: BOB_PERSISTENT_STORAGE
+        sync: false
+      # Optional: email team invites (otherwise Bob shows the link to send by hand).
+      # BOB_MAIL_TRANSPORT=resend, RESEND_API_KEY, BOB_MAIL_FROM. While testing, set
+      # BOB_MAIL_ALLOWED_RECIPIENTS (addresses or @domains) so nothing reaches a real person.
+      - key: BOB_MAIL_TRANSPORT
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: BOB_MAIL_FROM
+        sync: false
+      - key: BOB_MAIL_ALLOWED_RECIPIENTS
+        sync: false
       # Optional: set in the Render dashboard to switch on the Claude engine.
       - key: ANTHROPIC_API_KEY
         sync: false

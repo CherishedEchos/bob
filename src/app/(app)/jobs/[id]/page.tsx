@@ -9,7 +9,7 @@ import { useUI, type JobTab } from "@/lib/store/ui";
 import { JobWorkspace } from "@/components/jobs/job-sheet";
 import { EmptyState } from "@/components/common/bits";
 
-const TABS: JobTab[] = ["overview", "schedule", "updates", "photos", "documents", "materials", "tasks", "financials", "handover", "files", "report", "money"];
+const TABS: JobTab[] = ["overview", "schedule", "updates", "photos", "documents", "materials", "tasks", "extras", "variations" as JobTab, "financials", "handover", "files", "report", "money"];
 
 export default function JobPage() {
   return (

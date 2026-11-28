@@ -84,7 +84,8 @@ export function JobWorkspace({ id, initialTab }: { id: string; initialTab?: JobT
     return !v || ((v === "financials" || v === "extras") && !money) || (v === "handover" && !manager) ? "overview" : v;
   };
   const [tab, setTabState] = React.useState<JobTab>(allowed(initialTab));
-  React.useEffect(() => setTabState(allowed(initialTab)), [initialTab, id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Re-check once permissions are known, so a link straight to ?tab=extras (or financials/handover) opens it.
+  React.useEffect(() => setTabState(allowed(initialTab)), [initialTab, id, money, manager]); // eslint-disable-line react-hooks/exhaustive-deps
   // Arriving on a particular section (e.g. back from the handover): bring it into view.
   React.useEffect(() => {
     if (!initialTab || initialTab === "overview") return;

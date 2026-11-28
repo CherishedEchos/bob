@@ -25,7 +25,7 @@ async function signIn(browser, who, opts) {
   await p.getByLabel('Email', { exact: true }).fill(who.email);
   await p.getByLabel('Password', { exact: true }).fill(who.password);
   await p.getByRole('button', { name: /^Sign in$/ }).click();
-  await p.waitForURL('**/home', { timeout: 60000 });
+  await p.waitForURL('**/week', { timeout: 60000 });
   return p;
 }
 

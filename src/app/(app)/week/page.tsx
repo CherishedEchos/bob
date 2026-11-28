@@ -171,7 +171,7 @@ function Diary() {
           <>
             {can("schedule.read") ? (
               <Link href="/team?view=holidays" className={cn(pageSecondaryClass, "px-3")}>
-                <CalendarOff className="size-4 text-subtle" aria-hidden /> <span className="hidden sm:inline">Holidays</span>
+                <CalendarOff className="size-4 text-subtle" aria-hidden /> <span className="hidden sm:inline">Time off</span>
                 {pending ? <span className="tabular text-[13.5px] font-semibold text-warn-fg">{pending}</span> : null}
               </Link>
             ) : null}

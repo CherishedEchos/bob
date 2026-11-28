@@ -27,7 +27,7 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
   await o.goto(BASE + '/login');
   await o.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
   await o.goto(BASE + '/');
-  await o.waitForURL('**/home');
+  await o.waitForURL('**/week');
   await o.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
   await o.goto(BASE + '/week');
   await o.getByRole('heading', { name: 'Diary', level: 1 }).waitFor();
@@ -293,7 +293,7 @@ const ics = (page, path) => page.evaluate(async (p) => { const r = await fetch(p
     await p.goto(BASE + '/login');
     await p.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
     await p.goto(BASE + '/');
-    await p.waitForURL('**/home');
+    await p.waitForURL('**/week');
     const pages = [['/home', /Good (morning|afternoon|evening)/, /Your business at a glance/], ['/week', /Diary/, /Schedule work/], ['/jobs', /Jobs/, /Add job/], ['/enquiries', /Enquiries/, /Add/], ['/materials', /Materials/, /Add material/], ['/merchants', /Merchants/, /Add merchant/], ['/team', /Team/, /Add person/], ['/customers', /Customers/, /Add customer/], ['/tasks', /Tasks/, /Add task/], ['/invoices', /Money/, /Owed to you[\s\S]*Overdue[\s\S]*Received/], ['/invoices?view=bills', /Money/, /Add bill/], ['/settings', /Settings/, /Calendar/]];
     for (const [path, title, action] of pages) {
       await p.goto(BASE + path);

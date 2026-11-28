@@ -73,19 +73,22 @@ If the browser or phone already has the demo open (for example in the meeting), 
 
 1. Open the link and choose a password (8+ characters).
 2. Click **Set up my login**.
-3. They land on **Ask Bob** in the Ninety3 workspace ("Good morning, Luke"). From then on they sign in at `/login` → **Sign in to your business** with their email and password, on any device. "Try the demo" on the same page is separate and only ever opens the fictional workspace.
+3. They land on the **team diary** in the Ninety3 workspace (people down the side, days across; "Who's where" on a phone). The business overview is under **Overview**. From then on they sign in at `/login` → **Sign in to your business** with their email and password, on any device. "Try the demo" on the same page is separate and only ever opens the fictional workspace.
 
 Each sees the other's changes on the Diary within about 20 seconds, or straight away when they switch back to the tab. Verified in a test workspace: see `scripts/e2e-live-workspace.cjs`.
 
 ## Inviting staff and subcontractors (in the app)
 
-1. Open **Team** and click **Add person**. Enter their name, choose Employee or Subcontractor, add their trade and email, then save.
-2. Click the person to open their record. Under **Access to Bob → Access when they accept**, choose:
-   - **My work only** (the default, for staff and subcontractors). They see only the jobs they're booked on, the site details and their tasks. No prices, customers or company diary.
-   - **Admin**. Only the owner sees this choice.
-3. Click **Invite to Bob**, then **Copy link**, and send it to them.
+1. Open **Team** and tap **Invite someone**.
+2. Type their name. If they're already on the crew list, Bob offers **Invite <name>**: choose it, and their existing bookings stay with them.
+3. Enter their email and choose **Subcontractor** or **Employee**. Only the owner sees the choice between **My work only** (the default) and **Admin**.
+4. Tap **Send invite**. The invite names the business and you.
+   - **Emailed:** shown as emailed.
+   - **Email failed:** shown as failed, with **Try again**.
+   - **Email isn't set up on the server:** Bob says so plainly and shows the link to copy into a text or WhatsApp. It never claims something was sent.
+5. On the person's profile, the invite shows as **Invite pending** (sent by whom, when, and whether it was emailed), then **Accepted**. **Resend invite** issues a fresh link (the old one stops working). **Cancel invite** and **Remove access** are there too. Removing access signs them out at once and keeps their bookings and updates.
 
-People can be booked on the Diary before they're invited, or without ever being invited.
+People can be booked on the Diary before they're invited, or without ever being invited. Subcontractors and staff with "My work only" land on **My work**: their own bookings, the site address with directions, who they're working with, the shared site notes, and buttons to add a photo or an update. They never see prices, other jobs, private notes or Ask Bob.
 
 ## If something goes wrong
 

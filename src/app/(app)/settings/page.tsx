@@ -266,7 +266,7 @@ function LeavePolicySection({ org, owner, save }: { org: OrgConfig; owner: boole
         <span>
           <span className="block text-[15px] font-medium">Owners and admins can record their own leave as approved</span>
           <span className="block text-[15px] text-muted-foreground">
-            Either way, owners and admins approve or decline requests from employees, and subcontractors record their own unavailable dates. Manage leave in Team → Holidays.
+            Either way, owners and admins approve or decline requests from employees, and subcontractors record their own unavailable dates. Manage leave in Team → Time off.
           </span>
         </span>
       </label>

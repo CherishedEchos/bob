@@ -114,7 +114,7 @@ function london(offsetDays) {
     const dp = await demo.newPage();
     await dp.goto(BASE + '/login');
     await dp.getByRole('button', { name: /Try the demo/ }).click();
-    await dp.waitForURL('**/home');
+    await dp.waitForURL('**/week');
     const demoData = await who(dp);
     check('Demo still available separately', demoData.org.dataMode === 'sample' && demoData.org.id !== lukeData.org.id);
     const demoJob = demoData.jobs[0];

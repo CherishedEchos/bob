@@ -37,9 +37,9 @@ async function drag(p, from, to) {
   luke.on('pageerror', (e) => errors.push(e.message));
   await luke.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
   await luke.goto(BASE + '/');
-  await luke.waitForURL('**/home');
-  check('Signing in lands on Home', await luke.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ }).waitFor({ timeout: 60000 }).then(() => true, () => false));
-  await luke.goto(BASE + '/week');
+  await luke.waitForURL('**/week');
+  check('Signing in lands on the team diary (people down the side, days across)', await luke.getByRole('region', { name: 'Team schedule' }).waitFor({ timeout: 60000 }).then(() => true, () => false));
+  await luke.goto(BASE + '/week?view=week');
   await luke.getByRole('region', { name: 'Week' }).waitFor({ timeout: 60000 });
   const sub = await luke.locator('header p').first().innerText();
   check('Diary summary: sites · people scheduled · off', /\d+ active sites? · \d+ (people|person) scheduled/.test(sub), sub);
@@ -110,7 +110,13 @@ async function drag(p, from, to) {
   const phone = await signIn(b, process.env.LUKE_EMAIL || 'owner@ninety3.example', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   phone.on('pageerror', (e) => errors.push('phone: ' + e.message));
   await phone.goto(BASE + '/week');
+  // Phones open on "Who's where" (the team view, one day at a time); "By day" is the week agenda.
+  check("Phone: opens on Who's where", await phone.getByRole('region', { name: "Who's where" }).waitFor({ timeout: 60000 }).then(() => true, () => false));
+  await phone.getByRole('radio', { name: 'By day' }).click();
   const agenda = phone.getByRole('region', { name: 'Agenda' });
+  // Late in the week (e.g. a weekend), the days already gone are folded away: open them.
+  const earlier = phone.getByRole('button', { name: /Show earlier this week/ });
+  if (await earlier.isVisible().catch(() => false)) await earlier.click();
   await agenda.waitFor({ timeout: 60000 });
   check('Phone: agenda, not a squeezed calendar', (await phone.getByRole('region', { name: 'Week' }).isVisible().catch(() => false)) === false);
   check('Phone: cards have directions and the job', (await agenda.getByRole('link', { name: 'Directions' }).count()) > 0 && (await agenda.getByRole('button', { name: /Open job/ }).count()) > 0);
