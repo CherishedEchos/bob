@@ -10,6 +10,7 @@
  * (BOB_SHOW_DEMO_LOGINS), and never for Luke or Ryan once their own sign-ins
  * are configured.
  */
+import { safeNext } from "@/lib/safe-next";
 import * as React from "react";
 import { ChevronDown, Eye, EyeOff, Loader2 } from "lucide-react";
 import { BobLogo } from "@/components/brand/logo";
@@ -42,6 +43,10 @@ function friendly(status: number, serverMessage?: string): string {
   return serverMessage ?? "Couldn't sign in. Try again.";
 }
 
+
+/** ?next= from the sign-in link, if it's a safe same-site path; otherwise Home. */
+const returnTo = () => safeNext(new URLSearchParams(window.location.search).get("next")) ?? "/";
+
 export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassword?: string }) {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -65,7 +70,8 @@ export function LoginForm({ demo, demoPassword }: { demo: DemoGroup[]; demoPassw
     }
     if (res.ok) {
       // Keep the loading state until the workspace has loaded.
-      window.location.href = "/";
+      // Back to the page they were trying to open (a job link, say), otherwise Home.
+      window.location.href = returnTo();
       return;
     }
     const json = (await res.json().catch(() => ({}))) as { error?: string };

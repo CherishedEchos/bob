@@ -93,7 +93,8 @@ export default function MyWorkPage() {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <header className="theme-dark sticky top-0 z-10 flex items-center justify-between gap-2 bg-card px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <div className="min-w-0">
+        {/* The logo is Home for invited workers: back to the top of My work. */}
+        <a href="/my-work" aria-label={`${data?.businessName ?? "My work"} — My work`} className="min-w-0">
           {data?.wordmarkOnDark ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element -- fixed-height brand image */}
@@ -108,7 +109,7 @@ export default function MyWorkPage() {
               <p className="mt-1 truncate text-[14px] text-muted-foreground">{data ? data.businessName : " "}</p>
             </>
           )}
-        </div>
+        </a>
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => void load()} disabled={loading} aria-label="Refresh" className="grid size-11 place-items-center rounded-full text-foreground hover:bg-surface-3">
             <RefreshCw className={cn("size-5", loading && "animate-spin")} />

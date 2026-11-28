@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 
 /**
- * The first screen for owners and admins is the team diary (people down the
- * side, days across; "Who's where" on a phone). The business overview lives at
- * /home ("Overview"). Invited workers and subcontractors are sent to My work by
- * the app layout before this runs.
+ * Home for owners and admins is Overview (today's work, their to-do list and
+ * the business at a glance); the team calendar is one tap away in Diary.
+ * (src/middleware.ts redirects "/" before this runs; this is the fallback.)
+ * Invited workers and subcontractors are sent to My work by the app layout.
  */
 export default function Landing() {
-  redirect("/week");
+  redirect("/home");
 }

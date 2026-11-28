@@ -28,8 +28,8 @@ function london(offsetDays) {
   await o.goto(BASE + '/login');
   await o.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
   await o.goto(BASE + '/');
-  await o.waitForURL('**/week');
-  check(1, 'Signing in lands on the team diary', await o.getByRole('region', { name: 'Team schedule' }).waitFor({ timeout: 60000 }).then(() => true, () => false));
+  await o.waitForURL('**/home');
+  check(1, 'Signing in lands on Overview', await o.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ }).waitFor({ timeout: 60000 }).then(() => true, () => false));
   await o.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
   await o.goto(BASE + '/week');
   // Add a person (no login)
@@ -266,7 +266,7 @@ function london(offsetDays) {
     await p.goto(BASE + '/login');
     await p.evaluate(async () => fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@ninety3.example', password: 'bob-demo' }) }));
     await p.goto(BASE + '/');
-    await p.waitForURL('**/week');
+    await p.waitForURL('**/home');
     const pages = [
       ['/week', /Diary/, /Schedule work/],
       ['/enquiries', /Enquiries/, /Add enquiry|Add/],

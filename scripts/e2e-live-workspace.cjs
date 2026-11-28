@@ -66,7 +66,7 @@ function london(offsetDays) {
       await p.goto(url);
       await p.getByLabel('Choose a password').fill(password);
       await p.getByRole('button', { name: /Set up my login|Accept/ }).click();
-      await p.waitForURL(/\/(week|my-work)/, { timeout: 120000 }); // first compile on a dev server can be slow
+      await p.waitForURL(/\/(home|my-work)/, { timeout: 120000 }); // first compile on a dev server can be slow
       return { ctx, p };
     };
     const ops = (p, op, args) => p.evaluate(async ([op, args]) => {
@@ -114,7 +114,7 @@ function london(offsetDays) {
     const dp = await demo.newPage();
     await dp.goto(BASE + '/login');
     await dp.getByRole('button', { name: /Try the demo/ }).click();
-    await dp.waitForURL('**/week');
+    await dp.waitForURL('**/home');
     const demoData = await who(dp);
     check('Demo still available separately', demoData.org.dataMode === 'sample' && demoData.org.id !== lukeData.org.id);
     const demoJob = demoData.jobs[0];

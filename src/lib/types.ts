@@ -210,6 +210,8 @@ export interface RoughEstimate {
   rangePercent?: number | null;
   /** Things Bob noticed are missing (short questions), set by the user or Bob's suggestions. */
   questions?: string[];
+  /** What was measured for the suggestion (units, sizes, shelves, doors, days…), so reopening resumes it. */
+  inputs?: Record<string, number | string>;
   quoteId?: ID;
   updatedAt: string;
   updatedBy: string;

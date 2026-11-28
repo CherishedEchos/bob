@@ -13,7 +13,7 @@ import "server-only";
 import { z } from "zod";
 import type { Enquiry, OrgConfig, Quote, RateCard, RoughEstimate } from "@/lib/types";
 import { can } from "@/lib/auth/permissions";
-import { estimateTotals } from "@/lib/estimate";
+import { estimateTotals, savedEstimate } from "@/lib/estimate";
 import { gbp, uid } from "@/lib/utils";
 import { getDb, scoped, tx } from "@/server/db";
 import { denied, fail, ok, type Ctx, type Result } from "@/server/context";
@@ -45,6 +45,7 @@ const estimateSchema = z.object({
   lines: z.array(lineSchema).max(60),
   rangePercent: z.union([z.null(), z.coerce.number().min(0).max(50)]).optional(),
   questions: z.array(z.string().trim().max(200)).max(20).optional(),
+  inputs: z.record(z.string().max(40), z.union([z.number().min(0).max(1_000_000), z.string().max(80)])).optional(),
 });
 
 /** Save (replace) the rough estimate on a pricing record. A rate typed by hand is marked "entered"; a cleared rate is "missing". */
@@ -66,7 +67,8 @@ export function saveEstimate(ctx: Ctx, enquiryId: string, raw: unknown): Result<
     })),
     rangePercent: p.data.rangePercent ?? null,
     questions: p.data.questions,
-    quoteId: e.estimate?.quoteId,
+    inputs: p.data.inputs,
+    quoteId: savedEstimate(e)?.quoteId,
     updatedAt: now(),
     updatedBy: ctx.userName,
   };
@@ -88,13 +90,14 @@ export function estimateToQuote(ctx: Ctx, enquiryId: string): Result<Quote> {
   if (no) return no;
   if (!estimatesEnabled(ctx.org)) return fail("forbidden", "Rough estimates aren't switched on for this business.");
   const e = getEnquiry(ctx, enquiryId);
-  if (!e?.estimate) return fail("not_found", "Save an estimate first.");
-  const t = estimateTotals(e.estimate, ctx.org.finance);
+  const est = e ? savedEstimate(e) : undefined;
+  if (!e || !est) return fail("not_found", "Save an estimate first.");
+  const t = estimateTotals(est, ctx.org.finance);
   if (!t.complete) return fail("invalid", `Price every line first — ${t.missing.length} still ${t.missing.length === 1 ? "has" : "have"} no price.`);
   if (t.pricedSubtotal <= 0) return fail("invalid", "The estimate comes to nothing yet.");
   const q = preparePricingQuote(ctx, e.id, { description: e.title, amount: t.pricedSubtotal });
   if (!q.ok) return q;
-  scoped(ctx).update<Enquiry>("enquiries", e.id, { estimate: { ...e.estimate, quoteId: q.value.id } });
+  scoped(ctx).update<Enquiry>("enquiries", e.id, { estimate: { ...est, quoteId: q.value.id } });
   audit(ctx, "estimate.to_quote", `Quote draft made from the rough estimate (${gbp(t.pricedSubtotal)}) — not sent`, "quote", q.value.id);
   return ok(q.value);
 }

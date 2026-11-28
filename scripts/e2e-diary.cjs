@@ -37,8 +37,8 @@ async function drag(p, from, to) {
   luke.on('pageerror', (e) => errors.push(e.message));
   await luke.evaluate(() => fetch('/api/privacy/reset-sample', { method: 'POST' }));
   await luke.goto(BASE + '/');
-  await luke.waitForURL('**/week');
-  check('Signing in lands on the team diary (people down the side, days across)', await luke.getByRole('region', { name: 'Team schedule' }).waitFor({ timeout: 60000 }).then(() => true, () => false));
+  await luke.waitForURL('**/home');
+  check('Signing in lands on Overview', await luke.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ }).waitFor({ timeout: 60000 }).then(() => true, () => false));
   await luke.goto(BASE + '/week?view=week');
   await luke.getByRole('region', { name: 'Week' }).waitFor({ timeout: 60000 });
   const sub = await luke.locator('header p').first().innerText();

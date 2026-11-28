@@ -159,3 +159,9 @@ export function suggestFittedFurniture(input: FittedFurnitureInput, card: RateCa
   if (!card?.labourDayRate) q.push("What's your day rate for labour? (add it to your prices)");
   return { lines, questions: Array.from(new Set(q)) };
 }
+
+/** The saved estimate on a pricing record, if there really is one (empty JSON columns read back as []). */
+export function savedEstimate(e: { estimate?: RoughEstimate | unknown }): RoughEstimate | undefined {
+  const est = e.estimate as RoughEstimate | undefined;
+  return est && !Array.isArray(est) && Array.isArray(est.lines) ? est : undefined;
+}
